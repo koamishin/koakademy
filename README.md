@@ -12,7 +12,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/yukazakiri/koakademy">
-    <img src="public/web-app-manifest-192x192.png" alt="KoAkademy Logo" width="96" height="96" />
+    <img src="https://raw.githubusercontent.com/koamishin/KoamiStarterKit/main/public/koamishin-logo.svg" alt="KoAkademy Logo" width="96" height="96" />
   </a>
 
   <h3 align="center">KoAkademy</h3>
@@ -211,7 +211,7 @@ Distributed under the GNU Affero General Public License v3.0 or later. See [`LIC
 [license-shield]: https://img.shields.io/github/license/yukazakiri/koakademy.svg?style=for-the-badge
 [license-url]: https://github.com/yukazakiri/koakademy/blob/master/LICENSE.md
 
-[product-screenshot]: public/web-app-manifest-192x192.png
+[product-screenshot]: [public/web-app-manifest-192x192.png](https://raw.githubusercontent.com/koamishin/KoamiStarterKit/main/public/koamishin-logo.svg)
 
 [Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
 [Laravel-url]: https://laravel.com
