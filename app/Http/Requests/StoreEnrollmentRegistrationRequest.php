@@ -63,6 +63,41 @@ final class StoreEnrollmentRegistrationRequest extends FormRequest
             'education.vocational_course' => ['nullable', 'string', 'max:255'],
             'education.vocational_year_graduated' => ['nullable', 'string', 'max:50'],
 
+            // Personal info
+            'personal_info.birthplace' => ['nullable', 'string', 'max:255'],
+            'personal_info.citizenship' => ['nullable', 'string', 'max:100'],
+            'personal_info.weight' => ['nullable', 'string', 'max:20'],
+            'personal_info.height' => ['nullable', 'string', 'max:20'],
+            'personal_info.current_address' => ['nullable', 'string', 'max:2000'],
+            'personal_info.permanent_address' => ['nullable', 'string', 'max:2000'],
+
+            // Additional student fields
+            'ethnicity' => ['nullable', 'string', 'max:100'],
+            'city_of_origin' => ['nullable', 'string', 'max:100'],
+            'province_of_origin' => ['nullable', 'string', 'max:100'],
+            'region_of_origin' => ['nullable', 'string', 'max:100'],
+            'is_indigenous_person' => ['nullable', 'boolean'],
+            'indigenous_group' => ['nullable', 'string', 'max:100'],
+            'remarks' => ['nullable', 'string', 'max:2000'],
+
+            // Social media
+            'contacts.facebook' => ['nullable', 'string', 'max:255'],
+            'contacts.twitter' => ['nullable', 'string', 'max:255'],
+            'contacts.instagram' => ['nullable', 'string', 'max:255'],
+            'contacts.linkedin' => ['nullable', 'string', 'max:255'],
+
+            // Additional parent fields
+            'parents.father_occupation' => ['nullable', 'string', 'max:100'],
+            'parents.father_email' => ['nullable', 'email', 'max:255'],
+            'parents.mother_occupation' => ['nullable', 'string', 'max:100'],
+            'parents.mother_email' => ['nullable', 'email', 'max:255'],
+            'parents.guardian_email' => ['nullable', 'email', 'max:255'],
+
+            // College education (for transferees)
+            'education.college_school' => ['nullable', 'string', 'max:255'],
+            'education.college_course' => ['nullable', 'string', 'max:255'],
+            'education.college_year_graduated' => ['nullable', 'string', 'max:50'],
+
             // Document uploads (optional)
             'documents' => ['nullable', 'array', 'max:20'],
             'documents.*.type' => ['required_with:documents', 'string', 'max:100'],

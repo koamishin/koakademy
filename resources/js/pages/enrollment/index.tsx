@@ -20,10 +20,12 @@ import {
     CheckCircle2,
     ChevronRight,
     Copy,
+    Eraser,
     FileText,
     GraduationCap,
     Loader2,
     LogIn,
+    PencilLine,
     School,
     Search,
     Sparkles,
@@ -33,6 +35,7 @@ import {
     UserPlus,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import SignaturePad from "signature_pad";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -102,13 +105,33 @@ type EnrollmentFormData = {
     civil_status: string;
     nationality: string;
     religion: string;
+    ethnicity: string;
 
     email: string;
     phone: string;
     address: string;
 
+    city_of_origin: string;
+    province_of_origin: string;
+    region_of_origin: string;
+    is_indigenous_person: boolean;
+    indigenous_group: string;
+
+    personal_info: {
+        birthplace: string;
+        citizenship: string;
+        weight: string;
+        height: string;
+        current_address: string;
+        permanent_address: string;
+    };
+
     contacts: {
         personal_contact: string;
+        facebook: string;
+        twitter: string;
+        instagram: string;
+        linkedin: string;
         emergency_contact_name: string;
         emergency_contact_phone: string;
         emergency_contact_relationship: string;
@@ -116,12 +139,17 @@ type EnrollmentFormData = {
 
     parents: {
         father_name: string;
+        father_occupation: string;
         father_contact: string;
+        father_email: string;
         mother_name: string;
+        mother_occupation: string;
         mother_contact: string;
+        mother_email: string;
         guardian_name: string;
         guardian_relationship: string;
         guardian_contact: string;
+        guardian_email: string;
         family_address: string;
     };
 
@@ -132,11 +160,15 @@ type EnrollmentFormData = {
         high_school_year_graduated: string;
         senior_high_school: string;
         senior_high_year_graduated: string;
+        college_school: string;
+        college_course: string;
+        college_year_graduated: string;
         vocational_school: string;
         vocational_course: string;
         vocational_year_graduated: string;
     };
 
+    remarks: string;
     consent: boolean;
 };
 
@@ -153,9 +185,9 @@ const steps = [
     { id: "personal", label: "Personal Details", icon: User, description: "Tell us about you" },
     {
         id: "contacts",
-        label: "Family & Contacts",
+        label: "Family & Education",
         icon: School,
-        description: "Emergency details",
+        description: "Family & background",
     },
     { id: "documents", label: "Documents", icon: FileText, description: "Upload requirements" },
     { id: "review", label: "Review & Submit", icon: Sparkles, description: "Final check" },
@@ -269,6 +301,10 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
     const [uploadedDocuments, setUploadedDocuments] = useState<DocumentFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
+    const signatureWrapperRef = useRef<HTMLDivElement>(null);
+    const signaturePadRef = useRef<SignaturePad | null>(null);
+    const [signatureCaptured, setSignatureCaptured] = useState(false);
 
     // Identify / returning-student flow
     type MatchedStudent = {
@@ -353,7 +389,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         student_type: tesda_enrollment_enabled ? "tesda" : "college",
         department: "TESDA",
         course_id: "",
-        academic_year: "",
+        academic_year: "1",
 
         first_name: "",
         middle_name: "",
@@ -365,13 +401,33 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         civil_status: "",
         nationality: "Filipino",
         religion: "",
+        ethnicity: "",
 
         email: "",
         phone: "",
         address: "",
 
+        city_of_origin: "",
+        province_of_origin: "",
+        region_of_origin: "",
+        is_indigenous_person: false,
+        indigenous_group: "",
+
+        personal_info: {
+            birthplace: "",
+            citizenship: "Filipino",
+            weight: "",
+            height: "",
+            current_address: "",
+            permanent_address: "",
+        },
+
         contacts: {
             personal_contact: "",
+            facebook: "",
+            twitter: "",
+            instagram: "",
+            linkedin: "",
             emergency_contact_name: "",
             emergency_contact_phone: "",
             emergency_contact_relationship: "",
@@ -379,12 +435,17 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
 
         parents: {
             father_name: "",
+            father_occupation: "",
             father_contact: "",
+            father_email: "",
             mother_name: "",
+            mother_occupation: "",
             mother_contact: "",
+            mother_email: "",
             guardian_name: "",
             guardian_relationship: "",
             guardian_contact: "",
+            guardian_email: "",
             family_address: "",
         },
 
@@ -395,11 +456,15 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
             high_school_year_graduated: "",
             senior_high_school: "",
             senior_high_year_graduated: "",
+            college_school: "",
+            college_course: "",
+            college_year_graduated: "",
             vocational_school: "",
             vocational_course: "",
             vocational_year_graduated: "",
         },
 
+        remarks: "",
         consent: false,
     });
 
@@ -457,7 +522,6 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
     useEffect(() => {
         if (data.student_type === "tesda") {
             setData("department", "TESDA");
-            setData("academic_year", "");
         } else if (data.department === "TESDA") {
             setData("department", "");
         }
@@ -569,9 +633,16 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         formData.append("civil_status", data.civil_status);
         formData.append("nationality", data.nationality);
         formData.append("religion", data.religion);
+        formData.append("ethnicity", data.ethnicity);
         formData.append("email", data.email);
         formData.append("phone", data.phone);
         formData.append("address", data.address);
+        formData.append("city_of_origin", data.city_of_origin);
+        formData.append("province_of_origin", data.province_of_origin);
+        formData.append("region_of_origin", data.region_of_origin);
+        formData.append("is_indigenous_person", data.is_indigenous_person ? "1" : "0");
+        formData.append("indigenous_group", data.indigenous_group);
+        formData.append("remarks", data.remarks);
         formData.append("consent", data.consent ? "1" : "0");
 
         // Add nested objects
@@ -583,6 +654,9 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         });
         Object.entries(data.education).forEach(([key, value]) => {
             formData.append(`education[${key}]`, value);
+        });
+        Object.entries(data.personal_info).forEach(([key, value]) => {
+            formData.append(`personal_info[${key}]`, value);
         });
 
         // Add document files
@@ -701,6 +775,95 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         },
         [uploadedDocuments],
     );
+
+    const initializeSignaturePad = useCallback(() => {
+        const canvas = signatureCanvasRef.current;
+        const wrapper = signatureWrapperRef.current;
+        if (!canvas || !wrapper) return;
+
+        if (signaturePadRef.current) {
+            signaturePadRef.current.off();
+            signaturePadRef.current = null;
+        }
+
+        const width = Math.max(wrapper.clientWidth, 300);
+        if (width <= 0) return;
+
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = width * ratio;
+        canvas.height = 200 * ratio;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = "200px";
+
+        const context = canvas.getContext("2d");
+        if (!context) return;
+        context.scale(ratio, ratio);
+
+        const dark = document.documentElement.classList.contains("dark");
+        signaturePadRef.current = new SignaturePad(canvas, {
+            minWidth: 1,
+            maxWidth: 2.2,
+            penColor: dark ? "rgb(255,255,255)" : "rgb(30,41,59)",
+            backgroundColor: "rgba(255,255,255,0)",
+        });
+
+        signaturePadRef.current.addEventListener("endStroke", () => {
+            setSignatureCaptured(!signaturePadRef.current?.isEmpty());
+        });
+    }, []);
+
+    const clearSignature = useCallback(() => {
+        signaturePadRef.current?.clear();
+        setSignatureCaptured(false);
+        setUploadedDocuments((prev) => prev.filter((doc) => doc.type !== "signature"));
+    }, []);
+
+    const saveSignatureToDocuments = useCallback(() => {
+        const canvas = signatureCanvasRef.current;
+        const signaturePad = signaturePadRef.current;
+        if (!canvas || !signaturePad || signaturePad.isEmpty()) return;
+
+        canvas.toBlob((blob) => {
+            if (!blob) return;
+            const file = new File([blob], "signature.png", { type: "image/png" });
+            const docFile: DocumentFile = {
+                id: `signature-${Date.now()}`,
+                type: "signature",
+                file,
+                preview: canvas.toDataURL("image/png"),
+            };
+            setUploadedDocuments((prev) => [...prev.filter((doc) => doc.type !== "signature"), docFile]);
+            toast.success("Signature captured!");
+        }, "image/png");
+    }, []);
+
+    useEffect(() => {
+        if (currentStep === 3) {
+            const timer = setTimeout(() => {
+                requestAnimationFrame(() => {
+                    initializeSignaturePad();
+                });
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [currentStep, initializeSignaturePad]);
+
+    useEffect(() => {
+        if (currentStep !== 3) return;
+
+        const handleResize = () => {
+            const existingStrokeData = signaturePadRef.current?.toData() ?? [];
+            requestAnimationFrame(() => {
+                initializeSignaturePad();
+                if (existingStrokeData.length > 0 && signaturePadRef.current) {
+                    signaturePadRef.current.fromData(existingStrokeData);
+                }
+            });
+        };
+
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, [currentStep, initializeSignaturePad]);
 
     const variants = {
         enter: (direction: number) => ({
@@ -2098,100 +2261,63 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                             </div>
                         )}
 
-                        {/* ... other steps ... */}
-                        {/* I will fill these in via subsequent edits to ensure I don't hit token limits or mess up context */}
-                        {/* Step 2: Personal Details */}
                         {currentStep === 1 && (
-                            <div className="space-y-6">
-                                {/* Mobile friendly form groups */}
-                                <Card>
+                            <div className="space-y-5">
+                                <Card className="border shadow-sm">
                                     <CardContent className="space-y-4 p-4 sm:p-6">
-                                        <div className="mb-2 flex items-center gap-2">
+                                        <div className="mb-1 flex items-center gap-2">
                                             <User className="text-primary h-5 w-5" />
-                                            <h3 className="text-lg font-semibold">Identity</h3>
+                                            <h3 className="text-base font-semibold">Identity</h3>
                                         </div>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    First Name <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.first_name}
-                                                    onChange={(e) => setData("first_name", sanitizeNameInput(e.target.value))}
-                                                    placeholder="e.g. Juan"
-                                                />
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">First Name <span className="text-destructive">*</span></Label>
+                                                <Input value={data.first_name} onChange={(e) => setData("first_name", sanitizeNameInput(e.target.value))} placeholder="e.g. Juan" />
                                                 {errorsBag.first_name && <p className="text-destructive text-xs">{errorsBag.first_name}</p>}
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Last Name <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.last_name}
-                                                    onChange={(e) => setData("last_name", sanitizeNameInput(e.target.value))}
-                                                    placeholder="e.g. Dela Cruz"
-                                                />
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Last Name <span className="text-destructive">*</span></Label>
+                                                <Input value={data.last_name} onChange={(e) => setData("last_name", sanitizeNameInput(e.target.value))} placeholder="e.g. Dela Cruz" />
                                                 {errorsBag.last_name && <p className="text-destructive text-xs">{errorsBag.last_name}</p>}
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label>Middle Name</Label>
-                                                <Input
-                                                    value={data.middle_name}
-                                                    onChange={(e) => setData("middle_name", sanitizeNameInput(e.target.value))}
-                                                    placeholder="(Optional)"
-                                                />
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Middle Name</Label>
+                                                <Input value={data.middle_name} onChange={(e) => setData("middle_name", sanitizeNameInput(e.target.value))} placeholder="(Optional)" />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label>Suffix</Label>
-                                                <Input
-                                                    value={data.suffix}
-                                                    onChange={(e) => setData("suffix", sanitizeNameInput(e.target.value))}
-                                                    placeholder="e.g. Jr."
-                                                />
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Suffix</Label>
+                                                <Input value={data.suffix} onChange={(e) => setData("suffix", sanitizeNameInput(e.target.value))} placeholder="e.g. Jr." />
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card>
+                                <Card className="border shadow-sm">
                                     <CardContent className="space-y-4 p-4 sm:p-6">
-                                        <div className="mb-2 flex items-center gap-2">
+                                        <div className="mb-1 flex items-center gap-2">
                                             <FileText className="text-primary h-5 w-5" />
-                                            <h3 className="text-lg font-semibold">Demographics</h3>
+                                            <h3 className="text-base font-semibold">Birth & Demographics</h3>
                                         </div>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Birth Date <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    type="date"
-                                                    value={data.birth_date}
-                                                    onChange={(e) => setData("birth_date", e.target.value)}
-                                                    className="block w-full"
-                                                />
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Birth Date <span className="text-destructive">*</span></Label>
+                                                <Input type="date" value={data.birth_date} onChange={(e) => setData("birth_date", e.target.value)} className="block w-full" />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Gender <span className="text-destructive">*</span>
-                                                </Label>
-                                                <select
-                                                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                                                    value={data.gender}
-                                                    onChange={(e) => setData("gender", e.target.value)}
-                                                >
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Birthplace</Label>
+                                                <Input value={data.personal_info.birthplace} onChange={(e) => setData("personal_info", { ...data.personal_info, birthplace: e.target.value })} placeholder="City, Province" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Gender <span className="text-destructive">*</span></Label>
+                                                <select className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none" value={data.gender} onChange={(e) => setData("gender", e.target.value)}>
                                                     <option value="">Select Gender</option>
                                                     <option value="male">Male</option>
                                                     <option value="female">Female</option>
                                                 </select>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label>Civil Status</Label>
-                                                <select
-                                                    className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                                                    value={data.civil_status}
-                                                    onChange={(e) => setData("civil_status", e.target.value)}
-                                                >
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Civil Status</Label>
+                                                <select className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none" value={data.civil_status} onChange={(e) => setData("civil_status", e.target.value)}>
                                                     <option value="">Select Status</option>
                                                     <option value="Single">Single</option>
                                                     <option value="Married">Married</option>
@@ -2199,59 +2325,323 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                                     <option value="Separated">Separated</option>
                                                 </select>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Nationality <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.nationality}
-                                                    onChange={(e) => setData("nationality", sanitizeNameInput(e.target.value))}
-                                                />
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Nationality <span className="text-destructive">*</span></Label>
+                                                <Input value={data.nationality} onChange={(e) => setData("nationality", sanitizeNameInput(e.target.value))} placeholder="e.g. Filipino" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Citizenship</Label>
+                                                <Input value={data.personal_info.citizenship} onChange={(e) => setData("personal_info", { ...data.personal_info, citizenship: e.target.value })} placeholder="e.g. Filipino" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Religion</Label>
+                                                <Input value={data.religion} onChange={(e) => setData("religion", e.target.value)} placeholder="e.g. Roman Catholic" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Ethnicity</Label>
+                                                <Input value={data.ethnicity} onChange={(e) => setData("ethnicity", e.target.value)} placeholder="e.g. Tagalog, Cebuano" />
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card>
+                                <Card className="border shadow-sm">
                                     <CardContent className="space-y-4 p-4 sm:p-6">
-                                        <div className="mb-2 flex items-center gap-2">
+                                        <div className="mb-1 flex items-center gap-2">
                                             <School className="text-primary h-5 w-5" />
-                                            <h3 className="text-lg font-semibold">Contact Info</h3>
+                                            <h3 className="text-base font-semibold">Origin</h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-3">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">City</Label>
+                                                <Input value={data.city_of_origin} onChange={(e) => setData("city_of_origin", e.target.value)} placeholder="City of origin" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Province</Label>
+                                                <Input value={data.province_of_origin} onChange={(e) => setData("province_of_origin", e.target.value)} placeholder="Province" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Region</Label>
+                                                <Input value={data.region_of_origin} onChange={(e) => setData("region_of_origin", e.target.value)} placeholder="Region" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3 rounded-lg border p-3">
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox id="indigenous" checked={data.is_indigenous_person} onCheckedChange={(checked) => setData("is_indigenous_person", checked === true)} />
+                                                <Label htmlFor="indigenous" className="cursor-pointer text-sm font-medium">I am an Indigenous Person (IP)</Label>
+                                            </div>
+                                            {data.is_indigenous_person && (
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Indigenous Group</Label>
+                                                    <Input value={data.indigenous_group} onChange={(e) => setData("indigenous_group", e.target.value)} placeholder="e.g. Manobo, Ifugao" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <User className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Physical Info</h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Weight (kg)</Label>
+                                                <Input value={data.personal_info.weight} onChange={(e) => setData("personal_info", { ...data.personal_info, weight: e.target.value })} placeholder="e.g. 60" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Height (cm)</Label>
+                                                <Input value={data.personal_info.height} onChange={(e) => setData("personal_info", { ...data.personal_info, height: e.target.value })} placeholder="e.g. 170" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <School className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Contact Info</h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Email Address</Label>
+                                                <Input type="email" value={data.email} onChange={(e) => setData("email", e.target.value)} placeholder="juan@example.com" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Mobile Number <span className="text-destructive">*</span></Label>
+                                                <Input value={data.phone} onChange={(e) => setData("phone", sanitizeNumberInput(e.target.value))} placeholder="09123456789" type="tel" inputMode="numeric" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-sm">Complete Address <span className="text-destructive">*</span></Label>
+                                            <Textarea value={data.address} onChange={(e) => setData("address", e.target.value)} placeholder="House No., Street, Barangay, City, Province" className="min-h-[72px]" />
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Current Address</Label>
+                                                <Input value={data.personal_info.current_address} onChange={(e) => setData("personal_info", { ...data.personal_info, current_address: e.target.value })} placeholder="If different from above" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Permanent Address</Label>
+                                                <Input value={data.personal_info.permanent_address} onChange={(e) => setData("personal_info", { ...data.personal_info, permanent_address: e.target.value })} placeholder="Home province address" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <User className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Social Media (Optional)</h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Facebook</Label>
+                                                <Input value={data.contacts.facebook} onChange={(e) => setData("contacts", { ...data.contacts, facebook: e.target.value })} placeholder="facebook.com/username" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Instagram</Label>
+                                                <Input value={data.contacts.instagram} onChange={(e) => setData("contacts", { ...data.contacts, instagram: e.target.value })} placeholder="@username" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Twitter / X</Label>
+                                                <Input value={data.contacts.twitter} onChange={(e) => setData("contacts", { ...data.contacts, twitter: e.target.value })} placeholder="@username" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">LinkedIn</Label>
+                                                <Input value={data.contacts.linkedin} onChange={(e) => setData("contacts", { ...data.contacts, linkedin: e.target.value })} placeholder="linkedin.com/in/username" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        )}
+
+                        {currentStep === 2 && (
+                            <div className="space-y-5">
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <School className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Emergency Contact</h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Contact Name <span className="text-destructive">*</span></Label>
+                                                <Input value={data.contacts.emergency_contact_name} onChange={(e) => setData("contacts", { ...data.contacts, emergency_contact_name: sanitizeNameInput(e.target.value) })} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Phone Number <span className="text-destructive">*</span></Label>
+                                                <Input value={data.contacts.emergency_contact_phone} onChange={(e) => setData("contacts", { ...data.contacts, emergency_contact_phone: sanitizeNumberInput(e.target.value) })} type="tel" inputMode="numeric" />
+                                            </div>
+                                            <div className="space-y-1.5 sm:col-span-2">
+                                                <Label className="text-sm">Relationship</Label>
+                                                <Input value={data.contacts.emergency_contact_relationship} onChange={(e) => setData("contacts", { ...data.contacts, emergency_contact_relationship: sanitizeNameInput(e.target.value) })} placeholder="e.g. Mother, Father" />
+                                            </div>
+                                            <div className="space-y-1.5 sm:col-span-2">
+                                                <Label className="text-sm">Personal Contact (if different from mobile)</Label>
+                                                <Input value={data.contacts.personal_contact} onChange={(e) => setData("contacts", { ...data.contacts, personal_contact: sanitizeNumberInput(e.target.value) })} type="tel" inputMode="numeric" placeholder="Optional alternate number" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <User className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Father</h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Name</Label>
+                                                <Input value={data.parents.father_name} onChange={(e) => setData("parents", { ...data.parents, father_name: sanitizeNameInput(e.target.value) })} placeholder="Full name" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Occupation</Label>
+                                                <Input value={data.parents.father_occupation} onChange={(e) => setData("parents", { ...data.parents, father_occupation: e.target.value })} placeholder="e.g. Engineer" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Contact Number</Label>
+                                                <Input value={data.parents.father_contact} onChange={(e) => setData("parents", { ...data.parents, father_contact: sanitizeNumberInput(e.target.value) })} type="tel" inputMode="numeric" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Email</Label>
+                                                <Input type="email" value={data.parents.father_email} onChange={(e) => setData("parents", { ...data.parents, father_email: e.target.value })} placeholder="father@example.com" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <User className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Mother</h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Name</Label>
+                                                <Input value={data.parents.mother_name} onChange={(e) => setData("parents", { ...data.parents, mother_name: sanitizeNameInput(e.target.value) })} placeholder="Full name" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Occupation</Label>
+                                                <Input value={data.parents.mother_occupation} onChange={(e) => setData("parents", { ...data.parents, mother_occupation: e.target.value })} placeholder="e.g. Teacher" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Contact Number</Label>
+                                                <Input value={data.parents.mother_contact} onChange={(e) => setData("parents", { ...data.parents, mother_contact: sanitizeNumberInput(e.target.value) })} type="tel" inputMode="numeric" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Email</Label>
+                                                <Input type="email" value={data.parents.mother_email} onChange={(e) => setData("parents", { ...data.parents, mother_email: e.target.value })} placeholder="mother@example.com" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <User className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Guardian <span className="text-muted-foreground text-xs font-normal">(if different from parents)</span></h3>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Name <span className="text-destructive">*</span></Label>
+                                                <Input value={data.parents.guardian_name} onChange={(e) => setData("parents", { ...data.parents, guardian_name: sanitizeNameInput(e.target.value) })} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Relationship <span className="text-destructive">*</span></Label>
+                                                <Input value={data.parents.guardian_relationship} onChange={(e) => setData("parents", { ...data.parents, guardian_relationship: sanitizeNameInput(e.target.value) })} />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Contact <span className="text-destructive">*</span></Label>
+                                                <Input value={data.parents.guardian_contact} onChange={(e) => setData("parents", { ...data.parents, guardian_contact: sanitizeNumberInput(e.target.value) })} type="tel" inputMode="numeric" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-sm">Email</Label>
+                                                <Input type="email" value={data.parents.guardian_email} onChange={(e) => setData("parents", { ...data.parents, guardian_email: e.target.value })} placeholder="guardian@example.com" />
+                                            </div>
+                                            <div className="space-y-1.5 sm:col-span-2">
+                                                <Label className="text-sm">Family Address</Label>
+                                                <Textarea value={data.parents.family_address} onChange={(e) => setData("parents", { ...data.parents, family_address: e.target.value })} placeholder="If different from your address" className="min-h-[60px]" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <FileText className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Education Background</h3>
                                         </div>
                                         <div className="space-y-4">
-                                            <div className="grid gap-4 sm:grid-cols-2">
-                                                <div className="space-y-2">
-                                                    <Label>Email Address</Label>
-                                                    <Input
-                                                        type="email"
-                                                        value={data.email}
-                                                        onChange={(e) => setData("email", e.target.value)}
-                                                        placeholder="juan@example.com"
-                                                    />
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Elementary School</Label>
+                                                    <Input value={data.education.elementary_school} onChange={(e) => setData("education", { ...data.education, elementary_school: e.target.value })} placeholder="School name" />
                                                 </div>
-                                                <div className="space-y-2">
-                                                    <Label>
-                                                        Mobile Number <span className="text-destructive">*</span>
-                                                    </Label>
-                                                    <Input
-                                                        value={data.phone}
-                                                        onChange={(e) => setData("phone", sanitizeNumberInput(e.target.value))}
-                                                        placeholder="09123456789"
-                                                        type="tel"
-                                                        inputMode="numeric"
-                                                    />
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Year Graduated</Label>
+                                                    <Input value={data.education.elementary_year_graduated} onChange={(e) => setData("education", { ...data.education, elementary_year_graduated: e.target.value })} placeholder="YYYY" />
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Complete Address <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Textarea
-                                                    value={data.address}
-                                                    onChange={(e) => setData("address", e.target.value)}
-                                                    placeholder="House No., Street, Barangay, City, Province"
-                                                    className="min-h-[80px]"
-                                                />
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">High School</Label>
+                                                    <Input value={data.education.high_school} onChange={(e) => setData("education", { ...data.education, high_school: e.target.value })} placeholder="School name" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Year Graduated</Label>
+                                                    <Input value={data.education.high_school_year_graduated} onChange={(e) => setData("education", { ...data.education, high_school_year_graduated: e.target.value })} placeholder="YYYY" />
+                                                </div>
+                                            </div>
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Senior High School</Label>
+                                                    <Input value={data.education.senior_high_school} onChange={(e) => setData("education", { ...data.education, senior_high_school: e.target.value })} placeholder="School name" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Year Graduated</Label>
+                                                    <Input value={data.education.senior_high_year_graduated} onChange={(e) => setData("education", { ...data.education, senior_high_year_graduated: e.target.value })} placeholder="YYYY" />
+                                                </div>
+                                            </div>
+                                            <div className="rounded-lg border p-3">
+                                                <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wider">College / Transferee (if applicable)</p>
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-sm">School</Label>
+                                                        <Input value={data.education.college_school} onChange={(e) => setData("education", { ...data.education, college_school: e.target.value })} placeholder="Previous college" />
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-sm">Course</Label>
+                                                        <Input value={data.education.college_course} onChange={(e) => setData("education", { ...data.education, college_course: e.target.value })} placeholder="Previous course" />
+                                                    </div>
+                                                    <div className="space-y-1.5 sm:col-span-2">
+                                                        <Label className="text-sm">Year Graduated / Last Attended</Label>
+                                                        <Input value={data.education.college_year_graduated} onChange={(e) => setData("education", { ...data.education, college_year_graduated: e.target.value })} placeholder="YYYY" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Vocational School</Label>
+                                                    <Input value={data.education.vocational_school} onChange={(e) => setData("education", { ...data.education, vocational_school: e.target.value })} placeholder="School name" />
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <Label className="text-sm">Course</Label>
+                                                    <Input value={data.education.vocational_course} onChange={(e) => setData("education", { ...data.education, vocational_course: e.target.value })} placeholder="Course taken" />
+                                                </div>
+                                                <div className="space-y-1.5 sm:col-span-2">
+                                                    <Label className="text-sm">Year Graduated</Label>
+                                                    <Input value={data.education.vocational_year_graduated} onChange={(e) => setData("education", { ...data.education, vocational_year_graduated: e.target.value })} placeholder="YYYY" />
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -2259,117 +2649,125 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                             </div>
                         )}
 
-                        {/* Step 3: Contacts */}
-                        {currentStep === 2 && (
-                            <div className="space-y-6">
-                                <Card>
-                                    <CardContent className="space-y-4 p-4 sm:p-6">
-                                        <div className="text-destructive mb-2 flex items-center gap-2">
-                                            <School className="h-5 w-5" />
-                                            <h3 className="text-lg font-semibold">Emergency Contact</h3>
-                                        </div>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Contact Name <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.contacts.emergency_contact_name}
-                                                    onChange={(e) =>
-                                                        setData("contacts", {
-                                                            ...data.contacts,
-                                                            emergency_contact_name: sanitizeNameInput(e.target.value),
-                                                        })
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Phone Number <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.contacts.emergency_contact_phone}
-                                                    onChange={(e) =>
-                                                        setData("contacts", {
-                                                            ...data.contacts,
-                                                            emergency_contact_phone: sanitizeNumberInput(e.target.value),
-                                                        })
-                                                    }
-                                                    type="tel"
-                                                    inputMode="numeric"
-                                                />
-                                            </div>
-                                            <div className="space-y-2 sm:col-span-2">
-                                                <Label>Relationship</Label>
-                                                <Input
-                                                    value={data.contacts.emergency_contact_relationship}
-                                                    onChange={(e) =>
-                                                        setData("contacts", {
-                                                            ...data.contacts,
-                                                            emergency_contact_relationship: sanitizeNameInput(e.target.value),
-                                                        })
-                                                    }
-                                                    placeholder="e.g. Mother, Father"
-                                                />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card>
-                                    <CardContent className="space-y-4 p-4 sm:p-6">
-                                        <div className="text-primary mb-2 flex items-center gap-2">
-                                            <User className="h-5 w-5" />
-                                            <h3 className="text-lg font-semibold">Guardian / Parents</h3>
-                                        </div>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Guardian Name <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.parents.guardian_name}
-                                                    onChange={(e) =>
-                                                        setData("parents", { ...data.parents, guardian_name: sanitizeNameInput(e.target.value) })
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Guardian Contact <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.parents.guardian_contact}
-                                                    onChange={(e) =>
-                                                        setData("parents", { ...data.parents, guardian_contact: sanitizeNumberInput(e.target.value) })
-                                                    }
-                                                    type="tel"
-                                                    inputMode="numeric"
-                                                />
-                                            </div>
-                                            <div className="space-y-2 sm:col-span-2">
-                                                <Label>
-                                                    Relationship <span className="text-destructive">*</span>
-                                                </Label>
-                                                <Input
-                                                    value={data.parents.guardian_relationship}
-                                                    onChange={(e) =>
-                                                        setData("parents", {
-                                                            ...data.parents,
-                                                            guardian_relationship: sanitizeNameInput(e.target.value),
-                                                        })
-                                                    }
-                                                />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        )}
-
-                        {/* Step 4: Documents */}
                         {currentStep === 3 && (
-                            <div className="space-y-6">
+                            <div className="space-y-5">
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <Upload className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Profile Photo</h3>
+                                            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Recommended</Badge>
+                                        </div>
+                                        <p className="text-muted-foreground text-sm">Upload a clear 2x2 or passport-size photo with a plain background. <span className="text-foreground font-medium">You can skip this and upload it later.</span></p>
+                                        <div className="space-y-3">
+                                            {getDocumentsForType("profile_photo").length > 0 && (
+                                                <div className="grid grid-cols-1 gap-2">
+                                                    {getDocumentsForType("profile_photo").map((doc) => (
+                                                        <div key={doc.id} className="bg-background flex items-center gap-3 rounded-lg border p-2 pr-3 shadow-sm">
+                                                            {doc.preview ? (
+                                                                <img src={doc.preview} className="h-10 w-10 rounded border object-cover" alt="" />
+                                                            ) : (
+                                                                <div className="bg-muted flex h-10 w-10 items-center justify-center rounded">
+                                                                    <FileText className="text-muted-foreground h-5 w-5" />
+                                                                </div>
+                                                            )}
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="truncate text-sm font-medium">{doc.file.name}</p>
+                                                                <p className="text-muted-foreground text-xs">{(doc.file.size / 1024).toFixed(0)} KB</p>
+                                                            </div>
+                                                            <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={() => handleRemoveDocument(doc.id)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div
+                                                onClick={() => {
+                                                    if (fileInputRef.current) {
+                                                        fileInputRef.current.setAttribute("data-doc-type", "profile_photo");
+                                                        fileInputRef.current.click();
+                                                    }
+                                                }}
+                                                className="hover:bg-muted/30 active:bg-muted flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-6 text-center transition-colors"
+                                            >
+                                                <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full">
+                                                    <Upload className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-foreground text-sm font-medium">Tap to upload photo</p>
+                                                    <p className="text-muted-foreground mt-0.5 text-xs">JPG, PNG, or WebP</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <PencilLine className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Signature</h3>
+                                            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">Recommended</Badge>
+                                        </div>
+                                        <p className="text-muted-foreground text-sm">Draw your signature below using your mouse or finger. <span className="text-foreground font-medium">You can skip this and add it later.</span></p>
+                                        <div className="space-y-3">
+                                            {getDocumentsForType("signature").length > 0 && (
+                                                <div className="grid grid-cols-1 gap-2">
+                                                    {getDocumentsForType("signature").map((doc) => (
+                                                        <div key={doc.id} className="bg-background flex items-center gap-3 rounded-lg border p-2 pr-3 shadow-sm">
+                                                            {doc.preview ? (
+                                                                <img src={doc.preview} className="h-10 w-10 rounded border object-cover" alt="" />
+                                                            ) : (
+                                                                <div className="bg-muted flex h-10 w-10 items-center justify-center rounded">
+                                                                    <FileText className="text-muted-foreground h-5 w-5" />
+                                                                </div>
+                                                            )}
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="truncate text-sm font-medium">{doc.file.name}</p>
+                                                                <p className="text-muted-foreground text-xs">{(doc.file.size / 1024).toFixed(0)} KB</p>
+                                                            </div>
+                                                            <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={() => { handleRemoveDocument(doc.id); clearSignature(); }}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div
+                                                ref={signatureWrapperRef}
+                                                className="min-w-[300px] overflow-hidden rounded-lg border bg-white dark:bg-zinc-900"
+                                            >
+                                                <canvas
+                                                    ref={signatureCanvasRef}
+                                                    className="block w-full touch-none"
+                                                    style={{ height: 200 }}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={clearSignature}
+                                                >
+                                                    <Eraser className="mr-1.5 h-3.5 w-3.5" />
+                                                    Clear
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={saveSignatureToDocuments}
+                                                    disabled={!signatureCaptured}
+                                                >
+                                                    <Check className="mr-1.5 h-3.5 w-3.5" />
+                                                    Save Signature
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
                                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
                                     <div className="flex gap-3">
                                         <div className="mt-0.5">
@@ -2384,10 +2782,10 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                     </div>
                                 </div>
 
-                                <Card>
+                                <Card className="border shadow-sm">
                                     <CardContent className="space-y-4 p-4 sm:p-6">
                                         <div className="flex items-center justify-between">
-                                            <h3 className="text-lg font-semibold">Checklist</h3>
+                                            <h3 className="text-base font-semibold">Checklist</h3>
                                             <span className="text-muted-foreground text-xs">Select what you have</span>
                                         </div>
                                         <div className="grid gap-3">
@@ -2434,16 +2832,16 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                 </Card>
 
                                 {hasAnyDocumentsToUpload && (
-                                    <div className="space-y-6">
+                                    <div className="space-y-5">
                                         <div className="flex items-center gap-2 px-2">
                                             <Upload className="text-primary h-5 w-5" />
-                                            <h3 className="text-lg font-semibold">Upload Selected Files</h3>
+                                            <h3 className="text-base font-semibold">Upload Selected Files</h3>
                                         </div>
 
                                         {DOCUMENT_TYPES.filter((d) => availableDocuments[d.id]).map((docType) => {
                                             const docsForType = getDocumentsForType(docType.id);
                                             return (
-                                                <Card key={docType.id} className="overflow-hidden">
+                                                <Card key={docType.id} className="overflow-hidden border shadow-sm">
                                                     <div className="bg-muted/30 flex items-center justify-between border-b p-3">
                                                         <span className="text-sm font-medium">{docType.label}</span>
                                                         {docsForType.length > 0 && (
@@ -2453,7 +2851,6 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                                         )}
                                                     </div>
                                                     <CardContent className="space-y-3 p-4">
-                                                        {/* Uploaded Files List */}
                                                         {docsForType.length > 0 && (
                                                             <div className="grid grid-cols-1 gap-2">
                                                                 {docsForType.map((doc) => (
@@ -2491,7 +2888,6 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                                             </div>
                                                         )}
 
-                                                        {/* Mobile Friendly Dropzone */}
                                                         <div
                                                             onClick={() => {
                                                                 if (fileInputRef.current) {
@@ -2516,7 +2912,6 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                     </div>
                                 )}
 
-                                {/* Note about originals - simplified */}
                                 {!hasAnyDocumentsToUpload && (
                                     <p className="text-muted-foreground px-4 text-center text-sm">
                                         You can skip uploading for now. Please bring your original documents to the registrar.
@@ -2525,56 +2920,104 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                             </div>
                         )}
 
-                        {/* Step 5: Review */}
                         {currentStep === 4 && (
-                            <div className="space-y-6">
+                            <div className="space-y-5">
                                 <Card className="border-primary/20 shadow-md">
-                                    <div className="bg-primary/5 border-primary/10 border-b p-6 text-center">
-                                        <h3 className="text-primary text-xl font-bold">Review Details</h3>
-                                        <p className="text-muted-foreground text-sm">Verify your information</p>
+                                    <div className="bg-primary/5 border-primary/10 border-b p-4 text-center sm:p-6">
+                                        <h3 className="text-primary text-lg font-bold sm:text-xl">Review Details</h3>
+                                        <p className="text-muted-foreground text-sm">Verify your information before submitting</p>
                                     </div>
                                     <CardContent className="p-0">
                                         <div className="divide-y">
                                             <div className="grid gap-1 p-4 sm:p-6">
-                                                <span className="text-muted-foreground text-xs font-medium uppercase">Applicant</span>
-                                                <p className="text-lg font-semibold">
-                                                    {data.last_name}, {data.first_name} {data.middle_name}
-                                                </p>
-                                                <div className="text-muted-foreground mt-1 flex gap-4 text-sm">
-                                                    <span>{data.gender}</span>
-                                                    <span>•</span>
-                                                    <span>{data.phone}</span>
+                                                <span className="text-muted-foreground text-xs font-medium uppercase">Program</span>
+                                                <p className="text-foreground font-medium">{selectedCourse?.title || "Not Selected"}</p>
+                                                <div className="mt-1 flex flex-wrap gap-2">
+                                                    <Badge variant="outline" className="w-fit">{data.student_type.toUpperCase()}</Badge>
+                                                    {data.academic_year && <Badge variant="outline" className="w-fit">{data.academic_year} Year</Badge>}
                                                 </div>
                                             </div>
 
                                             <div className="grid gap-1 p-4 sm:p-6">
-                                                <span className="text-muted-foreground text-xs font-medium uppercase">Program</span>
-                                                <p className="text-foreground font-medium">{selectedCourse?.title || "Not Selected"}</p>
-                                                <Badge variant="outline" className="mt-2 w-fit">
-                                                    {data.student_type.toUpperCase()}
-                                                </Badge>
+                                                <span className="text-muted-foreground text-xs font-medium uppercase">Identity</span>
+                                                <p className="text-lg font-semibold">{data.last_name}, {data.first_name} {data.middle_name} {data.suffix}</p>
+                                                <div className="text-muted-foreground mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                                                    <span>{data.gender}</span>
+                                                    <span>•</span>
+                                                    <span>{data.birth_date}</span>
+                                                </div>
                                             </div>
 
                                             <div className="grid gap-1 p-4 sm:p-6">
-                                                <span className="text-muted-foreground text-xs font-medium uppercase">Guardian</span>
+                                                <span className="text-muted-foreground text-xs font-medium uppercase">Demographics</span>
+                                                <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                                                    <span>{data.nationality}</span>
+                                                    {data.personal_info.citizenship && <span>• {data.personal_info.citizenship}</span>}
+                                                    {data.civil_status && <span>• {data.civil_status}</span>}
+                                                    {data.religion && <span>• {data.religion}</span>}
+                                                    {data.ethnicity && <span>• {data.ethnicity}</span>}
+                                                </div>
+                                                {(data.city_of_origin || data.province_of_origin || data.region_of_origin) && (
+                                                    <p className="text-muted-foreground mt-1 text-sm">
+                                                        Origin: {[data.city_of_origin, data.province_of_origin, data.region_of_origin].filter(Boolean).join(", ")}
+                                                    </p>
+                                                )}
+                                                {data.is_indigenous_person && (
+                                                    <Badge variant="outline" className="mt-2 w-fit">IP - {data.indigenous_group || "Indigenous Person"}</Badge>
+                                                )}
+                                            </div>
+
+                                            <div className="grid gap-1 p-4 sm:p-6">
+                                                <span className="text-muted-foreground text-xs font-medium uppercase">Contact</span>
+                                                <p className="text-sm">{data.phone}</p>
+                                                {data.email && <p className="text-muted-foreground text-sm">{data.email}</p>}
+                                                <p className="text-muted-foreground mt-1 text-sm">{data.address}</p>
+                                            </div>
+
+                                            <div className="grid gap-1 p-4 sm:p-6">
+                                                <span className="text-muted-foreground text-xs font-medium uppercase">Family</span>
                                                 <p className="font-medium">{data.parents.guardian_name}</p>
-                                                <p className="text-muted-foreground text-sm">{data.parents.guardian_relationship}</p>
-                                                <p className="text-muted-foreground text-sm">{data.parents.guardian_contact}</p>
+                                                <p className="text-muted-foreground text-sm">{data.parents.guardian_relationship} • {data.parents.guardian_contact}</p>
+                                                {(data.parents.father_name || data.parents.mother_name) && (
+                                                    <p className="text-muted-foreground mt-1 text-sm">
+                                                        Parents: {[data.parents.father_name, data.parents.mother_name].filter(Boolean).join(" & ")}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="grid gap-1 p-4 sm:p-6">
+                                                <span className="text-muted-foreground text-xs font-medium uppercase">Education</span>
+                                                <div className="text-muted-foreground space-y-0.5 text-sm">
+                                                    {data.education.elementary_school && <p>Elem: {data.education.elementary_school} ({data.education.elementary_year_graduated})</p>}
+                                                    {data.education.high_school && <p>HS: {data.education.high_school} ({data.education.high_school_year_graduated})</p>}
+                                                    {data.education.senior_high_school && <p>SHS: {data.education.senior_high_school} ({data.education.senior_high_year_graduated})</p>}
+                                                    {data.education.college_school && <p>College: {data.education.college_school} - {data.education.college_course} ({data.education.college_year_graduated})</p>}
+                                                    {data.education.vocational_school && <p>Vocational: {data.education.vocational_school} - {data.education.vocational_course} ({data.education.vocational_year_graduated})</p>}
+                                                </div>
                                             </div>
 
                                             <div className="p-4 sm:p-6">
                                                 <span className="text-muted-foreground mb-3 block text-xs font-medium uppercase">Documents</span>
-                                                {uploadedDocuments.length > 0 ? (
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {DOCUMENT_TYPES.filter((d) => getDocumentsForType(d.id).length > 0).map((doc) => (
-                                                            <Badge key={doc.id} variant="secondary" className="gap-1 py-1 pr-2 pl-1">
-                                                                <Check className="h-3 w-3 text-green-600" /> {doc.label}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-muted-foreground text-sm italic">No documents uploaded (to follow)</p>
-                                                )}
+                                                <div className="flex flex-wrap gap-2">
+                                                    {getDocumentsForType("profile_photo").length > 0 && (
+                                                        <Badge variant="secondary" className="gap-1 py-1 pr-2 pl-1">
+                                                            <Check className="h-3 w-3 text-green-600" /> Profile Photo
+                                                        </Badge>
+                                                    )}
+                                                    {getDocumentsForType("signature").length > 0 && (
+                                                        <Badge variant="secondary" className="gap-1 py-1 pr-2 pl-1">
+                                                            <Check className="h-3 w-3 text-green-600" /> Signature
+                                                        </Badge>
+                                                    )}
+                                                    {DOCUMENT_TYPES.filter((d) => getDocumentsForType(d.id).length > 0).map((doc) => (
+                                                        <Badge key={doc.id} variant="secondary" className="gap-1 py-1 pr-2 pl-1">
+                                                            <Check className="h-3 w-3 text-green-600" /> {doc.label}
+                                                        </Badge>
+                                                    ))}
+                                                    {uploadedDocuments.length === 0 && (
+                                                        <p className="text-muted-foreground text-sm italic">No documents uploaded (to follow)</p>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>

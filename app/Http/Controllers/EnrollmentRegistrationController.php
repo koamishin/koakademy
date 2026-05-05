@@ -170,6 +170,10 @@ final class EnrollmentRegistrationController extends Controller
             $studentContactId = null;
             $studentContactAttributes = $this->onlyExistingColumns('student_contacts', [
                 'personal_contact' => $payload['contacts']['personal_contact'] ?? null,
+                'facebook' => $payload['contacts']['facebook'] ?? null,
+                'twitter' => $payload['contacts']['twitter'] ?? null,
+                'instagram' => $payload['contacts']['instagram'] ?? null,
+                'linkedin' => $payload['contacts']['linkedin'] ?? null,
                 'emergency_contact_name' => $payload['contacts']['emergency_contact_name'] ?? null,
                 'emergency_contact_phone' => $payload['contacts']['emergency_contact_phone'] ?? null,
                 'emergency_contact_relationship' => $payload['contacts']['emergency_contact_relationship'] ?? null,
@@ -182,12 +186,17 @@ final class EnrollmentRegistrationController extends Controller
             $studentParentInfoId = null;
             $studentParentInfoAttributes = $this->onlyExistingColumns('student_parents_info', [
                 'father_name' => $payload['parents']['father_name'] ?? null,
+                'father_occupation' => $payload['parents']['father_occupation'] ?? null,
                 'father_contact' => $payload['parents']['father_contact'] ?? null,
+                'father_email' => $payload['parents']['father_email'] ?? null,
                 'mother_name' => $payload['parents']['mother_name'] ?? null,
+                'mother_occupation' => $payload['parents']['mother_occupation'] ?? null,
                 'mother_contact' => $payload['parents']['mother_contact'] ?? null,
+                'mother_email' => $payload['parents']['mother_email'] ?? null,
                 'guardian_name' => $payload['parents']['guardian_name'] ?? null,
                 'guardian_relationship' => $payload['parents']['guardian_relationship'] ?? null,
                 'guardian_contact' => $payload['parents']['guardian_contact'] ?? null,
+                'guardian_email' => $payload['parents']['guardian_email'] ?? null,
                 'family_address' => $payload['parents']['family_address'] ?? null,
             ]);
 
@@ -203,6 +212,9 @@ final class EnrollmentRegistrationController extends Controller
                 'high_school_year_graduated' => $payload['education']['high_school_year_graduated'] ?? null,
                 'senior_high_school' => $payload['education']['senior_high_school'] ?? null,
                 'senior_high_year_graduated' => $payload['education']['senior_high_year_graduated'] ?? null,
+                'college_school' => $payload['education']['college_school'] ?? null,
+                'college_course' => $payload['education']['college_course'] ?? null,
+                'college_year_graduated' => $payload['education']['college_year_graduated'] ?? null,
                 'vocational_school' => $payload['education']['vocational_school'] ?? null,
                 'vocational_course' => $payload['education']['vocational_course'] ?? null,
                 'vocational_year_graduated' => $payload['education']['vocational_year_graduated'] ?? null,
@@ -212,16 +224,37 @@ final class EnrollmentRegistrationController extends Controller
                 $studentEducationInfoId = (int) DB::table('student_education_info')->insertGetId($studentEducationInfoAttributes);
             }
 
+            $studentPersonalInfoId = null;
+            $studentPersonalInfoAttributes = $this->onlyExistingColumns('students_personal_info', [
+                'birthplace' => $payload['personal_info']['birthplace'] ?? null,
+                'civil_status' => $payload['personal_info']['civil_status'] ?? null,
+                'citizenship' => $payload['personal_info']['citizenship'] ?? null,
+                'religion' => $payload['personal_info']['religion'] ?? null,
+                'weight' => $payload['personal_info']['weight'] ?? null,
+                'height' => $payload['personal_info']['height'] ?? null,
+                'current_adress' => $payload['personal_info']['current_address'] ?? null,
+                'permanent_address' => $payload['personal_info']['permanent_address'] ?? null,
+            ]);
+
+            if ($studentPersonalInfoAttributes !== []) {
+                $studentPersonalInfoId = (int) DB::table('students_personal_info')->insertGetId($studentPersonalInfoAttributes);
+            }
+
             // Process uploaded documents
             $uploadedDocuments = $this->processDocumentUploads($request, (string) $studentId);
 
             $contacts = array_filter([
                 'personal_contact' => $payload['contacts']['personal_contact'] ?? null,
+                'facebook' => $payload['contacts']['facebook'] ?? null,
+                'twitter' => $payload['contacts']['twitter'] ?? null,
+                'instagram' => $payload['contacts']['instagram'] ?? null,
+                'linkedin' => $payload['contacts']['linkedin'] ?? null,
                 'emergency_contact_name' => $payload['contacts']['emergency_contact_name'] ?? null,
                 'emergency_contact_phone' => $payload['contacts']['emergency_contact_phone'] ?? null,
                 'emergency_contact_relationship' => $payload['contacts']['emergency_contact_relationship'] ?? null,
                 'parents' => $payload['parents'] ?? null,
                 'education' => $payload['education'] ?? null,
+                'personal_info' => $payload['personal_info'] ?? null,
                 'consent' => true,
                 'documents' => $uploadedDocuments !== [] ? $uploadedDocuments : null,
             ], static fn ($value): bool => $value !== null && $value !== '');
@@ -250,8 +283,16 @@ final class EnrollmentRegistrationController extends Controller
                 'student_contact_id' => $studentContactId,
                 'student_parent_info' => $studentParentInfoId,
                 'student_education_id' => $studentEducationInfoId,
+                'student_personal_id' => $studentPersonalInfoId,
                 'status' => StudentStatus::Applicant,
                 'contacts' => $contacts,
+                'ethnicity' => $payload['ethnicity'] ?? null,
+                'city_of_origin' => $payload['city_of_origin'] ?? null,
+                'province_of_origin' => $payload['province_of_origin'] ?? null,
+                'region_of_origin' => $payload['region_of_origin'] ?? null,
+                'is_indigenous_person' => $payload['is_indigenous_person'] ?? false,
+                'indigenous_group' => $payload['indigenous_group'] ?? null,
+                'remarks' => $payload['remarks'] ?? null,
                 'scholarship_type' => null, // Explicitly not a scholar yet
             ]);
         });
