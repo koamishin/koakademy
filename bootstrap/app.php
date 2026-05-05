@@ -28,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustHosts([
             'localhost',
             '127.0.0.1',
+            'portal\.koakademy\.test',
+            'admin\.koakademy\.test',
             'portal\.dccp\.test',
             'admin\.dccp\.test',
             'admin\.dccp\.edu\.ph',

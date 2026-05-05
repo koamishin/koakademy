@@ -535,10 +535,10 @@ if [[ "$SKIP_SSL" == false ]]; then
 
     # Update Traefik dynamic configuration
     TRAEFIK_CONF="$PROJECT_ROOT/docker/traefik/dynamic/tls.yml"
-    if [ -f "$TRAEFIK_CONF" ]; then
-        info "Updating Traefik dynamic configuration..."
+    info "Updating Traefik dynamic configuration..."
+    mkdir -p "$(dirname "$TRAEFIK_CONF")"
 
-        cat > "$TRAEFIK_CONF" <<EOF
+    cat > "$TRAEFIK_CONF" <<EOF
 http:
   routers:
     # Portal (Laravel app)
@@ -611,9 +611,6 @@ tls:
         keyFile: /etc/traefik/certs/${KEY_FILE}
 EOF
         success "Traefik configuration updated with .env domains"
-    else
-        warn "Traefik configuration file not found at $TRAEFIK_CONF"
-    fi
 
 else
     info "Skipping SSL certificate setup (--skip-ssl flag set)"

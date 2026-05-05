@@ -16,8 +16,8 @@ services:
         networks:
             - sail
         volumes:
-            - "./docker/traefik/dynamic:/etc/traefik/dynamic:ro"
-            - "./docker/traefik/certs:/etc/traefik/certs:ro"
+            - "./docker/traefik/dynamic:/etc/traefik/dynamic:ro,z"
+            - "./docker/traefik/certs:/etc/traefik/certs:ro,z"
     laravel.test:
         build:
             context: ./vendor/laravel/sail/runtimes/8.5
@@ -37,7 +37,7 @@ services:
             XDEBUG_CONFIG: "${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}"
             IGNITION_LOCAL_SITES_PATH: "${PWD}"
         volumes:
-            - ".:/var/www/html"
+            - ".:/var/www/html:z"
         networks:
             sail:
                 aliases:
@@ -89,7 +89,7 @@ services:
             XDEBUG_CONFIG: "${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}"
             IGNITION_LOCAL_SITES_PATH: "${PWD}"
         volumes:
-            - ".:/var/www/html"
+            - ".:/var/www/html:z"
         networks:
             - sail
         depends_on:
@@ -110,7 +110,7 @@ services:
             XDEBUG_CONFIG: "${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}"
             IGNITION_LOCAL_SITES_PATH: "${PWD}"
         volumes:
-            - ".:/var/www/html"
+            - ".:/var/www/html:z"
         networks:
             - sail
         depends_on:
