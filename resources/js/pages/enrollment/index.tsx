@@ -2,7 +2,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -42,6 +41,7 @@ import { z } from "zod";
 type Department = {
     code: string;
     label: string;
+    description: string | null;
 };
 
 type Course = {
@@ -49,6 +49,7 @@ type Course = {
     code: string;
     title: string;
     department: string | null;
+    department_name: string | null;
     description: string | null;
 };
 
@@ -116,6 +117,13 @@ type EnrollmentFormData = {
     region_of_origin: string;
     is_indigenous_person: boolean;
     indigenous_group: string;
+    is_pwd: boolean;
+    pwd_type: string;
+    is_solo_parent: boolean;
+    is_senior_citizen: boolean;
+    is_magna_carta: boolean;
+    is_underprivileged: boolean;
+    is_first_generation: boolean;
 
     personal_info: {
         birthplace: string;
@@ -181,7 +189,7 @@ interface EnrollmentCreateProps {
 }
 
 const steps = [
-    { id: "program", label: "Program Selection", icon: BookOpen, description: "Choose your path" },
+    { id: "program", label: "Program Selection", icon: BookOpen, description: "Browse & pick your program" },
     { id: "personal", label: "Personal Details", icon: User, description: "Tell us about you" },
     {
         id: "contacts",
@@ -208,15 +216,7 @@ type DocumentFile = {
     preview?: string;
 };
 
-function toDepartmentLabel(code: string, departments: Department[]): string {
-    return departments.find((dept) => dept.code === code)?.label ?? code;
-}
 
-function courseLabel(course: Course): string {
-    const dept = course.department ? course.department.toUpperCase() : "";
-    const pieces = [course.title, course.code ? `(${course.code})` : null, dept ? `• ${dept}` : null].filter(Boolean);
-    return pieces.join(" ");
-}
 
 // Validation Schemas
 const programSchema = z.object({
@@ -372,6 +372,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
     const [selectedSubjects, setSelectedSubjects] = useState<SelectedSubject[]>([]);
     const [subjectSearch, setSubjectSearch] = useState("");
     const [subjectsLoading, setSubjectsLoading] = useState(false);
+    const [programSearch, setProgramSearch] = useState("");
 
     const MODULAR_FEE_PER_SUBJECT = 2400;
 
@@ -412,6 +413,13 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         region_of_origin: "",
         is_indigenous_person: false,
         indigenous_group: "",
+        is_pwd: false,
+        pwd_type: "",
+        is_solo_parent: false,
+        is_senior_citizen: false,
+        is_magna_carta: false,
+        is_underprivileged: false,
+        is_first_generation: false,
 
         personal_info: {
             birthplace: "",
@@ -529,11 +537,12 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
     }, [data.student_type]);
 
     const availableDepartments = useMemo(() => {
+        const deptCodesWithCourses = new Set(courses.map((c) => (c.department ?? "").trim().toUpperCase()));
         if (data.student_type === "tesda") {
-            return departments.filter((dept) => dept.code === "TESDA");
+            return departments.filter((dept) => dept.code === "TESDA" && deptCodesWithCourses.has(dept.code.toUpperCase()));
         }
-        return departments.filter((dept) => dept.code !== "TESDA");
-    }, [data.student_type, departments]);
+        return departments.filter((dept) => dept.code !== "TESDA" && deptCodesWithCourses.has(dept.code.toUpperCase()));
+    }, [data.student_type, departments, courses]);
 
     const availableCourses = useMemo(() => {
         const normalizedDepartment = data.department.trim().toUpperCase();
@@ -550,14 +559,25 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         });
     }, [courses, data.department, data.student_type]);
 
-    const courseOptions: ComboboxOption[] = useMemo(() => {
-        return availableCourses.map((course) => ({
-            value: String(course.id),
-            label: courseLabel(course),
-            description: course.description ?? undefined,
-            searchText: [course.title, course.code, course.department].filter(Boolean).join(" "),
-        }));
-    }, [availableCourses]);
+
+    const filteredCoursesForGrid = useMemo(() => {
+        if (!programSearch.trim()) return availableCourses;
+        const q = programSearch.toLowerCase();
+        return availableCourses.filter(
+            (c) =>
+                c.title.toLowerCase().includes(q) ||
+                c.code.toLowerCase().includes(q) ||
+                (c.department_name ?? "").toLowerCase().includes(q) ||
+                (c.description ?? "").toLowerCase().includes(q),
+        );
+    }, [availableCourses, programSearch]);
+
+    const departmentColorMap: Record<string, { bg: string; text: string; border: string; light: string }> = {
+        TESDA: { bg: "bg-orange-500", text: "text-orange-700 dark:text-orange-400", border: "border-orange-500", light: "bg-orange-50 dark:bg-orange-950/40" },
+        default: { bg: "bg-primary", text: "text-primary", border: "border-primary", light: "bg-primary/5" },
+    };
+
+    const getDeptColor = (code: string | null) => departmentColorMap[code ?? ""] ?? departmentColorMap.default;
 
     const selectedCourse = useMemo(() => {
         const id = Number(data.course_id);
@@ -642,6 +662,13 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         formData.append("region_of_origin", data.region_of_origin);
         formData.append("is_indigenous_person", data.is_indigenous_person ? "1" : "0");
         formData.append("indigenous_group", data.indigenous_group);
+        formData.append("is_pwd", data.is_pwd ? "1" : "0");
+        formData.append("pwd_type", data.pwd_type);
+        formData.append("is_solo_parent", data.is_solo_parent ? "1" : "0");
+        formData.append("is_senior_citizen", data.is_senior_citizen ? "1" : "0");
+        formData.append("is_magna_carta", data.is_magna_carta ? "1" : "0");
+        formData.append("is_underprivileged", data.is_underprivileged ? "1" : "0");
+        formData.append("is_first_generation", data.is_first_generation ? "1" : "0");
         formData.append("remarks", data.remarks);
         formData.append("consent", data.consent ? "1" : "0");
 
@@ -2129,7 +2156,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                         <div className="mb-8 hidden space-y-2 md:block">
                             <h2 className="text-3xl font-bold tracking-tight">{steps[currentStep].label}</h2>
                             <p className="text-muted-foreground text-lg">
-                                {currentStep === 0 && "Select your student type and desired program."}
+                                {currentStep === 0 && "Browse and choose the program that fits your goals."}
                                 {currentStep === 1 && "Fill in your personal information accurately."}
                                 {currentStep === 2 && "Provide contact details for emergencies."}
                                 {currentStep === 3 && "Check the documents you have ready to upload."}
@@ -2138,126 +2165,245 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                             <Separator className="mt-6" />
                         </div>
 
-                        {/* Step 1: Program Selection */}
+                        {/* Step 1: Program Selection — Mobile-Native App Design */}
                         {currentStep === 0 && (
-                            <div className="space-y-6">
-                                <div className="space-y-3">
-                                    <Label className="text-base font-semibold">What type of student are you?</Label>
+                            <div className="-mx-4 flex flex-col gap-0 px-4 sm:mx-0 sm:gap-6 sm:rounded-2xl sm:px-0">
+                                {/* ── Student Type: Full-width banners ── */}
+                                <div className="space-y-2.5 pb-5 sm:pb-0">
+                                    <h3 className="text-base font-bold sm:text-lg">What are you enrolling as?</h3>
                                     <RadioGroup
                                         value={data.student_type}
                                         onValueChange={(val: "college" | "tesda") => {
                                             setData("student_type", val);
+                                            setProgramSearch("");
                                         }}
-                                        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                                        className="flex flex-col gap-2.5 sm:flex-row sm:gap-3"
                                     >
-                                        <div className={cn("relative", !college_enrollment_enabled && "opacity-60")}>
+                                        {/* College Banner */}
+                                        <div className={cn("relative", !college_enrollment_enabled && "opacity-40")}>
                                             <RadioGroupItem value="college" id="type-college" className="peer sr-only" disabled={!college_enrollment_enabled} />
                                             <Label
                                                 htmlFor="type-college"
                                                 className={cn(
-                                                    "border-muted bg-card flex items-center gap-4 rounded-xl border-2 p-4",
+                                                    "flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 transition-all active:scale-[0.98] sm:flex-1 sm:justify-center",
                                                     college_enrollment_enabled
-                                                        ? "cursor-pointer hover:bg-accent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 shadow-sm transition-all"
-                                                        : "cursor-not-allowed grayscale hover:bg-transparent",
+                                                        ? "border-border/50 bg-card hover:border-primary/30 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 peer-data-[state=checked]:shadow-md"
+                                                        : "cursor-not-allowed grayscale",
                                                 )}
                                             >
-                                                <div className="bg-primary/10 shrink-0 rounded-full p-3">
-                                                    <BookOpen className="text-primary h-6 w-6" />
+                                                <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14">
+                                                    <BookOpen className="text-primary h-6 w-6 sm:h-7 sm:w-7" />
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <span className="font-semibold">College Student</span>
-                                                    <p className="text-muted-foreground text-xs font-normal">
-                                                        4-year degree programs (BSIT, BSHM, BSBA).
-                                                    </p>
+                                                <div className="min-w-0 flex-1 sm:text-center">
+                                                    <span className="text-base font-bold">College</span>
+                                                    <p className="text-muted-foreground text-xs">4-year bachelor&apos;s degree programs</p>
                                                 </div>
+                                                <div className="peer-data-[state=checked]:opacity-100 text-primary shrink-0 opacity-0 transition-opacity">
+                                                    <CheckCircle2 className="h-6 w-6" />
+                                                </div>
+                                                {!college_enrollment_enabled && (
+                                                    <Badge variant="destructive" className="absolute top-3 right-3 px-2 py-0.5 text-[10px]">Closed</Badge>
+                                                )}
                                             </Label>
-                                            {!college_enrollment_enabled && (
-                                                <Badge variant="destructive" className="absolute top-2 right-2 px-1.5 py-0 text-[10px]">
-                                                    Closed
-                                                </Badge>
-                                            )}
                                         </div>
-                                        <div className={cn("relative", !tesda_enrollment_enabled && "opacity-60")}>
+
+                                        {/* TESDA Banner */}
+                                        <div className={cn("relative", !tesda_enrollment_enabled && "opacity-40")}>
                                             <RadioGroupItem value="tesda" id="type-tesda" className="peer sr-only" disabled={!tesda_enrollment_enabled} />
                                             <Label
                                                 htmlFor="type-tesda"
                                                 className={cn(
-                                                    "border-muted bg-card flex items-center gap-4 rounded-xl border-2 p-4",
+                                                    "flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 transition-all active:scale-[0.98] sm:flex-1 sm:justify-center",
                                                     tesda_enrollment_enabled
-                                                        ? "cursor-pointer hover:bg-accent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 shadow-sm transition-all"
-                                                        : "cursor-not-allowed grayscale hover:bg-transparent",
+                                                        ? "border-border/50 bg-card hover:border-orange-400/30 peer-data-[state=checked]:border-orange-500 peer-data-[state=checked]:bg-orange-50 peer-data-[state=checked]:shadow-md dark:peer-data-[state=checked]:bg-orange-950/30"
+                                                        : "cursor-not-allowed grayscale",
                                                 )}
                                             >
-                                                <div className={cn("shrink-0 rounded-full p-3", tesda_enrollment_enabled ? "bg-orange-500/10" : "bg-muted")}>
-                                                    <Sparkles className={cn("h-6 w-6", tesda_enrollment_enabled ? "text-orange-600" : "text-muted-foreground")} />
+                                                <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl sm:h-14 sm:w-14", tesda_enrollment_enabled ? "bg-orange-500/10" : "bg-muted")}>
+                                                    <Sparkles className={cn("h-6 w-6 sm:h-7 sm:w-7", tesda_enrollment_enabled ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground")} />
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <span className="font-semibold">TESDA Scholar</span>
-                                                    <p className="text-muted-foreground text-xs font-normal">
-                                                        Short-term technical and vocational courses.
-                                                    </p>
+                                                <div className="min-w-0 flex-1 sm:text-center">
+                                                    <span className="text-base font-bold">TESDA</span>
+                                                    <p className="text-muted-foreground text-xs">Technical-vocational &amp; skills training</p>
                                                 </div>
+                                                <div className="peer-data-[state=checked]:opacity-100 text-orange-500 shrink-0 opacity-0 transition-opacity dark:text-orange-400">
+                                                    <CheckCircle2 className="h-6 w-6" />
+                                                </div>
+                                                {!tesda_enrollment_enabled && (
+                                                    <Badge variant="destructive" className="absolute top-3 right-3 px-2 py-0.5 text-[10px]">Closed</Badge>
+                                                )}
                                             </Label>
-                                            {!tesda_enrollment_enabled && (
-                                                <Badge variant="destructive" className="absolute top-2 right-2 px-1.5 py-0 text-[10px]">
-                                                    Closed
-                                                </Badge>
-                                            )}
                                         </div>
                                     </RadioGroup>
                                 </div>
 
-                                {data.student_type === "college" && availableDepartments.length > 0 && (
-                                    <div className="space-y-3">
-                                        <Label className="text-base font-semibold">Department</Label>
-                                        <Card className="border shadow-sm">
-                                            <CardContent className="p-4">
-                                                <Combobox
-                                                    value={data.department}
-                                                    onValueChange={(val) => {
-                                                        setData("department", val);
-                                                        setData("course_id", "");
-                                                    }}
-                                                    options={availableDepartments.map((dept) => ({
-                                                        value: dept.code,
-                                                        label: dept.label,
-                                                        searchText: `${dept.code} ${dept.label}`,
-                                                    }))}
-                                                    placeholder="Select a department (optional)..."
-                                                    emptyText="No departments found."
-                                                    className="w-full"
-                                                />
-                                                <p className="text-muted-foreground mt-2 text-xs">
-                                                    Filter by department or leave empty to see all college programs.
-                                                </p>
-                                            </CardContent>
-                                        </Card>
+                                {/* ── Department Chips (College only) ── */}
+                                {data.student_type === "college" && availableDepartments.length > 1 && (
+                                    <div className="border-border/40 border-b pb-4 sm:border-0 sm:pb-0">
+                                        <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0 sm:gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setData("department", ""); setData("course_id", ""); }}
+                                                className={cn(
+                                                    "inline-flex shrink-0 items-center rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95",
+                                                    data.department === ""
+                                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                                                )}
+                                            >
+                                                All
+                                            </button>
+                                            {availableDepartments.map((dept) => (
+                                                <button
+                                                    key={dept.code}
+                                                    type="button"
+                                                    onClick={() => { setData("department", dept.code); setData("course_id", ""); }}
+                                                    className={cn(
+                                                        "inline-flex shrink-0 items-center rounded-full px-4 py-2 text-sm font-semibold transition-all active:scale-95",
+                                                        data.department === dept.code
+                                                            ? "bg-primary text-primary-foreground shadow-sm"
+                                                            : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                                                    )}
+                                                >
+                                                    {dept.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 
-                                <div className="space-y-3">
-                                    <Label className="text-base font-semibold">Course / Program</Label>
-                                    <Card className="border shadow-sm">
-                                        <CardContent className="p-4">
-                                            <Combobox
-                                                value={data.course_id}
-                                                onValueChange={(val) => setData("course_id", val)}
-                                                options={courseOptions}
-                                                placeholder={data.student_type === "tesda" ? "Select a TESDA course..." : "Select a college program..."}
-                                                emptyText={data.student_type === "tesda" ? "No TESDA courses found." : "No college programs found."}
-                                                className="w-full"
-                                            />
-                                            {selectedCourse?.description && (
-                                                <div className="text-muted-foreground bg-muted/30 mt-3 flex gap-2 rounded-md p-3 text-sm">
-                                                    <div className="shrink-0 pt-0.5">
-                                                        <School className="h-4 w-4" />
-                                                    </div>
-                                                    <p>{selectedCourse.description}</p>
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                {/* ── Search Bar ── */}
+                                <div className="py-3 sm:py-0">
+                                    <div className="relative">
+                                        <Search className="text-muted-foreground/70 absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2" />
+                                        <Input
+                                            value={programSearch}
+                                            onChange={(e) => setProgramSearch(e.target.value)}
+                                            placeholder={data.student_type === "tesda" ? "Search TESDA courses..." : "Search college programs..."}
+                                            className="h-14 rounded-2xl bg-muted/50 pl-12 text-base shadow-none border-0 focus-visible:ring-2 focus-visible:ring-primary/30 sm:h-12 sm:rounded-xl sm:bg-card sm:border"
+                                        />
+                                        {programSearch && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setProgramSearch("")}
+                                                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-4 -translate-y-1/2 rounded-full p-1 transition-all active:scale-90"
+                                            >
+                                                <Eraser className="h-5 w-5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
+
+                                {/* ── Program List ── */}
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2 pb-1">
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            {data.student_type === "tesda" ? "TESDA Courses" : "College Programs"}
+                                        </span>
+                                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                                            {filteredCoursesForGrid.length}
+                                        </Badge>
+                                    </div>
+
+                                    {filteredCoursesForGrid.length === 0 ? (
+                                        <div className="flex flex-col items-center py-16">
+                                            <div className="bg-muted mb-3 flex h-14 w-14 items-center justify-center rounded-full">
+                                                <Search className="text-muted-foreground h-6 w-6" />
+                                            </div>
+                                            <p className="font-semibold">No programs found</p>
+                                            <p className="text-muted-foreground mt-1 text-sm">Try a different search or department.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-border/40 divide-y overflow-hidden rounded-2xl border border-border/40 bg-card sm:divide-y-0 sm:gap-2 sm:space-y-0 sm:rounded-none sm:border-0 sm:bg-transparent">
+                                            {filteredCoursesForGrid.map((course) => {
+                                                const isSelected = String(course.id) === data.course_id;
+                                                const deptColor = getDeptColor(course.department);
+                                                return (
+                                                    <button
+                                                        key={course.id}
+                                                        type="button"
+                                                        onClick={() => setData("course_id", String(course.id))}
+                                                        className={cn(
+                                                            "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-all active:bg-muted/80 sm:rounded-xl sm:border sm:px-4 sm:py-3",
+                                                            isSelected
+                                                                ? "bg-primary/5 sm:border-primary sm:bg-primary/5 sm:shadow-sm"
+                                                                : "hover:bg-muted/30 sm:border-border/40 sm:bg-card sm:hover:border-primary/20",
+                                                        )}
+                                                    >
+                                                        {/* Radio-style circle */}
+                                                        <div className={cn(
+                                                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                                                            isSelected
+                                                                ? "border-primary bg-primary"
+                                                                : "border-muted-foreground/30",
+                                                        )}>
+                                                            {isSelected && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
+                                                        </div>
+
+                                                        {/* Content */}
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-primary font-mono text-xs font-bold">{course.code}</span>
+                                                                {course.department_name && (
+                                                                    <span className={cn(
+                                                                        "rounded px-1.5 py-0.5 text-[9px] font-semibold",
+                                                                        deptColor.light, deptColor.text,
+                                                                    )}>
+                                                                        {course.department_name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <h4 className={cn("mt-0.5 text-sm font-semibold leading-snug", isSelected && "text-primary")}>
+                                                                {course.title}
+                                                            </h4>
+                                                            {course.description && (
+                                                                <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+                                                                    {course.description}
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Chevron */}
+                                                        <ChevronRight className="text-muted-foreground/40 h-4 w-4 shrink-0" />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ── Selected Program Confirmation ── */}
+                                {selectedCourse && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 dark:bg-primary/[0.08] sm:rounded-xl"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-primary text-primary-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                                                <CheckCircle2 className="h-5 w-5" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <h4 className="text-sm font-bold leading-snug">{selectedCourse.title}</h4>
+                                                <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                                                    <span className="font-mono font-bold">{selectedCourse.code}</span>
+                                                    {selectedCourse.department_name && (
+                                                        <>
+                                                            <span>·</span>
+                                                            <span>{selectedCourse.department_name}</span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {selectedCourse.description && (
+                                            <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                                                {selectedCourse.description}
+                                            </p>
+                                        )}
+                                    </motion.div>
+                                )}
                             </div>
                         )}
 
@@ -2376,6 +2522,66 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                                     <Input value={data.indigenous_group} onChange={(e) => setData("indigenous_group", e.target.value)} placeholder="e.g. Manobo, Ifugao" />
                                                 </div>
                                             )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border shadow-sm">
+                                    <CardContent className="space-y-4 p-4 sm:p-6">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <School className="text-primary h-5 w-5" />
+                                            <h3 className="text-base font-semibold">Special Equity Groups</h3>
+                                        </div>
+                                        <p className="text-muted-foreground text-sm">Select any categories that apply to you. This helps the institution provide appropriate support.</p>
+                                        <div className="space-y-3">
+                                            <div className="space-y-3 rounded-lg border p-3">
+                                                <div className="flex items-center gap-2">
+                                                    <Checkbox id="pwd" checked={data.is_pwd} onCheckedChange={(checked) => { setData("is_pwd", checked === true); if (!checked) setData("pwd_type", ""); }} />
+                                                    <Label htmlFor="pwd" className="cursor-pointer text-sm font-medium">Person with Disability (PWD)</Label>
+                                                </div>
+                                                {data.is_pwd && (
+                                                    <div className="space-y-1.5">
+                                                        <Label className="text-sm">Type of Disability</Label>
+                                                        <select
+                                                            value={data.pwd_type}
+                                                            onChange={(e) => setData("pwd_type", e.target.value)}
+                                                            className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        >
+                                                            <option value="">Select type...</option>
+                                                            <option value="Apparent Physical Disability">Apparent Physical Disability</option>
+                                                            <option value="Deaf/Hard of Hearing Disability">Deaf/Hard of Hearing Disability</option>
+                                                            <option value="Intellectual Disability">Intellectual Disability</option>
+                                                            <option value="Mental/Psychological Disability">Mental/Psychological Disability</option>
+                                                            <option value="Learning Disability">Learning Disability</option>
+                                                            <option value="Visual Disability">Visual Disability</option>
+                                                            <option value="Speech and Language Impairment">Speech and Language Impairment</option>
+                                                            <option value="Non-apparent Rare Disease">Non-apparent Rare Disease</option>
+                                                        </select>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="flex items-center gap-2 rounded-lg border p-3">
+                                                    <Checkbox id="solo_parent" checked={data.is_solo_parent} onCheckedChange={(checked) => setData("is_solo_parent", checked === true)} />
+                                                    <Label htmlFor="solo_parent" className="cursor-pointer text-sm font-medium">Solo Parent</Label>
+                                                </div>
+                                                <div className="flex items-center gap-2 rounded-lg border p-3">
+                                                    <Checkbox id="senior_citizen" checked={data.is_senior_citizen} onCheckedChange={(checked) => setData("is_senior_citizen", checked === true)} />
+                                                    <Label htmlFor="senior_citizen" className="cursor-pointer text-sm font-medium">Senior Citizen</Label>
+                                                </div>
+                                                <div className="flex items-center gap-2 rounded-lg border p-3">
+                                                    <Checkbox id="magna_carta" checked={data.is_magna_carta} onCheckedChange={(checked) => setData("is_magna_carta", checked === true)} />
+                                                    <Label htmlFor="magna_carta" className="cursor-pointer text-sm font-medium">Magna Carta of the Poor</Label>
+                                                </div>
+                                                <div className="flex items-center gap-2 rounded-lg border p-3">
+                                                    <Checkbox id="underprivileged" checked={data.is_underprivileged} onCheckedChange={(checked) => setData("is_underprivileged", checked === true)} />
+                                                    <Label htmlFor="underprivileged" className="cursor-pointer text-sm font-medium">Underprivileged / Homeless</Label>
+                                                </div>
+                                                <div className="flex items-center gap-2 rounded-lg border p-3 sm:col-span-2">
+                                                    <Checkbox id="first_generation" checked={data.is_first_generation} onCheckedChange={(checked) => setData("is_first_generation", checked === true)} />
+                                                    <Label htmlFor="first_generation" className="cursor-pointer text-sm font-medium">First Generation Student (first in family to attend college)</Label>
+                                                </div>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -2964,6 +3170,16 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                                 )}
                                                 {data.is_indigenous_person && (
                                                     <Badge variant="outline" className="mt-2 w-fit">IP - {data.indigenous_group || "Indigenous Person"}</Badge>
+                                                )}
+                                                {(data.is_pwd || data.is_solo_parent || data.is_senior_citizen || data.is_magna_carta || data.is_underprivileged || data.is_first_generation) && (
+                                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                                        {data.is_pwd && <Badge variant="secondary" className="text-xs">PWD{data.pwd_type ? `: ${data.pwd_type}` : ""}</Badge>}
+                                                        {data.is_solo_parent && <Badge variant="secondary" className="text-xs">Solo Parent</Badge>}
+                                                        {data.is_senior_citizen && <Badge variant="secondary" className="text-xs">Senior Citizen</Badge>}
+                                                        {data.is_magna_carta && <Badge variant="secondary" className="text-xs">Magna Carta</Badge>}
+                                                        {data.is_underprivileged && <Badge variant="secondary" className="text-xs">Underprivileged</Badge>}
+                                                        {data.is_first_generation && <Badge variant="secondary" className="text-xs">First Gen</Badge>}
+                                                    </div>
                                                 )}
                                             </div>
 

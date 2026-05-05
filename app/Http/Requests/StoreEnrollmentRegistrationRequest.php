@@ -78,6 +78,13 @@ final class StoreEnrollmentRegistrationRequest extends FormRequest
             'region_of_origin' => ['nullable', 'string', 'max:100'],
             'is_indigenous_person' => ['nullable', 'boolean'],
             'indigenous_group' => ['nullable', 'string', 'max:100'],
+            'is_pwd' => ['nullable', 'boolean'],
+            'pwd_type' => ['nullable', 'string', 'max:100'],
+            'is_solo_parent' => ['nullable', 'boolean'],
+            'is_senior_citizen' => ['nullable', 'boolean'],
+            'is_magna_carta' => ['nullable', 'boolean'],
+            'is_underprivileged' => ['nullable', 'boolean'],
+            'is_first_generation' => ['nullable', 'boolean'],
             'remarks' => ['nullable', 'string', 'max:2000'],
 
             // Social media

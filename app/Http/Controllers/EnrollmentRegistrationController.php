@@ -68,6 +68,7 @@ final class EnrollmentRegistrationController extends Controller
             ->map(fn (Department $dept): array => [
                 'code' => $dept->code,
                 'label' => $dept->name,
+                'description' => $dept->description,
             ])
             ->values()
             ->all();
@@ -79,6 +80,7 @@ final class EnrollmentRegistrationController extends Controller
                 'code' => $course->code,
                 'title' => $course->title,
                 'department' => $course->department?->code,
+                'department_name' => $course->department?->name,
                 'description' => $course->description,
             ])->all(),
             'flash' => session('flash'),
@@ -292,6 +294,13 @@ final class EnrollmentRegistrationController extends Controller
                 'region_of_origin' => $payload['region_of_origin'] ?? null,
                 'is_indigenous_person' => $payload['is_indigenous_person'] ?? false,
                 'indigenous_group' => $payload['indigenous_group'] ?? null,
+                'is_pwd' => $payload['is_pwd'] ?? false,
+                'pwd_type' => $payload['pwd_type'] ?? null,
+                'is_solo_parent' => $payload['is_solo_parent'] ?? false,
+                'is_senior_citizen' => $payload['is_senior_citizen'] ?? false,
+                'is_magna_carta' => $payload['is_magna_carta'] ?? false,
+                'is_underprivileged' => $payload['is_underprivileged'] ?? false,
+                'is_first_generation' => $payload['is_first_generation'] ?? false,
                 'remarks' => $payload['remarks'] ?? null,
                 'scholarship_type' => null, // Explicitly not a scholar yet
             ]);
