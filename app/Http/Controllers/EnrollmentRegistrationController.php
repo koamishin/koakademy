@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\StudentStatus;
 use App\Enums\StudentType;
 use App\Http\Requests\StoreEnrollmentRegistrationRequest;
+use App\Models\ClassEnrollment;
 use App\Models\Classes;
 use App\Models\Course;
 use App\Models\Department;
@@ -16,6 +17,7 @@ use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\EnrollmentPipelineService;
 use App\Services\EnrollmentService;
 use App\Services\GeneralSettingsService;
 use App\Settings\SiteSettings;
@@ -191,7 +193,7 @@ final class EnrollmentRegistrationController extends Controller
         }
 
         /** @var Student $student */
-        $student = DB::transaction(function () use ($request, $payload, $studentType, $birthDate, $courseId, $academicYear): Student {
+        $student = DB::transaction(function () use ($request, $payload, $studentType, $birthDate, $courseId, $academicYear, $settings): Student {
             $studentId = Student::generateNextId($studentType);
 
             $studentContactId = null;
@@ -286,7 +288,7 @@ final class EnrollmentRegistrationController extends Controller
                 'documents' => $uploadedDocuments !== [] ? $uploadedDocuments : null,
             ], static fn ($value): bool => $value !== null && $value !== '');
 
-            return Student::query()->create([
+            $student = Student::query()->create([
                 'school_id' => $this->resolveSiteSchoolId(),
                 'student_id' => $studentId,
                 'student_type' => $studentType,
@@ -334,6 +336,18 @@ final class EnrollmentRegistrationController extends Controller
                 'remarks' => $payload['remarks'] ?? null,
                 'scholarship_type' => null, // Explicitly not a scholar yet
             ]);
+
+            if ($this->shouldAutoCreateStudentEnrollment()) {
+                $this->createApplicantEnrollmentRecords(
+                    student: $student,
+                    academicYear: $academicYear,
+                    settings: $settings,
+                    preferFirstYearSubjects: $this->shouldDefaultApplicantToFirstYear(),
+                    shouldAutoAssignSubjects: $this->shouldAutoAssignSubjects(),
+                );
+            }
+
+            return $student;
         });
 
         $systemSchoolYearStart = $settings->getSystemDefaultSchoolYearStart();
@@ -856,6 +870,198 @@ final class EnrollmentRegistrationController extends Controller
         return School::query()
             ->orderBy('id')
             ->value('id');
+    }
+
+    private function shouldAutoCreateStudentEnrollment(): bool
+    {
+        $automation = app(EnrollmentPipelineService::class)->getConfiguration()['automation'] ?? [];
+
+        return (bool) ($automation['auto_create_student_enrollment'] ?? false);
+    }
+
+    private function shouldAutoAssignSubjects(): bool
+    {
+        $automation = app(EnrollmentPipelineService::class)->getConfiguration()['automation'] ?? [];
+
+        return (bool) ($automation['auto_assign_subjects'] ?? false);
+    }
+
+    private function shouldDefaultApplicantToFirstYear(): bool
+    {
+        $automation = app(EnrollmentPipelineService::class)->getConfiguration()['automation'] ?? [];
+
+        return (bool) ($automation['default_new_applicant_to_first_year'] ?? true);
+    }
+
+    private function createApplicantEnrollmentRecords(
+        Student $student,
+        ?int $academicYear,
+        GeneralSettingsService $settings,
+        bool $preferFirstYearSubjects,
+        bool $shouldAutoAssignSubjects,
+    ): void {
+        $schoolYearStart = $settings->getSystemDefaultSchoolYearStart();
+        $schoolYear = $schoolYearStart.' - '.($schoolYearStart + 1);
+        $semester = $settings->getSystemDefaultSemester();
+        $schoolId = $this->resolveSiteSchoolId($student);
+        $targetAcademicYear = $preferFirstYearSubjects ? 1 : ($academicYear ?: 1);
+
+        $enrollment = StudentEnrollment::query()->firstOrCreate(
+            [
+                'student_id' => $student->id,
+                'course_id' => $student->course_id,
+                'school_year' => $schoolYear,
+                'semester' => $semester,
+            ],
+            [
+                'school_id' => $schoolId,
+                'academic_year' => $targetAcademicYear,
+            ],
+        );
+
+        if (! $shouldAutoAssignSubjects || ! $student->course_id) {
+            return;
+        }
+
+        $subjects = Subject::query()
+            ->where('course_id', $student->course_id)
+            ->where('academic_year', $targetAcademicYear)
+            ->where('semester', $semester)
+            ->orderBy('code')
+            ->get();
+
+        if ($subjects->isEmpty()) {
+            return;
+        }
+
+        $course = Course::query()->find($student->course_id);
+        $lecturePerUnit = (float) ($course?->lec_per_unit ?? 0);
+        $laboratoryPerUnit = (float) ($course?->lab_per_unit ?? 0);
+
+        foreach ($subjects as $subject) {
+            $subjectEnrollment = $enrollment->subjectsEnrolled()->firstOrCreate(
+                [
+                    'subject_id' => $subject->id,
+                    'student_id' => $student->id,
+                    'enrollment_id' => $enrollment->id,
+                ],
+                [
+                    'school_id' => $schoolId,
+                    'academic_year' => $targetAcademicYear,
+                    'school_year' => $schoolYear,
+                    'semester' => $semester,
+                    'is_modular' => false,
+                    'lecture_fee' => ((int) $subject->lecture + (int) $subject->laboratory) * $lecturePerUnit,
+                    'laboratory_fee' => (int) $subject->laboratory * $laboratoryPerUnit,
+                    'enrolled_lecture_units' => (int) $subject->lecture,
+                    'enrolled_laboratory_units' => (int) $subject->laboratory,
+                ],
+            );
+
+            $class = $this->findOpenClassForSubject(
+                subject: $subject,
+                schoolYear: $schoolYear,
+                semester: $semester,
+            );
+
+            if (! $class instanceof Classes) {
+                continue;
+            }
+
+            ClassEnrollment::query()->firstOrCreate(
+                [
+                    'student_id' => $student->id,
+                    'class_id' => $class->id,
+                ],
+                [
+                    'school_id' => $schoolId,
+                    'status' => true,
+                ],
+            );
+
+            $subjectEnrollment->update([
+                'class_id' => $class->id,
+                'section' => $class->section,
+            ]);
+        }
+
+        if ($enrollment->studentTuition === null) {
+            app(EnrollmentService::class)->createStudentTuition($enrollment, [
+                'subjectsEnrolled' => $enrollment->subjectsEnrolled()
+                    ->get([
+                        'subject_id',
+                        'is_modular',
+                        'lecture_fee',
+                        'laboratory_fee',
+                        'enrolled_lecture_units',
+                        'enrolled_laboratory_units',
+                    ])
+                    ->toArray(),
+                'discount' => 0,
+                'downpayment' => 0,
+                'additionalFees' => [],
+            ]);
+        }
+    }
+
+    private function findOpenClassForSubject(Subject $subject, string $schoolYear, int $semester): ?Classes
+    {
+        $schoolYearVariants = [
+            $schoolYear,
+            str_replace(' ', '', $schoolYear),
+            preg_replace('/\s*[-–]\s*/', '-', $schoolYear) ?? $schoolYear,
+        ];
+
+        $baseQuery = Classes::query()
+            ->whereIn('school_year', array_values(array_unique($schoolYearVariants)))
+            ->where('semester', $semester)
+            ->where(function ($query) use ($subject): void {
+                $query->whereJsonContains('subject_ids', (int) $subject->id)
+                    ->orWhereJsonContains('subject_ids', (string) $subject->id)
+                    ->orWhereRaw('LOWER(TRIM(subject_code)) = LOWER(TRIM(?))', [(string) $subject->code])
+                    ->orWhereRaw('LOWER(subject_code) LIKE LOWER(?)', ['%'.(string) $subject->code.'%']);
+            })
+            ->orderBy('id');
+
+        $classes = (clone $baseQuery)
+            ->where(function ($query) use ($subject): void {
+                $query->whereJsonContains('course_codes', (int) $subject->course_id)
+                    ->orWhereJsonContains('course_codes', (string) $subject->course_id);
+            })
+            ->get();
+
+        if ($classes->isEmpty()) {
+            $classes = Classes::query()
+                ->where('semester', $semester)
+                ->where(function ($query) use ($subject): void {
+                    $query->whereJsonContains('course_codes', (int) $subject->course_id)
+                        ->orWhereJsonContains('course_codes', (string) $subject->course_id);
+                })
+                ->where(function ($query) use ($subject): void {
+                    $query->whereJsonContains('subject_ids', (int) $subject->id)
+                        ->orWhereJsonContains('subject_ids', (string) $subject->id)
+                        ->orWhereRaw('LOWER(TRIM(subject_code)) = LOWER(TRIM(?))', [(string) $subject->code])
+                        ->orWhereRaw('LOWER(subject_code) LIKE LOWER(?)', ['%'.(string) $subject->code.'%']);
+                })
+                ->orderBy('id')
+                ->get();
+        }
+
+        foreach ($classes as $class) {
+            $maxSlots = (int) ($class->maximum_slots ?? 0);
+
+            if ($maxSlots <= 0) {
+                return $class;
+            }
+
+            $enrolledCount = ClassEnrollment::query()->where('class_id', $class->id)->count();
+
+            if ($enrolledCount < $maxSlots) {
+                return $class;
+            }
+        }
+
+        return null;
     }
 
     /**

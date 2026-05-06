@@ -301,10 +301,13 @@ final class Transaction extends Model
      */
     protected function scopeForAcademicPeriod($query, string $schoolYear, int $semester)
     {
-        // Parse school year (e.g., "2024-2025")
-        $years = explode('-', $schoolYear);
-        $startYear = (int) $years[0];
-        $endYear = (int) $years[1];
+        $parsedSchoolYear = self::parseSchoolYearRange($schoolYear);
+
+        if ($parsedSchoolYear === null || ! in_array($semester, [1, 2], true)) {
+            return $query->whereNull('transactions.id');
+        }
+
+        [$startYear, $endYear] = $parsedSchoolYear;
 
         if ($semester === 1) {
             // First semester: include early downpayments before June for the upcoming school year
@@ -329,5 +332,28 @@ final class Transaction extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Parse and validate a school year string into [startYear, endYear].
+     *
+     * @return array{0: int, 1: int}|null
+     */
+    private static function parseSchoolYearRange(string $schoolYear): ?array
+    {
+        $normalizedSchoolYear = str_replace(' ', '', $schoolYear);
+
+        if (preg_match('/^(\d{4})-(\d{4})$/', $normalizedSchoolYear, $matches) !== 1) {
+            return null;
+        }
+
+        $startYear = (int) $matches[1];
+        $endYear = (int) $matches[2];
+
+        if ($endYear !== $startYear + 1) {
+            return null;
+        }
+
+        return [$startYear, $endYear];
     }
 }

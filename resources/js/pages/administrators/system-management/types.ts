@@ -129,6 +129,11 @@ export interface EnrollmentPipelineSettings {
     entry_step_key?: string;
     completion_step_key?: string;
     steps: EnrollmentPipelineStep[];
+    automation?: {
+        auto_create_student_enrollment: boolean;
+        auto_assign_subjects: boolean;
+        default_new_applicant_to_first_year: boolean;
+    };
 }
 
 export type EnrollmentStatMetric = "total_records" | "active_records" | "trashed_records" | "status_count" | "paid_count";

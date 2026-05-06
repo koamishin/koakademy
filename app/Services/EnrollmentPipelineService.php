@@ -125,6 +125,7 @@ final class EnrollmentPipelineService
             'steps' => $steps,
             'entry_step_key' => $entryStepKey,
             'completion_step_key' => $completionStepKey,
+            'automation' => $this->sanitizeAutomationConfig($input['automation'] ?? []),
         ];
 
         return $this->appendLegacyAliases($config);
@@ -467,6 +468,42 @@ final class EnrollmentPipelineService
             ],
             'entry_step_key' => 'pending',
             'completion_step_key' => 'payment_verification',
+            'automation' => [
+                'auto_create_student_enrollment' => false,
+                'auto_assign_subjects' => false,
+                'default_new_applicant_to_first_year' => true,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    private function sanitizeAutomationConfig(mixed $automationRaw): array
+    {
+        $defaults = $this->defaults()['automation'];
+
+        if (! is_array($automationRaw)) {
+            return $defaults;
+        }
+
+        $defaultNewApplicantToFirstYear = (bool) ($automationRaw['default_new_applicant_to_first_year'] ?? $defaults['default_new_applicant_to_first_year']);
+        $autoCreateStudentEnrollment = (bool) ($automationRaw['auto_create_student_enrollment'] ?? $defaults['auto_create_student_enrollment']);
+        $autoAssignSubjects = (bool) ($automationRaw['auto_assign_subjects'] ?? $defaults['auto_assign_subjects']);
+
+        if (! $defaultNewApplicantToFirstYear) {
+            $autoCreateStudentEnrollment = false;
+            $autoAssignSubjects = false;
+        }
+
+        if (! $autoCreateStudentEnrollment) {
+            $autoAssignSubjects = false;
+        }
+
+        return [
+            'auto_create_student_enrollment' => $autoCreateStudentEnrollment,
+            'auto_assign_subjects' => $autoAssignSubjects,
+            'default_new_applicant_to_first_year' => $defaultNewApplicantToFirstYear,
         ];
     }
 
@@ -794,6 +831,7 @@ final class EnrollmentPipelineService
 
         return [
             ...$config,
+            'automation' => $config['automation'] ?? $this->defaults()['automation'],
             'pending_status' => $entryStep['status'],
             'pending_label' => $entryStep['label'],
             'pending_color' => $entryStep['color'],

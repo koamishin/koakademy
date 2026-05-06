@@ -161,35 +161,12 @@ final class StudentEnrollment extends Model
      */
     public function enrollmentTransactions()
     {
-        // Use the Transaction model scope to determine the correct date range for this enrollment's semester
-        // This ensures consistency with the StudentTuition calculation and covers edge cases like early downpayments
-
         $schoolYear = str_replace(' ', '', (string) $this->school_year);
         $semester = (int) $this->semester;
 
-        // Parse school year for date range (logic mirrored from Transaction::scopeForAcademicPeriod to apply to nested relation)
-        $years = explode('-', $schoolYear);
-        if (count($years) < 2) {
-            // Fallback if school year is invalid
-            $currentYear = date('Y');
-            $startYear = $currentYear;
-            $endYear = $currentYear + 1;
-        } else {
-            $startYear = (int) $years[0];
-            $endYear = (int) $years[1];
-        }
-
-        if ($semester === 1) {
-            $startDate = $startYear.'-01-01 00:00:00';
-            $endDate = ($startYear + 1).'-02-28 23:59:59';
-        } else {
-            $startDate = $startYear.'-11-01 00:00:00';
-            $endDate = $endYear.'-07-31 23:59:59';
-        }
-
         return $this->hasMany(StudentTransaction::class, 'student_id', 'student_id')
-            ->whereHas('transaction', function ($query) use ($startDate, $endDate): void {
-                $query->whereBetween('transactions.created_at', [$startDate, $endDate]);
+            ->whereHas('transaction', function ($query) use ($schoolYear, $semester): void {
+                $query->forAcademicPeriod($schoolYear, $semester);
             })
             ->orderBy('created_at', 'desc');
     }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
+use App\Models\GeneralSetting;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Permission;
@@ -125,4 +126,50 @@ it('allows updates when the user has the matching update permission', function (
             'school_portal_description' => 'Portal description',
         ])
         ->assertRedirect();
+});
+
+it('persists enrollment automation settings on the active global settings record', function (): void {
+    $user = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    foreach (['View:SystemManagementEnrollmentPipeline', 'Update:SystemManagementEnrollmentPipeline'] as $permission) {
+        createSystemManagementPermission($permission);
+    }
+
+    $user->givePermissionTo(['View:SystemManagementEnrollmentPipeline', 'Update:SystemManagementEnrollmentPipeline']);
+
+    $settings = GeneralSetting::query()->create([
+        'site_name' => 'Legacy Site Name',
+    ]);
+
+    actingAs($user)
+        ->put(portalUrlForAdministrators('/administrators/system-management/enrollment-pipeline'), [
+            'submitted_label' => 'Submitted',
+            'entry_step_key' => 'pending',
+            'completion_step_key' => 'pending',
+            'steps' => [
+                [
+                    'key' => 'pending',
+                    'status' => 'Pending',
+                    'label' => 'Pending',
+                    'color' => 'yellow',
+                    'allowed_roles' => [],
+                    'action_type' => 'standard',
+                ],
+            ],
+            'automation' => [
+                'default_new_applicant_to_first_year' => true,
+                'auto_create_student_enrollment' => true,
+                'auto_assign_subjects' => true,
+            ],
+        ])
+        ->assertRedirect();
+
+    $settings->refresh();
+
+    expect(data_get($settings->more_configs, 'enrollment_pipeline.automation.default_new_applicant_to_first_year'))->toBeTrue();
+    expect(data_get($settings->more_configs, 'enrollment_pipeline.automation.auto_create_student_enrollment'))->toBeTrue();
+    expect(data_get($settings->more_configs, 'enrollment_pipeline.automation.auto_assign_subjects'))->toBeTrue();
+    expect(GeneralSetting::query()->count())->toBe(1);
 });

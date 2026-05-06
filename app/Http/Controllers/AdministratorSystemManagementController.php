@@ -559,9 +559,15 @@ final class AdministratorSystemManagementController extends Controller
     {
         $this->authorize('updateEnrollmentPipeline', GeneralSetting::class);
 
-        $settings = GeneralSetting::firstOrCreate([
-            'site_name' => $this->siteSettings->getAppName(),
-        ]);
+        $generalSettingsService = app(GeneralSettingsService::class);
+        $settings = $generalSettingsService->getGlobalSettingsModel();
+
+        if (! $settings instanceof GeneralSetting) {
+            $settings = GeneralSetting::query()->create([
+                'site_name' => $this->siteSettings->getAppName(),
+            ]);
+            $generalSettingsService->replaceGlobalSettings($settings);
+        }
 
         $validated = $request->validate([
             'submitted_label' => ['required', 'string', 'max:100'],
@@ -575,6 +581,10 @@ final class AdministratorSystemManagementController extends Controller
             'steps.*.action_type' => ['nullable', 'string', 'in:standard,department_verification,cashier_verification'],
             'entry_step_key' => ['nullable', 'string', 'max:100'],
             'completion_step_key' => ['nullable', 'string', 'max:100'],
+            'automation' => ['nullable', 'array'],
+            'automation.auto_create_student_enrollment' => ['nullable', 'boolean'],
+            'automation.auto_assign_subjects' => ['nullable', 'boolean'],
+            'automation.default_new_applicant_to_first_year' => ['nullable', 'boolean'],
             'pending_status' => ['required_without:steps', 'string', 'max:100'],
             'pending_label' => ['required_without:steps', 'string', 'max:100'],
             'pending_color' => ['required_without:steps', 'string', 'max:50'],

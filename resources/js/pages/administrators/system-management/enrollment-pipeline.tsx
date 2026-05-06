@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +28,11 @@ interface EnrollmentPipelineFormData {
     entry_step_key: string;
     completion_step_key: string;
     steps: EnrollmentPipelineStep[];
+    automation: {
+        auto_create_student_enrollment: boolean;
+        auto_assign_subjects: boolean;
+        default_new_applicant_to_first_year: boolean;
+    };
     enrollment_stats: {
         cards: EnrollmentStatsCard[];
     };
@@ -69,6 +75,11 @@ export default function SystemManagementEnrollmentPipelinePage({
             allowed_roles: step.allowed_roles || [],
             action_type: step.action_type || "standard",
         })),
+        automation: {
+            auto_create_student_enrollment: enrollment_pipeline?.automation?.auto_create_student_enrollment ?? false,
+            auto_assign_subjects: enrollment_pipeline?.automation?.auto_assign_subjects ?? false,
+            default_new_applicant_to_first_year: enrollment_pipeline?.automation?.default_new_applicant_to_first_year ?? true,
+        },
         enrollment_stats: {
             cards: enrollment_stats?.cards || [],
         },
@@ -330,6 +341,97 @@ export default function SystemManagementEnrollmentPipelinePage({
                                 </Select>
                                 <p className="text-muted-foreground text-[10px]">The step when enrollment is fully completed.</p>
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border shadow-none">
+                        <CardHeader className="pb-4">
+                            <div className="flex items-center gap-2">
+                                <Settings className="text-primary h-5 w-5" />
+                                <CardTitle className="text-lg">Applicant Automation</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Control what happens automatically after a new student application is submitted.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-start gap-3 rounded-lg border p-3">
+                                <Switch
+                                    id="default_new_applicant_to_first_year"
+                                    checked={pipelineForm.data.automation.default_new_applicant_to_first_year}
+                                    onCheckedChange={(checked) => {
+                                        const enabled = checked === true;
+
+                                        pipelineForm.setData("automation", {
+                                            ...pipelineForm.data.automation,
+                                            default_new_applicant_to_first_year: enabled,
+                                            auto_create_student_enrollment: enabled
+                                                ? pipelineForm.data.automation.auto_create_student_enrollment
+                                                : false,
+                                            auto_assign_subjects: enabled
+                                                ? pipelineForm.data.automation.auto_assign_subjects
+                                                : false,
+                                        });
+                                    }}
+                                />
+                                <div className="space-y-1">
+                                    <Label htmlFor="default_new_applicant_to_first_year" className="cursor-pointer font-medium">Treat new applicants as 1st year automatically</Label>
+                                    <p className="text-muted-foreground text-xs">
+                                        Enables first-year-based auto enrollment policies for new applicants.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {pipelineForm.data.automation.default_new_applicant_to_first_year && (
+                                <>
+                                    <div className="flex items-start gap-3 rounded-lg border p-3">
+                                        <Switch
+                                            id="auto_create_student_enrollment"
+                                            checked={pipelineForm.data.automation.auto_create_student_enrollment}
+                                            onCheckedChange={(checked) =>
+                                                pipelineForm.setData("automation", {
+                                                    ...pipelineForm.data.automation,
+                                                    auto_create_student_enrollment: checked === true,
+                                                    auto_assign_subjects: checked === true
+                                                        ? pipelineForm.data.automation.auto_assign_subjects
+                                                        : false,
+                                                })
+                                            }
+                                        />
+                                        <div className="space-y-1">
+                                            <Label htmlFor="auto_create_student_enrollment" className="cursor-pointer font-medium">Auto-create Student Enrollment record</Label>
+                                            <p className="text-muted-foreground text-xs">
+                                                When enabled, a dedicated enrollment record is created immediately for every new applicant.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 rounded-lg border p-3">
+                                        <Switch
+                                            id="auto_assign_subjects"
+                                            checked={pipelineForm.data.automation.auto_assign_subjects}
+                                            onCheckedChange={(checked) =>
+                                                pipelineForm.setData("automation", {
+                                                    ...pipelineForm.data.automation,
+                                                    auto_assign_subjects: checked === true,
+                                                })
+                                            }
+                                            disabled={!pipelineForm.data.automation.auto_create_student_enrollment}
+                                        />
+                                        <div className="space-y-1">
+                                            <Label htmlFor="auto_assign_subjects" className="cursor-pointer font-medium">Auto-assign available subjects/classes</Label>
+                                            <p className="text-muted-foreground text-xs">
+                                                Uses the chosen course plus current school year/semester to add available subjects and open class sections.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                            {!pipelineForm.data.automation.default_new_applicant_to_first_year && (
+                                <div className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
+                                    Enable first-year treatment first to reveal applicant automation options.
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

@@ -112,9 +112,18 @@ final class StudentTuition extends Model
 
             $schoolYear = str_replace(' ', '', $this->school_year);
 
+            if (preg_match('/^(\d{4})-(\d{4})$/', $schoolYear) !== 1) {
+                return 0.00;
+            }
+
+            $semester = (int) $this->semester;
+            if (! in_array($semester, [1, 2], true)) {
+                return 0.00;
+            }
+
             // Get transactions using the scope from Transaction model
             $transactions = $student->Transaction()
-                ->forAcademicPeriod($schoolYear, $this->semester)
+                ->forAcademicPeriod($schoolYear, $semester)
                 ->get();
 
             $total = 0.00;
