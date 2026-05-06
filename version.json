@@ -1,14 +1,14 @@
 {
-  "version": "1.1.0-dev.9.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.1.0-dev.9.0",
-  "commit": "9664f45636d771567e66c359e6424aac0db0d1e3",
+  "version": "1.1.0-dev.10.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.1.0-dev.10.0",
+  "commit": "f0c240168f5754d838c5f4495c4b7024b471bc33",
   "branch": "master",
-  "timestamp": "2026-05-06T01:15:28Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25411067000",
+  "timestamp": "2026-05-06T03:45:49Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25415202840",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.1.0-dev.9.0 - feat: add configurable income brackets and special equity groups to enrollment",
-    "previous": "1.1.0-dev.8.1"
+    "current": "Version 1.1.0-dev.10.0 - feat: support parent-specific income brackets with monthly/annual modes",
+    "previous": "1.1.0-dev.9.0"
   },
   "metadata": {
     "author": "yukazakiri",
