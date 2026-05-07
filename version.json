@@ -1,14 +1,14 @@
 {
-  "version": "1.2.0-dev.0.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.0.1",
-  "commit": "8ae2d088b1582a5a61e779a4dae519b8417d7764",
+  "version": "1.2.0-dev.0.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.0.2",
+  "commit": "ea0728dd565f64601cfbb308bd7d65b8a74d62d6",
   "branch": "master",
-  "timestamp": "2026-05-06T07:45:45Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25422688006",
+  "timestamp": "2026-05-07T14:44:19Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25502593867",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.2.0-dev.0.1 - Refactor code structure for improved readability and maintainability",
-    "previous": "1.2.0"
+    "current": "Version 1.2.0-dev.0.2 - Add targeted announcements with scope and locations",
+    "previous": "1.2.0-dev.0.1"
   },
   "metadata": {
     "author": "yukazakiri",
