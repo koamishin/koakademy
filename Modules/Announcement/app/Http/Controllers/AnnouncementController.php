@@ -28,6 +28,17 @@ final class AnnouncementController extends Controller
 
         return Inertia::render('Announcement/Index', [
             'announcements' => $this->announcementDataService->paginateForAdministration(),
+            'templates' => $this->announcementDataService->getTemplates(),
+            'options' => [
+                'visibilityScopes' => [
+                    'global' => 'Global',
+                    'authenticated_only' => 'Authenticated users only',
+                    'guest_only' => 'Guests only',
+                    'role_based' => 'Specific roles',
+                ],
+                'audienceRoles' => Announcement::ROLE_OPTIONS,
+                'displayLocations' => Announcement::LOCATION_OPTIONS,
+            ],
             'auth' => [
                 'user' => $request->user(),
             ],
@@ -48,8 +59,14 @@ final class AnnouncementController extends Controller
             'priority' => 'nullable|string|in:urgent,high,medium,low',
             'display_mode' => 'nullable|string|in:banner,toast,modal',
             'requires_acknowledgment' => 'boolean',
-            'link' => 'nullable|string|url',
+            'link' => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/|\/).+/'],
+            'action_label' => 'nullable|string|max:80',
             'is_active' => 'boolean',
+            'visibility_scope' => 'nullable|string|in:global,authenticated_only,guest_only,role_based',
+            'audience_roles' => 'nullable|array',
+            'audience_roles.*' => 'string|in:guest,authenticated,admin,student,faculty',
+            'display_locations' => 'nullable|array',
+            'display_locations.*' => 'string|in:all,login,signup,enrollment,home,admin_layout,student_layout,faculty_layout',
             'starts_at' => 'nullable|date',
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
         ]);
@@ -76,8 +93,14 @@ final class AnnouncementController extends Controller
             'priority' => 'nullable|string|in:urgent,high,medium,low',
             'display_mode' => 'nullable|string|in:banner,toast,modal',
             'requires_acknowledgment' => 'boolean',
-            'link' => 'nullable|string|url',
+            'link' => ['nullable', 'string', 'max:255', 'regex:/^(https?:\/\/|\/).+/'],
+            'action_label' => 'nullable|string|max:80',
             'is_active' => 'boolean',
+            'visibility_scope' => 'nullable|string|in:global,authenticated_only,guest_only,role_based',
+            'audience_roles' => 'nullable|array',
+            'audience_roles.*' => 'string|in:guest,authenticated,admin,student,faculty',
+            'display_locations' => 'nullable|array',
+            'display_locations.*' => 'string|in:all,login,signup,enrollment,home,admin_layout,student_layout,faculty_layout',
             'starts_at' => 'nullable|date',
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
         ]);
@@ -111,7 +134,11 @@ final class AnnouncementController extends Controller
      *     display_mode?: string,
      *     requires_acknowledgment?: bool,
      *     link?: string|null,
+     *     action_label?: string|null,
      *     is_active?: bool,
+     *     visibility_scope?: string,
+     *     audience_roles?: array<int, string>|null,
+     *     display_locations?: array<int, string>|null,
      *     starts_at?: string|null,
      *     ends_at?: string|null
      * }  $validated
@@ -129,6 +156,12 @@ final class AnnouncementController extends Controller
             'priority' => $validated['priority'] ?? 'medium',
             'display_mode' => $validated['display_mode'] ?? 'banner',
             'requires_acknowledgment' => $validated['requires_acknowledgment'] ?? false,
+            'action_label' => isset($validated['action_label']) && mb_trim($validated['action_label']) !== ''
+                ? mb_trim($validated['action_label'])
+                : null,
+            'visibility_scope' => $validated['visibility_scope'] ?? 'global',
+            'audience_roles' => $validated['audience_roles'] ?? null,
+            'display_locations' => $validated['display_locations'] ?? ['all'],
             'created_by' => $authorId,
             'is_global' => true,
             'status' => $isActive ? 'published' : 'draft',

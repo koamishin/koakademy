@@ -1,5 +1,6 @@
 import { Head, usePage } from "@inertiajs/react";
 
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { resolveBranding, type Branding } from "@/lib/branding";
 import { LoginForm } from "@/components/login-form";
 import { OnboardingPanel } from "@/components/onboarding-panel";
@@ -7,10 +8,11 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { TransitionWrapper } from "@/components/transition-wrapper";
 
 export default function LoginPage() {
-    const { errors, status, branding } = usePage<{
+    const { errors, status, branding, announcements } = usePage<{
         errors?: Record<string, string>;
         status?: string | null;
         branding?: Partial<Branding> | null;
+        announcements?: unknown[];
     }>().props;
 
     const resolvedBranding = resolveBranding(branding);
@@ -51,6 +53,9 @@ export default function LoginPage() {
                         }
                     >
                         <div className="space-y-2 text-center">
+                            <div className="mb-3 text-left">
+                                <AnnouncementBanner announcements={announcements ?? []} />
+                            </div>
                             <h1 className="text-foreground text-2xl font-bold tracking-tight">Academic Management Portal</h1>
                             <p className="text-muted-foreground text-sm text-pretty">
                                 Welcome to the official {appName}. A centralized platform for {organizationName} students and faculty to manage

@@ -48,6 +48,7 @@ use Joaopaulolndev\FilamentEditProfile\FilamentEditProfilePlugin;
 use Joaopaulolndev\FilamentEditProfile\Pages\EditProfilePage;
 use MarcelWeidum\Passkeys\PasskeysPlugin;
 use Moataz01\FilamentNotificationSound\FilamentNotificationSoundPlugin;
+use Modules\Announcement\Services\AnnouncementDataService;
 use pxlrbt\FilamentEnvironmentIndicator\EnvironmentIndicatorPlugin;
 use pxlrbt\FilamentSpotlight\SpotlightPlugin;
 use Rupadana\ApiService\ApiServicePlugin;
@@ -154,6 +155,16 @@ final class AdminPanelProvider extends PanelProvider
         $panel->renderHook(
             'panels::head.end',
             fn (): HtmlString => new HtmlString(app(AnalyticsSettingsService::class)->renderHeadMarkup())
+        );
+
+        $panel->renderHook(
+            'panels::content.start',
+            fn (): View|Factory => view('filament.components.global-announcement-banner', [
+                'announcements' => app(AnnouncementDataService::class)->getSharedBannerAnnouncements(
+                    user: Auth::user(),
+                    location: 'admin_layout',
+                ),
+            ])
         );
 
         return $panel

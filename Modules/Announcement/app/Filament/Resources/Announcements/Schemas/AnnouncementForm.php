@@ -70,6 +70,39 @@ final class AnnouncementForm
                             ->label('Global Announcement')
                             ->helperText('Show to all users on dashboards and portal pages')
                             ->default(true),
+                        Select::make('visibility_scope')
+                            ->options([
+                                'global' => 'Global',
+                                'authenticated_only' => 'Authenticated users only',
+                                'guest_only' => 'Guests only',
+                                'role_based' => 'Role based',
+                            ])
+                            ->default('global')
+                            ->required(),
+                        Select::make('audience_roles')
+                            ->multiple()
+                            ->options([
+                                'guest' => 'Guest',
+                                'authenticated' => 'Authenticated',
+                                'admin' => 'Admin',
+                                'student' => 'Student',
+                                'faculty' => 'Faculty',
+                            ])
+                            ->helperText('Optional. Leave empty to allow all roles for the selected visibility scope.'),
+                        Select::make('display_locations')
+                            ->multiple()
+                            ->options([
+                                'all' => 'All pages',
+                                'login' => 'Login page',
+                                'signup' => 'Signup page',
+                                'enrollment' => 'Enrollment page',
+                                'home' => 'Public home page',
+                                'admin_layout' => 'Admin layouts',
+                                'student_layout' => 'Student layouts',
+                                'faculty_layout' => 'Faculty layouts',
+                            ])
+                            ->default(['all'])
+                            ->helperText('Where this announcement should be shown.'),
                         Select::make('display_mode')
                             ->options([
                                 'banner' => 'Banner',
@@ -81,8 +114,12 @@ final class AnnouncementForm
                         Toggle::make('requires_acknowledgment')
                             ->default(false),
                         TextInput::make('link')
-                            ->url()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->rule('regex:/^(\/|https?:\/\/).+/')
+                            ->helperText('Use a full URL (https://...) or an internal path (/enrollment).'),
+                        TextInput::make('action_label')
+                            ->maxLength(80)
+                            ->helperText('Optional button text shown when link is present.'),
                     ])
                     ->columns(2),
 

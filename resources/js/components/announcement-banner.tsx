@@ -29,10 +29,16 @@ interface Announcement {
     display_mode?: AnnouncementDisplayMode;
     requires_acknowledgment?: boolean;
     link?: string | null;
+    action_label?: string | null;
     is_active?: boolean;
     starts_at?: string | null;
     ends_at?: string | null;
 }
+
+const getActionLabel = (announcement: Announcement): string => {
+    const label = announcement.action_label?.trim();
+    return label && label.length > 0 ? label : "Learn more";
+};
 
 interface AnnouncementBannerProps {
     announcements: Announcement[] | { data: Announcement[] };
@@ -42,94 +48,80 @@ interface AnnouncementBannerProps {
 const priorityConfig = {
     urgent: {
         pulse: true,
-        iconBg: "bg-red-600",
-        borderColor: "border-l-red-600",
+        iconBg: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300",
+        borderColor: "border-l-red-500",
     },
     high: {
         pulse: false,
-        iconBg: "bg-orange-500",
+        iconBg: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
         borderColor: "border-l-orange-500",
     },
     medium: {
         pulse: false,
-        iconBg: "bg-blue-500",
+        iconBg: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
         borderColor: "border-l-blue-500",
     },
     low: {
         pulse: false,
-        iconBg: "bg-gray-500",
-        borderColor: "border-l-gray-500",
+        iconBg: "bg-muted text-muted-foreground",
+        borderColor: "border-l-border",
     },
 };
 
 const typeConfig = {
     info: {
         icon: IconInfoCircle,
-        gradient: "from-blue-600 to-blue-700",
-        bgGradient: "bg-gradient-to-r from-blue-600 to-blue-700",
-        lightBg: "bg-blue-50 dark:bg-blue-950/30",
-        textColor: "text-blue-100",
-        iconColor: "text-white",
+        iconBg: "bg-blue-100 dark:bg-blue-950/40",
+        lightBg: "bg-card",
+        iconColor: "text-blue-700 dark:text-blue-300",
         borderColor: "border-l-blue-500",
         description: "Information",
     },
     success: {
         icon: IconCheck,
-        gradient: "from-emerald-600 to-emerald-700",
-        bgGradient: "bg-gradient-to-r from-emerald-600 to-emerald-700",
-        lightBg: "bg-emerald-50 dark:bg-emerald-950/30",
-        textColor: "text-emerald-100",
-        iconColor: "text-white",
+        iconBg: "bg-emerald-100 dark:bg-emerald-950/40",
+        lightBg: "bg-card",
+        iconColor: "text-emerald-700 dark:text-emerald-300",
         borderColor: "border-l-emerald-500",
         description: "Success",
     },
     warning: {
         icon: IconAlertTriangle,
-        gradient: "from-amber-500 to-amber-600",
-        bgGradient: "bg-gradient-to-r from-amber-500 to-amber-600",
-        lightBg: "bg-amber-50 dark:bg-amber-950/30",
-        textColor: "text-amber-100",
-        iconColor: "text-white",
+        iconBg: "bg-amber-100 dark:bg-amber-950/40",
+        lightBg: "bg-card",
+        iconColor: "text-amber-700 dark:text-amber-300",
         borderColor: "border-l-amber-500",
         description: "Warning",
     },
     danger: {
         icon: IconAlertTriangle,
-        gradient: "from-red-600 to-red-700",
-        bgGradient: "bg-gradient-to-r from-red-600 to-red-700",
-        lightBg: "bg-red-50 dark:bg-red-950/30",
-        textColor: "text-red-100",
-        iconColor: "text-white",
+        iconBg: "bg-red-100 dark:bg-red-950/40",
+        lightBg: "bg-card",
+        iconColor: "text-red-700 dark:text-red-300",
         borderColor: "border-l-red-500",
         description: "Critical",
     },
     maintenance: {
         icon: IconLoader2,
-        gradient: "from-purple-600 to-purple-700",
-        bgGradient: "bg-gradient-to-r from-purple-600 to-purple-700",
-        lightBg: "bg-purple-50 dark:bg-purple-950/30",
-        textColor: "text-purple-100",
-        iconColor: "text-white",
+        iconBg: "bg-violet-100 dark:bg-violet-950/40",
+        lightBg: "bg-card",
+        iconColor: "text-violet-700 dark:text-violet-300",
         borderColor: "border-l-purple-500",
         description: "Maintenance",
     },
     enrollment: {
         icon: IconCalendar,
-        gradient: "from-cyan-600 to-cyan-700",
-        bgGradient: "bg-gradient-to-r from-cyan-600 to-cyan-700",
-        lightBg: "bg-cyan-50 dark:bg-cyan-950/30",
-        textColor: "text-cyan-100",
-        iconColor: "text-white",
+        iconBg: "bg-cyan-100 dark:bg-cyan-950/40",
+        lightBg: "bg-card",
+        iconColor: "text-cyan-700 dark:text-cyan-300",
         borderColor: "border-l-cyan-500",
         description: "Enrollment",
     },
     update: {
         icon: IconSpeakerphone,
-        gradient: "from-indigo-600 to-indigo-700",
-        bgGradient: "bg-gradient-to-r from-indigo-600 to-indigo-700",
-        lightBg: "bg-indigo-50 dark:bg-indigo-950/30",
-        textColor: "text-indigo-100",
-        iconColor: "text-white",
+        iconBg: "bg-indigo-100 dark:bg-indigo-950/40",
+        lightBg: "bg-card",
+        iconColor: "text-indigo-700 dark:text-indigo-300",
         borderColor: "border-l-indigo-500",
         description: "Update",
     },
@@ -189,10 +181,10 @@ function AnnouncementItem({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={cn("relative overflow-hidden rounded-lg border shadow-sm", priority.borderColor, config.lightBg)}
+            className={cn("relative overflow-hidden rounded-lg border border-border border-l-4 shadow-sm", priority.borderColor, config.lightBg)}
         >
             <div className="flex items-start gap-3 p-4">
-                <div className={cn("flex shrink-0 items-center justify-center rounded-lg shadow-md", config.gradient, "h-10 w-10")}>
+                <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", config.iconBg)}>
                     <Icon className={cn("h-5 w-5", config.iconColor)} />
                 </div>
 
@@ -208,7 +200,7 @@ function AnnouncementItem({
                             )}
                         </div>
                         {timeRemaining && (
-                            <span className="text-muted-foreground flex items-center gap-1 rounded-full bg-white/50 px-2 py-0.5 text-xs font-medium whitespace-nowrap dark:bg-black/20">
+                            <span className="bg-muted text-muted-foreground flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap">
                                 <IconClock className="h-3 w-3" />
                                 {timeRemaining}
                             </span>
@@ -221,7 +213,7 @@ function AnnouncementItem({
                                 {announcement.content.slice(0, 150)}...
                                 <button
                                     onClick={() => setIsExpanded(true)}
-                                    className="ml-1 inline-flex items-center text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                    className="text-primary ml-1 inline-flex items-center text-xs font-medium hover:underline"
                                 >
                                     Read more <IconChevronDown className="h-3 w-3" />
                                 </button>
@@ -232,7 +224,7 @@ function AnnouncementItem({
                         {isLongContent && isExpanded && (
                             <button
                                 onClick={() => setIsExpanded(false)}
-                                className="mt-1 inline-flex items-center text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                                className="text-primary mt-1 inline-flex items-center text-xs font-medium hover:underline"
                             >
                                 Show less <IconChevronUp className="h-3 w-3" />
                             </button>
@@ -242,10 +234,10 @@ function AnnouncementItem({
                     {announcement.link && (
                         <a
                             href={announcement.link}
-                            className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-medium hover:underline"
                         >
                             <IconLink className="h-3 w-3" />
-                            Learn more
+                            {getActionLabel(announcement)}
                         </a>
                     )}
                 </div>
@@ -292,16 +284,25 @@ function ToastNotification({
             initial={{ opacity: 0, x: 100, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.9 }}
-            className={cn("relative overflow-hidden rounded-lg border shadow-xl", config.lightBg, priority.borderColor, "border-l-4")}
+            className={cn("bg-card relative overflow-hidden rounded-lg border border-border border-l-4 shadow-lg", priority.borderColor)}
         >
             <div className="flex items-start gap-3 p-4">
-                <div className={cn("flex shrink-0 items-center justify-center rounded-full", config.gradient, "h-8 w-8")}>
+                <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", config.iconBg)}>
                     <Icon className={cn("h-4 w-4", config.iconColor)} />
                 </div>
 
                 <div className="min-w-0 flex-1">
                     <h4 className="text-foreground text-sm font-semibold">{announcement.title}</h4>
                     <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{announcement.content}</p>
+                    {announcement.link && (
+                        <a
+                            href={announcement.link}
+                            className="text-primary mt-1 inline-flex items-center gap-1 text-xs font-medium hover:underline"
+                        >
+                            <IconLink className="h-3 w-3" />
+                            {getActionLabel(announcement)}
+                        </a>
+                    )}
                 </div>
 
                 {announcement.requires_acknowledgment && !isAcknowledged ? (
@@ -323,12 +324,10 @@ function ModalPopup({
     announcement,
     onDismiss,
     onAcknowledge,
-    isAcknowledged,
 }: {
     announcement: Announcement;
     onDismiss: (id: number) => void;
     onAcknowledge?: (id: number) => void;
-    isAcknowledged: boolean;
 }) {
     const config = typeConfig[announcement.type] || typeConfig.info;
     const Icon = config.icon;
@@ -339,7 +338,7 @@ function ModalPopup({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
             onClick={() => !announcement.requires_acknowledgment && onDismiss(announcement.id)}
         >
             <motion.div
@@ -348,19 +347,18 @@ function ModalPopup({
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
-                    "w-full max-w-md overflow-hidden rounded-2xl border-2 border-l-8 shadow-2xl",
+                    "bg-card w-full max-w-md overflow-hidden rounded-2xl border border-border border-l-8 shadow-2xl",
                     priority.borderColor.replace("border-l", "border-l-8"),
-                    "bg-background",
                 )}
             >
-                <div className={cn("p-6", config.gradient)}>
+                <div className="bg-muted/50 border-b p-6">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-                            <Icon className="h-6 w-6 text-white" />
+                        <div className={cn("flex h-12 w-12 items-center justify-center rounded-xl", config.iconBg)}>
+                            <Icon className={cn("h-6 w-6", config.iconColor)} />
                         </div>
-                        <div className="text-white">
+                        <div>
                             <h3 className="text-lg font-bold">{announcement.title}</h3>
-                            <p className="text-sm text-white/80">{config.description}</p>
+                            <p className="text-muted-foreground text-sm">{config.description}</p>
                         </div>
                     </div>
                 </div>
@@ -371,10 +369,10 @@ function ModalPopup({
                     {announcement.link && (
                         <a
                             href={announcement.link}
-                            className="mt-4 inline-flex items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            className="text-primary mt-4 inline-flex items-center gap-1 font-medium hover:underline"
                         >
                             <IconLink className="h-4 w-4" />
-                            Learn more
+                            {getActionLabel(announcement)}
                         </a>
                     )}
 
@@ -466,7 +464,6 @@ export function AnnouncementBanner({ announcements, displayMode: defaultDisplayM
                     announcement={urgentAnnouncement}
                     onDismiss={handleDismiss}
                     onAcknowledge={handleAcknowledge}
-                    isAcknowledged={isAcknowledged(urgentAnnouncement.id)}
                 />
             );
         }

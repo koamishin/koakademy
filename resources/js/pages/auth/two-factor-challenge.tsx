@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { OnboardingPanel } from "@/components/onboarding-panel";
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TransitionWrapper } from "@/components/transition-wrapper";
 import { Button } from "@/components/ui/button";
@@ -34,11 +35,12 @@ function supportsWebAuthn(): boolean {
 }
 
 export default function TwoFactorChallengePage() {
-    const { has_app_auth, has_email_auth, has_passkeys, branding } = usePage<{
+    const { has_app_auth, has_email_auth, has_passkeys, branding, announcements } = usePage<{
         has_app_auth: boolean;
         has_email_auth: boolean;
         has_passkeys: boolean;
         branding?: Partial<Branding> | null;
+        announcements?: unknown[];
     }>().props;
 
     const resolvedBranding = resolveBranding(branding);
@@ -451,6 +453,9 @@ export default function TwoFactorChallengePage() {
                 <div className="flex flex-1 items-center justify-center">
                     <div className="w-full max-w-sm">
                         <TransitionWrapper>
+                            <div className="mb-4">
+                                <AnnouncementBanner announcements={announcements ?? []} />
+                            </div>
                             <Card>
                                 <CardHeader>
                                     <div className="flex items-center gap-2">

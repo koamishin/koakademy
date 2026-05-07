@@ -89,8 +89,40 @@ final class HandleInertiaRequests extends Middleware
                 'moduleAdminRoutes' => $moduleAdminNavigationService->getRoutes(),
             ],
             [
-                'announcements' => $announcementService->getSharedBannerAnnouncements(...),
+                'announcements' => fn () => $announcementService->getSharedBannerAnnouncements(
+                    user: $user,
+                    location: $this->resolveAnnouncementLocation($request),
+                ),
             ]
         );
+    }
+
+    private function resolveAnnouncementLocation(Request $request): string
+    {
+        if ($request->routeIs('login')) {
+            return 'login';
+        }
+
+        if ($request->routeIs('signup.*') || $request->is('signup')) {
+            return 'signup';
+        }
+
+        if ($request->routeIs('enrollment.*') || $request->is('enrollment')) {
+            return 'enrollment';
+        }
+
+        if ($request->is('student/*')) {
+            return 'student_layout';
+        }
+
+        if ($request->is('faculty/*')) {
+            return 'faculty_layout';
+        }
+
+        if ($request->is('administrators/*') || $request->is('admin/*')) {
+            return 'admin_layout';
+        }
+
+        return 'home';
     }
 }

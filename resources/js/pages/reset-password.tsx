@@ -1,7 +1,8 @@
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link, useForm } from "@inertiajs/react";
+import { Link, useForm, usePage } from "@inertiajs/react";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
@@ -12,6 +13,7 @@ type Props = {
 
 export default function ResetPasswordPage(props: Props) {
     const { token, email } = props;
+    const { props: pageProps } = usePage<{ announcements?: unknown[] }>();
     const { data, setData, post, processing, errors } = useForm({
         token,
         email,
@@ -37,6 +39,9 @@ export default function ResetPasswordPage(props: Props) {
             <div className="flex flex-col gap-6 p-6 md:p-10">
                 <div className="flex flex-1 items-center justify-center">
                     <div className="w-full max-w-xs">
+                        <div className="mb-4">
+                            <AnnouncementBanner announcements={pageProps.announcements ?? []} />
+                        </div>
                         <form onSubmit={submit} className="space-y-6">
                             <div className="space-y-2 text-center">
                                 <h1 className="text-xl font-bold">Reset password</h1>

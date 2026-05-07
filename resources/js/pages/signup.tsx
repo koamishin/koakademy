@@ -1,3 +1,4 @@
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { SignupStepper } from "@/components/signup-stepper";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TransitionWrapper } from "@/components/transition-wrapper";
@@ -5,8 +6,9 @@ import { resolveBranding, type Branding } from "@/lib/branding";
 import { usePage } from "@inertiajs/react";
 
 export default function SignupPage() {
-    const { branding } = usePage<{
+    const { branding, announcements } = usePage<{
         branding?: Partial<Branding> | null;
+        announcements?: unknown[];
     }>().props;
 
     const resolvedBranding = resolveBranding(branding);
@@ -26,6 +28,9 @@ export default function SignupPage() {
                         </div>
                         <span className="text-foreground text-xl font-bold tracking-tight">{appName}</span>
                     </a>
+                </div>
+                <div className="mb-4">
+                    <AnnouncementBanner announcements={announcements ?? []} />
                 </div>
                 <TransitionWrapper>
                     <SignupStepper />

@@ -19,6 +19,25 @@ final class Announcement extends Model
 {
     use HasFactory;
 
+    public const ROLE_OPTIONS = [
+        'guest',
+        'authenticated',
+        'admin',
+        'student',
+        'faculty',
+    ];
+
+    public const LOCATION_OPTIONS = [
+        'all',
+        'login',
+        'signup',
+        'enrollment',
+        'home',
+        'admin_layout',
+        'student_layout',
+        'faculty_layout',
+    ];
+
     protected $table = 'announcements';
 
     protected $fillable = [
@@ -29,9 +48,13 @@ final class Announcement extends Model
         'type',
         'priority',
         'is_global',
+        'visibility_scope',
+        'audience_roles',
+        'display_locations',
         'display_mode',
         'requires_acknowledgment',
         'link',
+        'action_label',
         'is_active',
         'starts_at',
         'ends_at',
@@ -50,6 +73,7 @@ final class Announcement extends Model
     protected $attributes = [
         'status' => 'draft',
         'is_global' => true,
+        'visibility_scope' => 'global',
         'is_active' => true,
     ];
 
@@ -207,6 +231,8 @@ final class Announcement extends Model
             'class_id' => 'int',
             'school_id' => 'int',
             'is_global' => 'bool',
+            'audience_roles' => 'array',
+            'display_locations' => 'array',
             'is_active' => 'boolean',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',

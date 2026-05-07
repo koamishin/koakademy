@@ -1,3 +1,4 @@
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TransitionWrapper } from "@/components/transition-wrapper";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
-    const { props } = usePage<{ branding?: Partial<Branding> | null }>();
+    const { props } = usePage<{ branding?: Partial<Branding> | null; announcements?: unknown[] }>();
     const branding = resolveBranding(props.branding);
     const appName = branding.appName;
     const orgShortName = branding.organizationShortName;
@@ -50,6 +51,9 @@ export default function ForgotPasswordPage() {
                 <div className="flex flex-1 items-center justify-center">
                     <div className={authLayout === "card" ? "bg-card border-border w-full max-w-sm rounded-2xl border p-6 shadow-sm" : "w-full max-w-xs"}>
                         <TransitionWrapper>
+                            <div className="mb-4">
+                                <AnnouncementBanner announcements={props.announcements ?? []} />
+                            </div>
                             <form onSubmit={submit} className="flex flex-col gap-6">
                                 <div className="flex flex-col items-center gap-2 text-center">
                                     <h1 className="text-foreground text-xl font-bold">Forgot password</h1>

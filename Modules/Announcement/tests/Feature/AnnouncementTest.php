@@ -13,7 +13,10 @@ uses(TestCase::class, RefreshDatabase::class);
 
 function announcementRole(string $name, array $permissions): Role
 {
-    $role = Role::create(['name' => $name]);
+    $role = Role::query()->firstOrCreate([
+        'name' => $name,
+        'guard_name' => 'web',
+    ]);
 
     foreach ($permissions as $permission) {
         Permission::findOrCreate($permission, 'web');
@@ -57,6 +60,8 @@ it('can create an announcement', function () {
         'title' => 'Test Announcement',
         'content' => 'This is a test announcement content.',
         'type' => 'info',
+        'link' => '/enrollment',
+        'action_label' => 'Enroll now',
         'is_active' => true,
     ];
 
@@ -67,6 +72,8 @@ it('can create an announcement', function () {
 
     $this->assertDatabaseHas('announcements', [
         'title' => 'Test Announcement',
+        'link' => '/enrollment',
+        'action_label' => 'Enroll now',
         'created_by' => $admin->id,
     ]);
 });
