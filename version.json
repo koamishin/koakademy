@@ -1,14 +1,14 @@
 {
-  "version": "1.2.0-dev.0.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.0.3",
-  "commit": "e2256eeab047a261de398c48e1f634d48a760cce",
+  "version": "1.2.0-dev.0.4",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.0.4",
+  "commit": "16609057dca71db636418fb9c766f85b4eafe100",
   "branch": "master",
-  "timestamp": "2026-05-10T04:56:20Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25620173055",
+  "timestamp": "2026-05-10T08:40:30Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25624202595",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.2.0-dev.0.3 - Add two-factor enabled flag to users table",
-    "previous": "1.2.0-dev.0.2"
+    "current": "Version 1.2.0-dev.0.4 - updated readme for database configurations",
+    "previous": "1.2.0-dev.0.3"
   },
   "metadata": {
     "author": "yukazakiri",
