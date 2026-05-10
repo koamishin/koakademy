@@ -44,10 +44,11 @@
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
+        <li><a href="#quick-start">Quick Start</a></li>
       </ul>
     </li>
+    <li><a href="#deployment">Deployment</a></li>
+    <li><a href="#development">Development</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
@@ -85,58 +86,307 @@ Here's why:
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To get a local copy up and running, follow these steps.
+KoAkademy is a self-hostable academic management platform for student portals, admin operations, enrollment workflows, finance, schedules, and school content.
 
-### Prerequisites
+If you just want to try it, use the Docker image. If you want to work on the code, jump to [Development](#development).
 
-* Docker + Docker Compose
-* Composer (for the first install)
+### Quick Start
 
-### Installation
+The quick-start uses the smallest practical stack: KoAkademy + SQLite + Redis. SQLite is the app default, and Redis is included because the production image runs Horizon for queues.
 
-1. Clone the repo
-   ```sh
-   git clone https://github.com/yukazakiri/koakademy.git
-   cd koakademy
-   ```
+<details open>
+<summary><strong>Run KoAkademy with one copy-paste command</strong></summary>
 
-2. Install dependencies and bootstrap environment
-   ```sh
-   cp .env.example .env
-   composer install
-   vendor/bin/sail up -d
-   vendor/bin/sail artisan key:generate
-   vendor/bin/sail artisan migrate
-   vendor/bin/sail npm install
-   ```
+```sh
+mkdir -p koakademy && cd koakademy
+mkdir -p database
+touch database/database.sqlite
+APP_KEY="base64:$(openssl rand -base64 32)"
+cat > .env <<EOF
+APP_NAME="KoAkademy"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=http://localhost:8000
+APP_KEY=${APP_KEY}
+PORTAL_HOST=localhost
+ADMIN_HOST=localhost
+REDIS_HOST=redis
+QUEUE_CONNECTION=redis
+EOF
+cat > compose.yaml <<'EOF'
+services:
+  app:
+    image: docker.io/yukazakiri/koakademy:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - koakademy-storage:/app/storage
+      - ./database/database.sqlite:/app/database/database.sqlite
+    depends_on:
+      redis:
+        condition: service_started
 
-3. Start the frontend dev server
-   ```sh
-   vendor/bin/sail npm run dev
-   ```
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - koakademy-redis:/data
+
+volumes:
+  koakademy-storage:
+  koakademy-redis:
+EOF
+docker compose up -d
+docker compose logs --tail=100 app
+```
+
+Open `http://localhost:8000`, then create your first admin user:
+
+```sh
+docker compose exec app php artisan make:filament-user
+```
+
+</details>
+
+<details>
+<summary><strong>Image tags</strong></summary>
+
+* `docker.io/yukazakiri/koakademy:latest` — stable release channel.
+* `docker.io/yukazakiri/koakademy:dev-latest` — rolling development channel.
+* `ghcr.io/yukazakiri/koakademy:latest` — GitHub Container Registry mirror when enabled for a release.
+
+To try the rolling build, change the app image to:
+
+```yaml
+image: docker.io/yukazakiri/koakademy:dev-latest
+```
+
+</details>
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- DEPLOYMENT -->
+## Deployment
+
+For self-hosting, start with Docker Compose and add services only when you need them. The app has sensible defaults: SQLite for the database, database-backed cache/sessions, log mail, and collection search.
+
+<details>
+<summary><strong>Minimal Docker Compose</strong></summary>
+
+```yaml
+services:
+  app:
+    image: docker.io/yukazakiri/koakademy:latest
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - koakademy-storage:/app/storage
+      - ./database/database.sqlite:/app/database/database.sqlite
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - koakademy-redis:/data
+
+volumes:
+  koakademy-storage:
+  koakademy-redis:
+```
+
+Required `.env` values for this minimal setup:
+
+```env
+APP_NAME="KoAkademy"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.example
+APP_KEY=base64:replace-with-generated-key
+PORTAL_HOST=your-domain.example
+ADMIN_HOST=your-domain.example
+REDIS_HOST=redis
+QUEUE_CONNECTION=redis
+```
+
+</details>
+
+<details>
+<summary><strong>Docker run version</strong></summary>
+
+```sh
+mkdir -p koakademy/database
+touch koakademy/database/database.sqlite
+docker network create koakademy 2>/dev/null || true
+docker run -d --name koakademy-redis --restart unless-stopped --network koakademy redis:7-alpine
+docker run -d \
+  --name koakademy \
+  --restart unless-stopped \
+  --network koakademy \
+  -p 8000:8000 \
+  -v koakademy-storage:/app/storage \
+  -v "$(pwd)/koakademy/database/database.sqlite:/app/database/database.sqlite" \
+  -e APP_NAME="KoAkademy" \
+  -e APP_ENV=production \
+  -e APP_DEBUG=false \
+  -e APP_URL=http://localhost:8000 \
+  -e APP_KEY=base64:replace-with-generated-key \
+  -e PORTAL_HOST=localhost \
+  -e ADMIN_HOST=localhost \
+  -e REDIS_HOST=koakademy-redis \
+  -e QUEUE_CONNECTION=redis \
+  docker.io/yukazakiri/koakademy:latest
+```
+
+Generate an app key with:
+
+```sh
+printf 'base64:%s\n' "$(openssl rand -base64 32)"
+```
+
+</details>
+
+<details>
+<summary><strong>Recommended production add-ons</strong></summary>
+
+* Put Caddy, Traefik, Nginx, Cloudflare Tunnel, or your platform proxy in front of port `8000` for HTTPS.
+* Move to PostgreSQL when you need stronger multi-user production database operations.
+* Add Meilisearch when you want external Scout search indexing.
+* Configure SMTP for real outbound email.
+* Use S3 or Cloudflare R2 for durable uploads if you run more than one app node or replace hosts often.
+* Keep `/app/storage` persistent. For SQLite installs, also keep `/app/database/database.sqlite` persistent.
+
+</details>
+
+<details>
+<summary><strong>Environment notes</strong></summary>
+
+The only values you usually need to set for the minimal Docker setup are:
+
+* `APP_KEY` — required encryption key.
+* `APP_NAME` — display name, defaults to `KoAkademy`.
+* `APP_URL` — public URL used for generated links.
+* `PORTAL_HOST` — portal route hostname. Use `localhost` for local testing.
+* `ADMIN_HOST` — admin route hostname. Use `localhost` for local testing.
+* `REDIS_HOST` and `QUEUE_CONNECTION=redis` — needed because Horizon is supervised inside the production image.
+
+The Docker image runs migrations by default (`RUN_MIGRATIONS=true`) and listens on port `8000`.
+
+</details>
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- DEVELOPMENT -->
+## Development
+
+Working on KoAkademy locally? Use the setup scripts. They handle the boring bits: environment file, dependencies, local domains, certificates, and services.
+
+<details open>
+<summary><strong>Linux</strong></summary>
+
+```sh
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+./scripts/dev-setup.sh
+```
+
+Useful flags:
+
+```sh
+./scripts/dev-setup.sh --fresh
+./scripts/dev-setup.sh --skip-ssl
+./scripts/dev-setup.sh --skip-hosts
+./scripts/dev-setup.sh --skip-docker
+```
+
+The Linux script prepares the Docker Compose development stack, local HTTPS certificates, and hosts entries for the `.test` domains.
+
+</details>
+
+<details open>
+<summary><strong>Windows / PowerShell + Laravel Herd</strong></summary>
+
+Install [Laravel Herd](https://herd.laravel.com/) first, then run:
+
+```powershell
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+.\scripts\dev-setup.ps1
+```
+
+Useful flags:
+
+```powershell
+.\scripts\dev-setup.ps1 -SkipMigrations
+.\scripts\dev-setup.ps1 -SkipNpm
+.\scripts\dev-setup.ps1 -SkipHosts
+```
+
+The PowerShell script expects Laravel Herd and configures Herd-managed local domains and HTTPS.
+
+</details>
+
+<details>
+<summary><strong>Local development URLs</strong></summary>
+
+The scripts use the domains in your `.env`. Common defaults are:
+
+* `https://portal.koakademy.test`
+* `https://admin.koakademy.test`
+* `http://mailpit.local.test:8025`
+
+</details>
+
+<details>
+<summary><strong>Common development commands</strong></summary>
+
+```sh
+php artisan migrate
+php artisan test --compact
+vendor/bin/pint --dirty --format agent
+npm run dev
+npm run build
+```
+
+If you are using Sail / Docker Compose for development, prefix PHP and Node commands with `vendor/bin/sail`.
+
+</details>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Local hosts:
+Quick links after the Docker quick-start:
 
-* `https://portal.koakademy.test`
-* `https://admin.koakademy.test`
+* `http://localhost:8000`
+* `http://localhost:8000/admin`
+* `http://localhost:8000/administrators`
 
-Common commands:
+Handy container commands:
 
 ```sh
-vendor/bin/sail up -d
-vendor/bin/sail stop
+docker compose up -d
+docker compose logs --tail=100 app
+docker compose exec app php artisan make:filament-user
+docker compose exec app php artisan migrate --force
+docker compose pull app && docker compose up -d
+docker compose down
+```
 
-vendor/bin/sail artisan migrate
-vendor/bin/sail artisan test --compact
-vendor/bin/sail bin pint --dirty --format agent
+Local development commands:
 
-vendor/bin/sail npm run dev
-vendor/bin/sail npm run build
+```sh
+php artisan migrate
+php artisan test --compact
+vendor/bin/pint --dirty --format agent
+npm run dev
+npm run build
 ```
 
 Docs:
@@ -211,7 +461,7 @@ Distributed under the GNU Affero General Public License v3.0 or later. See [`LIC
 [license-shield]: https://img.shields.io/github/license/yukazakiri/koakademy.svg?style=for-the-badge
 [license-url]: https://github.com/yukazakiri/koakademy/blob/master/LICENSE.md
 
-[product-screenshot]: [public/web-app-manifest-192x192.png](https://raw.githubusercontent.com/koamishin/KoamiStarterKit/main/public/koamishin-logo.svg)
+[product-screenshot]: https://raw.githubusercontent.com/koamishin/KoamiStarterKit/main/public/koamishin-logo.svg
 
 [Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
 [Laravel-url]: https://laravel.com
