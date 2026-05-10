@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Filament\Auth\MultiFactor\SecurityAwareAppAuthentication;
+use App\Filament\Auth\MultiFactor\SecurityAwareEmailAuthentication;
 use App\Models\User;
-use App\Notifications\TwoFactorCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
-use PragmaRX\Google2FA\Google2FA;
 use Spatie\LaravelPasskeys\Actions\FindPasskeyToAuthenticateAction;
 use Spatie\LaravelPasskeys\Support\Config;
 use Spatie\LaravelPasskeys\Support\Serializer;
@@ -21,6 +20,11 @@ use Webauthn\PublicKeyCredentialRequestOptions;
 
 final class TwoFactorChallengeController extends Controller
 {
+    public function __construct(
+        private readonly SecurityAwareAppAuthentication $appAuthentication,
+        private readonly SecurityAwareEmailAuthentication $emailAuthentication,
+    ) {}
+
     public function create(Request $request)
     {
         if (! $request->session()->has('auth.2fa.id')) {
@@ -34,8 +38,8 @@ final class TwoFactorChallengeController extends Controller
         }
 
         return Inertia::render('auth/two-factor-challenge', [
-            'has_app_auth' => ! is_null($user->app_authentication_secret),
-            'has_email_auth' => true, // Email code is always available as a fallback
+            'has_app_auth' => $this->appAuthentication->isEnabled($user),
+            'has_email_auth' => $this->emailAuthentication->isEnabled($user),
             'has_passkeys' => $user->passkeys()->exists(),
         ]);
     }
@@ -58,12 +62,7 @@ final class TwoFactorChallengeController extends Controller
         }
 
         if ($request->filled('recovery_code')) {
-            $recoveryCodes = $user->app_authentication_recovery_codes;
-
-            if ($recoveryCodes && in_array($request->recovery_code, $recoveryCodes)) {
-                $user->app_authentication_recovery_codes = array_diff($recoveryCodes, [$request->recovery_code]);
-                $user->save();
-
+            if ($this->appAuthentication->isEnabled($user) && $this->verifyRecoveryCode($user, $request->recovery_code)) {
                 return $this->loginUser($request, $user);
             }
 
@@ -72,22 +71,19 @@ final class TwoFactorChallengeController extends Controller
 
         $code = $request->code;
 
-        // Try App Auth
-        if ($user->app_authentication_secret) {
-            $google2fa = new Google2FA();
-            // verifyKey(secret, code, window?) window defaults to 4 (2 mins before/after)
-            if ($google2fa->verifyKey($user->app_authentication_secret, $code)) {
+        if (blank($code)) {
+            return back()->withErrors(['code' => 'The authentication code is required.']);
+        }
+
+        if ($this->appAuthentication->isEnabled($user)) {
+            $secret = $user->getAppAuthenticationSecret();
+
+            if (filled($secret) && $this->appAuthentication->verifyCode($code, $secret, shouldPreventCodeReuse: true)) {
                 return $this->loginUser($request, $user);
             }
         }
 
-        // Try Email Auth (always available as fallback)
-        $cacheKey = '2fa_email_code_'.$user->id;
-        $cachedCode = Cache::get($cacheKey);
-
-        if ($cachedCode && $cachedCode === $code) {
-            Cache::forget($cacheKey);
-
+        if ($this->emailAuthentication->isEnabled($user) && $this->emailAuthentication->verifyCode($code)) {
             return $this->loginUser($request, $user);
         }
 
@@ -105,10 +101,13 @@ final class TwoFactorChallengeController extends Controller
             return redirect()->route('login');
         }
 
-        $code = (string) random_int(100000, 999999);
-        Cache::put('2fa_email_code_'.$user->id, $code, 300); // 5 minutes
+        if (! $this->emailAuthentication->isEnabled($user)) {
+            return back()->withErrors(['code' => 'Email authentication is not enabled for this account.']);
+        }
 
-        $user->notify(new TwoFactorCode($code));
+        if (! $this->emailAuthentication->sendCode($user)) {
+            return back()->withErrors(['code' => 'Please wait before requesting another email code.']);
+        }
 
         return back()->with('flash', ['success' => 'Code sent to your email.']);
     }
@@ -210,6 +209,28 @@ final class TwoFactorChallengeController extends Controller
         } catch (Throwable $e) {
             return response()->json(['error' => 'Passkey verification failed: '.$e->getMessage()], 400);
         }
+    }
+
+    private function verifyRecoveryCode(User $user, string $recoveryCode): bool
+    {
+        try {
+            if ($this->appAuthentication->verifyRecoveryCode($recoveryCode, $user)) {
+                return true;
+            }
+        } catch (Throwable) {
+            // Fall through to legacy recovery code handling below.
+        }
+
+        $recoveryCodes = $user->app_authentication_recovery_codes;
+
+        if (! is_array($recoveryCodes) || ! in_array($recoveryCode, $recoveryCodes, true)) {
+            return false;
+        }
+
+        $user->app_authentication_recovery_codes = array_values(array_diff($recoveryCodes, [$recoveryCode]));
+        $user->save();
+
+        return true;
     }
 
     private function loginUser(Request $request, User $user)

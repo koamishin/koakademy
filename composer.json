@@ -84,7 +84,7 @@
         "stechstudio/filament-impersonate": "^4.0",
         "stephenjude/filament-debugger": "^5.0",
         "tightenco/ziggy": "^2.5",
-        "tonegabes/filament-phosphor-icons": "*",
+        "tonegabes/filament-phosphor-icons": "^1.3",
         "wnx/laravel-backup-restore": "^1.8",
         "ysfkaya/filament-phone-input": "^4.0"
     },
