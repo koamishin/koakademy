@@ -1,14 +1,14 @@
 {
-  "version": "1.2.0-dev.0.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.0.2",
-  "commit": "ea0728dd565f64601cfbb308bd7d65b8a74d62d6",
+  "version": "1.2.0-dev.0.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.0.3",
+  "commit": "e2256eeab047a261de398c48e1f634d48a760cce",
   "branch": "master",
-  "timestamp": "2026-05-07T14:44:19Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25502593867",
+  "timestamp": "2026-05-10T04:56:20Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25620173055",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.2.0-dev.0.2 - Add targeted announcements with scope and locations",
-    "previous": "1.2.0-dev.0.1"
+    "current": "Version 1.2.0-dev.0.3 - Add two-factor enabled flag to users table",
+    "previous": "1.2.0-dev.0.2"
   },
   "metadata": {
     "author": "yukazakiri",
