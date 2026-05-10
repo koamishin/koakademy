@@ -55,8 +55,8 @@ final class AuthController extends Controller
             /** @var User|null $user */
             $user = $request->user();
 
-            // Check for 2FA (app auth, email auth, or passkeys)
-            if ($user->app_authentication_secret || $user->hasEmailAuthentication() || $user->passkeys()->exists()) {
+            // Check for enabled 2FA login challenges without removing configured credentials.
+            if ($user->requiresTwoFactorChallenge()) {
                 Auth::logout();
                 $request->session()->put('auth.2fa.id', $user->id);
                 $request->session()->put('auth.2fa.remember', $remember);

@@ -51,6 +51,7 @@ it('returns correct endpoints for student portal', function (): void {
         ->where('endpoints.two_factor_enable', '/student/profile/two-factor-authentication/enable')
         ->where('endpoints.two_factor_confirm', '/student/profile/two-factor-authentication/confirm')
         ->where('endpoints.two_factor_disable', '/student/profile/two-factor-authentication')
+        ->where('endpoints.security_two_factor_toggle', '/student/profile/two-factor-authentication/login-challenges')
         ->where('endpoints.email_auth_toggle', '/student/profile/email-authentication')
         ->where('endpoints.experimental_features', '/student/profile/experimental-features')
         ->where('endpoints.browser_sessions_logout', '/student/profile/other-browser-sessions')
@@ -137,6 +138,7 @@ it('returns student data when student record exists', function (): void {
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
         ->has('student')
+        ->where('user.security_two_factor_enabled', true)
         ->where('student.first_name', $this->student->first_name)
         ->where('student.last_name', $this->student->last_name)
         ->where('student.email', $this->student->email)

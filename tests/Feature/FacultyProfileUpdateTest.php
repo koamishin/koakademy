@@ -39,6 +39,7 @@ it('returns correct endpoints for faculty portal', function (): void {
         ->where('endpoints.two_factor_enable', '/faculty/profile/two-factor-authentication/enable')
         ->where('endpoints.two_factor_confirm', '/faculty/profile/two-factor-authentication/confirm')
         ->where('endpoints.two_factor_disable', '/faculty/profile/two-factor-authentication')
+        ->where('endpoints.security_two_factor_toggle', '/faculty/profile/two-factor-authentication/login-challenges')
         ->where('endpoints.email_auth_toggle', '/faculty/profile/email-authentication')
         ->where('endpoints.experimental_features', '/faculty/profile/experimental-features')
         ->where('endpoints.browser_sessions_logout', '/faculty/profile/other-browser-sessions')

@@ -160,6 +160,7 @@ Route::middleware(['auth', 'faculty.verified', 'faculty.only', 'ensure.feature']
         Route::post('/profile/two-factor-authentication/enable', [ProfileController::class, 'enableTwoFactor'])->name('profile.two-factor.enable');
         Route::post('/profile/two-factor-authentication/confirm', [ProfileController::class, 'confirmTwoFactor'])->name('profile.two-factor.confirm');
         Route::delete('/profile/two-factor-authentication', [ProfileController::class, 'disableTwoFactor'])->name('profile.two-factor.disable');
+        Route::post('/profile/two-factor-authentication/login-challenges', [ProfileController::class, 'toggleSecurityTwoFactor'])->name('profile.two-factor.login-challenges');
         Route::post('/profile/email-authentication', [ProfileController::class, 'toggleEmailAuthentication'])->name('profile.email-auth.toggle');
         Route::post('/profile/experimental-features', [ProfileController::class, 'toggleExperimentalFeatures'])->name('profile.experimental-features');
         Route::post('/profile/two-factor-authentication/recovery-codes', [ProfileController::class, 'regenerateRecoveryCodes'])->name('profile.two-factor.recovery-codes');

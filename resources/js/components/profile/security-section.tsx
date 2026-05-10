@@ -1,13 +1,15 @@
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemMedia, ItemSeparator, ItemTitle } from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { router } from "@inertiajs/react";
 import axios from "axios";
-import { CheckCircle2, Key, QrCode, ShieldCheck, Trash2 } from "lucide-react";
+import { Key, Mail, QrCode, ShieldCheck, ShieldOff, Smartphone, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +17,7 @@ interface SecuritySectionProps {
     isFaculty: boolean;
     isStudent: boolean;
     user: {
+        security_two_factor_enabled: boolean;
         two_factor_enabled: boolean;
         email_two_factor_enabled: boolean;
         recovery_codes?: string[];
@@ -27,6 +30,7 @@ interface SecuritySectionProps {
         two_factor_confirm: string;
         two_factor_disable: string;
         two_factor_recovery_codes: string;
+        security_two_factor_toggle: string;
         email_auth_toggle: string;
     };
     developerModeEnabled?: boolean;
@@ -55,6 +59,7 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
     const [twoFactorForm, setTwoFactorForm] = useState({ code: "", secret: "" });
     const [twoFactorProcessing, setTwoFactorProcessing] = useState(false);
     const [showRecoveryCodes, setShowRecoveryCodes] = useState(false);
+    const [securityTwoFactorProcessing, setSecurityTwoFactorProcessing] = useState(false);
 
     useEffect(() => {
         fetchPasskeys();
@@ -172,6 +177,25 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
             {
                 preserveScroll: true,
                 onSuccess: () => toast.success(checked ? "Email authentication enabled." : "Email authentication disabled."),
+            },
+        );
+    };
+
+    const handleToggleSecurityTwoFactor = (checked: boolean) => {
+        setSecurityTwoFactorProcessing(true);
+        router.post(
+            paths.security_two_factor_toggle,
+            { enabled: checked },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(checked ? "2FA login protection is on." : "2FA login protection is paused.");
+                    setSecurityTwoFactorProcessing(false);
+                },
+                onError: () => {
+                    toast.error("Failed to update 2FA login protection.");
+                    setSecurityTwoFactorProcessing(false);
+                },
             },
         );
     };
@@ -387,46 +411,106 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
                         <QrCode className="h-5 w-5" />
                         Two-Factor Authentication
                     </CardTitle>
-                    <CardDescription>Add an extra layer of security to your account</CardDescription>
+                    <CardDescription>Choose whether saved security methods are required when you sign in</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {passkeys.length > 0 && (
-                        <>
-                            <div className="flex items-center justify-between space-x-2">
-                                <Label className="flex flex-col space-y-1">
-                                    <span>Passkey Verification</span>
-                                    <span className="text-muted-foreground text-xs font-normal">
-                                        Your {passkeys.length} registered passkey
-                                        {passkeys.length !== 1 ? "s" : ""} can be used as a second factor during login
-                                    </span>
-                                </Label>
-                                <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5">
-                                    Active
-                                </Badge>
-                            </div>
-                            <Separator />
-                        </>
-                    )}
-                    <div className="flex items-center justify-between space-x-2">
-                        <Label htmlFor="email-auth" className="flex flex-col space-y-1">
-                            <span>Email Authentication</span>
-                            <span className="text-muted-foreground text-xs font-normal">Receive a verification code via email</span>
-                        </Label>
-                        <Switch id="email-auth" checked={user.email_two_factor_enabled} onCheckedChange={handleToggleEmailAuth} />
+                <CardContent className="space-y-5">
+                    <Alert className={user.security_two_factor_enabled ? "border-primary/30 bg-primary/5" : "border-amber-500/30 bg-amber-500/10"}>
+                        {user.security_two_factor_enabled ? <ShieldCheck className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
+                        <AlertTitle>{user.security_two_factor_enabled ? "Login protection is on" : "Login protection is paused"}</AlertTitle>
+                        <AlertDescription>
+                            {user.security_two_factor_enabled
+                                ? "After your password, you may be asked for one of your saved security methods."
+                                : "You will sign in with your password only. Your passkeys, email option, and authenticator setup stay saved."}
+                        </AlertDescription>
+                    </Alert>
+
+                    <Item variant="outline" className="items-center">
+                        <ItemMedia variant="icon">
+                            {user.security_two_factor_enabled ? <ShieldCheck className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
+                        </ItemMedia>
+                        <ItemContent>
+                            <ItemTitle>Require security check after password</ItemTitle>
+                            <ItemDescription>This is the only switch that controls whether login asks for 2FA.</ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
+                            <Badge variant={user.security_two_factor_enabled ? "default" : "secondary"}>
+                                {user.security_two_factor_enabled ? "On" : "Paused"}
+                            </Badge>
+                            <Switch
+                                id="security-two-factor"
+                                checked={user.security_two_factor_enabled}
+                                disabled={securityTwoFactorProcessing}
+                                onCheckedChange={handleToggleSecurityTwoFactor}
+                            />
+                        </ItemActions>
+                    </Item>
+
+                    <div className="space-y-3">
+                        <div>
+                            <h3 className="text-sm font-medium">Saved security methods</h3>
+                            <p className="text-muted-foreground text-xs">These stay saved even when login protection is paused.</p>
+                        </div>
+
+                        <ItemGroup className="rounded-lg border">
+                            <Item>
+                                <ItemMedia variant="icon">
+                                    <Key className="h-4 w-4" />
+                                </ItemMedia>
+                                <ItemContent>
+                                    <ItemTitle>Passkeys</ItemTitle>
+                                    <ItemDescription>
+                                        {passkeys.length > 0
+                                            ? `${passkeys.length} passkey${passkeys.length === 1 ? "" : "s"} saved for quick verification.`
+                                            : "No passkeys saved yet."}
+                                    </ItemDescription>
+                                </ItemContent>
+                                <ItemActions>
+                                    <Badge variant={passkeys.length > 0 ? "outline" : "secondary"}>{passkeys.length > 0 ? "Saved" : "Not set"}</Badge>
+                                </ItemActions>
+                            </Item>
+                            <ItemSeparator />
+                            <Item>
+                                <ItemMedia variant="icon">
+                                    <Mail className="h-4 w-4" />
+                                </ItemMedia>
+                                <ItemContent>
+                                    <ItemTitle>Email codes</ItemTitle>
+                                    <ItemDescription>Receive a verification code by email when login protection is on.</ItemDescription>
+                                </ItemContent>
+                                <ItemActions>
+                                    <Switch id="email-auth" checked={user.email_two_factor_enabled} onCheckedChange={handleToggleEmailAuth} />
+                                </ItemActions>
+                            </Item>
+                            <ItemSeparator />
+                            <Item>
+                                <ItemMedia variant="icon">
+                                    <Smartphone className="h-4 w-4" />
+                                </ItemMedia>
+                                <ItemContent>
+                                    <ItemTitle>Authenticator app</ItemTitle>
+                                    <ItemDescription>
+                                        {user.two_factor_enabled
+                                            ? "An authenticator app is saved for this account."
+                                            : "Use Google Authenticator, Authy, or a compatible app."}
+                                    </ItemDescription>
+                                </ItemContent>
+                                <ItemActions>
+                                    <Badge variant={user.two_factor_enabled ? "outline" : "secondary"}>
+                                        {user.two_factor_enabled ? "Saved" : "Not set"}
+                                    </Badge>
+                                </ItemActions>
+                            </Item>
+                        </ItemGroup>
                     </div>
                     <Separator />
                     {user.two_factor_enabled ? (
                         <>
-                            <div className="text-primary bg-primary/10 dark:bg-primary/20 flex items-center gap-2 rounded-md p-3">
-                                <CheckCircle2 className="h-5 w-5" />
-                                <span className="font-medium">Authenticator App is enabled.</span>
-                            </div>
-                            <div className="flex gap-3">
+                            <div className="flex flex-wrap gap-3">
                                 <Button variant="outline" onClick={handleRegenerateRecoveryCodes}>
                                     Regenerate Recovery Codes
                                 </Button>
                                 <Button variant="destructive" onClick={handleDisableTwoFactor}>
-                                    Disable App Auth
+                                    Remove Authenticator App
                                 </Button>
                             </div>
                             {showRecoveryCodes && user.recovery_codes && (

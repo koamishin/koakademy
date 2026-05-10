@@ -26,7 +26,7 @@ final class StudentFactory extends Factory
     public function definition(): array
     {
         $school = School::query()->first();
-        $schoolId = $school?->id ?? 1;
+        $schoolId = $school?->id ?? School::factory()->create()->id;
         $course = Course::query()->inRandomOrder()->first();
         $courseId = $course?->id ?? Course::factory()->create()->id;
         $gender = Gender::random();

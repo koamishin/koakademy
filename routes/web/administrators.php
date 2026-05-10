@@ -107,6 +107,7 @@ Route::middleware(['auth', 'administrators.only'])
         Route::post('/settings/two-factor-authentication/enable', [App\Http\Controllers\ProfileController::class, 'enableTwoFactor'])->name('settings.two-factor.enable');
         Route::post('/settings/two-factor-authentication/confirm', [App\Http\Controllers\ProfileController::class, 'confirmTwoFactor'])->name('settings.two-factor.confirm');
         Route::delete('/settings/two-factor-authentication', [App\Http\Controllers\ProfileController::class, 'disableTwoFactor'])->name('settings.two-factor.disable');
+        Route::post('/settings/two-factor-authentication/login-challenges', [App\Http\Controllers\ProfileController::class, 'toggleSecurityTwoFactor'])->name('settings.two-factor.login-challenges');
         Route::post('/settings/email-authentication', [App\Http\Controllers\ProfileController::class, 'toggleEmailAuthentication'])->name('settings.email-auth.toggle');
         Route::post('/settings/two-factor-authentication/recovery-codes', [App\Http\Controllers\ProfileController::class, 'regenerateRecoveryCodes'])->name('settings.two-factor.recovery-codes');
         Route::delete('/settings/other-browser-sessions', [App\Http\Controllers\ProfileController::class, 'logoutOtherBrowserSessions'])->name('settings.browser-sessions.logout');

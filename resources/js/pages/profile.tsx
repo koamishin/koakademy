@@ -87,6 +87,7 @@ export default function ProfilePage() {
             website?: string;
             department?: string;
             position?: string;
+            security_two_factor_enabled: boolean;
             two_factor_enabled: boolean;
             email_two_factor_enabled: boolean;
             recovery_codes?: string[];
@@ -170,6 +171,7 @@ export default function ProfilePage() {
             two_factor_confirm: string;
             two_factor_disable: string;
             two_factor_recovery_codes: string;
+            security_two_factor_toggle: string;
             email_auth_toggle: string;
             experimental_features: string;
             browser_sessions_logout: string;
@@ -190,6 +192,7 @@ export default function ProfilePage() {
         two_factor_confirm: endpoints?.two_factor_confirm || "/profile/two-factor-authentication/confirm",
         two_factor_disable: endpoints?.two_factor_disable || "/profile/two-factor-authentication",
         two_factor_recovery_codes: endpoints?.two_factor_recovery_codes || "/profile/two-factor-authentication/recovery-codes",
+        security_two_factor_toggle: endpoints?.security_two_factor_toggle || "/profile/two-factor-authentication/login-challenges",
         email_auth_toggle: endpoints?.email_auth_toggle || "/profile/email-authentication",
         experimental_features: endpoints?.experimental_features || "/profile/experimental-features",
         browser_sessions_logout: endpoints?.browser_sessions_logout || "/profile/other-browser-sessions",

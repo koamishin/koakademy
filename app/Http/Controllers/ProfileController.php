@@ -123,6 +123,7 @@ final class ProfileController extends Controller
                 'website' => $user->website,
                 'department' => $user->department,
                 'position' => $user->position,
+                'security_two_factor_enabled' => $user->security_two_factor_enabled ?? true,
                 'two_factor_enabled' => ! is_null($user->app_authentication_secret),
                 'email_two_factor_enabled' => $user->hasEmailAuthentication(),
                 'recovery_codes' => $user->app_authentication_recovery_codes,
@@ -288,6 +289,22 @@ final class ProfileController extends Controller
 
         return back()->with('flash', [
             'success' => $request->enabled ? 'Email authentication enabled.' : 'Email authentication disabled.',
+        ]);
+    }
+
+    public function toggleSecurityTwoFactor(Request $request)
+    {
+        $request->validate([
+            'enabled' => 'required|boolean',
+        ]);
+
+        $user = Auth::user();
+        $user->toggleSecurityTwoFactor($request->boolean('enabled'));
+
+        return back()->with('flash', [
+            'success' => $request->boolean('enabled')
+                ? 'Two-factor login challenges enabled.'
+                : 'Two-factor login challenges disabled.',
         ]);
     }
 
@@ -815,6 +832,7 @@ final class ProfileController extends Controller
             'two_factor_confirm' => $basePath.'/two-factor-authentication/confirm',
             'two_factor_disable' => $basePath.'/two-factor-authentication',
             'two_factor_recovery_codes' => $basePath.'/two-factor-authentication/recovery-codes',
+            'security_two_factor_toggle' => $basePath.'/two-factor-authentication/login-challenges',
             'email_auth_toggle' => $basePath.'/email-authentication',
             'experimental_features' => $basePath.'/experimental-features',
             'browser_sessions_logout' => $basePath.'/other-browser-sessions',

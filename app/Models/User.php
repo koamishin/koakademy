@@ -122,6 +122,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         'website',
         'department',
         'position',
+        'security_two_factor_enabled',
     ];
 
     /**
@@ -631,6 +632,21 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         $this->save();
     }
 
+    public function requiresTwoFactorChallenge(): bool
+    {
+        return ($this->security_two_factor_enabled ?? true) && (
+            filled($this->app_authentication_secret)
+            || $this->hasEmailAuthentication()
+            || $this->passkeys()->exists()
+        );
+    }
+
+    public function toggleSecurityTwoFactor(bool $condition): void
+    {
+        $this->security_two_factor_enabled = $condition;
+        $this->save();
+    }
+
     public function sendPasswordResetNotification($token): void
     {
         ResetPasswordNotification::createUrlUsing(fn ($user, string $token): string => route('password.reset', [
@@ -683,6 +699,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
             'has_email_authentication' => 'boolean',
+            'security_two_factor_enabled' => 'boolean',
             // Note: role is handled manually via getRoleAttribute/setRoleAttribute
         ];
     }
