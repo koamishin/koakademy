@@ -3,7 +3,7 @@ set -e
 
 container_mode=${CONTAINER_MODE:-"http"}
 app_env=$(printf '%s' "${APP_ENV:-production}" | tr '[:upper:]' '[:lower:]')
-database_connection=$(printf '%s' "${DB_CONNECTION:-sqlite}" | tr '[:upper:]' '[:lower:]')
+database_connection=$(printf '%s' "${DB_CONNECTION:-}" | tr '[:upper:]' '[:lower:]')
 
 horizon_enabled=true
 
@@ -171,6 +171,29 @@ is_redis_required() {
     fi
 
     return 1
+}
+
+resolve_database_connection() {
+    if [ -n "${database_connection}" ]; then
+        return 0
+    fi
+
+    derived_connection=$(php -r '
+        $app = require "bootstrap/app.php";
+        $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+        $kernel->bootstrap();
+        $driver = (string) config("database.default", "");
+        echo strtolower($driver);
+    ' 2>/dev/null || true)
+
+    if [ -n "${derived_connection}" ]; then
+        database_connection=$(printf '%s' "${derived_connection}" | tr '[:upper:]' '[:lower:]')
+        export DB_CONNECTION="${database_connection}"
+        return 0
+    fi
+
+    database_connection="sqlite"
+    export DB_CONNECTION="${database_connection}"
 }
 
 is_database_connection_networked() {
@@ -675,6 +698,8 @@ bootstrap_container() {
 
     fix_storage_permissions
     purge_laravel_provider_caches
+    resolve_database_connection
+    echo "Database connection driver: ${database_connection}"
     check_connections
     configure_scout_driver
 
