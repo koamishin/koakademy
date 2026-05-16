@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Faculty;
 
+use App\Features\Toggles\FacultyAttendance;
 use App\Models\ClassAttendanceRecord;
 use App\Models\ClassAttendanceSession;
 use App\Models\ClassEnrollment;
 use App\Models\Classes;
 use App\Models\Faculty;
+use App\Models\GeneralSetting;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\GeneralSettingsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Pennant\Feature;
 use Tests\TestCase;
 
 final class AttendanceRouteTest extends TestCase
@@ -59,6 +64,50 @@ final class AttendanceRouteTest extends TestCase
             'class_id' => $this->class->id,
             'topic' => 'Test Session',
         ]);
+    }
+
+    public function test_faculty_can_view_attendance_index_page(): void
+    {
+        config(['inertia.testing.ensure_pages_exist' => false]);
+
+        GeneralSetting::query()->create([
+            'school_starting_date' => '2024-08-01',
+            'school_ending_date' => '2025-05-31',
+            'semester' => 1,
+        ]);
+
+        $settingsService = app(GeneralSettingsService::class);
+
+        $this->class->update([
+            'school_year' => $settingsService->getCurrentSchoolYearString(),
+            'semester' => $settingsService->getCurrentSemester(),
+        ]);
+
+        $otherFacultyUser = User::factory()->create([
+            'role' => \App\Enums\UserRole::Instructor,
+            'faculty_id_number' => 'FAC-54321',
+            'email' => 'other-attendance-faculty@example.com',
+        ]);
+        $otherFaculty = Faculty::factory()->create(['email' => $otherFacultyUser->email]);
+
+        Classes::factory()->create([
+            'faculty_id' => $otherFaculty->id,
+            'school_year' => $settingsService->getCurrentSchoolYearString(),
+            'semester' => $settingsService->getCurrentSemester(),
+        ]);
+
+        Feature::for($this->user)->activate(FacultyAttendance::class);
+
+        $response = $this->actingAs($this->user)
+            ->get('/faculty/attendance');
+
+        $response->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->component('faculty/attendance/index')
+                ->has('faculty_data.classes', 1)
+                ->where('faculty_data.classes.0.id', $this->class->id)
+                ->where('faculty_data.classes.0.manage_attendance_url', '/faculty/classes/'.$this->class->id.'?tab=attendance')
+            );
     }
 
     public function test_can_update_attendance_record()
