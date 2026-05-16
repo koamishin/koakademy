@@ -9,6 +9,7 @@ use App\Models\Faculty;
 use App\Models\Room;
 use App\Models\School;
 use App\Models\Subject;
+use App\Services\GeneralSettingsService;
 use Illuminate\Database\Seeder;
 
 final class ClassSeeder extends Seeder
@@ -23,6 +24,9 @@ final class ClassSeeder extends Seeder
         $faculties = Faculty::all();
         $rooms = Room::all();
         $subjects = Subject::all();
+        $settings = app(GeneralSettingsService::class);
+        $currentSchoolYear = $settings->getCurrentSchoolYearString();
+        $currentSemester = $settings->getCurrentSemester();
 
         $classes = [
             // First Year IT Classes
@@ -312,6 +316,54 @@ final class ClassSeeder extends Seeder
                 'maximum_slots' => 25,
             ],
         ];
+
+        $demoFaculty = $faculties->firstWhere('email', 'j.adams@koakademy.edu');
+
+        if ($demoFaculty !== null) {
+            $demoClasses = [
+                [
+                    'subject_id' => $subjects->where('code', 'IT121')->first()->id,
+                    'subject_code' => 'IT121',
+                    'faculty_id' => $demoFaculty->id,
+                    'academic_year' => 1,
+                    'semester' => $currentSemester,
+                    'school_year' => $currentSchoolYear,
+                    'course_codes' => ['1', '4'], // BSIT + BSBA-MM
+                    'section' => 'DEMO-A',
+                    'room_id' => $rooms->where('name', 'Computer Lab 1')->first()->id,
+                    'classification' => 'college',
+                    'maximum_slots' => 30,
+                ],
+                [
+                    'subject_id' => $subjects->where('code', 'BA111')->first()->id,
+                    'subject_code' => 'BA111',
+                    'faculty_id' => $demoFaculty->id,
+                    'academic_year' => 1,
+                    'semester' => $currentSemester,
+                    'school_year' => $currentSchoolYear,
+                    'course_codes' => ['4', '5'], // BSBA-MM + BSBA-FM
+                    'section' => 'DEMO-B',
+                    'room_id' => $rooms->where('name', 'Business Lab')->first()->id,
+                    'classification' => 'college',
+                    'maximum_slots' => 30,
+                ],
+                [
+                    'subject_id' => $subjects->where('code', 'HM111')->first()->id,
+                    'subject_code' => 'HM111',
+                    'faculty_id' => $demoFaculty->id,
+                    'academic_year' => 1,
+                    'semester' => $currentSemester,
+                    'school_year' => $currentSchoolYear,
+                    'course_codes' => ['2', '6'], // BSHM + BSTM
+                    'section' => 'DEMO-C',
+                    'room_id' => $rooms->where('name', 'Room 301')->first()->id,
+                    'classification' => 'college',
+                    'maximum_slots' => 30,
+                ],
+            ];
+
+            $classes = [...$classes, ...$demoClasses];
+        }
 
         foreach ($classes as $class) {
             Classes::query()->create(array_merge($class, [

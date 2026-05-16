@@ -376,6 +376,52 @@ final class ScheduleSeeder extends Seeder
             ],
         ];
 
+        $demoAClass = $classes->where('section', 'DEMO-A')->first();
+        $demoBClass = $classes->where('section', 'DEMO-B')->first();
+        $demoCClass = $classes->where('section', 'DEMO-C')->first();
+
+        if ($demoAClass !== null && $demoBClass !== null && $demoCClass !== null) {
+            $demoSchedules = [
+                [
+                    'class_id' => $demoAClass->id,
+                    'day_of_week' => 'Monday',
+                    'start_time' => '09:00:00',
+                    'end_time' => '11:00:00',
+                    'room_id' => $rooms->where('name', 'Computer Lab 1')->first()->id,
+                ],
+                [
+                    'class_id' => $demoAClass->id,
+                    'day_of_week' => 'Wednesday',
+                    'start_time' => '09:00:00',
+                    'end_time' => '11:00:00',
+                    'room_id' => $rooms->where('name', 'Computer Lab 1')->first()->id,
+                ],
+                [
+                    'class_id' => $demoBClass->id,
+                    'day_of_week' => 'Tuesday',
+                    'start_time' => '13:00:00',
+                    'end_time' => '15:00:00',
+                    'room_id' => $rooms->where('name', 'Business Lab')->first()->id,
+                ],
+                [
+                    'class_id' => $demoBClass->id,
+                    'day_of_week' => 'Thursday',
+                    'start_time' => '13:00:00',
+                    'end_time' => '15:00:00',
+                    'room_id' => $rooms->where('name', 'Business Lab')->first()->id,
+                ],
+                [
+                    'class_id' => $demoCClass->id,
+                    'day_of_week' => 'Friday',
+                    'start_time' => '09:00:00',
+                    'end_time' => '12:00:00',
+                    'room_id' => $rooms->where('name', 'Room 301')->first()->id,
+                ],
+            ];
+
+            $schedules = [...$schedules, ...$demoSchedules];
+        }
+
         foreach ($schedules as $schedule) {
             Schedule::query()->create($schedule);
         }

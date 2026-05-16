@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Models\ClassEnrollment;
 use App\Models\Classes;
+use App\Models\Faculty;
 use App\Models\School;
 use App\Models\Student;
 use App\Models\SubjectEnrollment;
@@ -192,6 +193,77 @@ final class ClassEnrollmentSeeder extends Seeder
             }
         }
 
+        $this->seedDemoFacultyClassEnrollments($schoolId);
+
         $this->command->info('Class enrollments seeded successfully!');
+    }
+
+    private function seedDemoFacultyClassEnrollments(int $schoolId): void
+    {
+        $demoFaculty = Faculty::query()
+            ->where('email', 'j.adams@koakademy.edu')
+            ->first();
+
+        if ($demoFaculty === null) {
+            return;
+        }
+
+        $demoClasses = Classes::query()
+            ->where('faculty_id', $demoFaculty->id)
+            ->whereIn('section', ['DEMO-A', 'DEMO-B', 'DEMO-C'])
+            ->orderBy('section')
+            ->get();
+
+        if ($demoClasses->count() !== 3) {
+            return;
+        }
+
+        $students = Student::query()
+            ->orderBy('id')
+            ->take(30)
+            ->get();
+
+        if ($students->count() < 30) {
+            return;
+        }
+
+        $studentsByClass = $students->chunk(10)->values();
+
+        foreach ($demoClasses as $index => $demoClass) {
+            $classStudents = $studentsByClass->get($index);
+
+            if ($classStudents === null || $classStudents->count() < 10) {
+                continue;
+            }
+
+            foreach ($classStudents as $student) {
+                $alreadyEnrolled = ClassEnrollment::query()
+                    ->where('class_id', $demoClass->id)
+                    ->where('student_id', $student->id)
+                    ->exists();
+
+                if ($alreadyEnrolled) {
+                    continue;
+                }
+
+                ClassEnrollment::query()->create([
+                    'class_id' => $demoClass->id,
+                    'student_id' => $student->id,
+                    'school_id' => $schoolId,
+                    'completion_date' => null,
+                    'status' => true,
+                    'remarks' => 'Demo enrollment for faculty walkthrough',
+                    'prelim_grade' => null,
+                    'midterm_grade' => null,
+                    'finals_grade' => null,
+                    'total_average' => null,
+                    'is_grades_finalized' => false,
+                    'is_grades_verified' => false,
+                    'verified_by' => null,
+                    'verified_at' => null,
+                    'verification_notes' => null,
+                ]);
+            }
+        }
     }
 }
