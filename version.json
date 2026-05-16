@@ -1,14 +1,14 @@
 {
-  "version": "1.2.0-dev.2.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.2.0",
-  "commit": "825de2025f212ac7607e8d89a853d64993ce26fa",
+  "version": "1.2.0-dev.2.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.2.0-dev.2.1",
+  "commit": "2bcc38b009d7a16ff9bddd1a9dee7a7874b95581",
   "branch": "master",
-  "timestamp": "2026-05-16T05:51:55Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25954243887",
-  "release_type": "feature",
+  "timestamp": "2026-05-16T05:58:56Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25954357572",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.2.0-dev.2.0 - feat: add FeatureToggle core infrastructure (#74)",
-    "previous": "1.2.0-dev.1.2"
+    "current": "Version 1.2.0-dev.2.1 - Merge pull request #75 from yukazakiri/feat/migrate-feature-classes-to-toggles",
+    "previous": "1.2.0-dev.2.0"
   },
   "metadata": {
     "author": "yukazakiri",
