@@ -156,17 +156,12 @@ is_redis_required() {
     queue_connection=$(printf '%s' "${QUEUE_CONNECTION:-database}" | tr '[:upper:]' '[:lower:]')
     cache_store=$(printf '%s' "${CACHE_STORE:-database}" | tr '[:upper:]' '[:lower:]')
     session_driver=$(printf '%s' "${SESSION_DRIVER:-database}" | tr '[:upper:]' '[:lower:]')
-    pulse_ingest=$(printf '%s' "${PULSE_INGEST_DRIVER:-}" | tr '[:upper:]' '[:lower:]')
 
     if [ "${queue_connection}" = "redis" ] || [ "${queue_connection}" = "redis-pdf" ]; then
         return 0
     fi
 
     if [ "${cache_store}" = "redis" ] || [ "${session_driver}" = "redis" ]; then
-        return 0
-    fi
-
-    if [ "${pulse_ingest}" = "redis" ] && [ "${PULSE_ENABLED:-true}" != "false" ]; then
         return 0
     fi
 
