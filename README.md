@@ -385,6 +385,8 @@ Useful flags:
 
 This script prepares the Docker Compose dev stack, local HTTPS certs, and hosts entries for `.test` domains.
 
+If `portal.dccp.test` (or your portal host) shows `502 Bad Gateway`, see `docs/guide/getting-started/local-dev-troubleshooting.mdx`.
+
 </details>
 
 <details open>
