@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 use App\Enums\UserRole;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Faculty;
 use App\Models\User;
+use Database\Seeders\FacultySeeder;
+use Database\Seeders\RolesSeeder;
+use Database\Seeders\SchoolDepartmentSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
@@ -96,4 +101,28 @@ it('does not register the service worker in demo environment', function (): void
         ->assertOk()
         ->assertSee('serviceWorker.getRegistrations', false)
         ->assertDontSee('src="https://portal.dccp.test/sw.js"', false);
+});
+
+it('keeps the demo faculty account aligned with faculty seed data', function (): void {
+    $this->seed([
+        SchoolDepartmentSeeder::class,
+        RolesSeeder::class,
+        UserSeeder::class,
+        FacultySeeder::class,
+    ]);
+
+    $email = (string) config('demo.accounts.faculty.email');
+
+    $user = User::query()->where('email', $email)->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user?->faculty_id_number)->not->toBeNull()
+        ->and($user?->faculty_id_number)->not->toBe('');
+
+    $faculty = Faculty::query()
+        ->where('email', $email)
+        ->where('faculty_id_number', (string) $user?->faculty_id_number)
+        ->first();
+
+    expect($faculty)->not->toBeNull();
 });
