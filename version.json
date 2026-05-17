@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.2",
-  "commit": "3e9bb141f8b897919e1853f9edc60e362aa965ac",
+  "version": "1.5.0-dev.0.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.3",
+  "commit": "5554a0c0135c52cbcc6cbd8f8859f2a1ad0bc671",
   "branch": "master",
-  "timestamp": "2026-05-16T11:53:29Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25961176319",
+  "timestamp": "2026-05-17T15:14:44Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25994537554",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.2 - Remove Redis check for Pulse ingest",
-    "previous": "1.5.0-dev.0.1"
+    "current": "Version 1.5.0-dev.0.3 - Merge pull request #82 from koamishin/master",
+    "previous": "1.5.0-dev.0.2"
   },
   "metadata": {
     "author": "yukazakiri",
