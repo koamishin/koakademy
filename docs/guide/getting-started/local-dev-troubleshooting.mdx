@@ -1,0 +1,47 @@
+---
+title: Local Dev Troubleshooting
+description: Fix common local environment issues
+---
+
+# Local Development Troubleshooting
+
+## `portal.dccp.test` returns Bad Gateway
+
+If `https://portal.dccp.test` returns `502 Bad Gateway`, the most common cause is a broken Docker network alias between Traefik and the Laravel app container.
+
+### Why this happens
+
+Traefik routes portal traffic to the upstream host `laravel` on port `80`. If the `laravel.test` container is detached from the expected Docker network alias, Traefik cannot resolve `laravel`, and responds with `502`.
+
+### Fix
+
+From the project root, recreate the app and proxy containers:
+
+```bash
+docker compose up -d --force-recreate laravel.test traefik
+```
+
+If that does not resolve it, restart the full stack:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+### Verify
+
+1. Check the portal response:
+
+```bash
+curl -skI https://portal.dccp.test
+```
+
+Expected result is no longer `502` (for example, a `302` redirect to `/login`).
+
+2. Optional: check upstream resolution from Traefik:
+
+```bash
+docker compose exec traefik sh -lc 'wget -S -O /dev/null http://laravel:80'
+```
+
+Expected result: Traefik can connect to `laravel:80`.
