@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { User as UserType } from "@/types/user";
-import { Head, router } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import { IconCalendarStats, IconClockHour4, IconSchool, IconStack2 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { CalendarDays, Clock } from "lucide-react";
@@ -27,17 +27,20 @@ interface StudentScheduleProps {
 }
 
 const dashboardCardClass =
-    "border-border/60 bg-card/75 rounded-lg shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-card hover:shadow-md";
-const dashboardPanelClass = "border-border/60 bg-card/75 rounded-lg shadow-sm";
+    "border-border/40 bg-card/60 rounded-xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card hover:shadow-md";
+const dashboardPanelClass = "border-border/40 bg-card/60 rounded-xl shadow-sm backdrop-blur-sm";
 
 function ScheduleStatCard({ label, value, detail, icon: Icon }: { label: string; value: string | number; detail: string; icon: typeof IconSchool }) {
     return (
-        <Card className={`${dashboardCardClass} group relative overflow-hidden hover:-translate-y-0.5`}>
-            <Icon className="text-primary pointer-events-none absolute top-4 right-5 size-12 opacity-12 transition-all duration-200 group-hover:scale-105 group-hover:opacity-20" />
+        <Card className={`${dashboardCardClass} group relative overflow-hidden hover:-translate-y-1`}>
+            <div className="absolute top-0 left-0 h-full w-1 bg-primary/20 transition-colors group-hover:bg-primary" />
+            <Icon className="text-primary pointer-events-none absolute top-4 right-5 size-12 opacity-[0.08] transition-all duration-300 group-hover:scale-110 group-hover:opacity-15" />
             <CardContent className="relative p-4 pr-16">
-                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">{label}</p>
-                <p className="text-foreground mt-2 text-2xl font-semibold tracking-tight">{value}</p>
-                <p className="text-muted-foreground mt-1 text-xs">{detail}</p>
+                <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">{label}</p>
+                <div className="mt-2 flex items-baseline gap-1">
+                    <p className="text-foreground text-3xl font-bold tracking-tight">{value}</p>
+                </div>
+                <p className="text-muted-foreground/80 mt-1 text-[11px] font-medium leading-tight">{detail}</p>
             </CardContent>
         </Card>
     );
@@ -84,6 +87,8 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
         resetFilters,
     } = useClassFilters(processedClasses, events, conflictIds, unscheduled);
 
+    const hasActiveFilters = search !== "" || filterClassification !== "all" || filterRoom !== "all" || filterDay !== "all";
+
     // Stats for the class view
     const stats = useMemo(() => {
         const scheduledCount = new Set(events.map((event) => String(event.classItem.id))).size;
@@ -111,22 +116,25 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6">
                 {/* Header Section */}
-                <Card className={dashboardPanelClass}>
-                    <CardContent className="flex flex-col justify-between gap-5 p-4 md:flex-row md:items-end md:p-5">
-                        <div className="space-y-2">
-                            <div className="text-primary flex items-center gap-2 font-medium">
-                                <CalendarDays className="h-4 w-4" />
-                                <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Weekly Plan</span>
+                <Card className={`${dashboardPanelClass} overflow-hidden`}>
+                    <div className="from-primary/5 via-transparent absolute inset-0 bg-gradient-to-br to-transparent" />
+                    <CardContent className="relative flex flex-col justify-between gap-5 p-5 md:flex-row md:items-end md:p-6">
+                        <div className="space-y-3">
+                            <div className="text-primary flex items-center gap-2 font-bold">
+                                <div className="bg-primary/10 rounded-lg p-1.5">
+                                    <CalendarDays className="h-4 w-4" />
+                                </div>
+                                <span className="text-muted-foreground text-[11px] font-bold tracking-widest uppercase">Weekly Plan</span>
                             </div>
                             <div>
-                                <h1 className="text-foreground text-2xl font-semibold tracking-tight md:text-3xl">Class Schedule</h1>
-                                <p className="text-muted-foreground mt-1 flex max-w-xl items-center gap-2 text-sm">
-                                    <Clock className="h-4 w-4 shrink-0" />
+                                <h1 className="text-foreground text-3xl font-extrabold tracking-tight md:text-4xl">Class Schedule</h1>
+                                <p className="text-muted-foreground mt-1.5 flex max-w-xl items-center gap-2 text-sm leading-relaxed">
+                                    <Clock className="h-4 w-4 shrink-0 opacity-70" />
                                     Manage your enrolled class schedule for the selected academic period.
                                 </p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:w-[28rem]">
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:w-[32rem]">
                             <ScheduleStatCard label="Scheduled" value={stats.scheduledCount} detail="with time blocks" icon={IconCalendarStats} />
                             <ScheduleStatCard label="Unscheduled" value={stats.unscheduledCount} detail="awaiting schedule" icon={IconStack2} />
                             <ScheduleStatCard label="Conflicts" value={stats.conflictCount} detail="overlapping blocks" icon={IconClockHour4} />
@@ -142,8 +150,8 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
                         </div>
                     )}
 
-                    <Card className={dashboardPanelClass}>
-                        <CardContent className="p-3 md:p-4">
+                    <Card className={`${dashboardPanelClass} overflow-hidden border-none bg-transparent shadow-none`}>
+                        <CardContent className="p-0">
                             <ClassesToolbar
                                 viewMode={viewMode}
                                 setViewMode={handleSetViewMode}
@@ -157,40 +165,59 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
                                 setFilterDay={setFilterDay}
                                 rooms={rooms}
                                 resetFilters={resetFilters}
-                                hasActiveFilters={search !== "" || filterClassification !== "all" || filterRoom !== "all" || filterDay !== "all"}
+                                hasActiveFilters={hasActiveFilters}
                             />
                         </CardContent>
                     </Card>
 
-                    <div className="mt-4">
+                    <div className="mt-6">
                         <Tabs value={viewMode} onValueChange={(v) => handleSetViewMode(v as any)} className="w-full">
-                            <TabsContent value="board" className="mt-0 focus-visible:ring-0">
+                            <TabsContent value="board" className="mt-0 ring-offset-transparent focus-visible:ring-0">
                                 <StudentScheduleBoard events={events} classes={effectiveClasses} filterDay={filterDay} />
                             </TabsContent>
 
-                            <TabsContent value="gallery" className="mt-0 focus-visible:ring-0">
+                            <TabsContent value="gallery" className="mt-0 ring-offset-transparent focus-visible:ring-0">
                                 <ClassCards data={effectiveClasses} onEdit={(item) => router.visit(`/student/classes/${item.id}`)} />
                             </TabsContent>
 
-                            <TabsContent value="list" className="mt-0 focus-visible:ring-0">
+                            <TabsContent value="list" className="mt-0 ring-offset-transparent focus-visible:ring-0">
                                 <DataTable data={effectiveClasses} onEdit={(item) => router.visit(`/student/classes/${item.id}`)} />
                             </TabsContent>
                         </Tabs>
 
                         {effectiveClasses.length === 0 && (
-                            <Card className={`${dashboardPanelClass} mt-4 overflow-hidden`}>
-                                <CardContent className="relative flex min-h-[320px] flex-col items-center justify-center p-8 text-center">
-                                    <IconSchool className="text-primary pointer-events-none absolute top-8 right-8 size-24 opacity-10" />
-                                    <div className="bg-primary/10 text-primary mb-4 rounded-lg p-4">
-                                        <IconSchool className="h-8 w-8" />
+                            <Card className={`${dashboardPanelClass} mt-6 overflow-hidden border-dashed`}>
+                                <CardContent className="relative flex min-h-[400px] flex-col items-center justify-center p-12 text-center">
+                                    <div className="absolute inset-0 opacity-[0.03] grayscale pointer-events-none overflow-hidden">
+                                        <IconSchool className="absolute -top-12 -right-12 size-64 rotate-12" />
+                                        <IconSchool className="absolute -bottom-12 -left-12 size-64 -rotate-12" />
                                     </div>
-                                    <p className="text-foreground font-semibold">No active classes found</p>
-                                    <p className="text-muted-foreground mt-1 max-w-sm text-sm">
-                                        You are not enrolled in any classes matching the current filters.
+                                    
+                                    <div className="bg-primary/10 text-primary relative mb-6 rounded-2xl p-6 ring-8 ring-primary/5">
+                                        <IconSchool className="h-12 w-12" />
+                                    </div>
+                                    
+                                    <h3 className="text-foreground text-xl font-bold tracking-tight">No active classes found</h3>
+                                    <p className="text-muted-foreground mt-2 max-w-sm text-sm leading-relaxed">
+                                        {hasActiveFilters 
+                                            ? "We couldn't find any classes matching your current filters. Try adjusting them or clear all filters to see everything."
+                                            : "You are not enrolled in any classes for this academic period yet."}
                                     </p>
-                                    <Button variant="outline" onClick={resetFilters} className="mt-4 rounded-lg">
-                                        Clear filters
-                                    </Button>
+                                    
+                                    <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                                        {hasActiveFilters ? (
+                                            <Button onClick={resetFilters} className="rounded-xl px-6">
+                                                Clear all filters
+                                            </Button>
+                                        ) : (
+                                            <Button asChild className="rounded-xl px-6">
+                                                <Link href="/student/enrollment">Browse Enrollment</Link>
+                                            </Button>
+                                        )}
+                                        <Button variant="outline" onClick={() => router.reload()} className="rounded-xl px-6">
+                                            Refresh Page
+                                        </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         )}

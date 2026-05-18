@@ -145,33 +145,33 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
     const totalHeight = (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT;
 
     return (
-        <div className="bg-background flex h-full max-h-[800px] flex-col overflow-hidden rounded-xl border shadow-sm">
+        <div className="bg-background/40 flex h-full max-h-[800px] flex-col overflow-hidden rounded-2xl border border-border/40 shadow-sm backdrop-blur-md">
             {/* Header / Days */}
-            <div className="bg-muted/40 flex shrink-0 divide-x overflow-hidden border-b">
-                <div className="bg-background/50 flex w-12 shrink-0 items-center justify-center border-r p-2 md:w-16 md:p-4">
-                    <IconClock className="text-muted-foreground size-4 md:size-5" />
+            <div className="bg-muted/30 flex shrink-0 divide-x divide-border/30 overflow-hidden border-b border-border/40">
+                <div className="bg-background/40 flex w-12 shrink-0 items-center justify-center border-r border-border/40 p-2 md:w-16 md:p-4">
+                    <IconClock className="text-muted-foreground/60 size-4 md:size-5" />
                 </div>
                 <div className="grid flex-1" style={{ gridTemplateColumns: `repeat(${displayDays.length}, 1fr)` }}>
                     {displayDays.map((day) => (
                         <div
                             key={day}
                             className={cn(
-                                "flex flex-col items-center justify-center overflow-hidden border-r px-1 py-2 text-center transition-colors last:border-r-0 md:py-3",
+                                "flex flex-col items-center justify-center overflow-hidden border-r border-border/30 px-1 py-2.5 text-center transition-all last:border-r-0 md:py-4",
                                 day === today && "bg-primary/5",
                             )}
                         >
                             <span
                                 className={cn(
-                                    "w-full truncate text-[10px] font-semibold tracking-wide uppercase md:text-sm",
-                                    day === today ? "text-primary" : "text-muted-foreground",
+                                    "w-full truncate text-[10px] font-bold tracking-widest uppercase md:text-[11px]",
+                                    day === today ? "text-primary" : "text-muted-foreground/80",
                                 )}
                             >
-                                {isMobile ? day.slice(0, 1) : day.slice(0, 3)}
+                                {isMobile ? day.slice(0, 1) : day}
                             </span>
                             {day === today && (
-                                <div className="mt-0.5 flex items-center gap-1 md:mt-1">
-                                    <div className="bg-primary h-1.5 w-1.5 animate-pulse rounded-full" />
-                                    <span className="text-primary hidden text-[10px] font-medium md:inline-block">Today</span>
+                                <div className="mt-1 flex items-center gap-1.5">
+                                    <div className="bg-primary h-1.5 w-1.5 animate-pulse rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
+                                    <span className="text-primary hidden text-[9px] font-bold tracking-tight md:inline-block">TODAY</span>
                                 </div>
                             )}
                         </div>
@@ -183,11 +183,11 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
             <ScrollArea className="flex-1">
                 <div className="relative flex" style={{ height: `${totalHeight}px` }}>
                     {/* Time Column */}
-                    <div className="bg-background/80 relative z-10 w-12 shrink-0 border-r text-[10px] backdrop-blur-sm select-none md:w-16 md:text-xs">
+                    <div className="bg-background/60 relative z-10 w-12 shrink-0 border-r border-border/40 text-[9px] font-medium backdrop-blur-sm select-none md:w-16 md:text-[10px]">
                         {hours.map((hour) => (
                             <div key={hour} className="absolute w-full text-center" style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}>
-                                <span className="text-muted-foreground bg-background/80 relative -top-2 rounded px-1">
-                                    {hour > 12 ? `${hour - 12}pm` : hour === 12 ? `12pm` : `${hour}am`}
+                                <span className="text-muted-foreground/60 bg-background/40 relative -top-2 rounded-md px-1.5 py-0.5 backdrop-blur-md">
+                                    {hour > 12 ? `${hour - 12} PM` : hour === 12 ? `12 PM` : `${hour} AM`}
                                 </span>
                             </div>
                         ))}
@@ -195,7 +195,7 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
 
                     {/* Grid Body */}
                     <div
-                        className="relative grid flex-1 divide-x"
+                        className="relative grid flex-1 divide-x divide-border/20"
                         style={{
                             gridTemplateColumns: `repeat(${displayDays.length}, 1fr)`,
                         }}
@@ -205,7 +205,7 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
                             {hours.map((hour) => (
                                 <div
                                     key={hour}
-                                    className="border-border/30 absolute w-full border-t border-dashed"
+                                    className="border-border/10 absolute w-full border-t"
                                     style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}
                                 />
                             ))}
@@ -217,9 +217,9 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
                                 className="pointer-events-none absolute right-0 left-0 z-20 flex items-center"
                                 style={{ top: `${currentTimeTop}px` }}
                             >
-                                <div className="h-px w-12 bg-red-500/50 md:w-16" />
-                                <div className="relative h-px flex-1 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]">
-                                    <div className="absolute -top-[3px] -left-1 h-2 w-2 rounded-full bg-red-500" />
+                                <div className="h-[1.5px] w-12 bg-red-500/30 md:w-16" />
+                                <div className="relative h-[1.5px] flex-1 bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)]">
+                                    <div className="absolute -top-[3.5px] -left-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-red-500 shadow-sm" />
                                 </div>
                             </div>
                         )}
@@ -229,7 +229,7 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
                             const processedEvents = getProcessedDayEvents(dayEvents);
 
                             return (
-                                <div key={day} className={cn("relative h-full", day === today && "bg-primary/5")}>
+                                <div key={day} className={cn("relative h-full", day === today && "bg-primary/[0.02]")}>
                                     {processedEvents.map(({ event, style, isLive, isPast }, idx) => {
                                         // Dynamic color based on accent or default
                                         const accentColor = event.classItem.accent_color;
@@ -244,28 +244,28 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
                                                 key={`${event.classItem.id}-${idx}`}
                                                 href={`/student/classes/${event.classItem.id}`}
                                                 className={cn(
-                                                    "group hover:ring-primary/20 absolute inset-x-0.5 flex flex-col overflow-hidden rounded-[3px] border transition-all hover:z-30 hover:shadow-lg hover:ring-1 md:inset-x-1 md:rounded-md",
-                                                    "p-1 md:p-1.5",
+                                                    "group absolute inset-x-0.5 flex flex-col overflow-hidden rounded-lg border border-border/40 transition-all hover:z-30 hover:shadow-xl md:inset-x-1",
+                                                    "p-1.5 md:p-2",
                                                     isShort ? "justify-center" : "justify-between",
                                                     isLive
-                                                        ? "bg-background border-primary ring-primary z-20 shadow-md ring-1"
-                                                        : "bg-card hover:bg-card/90",
-                                                    isPast && "opacity-60 grayscale-[0.3] hover:opacity-100 hover:grayscale-0",
+                                                        ? "bg-background border-primary/50 ring-primary/20 z-20 shadow-lg ring-4"
+                                                        : "bg-card/60 hover:bg-card hover:border-primary/30",
+                                                    isPast && "opacity-50 grayscale-[0.4] hover:opacity-100 hover:grayscale-0",
                                                 )}
                                                 style={{
                                                     ...style,
                                                     // If using inline hex color for accent
                                                     ...(!isBgClass && accentColor
                                                         ? {
-                                                              borderColor: accentColor,
-                                                              backgroundColor: isLive ? undefined : `${accentColor}15`,
+                                                              borderColor: `${accentColor}40`,
+                                                              backgroundColor: isLive ? undefined : `${accentColor}10`,
                                                           }
                                                         : {}),
                                                 }}
                                             >
                                                 {/* Status Badges */}
                                                 {isLive && (
-                                                    <div className="absolute top-1 right-1 z-10 flex animate-pulse items-center gap-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-sm">
+                                                    <div className="absolute top-1.5 right-1.5 z-10 flex animate-pulse items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[7px] font-black text-white shadow-sm tracking-tighter">
                                                         <IconBroadcast className="size-2" />
                                                         LIVE
                                                     </div>
@@ -273,14 +273,14 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
 
                                                 {/* Left Accent Strip */}
                                                 <div
-                                                    className={cn("absolute top-0 bottom-0 left-0 w-0.5 md:w-1", baseColorClass)}
+                                                    className={cn("absolute top-0 bottom-0 left-0 w-1 md:w-1.5 opacity-80", baseColorClass)}
                                                     style={!isBgClass && accentColor ? { backgroundColor: accentColor } : {}}
                                                 />
 
-                                                <div className="relative flex h-full w-full flex-col pl-1.5 md:pl-2.5">
+                                                <div className="relative flex h-full w-full flex-col pl-2 md:pl-3">
                                                     <div
                                                         className={cn(
-                                                            "text-foreground truncate pr-8 text-[9px] leading-tight font-bold group-hover:underline md:text-xs",
+                                                            "text-foreground truncate pr-8 text-[10px] leading-tight font-bold group-hover:text-primary transition-colors md:text-[11px]",
                                                             isLive && "text-primary",
                                                         )}
                                                     >
@@ -289,27 +289,27 @@ export function StudentScheduleBoard({ events, classes, filterDay }: StudentSche
 
                                                     {!isShort && (
                                                         <>
-                                                            <div className="text-muted-foreground mt-0.5 truncate text-[8px] opacity-90 md:text-[10px]">
+                                                            <div className="text-muted-foreground/80 mt-1 truncate text-[8px] font-medium tracking-tight md:text-[9px]">
                                                                 {event.classItem.subject_code} • {event.classItem.section}
                                                             </div>
 
                                                             {event.classItem.faculty_name && (
-                                                                <div className="text-muted-foreground/80 mt-1 flex hidden items-center gap-1 text-[8px] md:flex md:text-[10px]">
-                                                                    <IconUser className="size-3 shrink-0" />
+                                                                <div className="text-muted-foreground/60 mt-2 flex hidden items-center gap-1 text-[8px] md:flex md:text-[9px]">
+                                                                    <IconUser className="size-3 shrink-0 opacity-70" />
                                                                     <span className="truncate">{event.classItem.faculty_name}</span>
                                                                 </div>
                                                             )}
 
-                                                            <div className="mt-auto hidden space-y-0.5 pt-1 opacity-80 sm:block">
-                                                                <div className="flex items-center gap-1 text-[9px] font-medium">
-                                                                    <IconClock className="size-2.5" />
+                                                            <div className="mt-auto hidden space-y-1 pt-2 opacity-80 sm:block">
+                                                                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-foreground/80">
+                                                                    <IconClock className="size-3 opacity-70" />
                                                                     <span className="truncate">
                                                                         {event.startLabel} - {event.endLabel}
                                                                     </span>
                                                                 </div>
                                                                 {event.roomLabel && (
-                                                                    <div className="flex items-center gap-1 text-[9px]">
-                                                                        <IconMapPin className="size-2.5" />
+                                                                    <div className="flex items-center gap-1.5 text-[9px] font-medium text-muted-foreground/70">
+                                                                        <IconMapPin className="size-3 opacity-70" />
                                                                         <span className="truncate">{event.roomLabel}</span>
                                                                     </div>
                                                                 )}
