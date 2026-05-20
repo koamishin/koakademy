@@ -32,15 +32,15 @@ const dashboardPanelClass = "border-border/40 bg-card/60 rounded-xl shadow-sm ba
 
 function ScheduleStatCard({ label, value, detail, icon: Icon }: { label: string; value: string | number; detail: string; icon: typeof IconSchool }) {
     return (
-        <Card className={`${dashboardCardClass} group relative overflow-hidden hover:-translate-y-1`}>
+        <Card className={`${dashboardCardClass} group relative min-h-[100px] overflow-hidden hover:-translate-y-1 sm:min-h-[120px]`}>
             <div className="absolute top-0 left-0 h-full w-1 bg-primary/20 transition-colors group-hover:bg-primary" />
-            <Icon className="text-primary pointer-events-none absolute top-4 right-5 size-12 opacity-[0.08] transition-all duration-300 group-hover:scale-110 group-hover:opacity-15" />
-            <CardContent className="relative p-4 pr-16">
-                <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">{label}</p>
-                <div className="mt-2 flex items-baseline gap-1">
-                    <p className="text-foreground text-3xl font-bold tracking-tight">{value}</p>
+            <Icon className="text-primary pointer-events-none absolute top-3 right-3 size-10 opacity-[0.08] transition-all duration-300 group-hover:scale-110 group-hover:opacity-15 sm:top-4 sm:right-5 sm:size-12" />
+            <CardContent className="relative p-3 pr-10 sm:p-4 sm:pr-16">
+                <p className="text-muted-foreground text-[9px] font-bold tracking-wider uppercase sm:text-[10px]">{label}</p>
+                <div className="mt-1 flex items-baseline gap-1 sm:mt-2">
+                    <p className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">{value}</p>
                 </div>
-                <p className="text-muted-foreground/80 mt-1 text-[11px] font-medium leading-tight">{detail}</p>
+                <p className="text-muted-foreground/80 mt-0.5 line-clamp-1 text-[10px] font-medium leading-tight sm:mt-1 sm:text-[11px]">{detail}</p>
             </CardContent>
         </Card>
     );
@@ -118,26 +118,28 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
                 {/* Header Section */}
                 <Card className={`${dashboardPanelClass} overflow-hidden`}>
                     <div className="from-primary/5 via-transparent absolute inset-0 bg-gradient-to-br to-transparent" />
-                    <CardContent className="relative flex flex-col justify-between gap-5 p-5 md:flex-row md:items-end md:p-6">
-                        <div className="space-y-3">
+                    <CardContent className="relative flex flex-col justify-between gap-6 p-4 sm:p-5 md:flex-row md:items-end md:p-6">
+                        <div className="space-y-2.5 sm:space-y-3">
                             <div className="text-primary flex items-center gap-2 font-bold">
-                                <div className="bg-primary/10 rounded-lg p-1.5">
-                                    <CalendarDays className="h-4 w-4" />
+                                <div className="bg-primary/10 rounded-lg p-1 sm:p-1.5">
+                                    <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 </div>
-                                <span className="text-muted-foreground text-[11px] font-bold tracking-widest uppercase">Weekly Plan</span>
+                                <span className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase sm:text-[11px]">Weekly Plan</span>
                             </div>
                             <div>
-                                <h1 className="text-foreground text-3xl font-extrabold tracking-tight md:text-4xl">Class Schedule</h1>
-                                <p className="text-muted-foreground mt-1.5 flex max-w-xl items-center gap-2 text-sm leading-relaxed">
-                                    <Clock className="h-4 w-4 shrink-0 opacity-70" />
+                                <h1 className="text-foreground text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">Class Schedule</h1>
+                                <p className="text-muted-foreground mt-1.5 flex max-w-xl items-center gap-2 text-xs leading-relaxed sm:text-sm">
+                                    <Clock className="h-3.5 w-3.5 shrink-0 opacity-70 sm:h-4 sm:w-4" />
                                     Manage your enrolled class schedule for the selected academic period.
                                 </p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:w-[32rem]">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:w-[32rem]">
                             <ScheduleStatCard label="Scheduled" value={stats.scheduledCount} detail="with time blocks" icon={IconCalendarStats} />
                             <ScheduleStatCard label="Unscheduled" value={stats.unscheduledCount} detail="awaiting schedule" icon={IconStack2} />
-                            <ScheduleStatCard label="Conflicts" value={stats.conflictCount} detail="overlapping blocks" icon={IconClockHour4} />
+                            <div className="col-span-2 sm:col-span-1">
+                                <ScheduleStatCard label="Conflicts" value={stats.conflictCount} detail="overlapping blocks" icon={IconClockHour4} />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

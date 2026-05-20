@@ -291,29 +291,33 @@ function StatTile({
     const iconTone = tone.split(" ").find((className) => className.startsWith("text-")) ?? "text-primary";
 
     return (
-        <Card className={`${dashboardCardClass} group relative min-h-[132px] overflow-hidden hover:-translate-y-0.5`}>
-            <CardContent className="relative flex h-full flex-col justify-end p-5 pr-20 sm:min-h-[150px]">
+        <Card className={`${dashboardCardClass} group relative min-h-[110px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]`}>
+            <CardContent className="relative flex h-full flex-col justify-end p-3.5 pr-10 sm:p-5 sm:pr-20">
                 <Icon
-                    className={`pointer-events-none absolute top-4 right-5 h-14 w-14 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 ${iconTone}`}
+                    className={`pointer-events-none absolute top-3 right-3 h-8 w-8 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 sm:top-4 sm:right-5 sm:h-14 sm:w-14 ${iconTone}`}
                 />
 
-                <div className="absolute top-4 left-5 z-10">
-                    {privateValue && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-muted/70 h-8 w-8 rounded-md"
-                            onClick={() => setRevealed((current) => !current)}
-                        >
-                            {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                    )}
-                </div>
-
                 <div className="relative z-10 min-w-0">
-                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-                    <p className="text-foreground mt-1 truncate text-2xl font-semibold tracking-tight md:text-3xl">{revealed ? value : "Hidden"}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">{detail}</p>
+                    <div className="flex items-center gap-1.5">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">{label}</p>
+                        {privateValue && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setRevealed((current) => !current);
+                                }}
+                                className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                            >
+                                {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                        )}
+                    </div>
+                    <p className="text-foreground mt-0.5 truncate text-lg font-semibold tracking-tight sm:mt-1 sm:text-2xl md:text-3xl">
+                        {revealed ? value : "Hidden"}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[10px] sm:mt-1 sm:text-xs">{detail}</p>
                 </div>
             </CardContent>
         </Card>
@@ -589,32 +593,32 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6">
                 <section>
                     <Card className={dashboardPanelClass}>
-                        <CardContent className="p-4 md:p-5">
-                            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-                                <div className="max-w-2xl space-y-3">
-                                    <Badge variant="outline" className="bg-background/75 w-fit rounded-full px-3 py-1">
+                        <CardContent className="p-3.5 sm:p-4 md:p-5">
+                            <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-end md:justify-between">
+                                <div className="max-w-2xl space-y-2.5 sm:space-y-3">
+                                    <Badge variant="outline" className="bg-background/75 w-fit rounded-full px-2.5 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs">
                                         <Sparkles className="text-primary mr-1.5 h-3 w-3" />
                                         {getSemesterLabel(student_data.semester)} - {student_data.school_year}
                                     </Badge>
                                     <div>
-                                        <h1 className="text-foreground text-2xl font-semibold tracking-tight md:text-3xl">
+                                        <h1 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
                                             {greeting}, {getShortName(student_data.student_name)}
                                         </h1>
-                                        <p className="text-muted-foreground mt-2 max-w-xl text-sm">
+                                        <p className="text-muted-foreground mt-1.5 max-w-xl text-xs sm:text-sm">
                                             Your academic status, upcoming class, grades, and announcements are grouped here for the current term.
                                         </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3 md:min-w-[280px]">
-                                    <div className="border-border/60 bg-background/50 rounded-md border p-3">
-                                        <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Program</p>
-                                        <p className="mt-1 truncate text-sm font-semibold" title={student_data.course || ""}>
+                                <div className="grid grid-cols-2 gap-2 sm:gap-3 md:min-w-[280px]">
+                                    <div className="border-border/60 bg-background/50 rounded-md border p-2.5 sm:p-3">
+                                        <p className="text-muted-foreground text-[9px] font-semibold tracking-wide uppercase sm:text-[10px]">Program</p>
+                                        <p className="mt-0.5 truncate text-xs font-semibold sm:mt-1 sm:text-sm" title={student_data.course || ""}>
                                             {student_data.course || "N/A"}
                                         </p>
                                     </div>
-                                    <div className="border-border/60 bg-background/50 rounded-md border p-3">
-                                        <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Student ID</p>
-                                        <p className="mt-1 truncate font-mono text-sm font-semibold">{student_data.student_id}</p>
+                                    <div className="border-border/60 bg-background/50 rounded-md border p-2.5 sm:p-3">
+                                        <p className="text-muted-foreground text-[9px] font-semibold tracking-wide uppercase sm:text-[10px]">Student ID</p>
+                                        <p className="mt-0.5 truncate font-mono text-xs font-semibold sm:mt-1 sm:text-sm">{student_data.student_id}</p>
                                     </div>
                                 </div>
                             </div>
@@ -622,7 +626,7 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                     </Card>
                 </section>
 
-                <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <StatTile
                         icon={Trophy}
                         label="GWA"
@@ -656,10 +660,10 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
 
                 <section>
                     <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
-                        <CardContent className="relative grid gap-4 p-4 pr-20 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
-                            <Calendar className="text-primary pointer-events-none absolute top-4 right-5 h-16 w-16 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:h-20 md:w-20" />
+                        <CardContent className="relative grid gap-4 p-4 pr-14 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
+                            <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
                             <div className="min-w-0">
-                                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Up Next</p>
+                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase sm:text-xs">Up Next</p>
                                 {nextClass ? (
                                     <div className="mt-2 space-y-2">
                                         <h2 className="text-foreground truncate text-lg leading-tight font-semibold md:text-xl">
