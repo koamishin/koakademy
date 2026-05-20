@@ -212,15 +212,6 @@ export function LoginForm({
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <form onSubmit={submit}>
                 <div className="flex flex-col gap-6">
-                    <div className="flex flex-col items-center gap-2">
-                        <h2 className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text pb-1 text-3xl font-bold text-transparent">
-                            Welcome back
-                        </h2>
-                        <div className="text-muted-foreground mx-auto w-full max-w-[250px] text-center text-sm text-balance">
-                            Enter your credentials to access your account dashboard
-                        </div>
-                    </div>
-
                     <div className="grid gap-5">
                         <div className="group relative grid gap-2">
                             <Label htmlFor="email" className="sr-only">
