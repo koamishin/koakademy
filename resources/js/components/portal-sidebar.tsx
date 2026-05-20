@@ -210,14 +210,18 @@ function SidebarSemesterSelector({ settings }: { settings: SemesterSelectorProps
     };
 
     return (
-        <SidebarGroup>
+        <SidebarGroup className="mt-2">
             <SidebarGroupLabel asChild>
-                <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                        <IconCalendar className="size-3.5" />
+                <button 
+                    type="button" 
+                    onClick={() => setOpen((v) => !v)} 
+                    className="hover:text-foreground flex w-full items-center justify-between transition-colors"
+                >
+                    <span className="flex items-center gap-2 font-bold tracking-tight">
+                        <IconCalendar className="text-primary size-4" />
                         Academic Period
                     </span>
-                    <IconChevronDown className={cn("size-3.5 transition-transform duration-200", open && "rotate-180")} />
+                    <IconChevronDown className={cn("size-3.5 transition-transform duration-300", open && "rotate-180")} />
                 </button>
             </SidebarGroupLabel>
 
@@ -226,16 +230,26 @@ function SidebarSemesterSelector({ settings }: { settings: SemesterSelectorProps
                     <button
                         type="button"
                         onClick={() => setOpen(true)}
-                        className="text-muted-foreground hover:text-foreground hover:bg-accent mx-2 mb-1 flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors"
+                        className="bg-muted/40 hover:bg-muted border-border/40 text-muted-foreground hover:text-foreground mx-2 mb-1 mt-1 flex items-center gap-2.5 rounded-xl border p-2 transition-all duration-200"
                     >
-                        <span className="truncate">
-                            {currentSemesterLabel} &middot; {currentSchoolYearLabel}
-                        </span>
-                        {hasAnyOverride && (
-                            <span className="bg-primary/15 text-primary shrink-0 rounded px-1 py-0.5 text-[9px] leading-none font-semibold">
-                                Custom
+                        <div className="bg-primary/10 flex size-8 shrink-0 items-center justify-center rounded-lg">
+                             <div className="bg-primary size-2 rounded-full animate-pulse" />
+                        </div>
+                        <div className="flex flex-1 flex-col items-start overflow-hidden">
+                            <div className="flex w-full items-center justify-between gap-1">
+                                <span className="truncate text-[10px] font-bold tracking-tight text-foreground uppercase">
+                                    {currentSemesterLabel}
+                                </span>
+                                {hasAnyOverride && (
+                                    <span className="bg-primary/15 text-primary shrink-0 rounded px-1 py-0.5 text-[7px] font-black uppercase leading-none">
+                                        Custom
+                                    </span>
+                                )}
+                            </div>
+                            <span className="truncate text-[10px] font-medium opacity-60">
+                                {currentSchoolYearLabel}
                             </span>
-                        )}
+                        </div>
                     </button>
                 </SidebarGroupContent>
             )}
