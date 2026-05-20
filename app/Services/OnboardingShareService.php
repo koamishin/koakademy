@@ -57,7 +57,7 @@ final class OnboardingShareService
         $allToggles = FeatureToggleRegistry::all();
 
         $featureClasses = collect($allToggles)
-            ->map(fn ($toggle) => get_class($toggle))
+            ->map(fn ($toggle): string => $toggle::class)
             ->values()
             ->all();
 
@@ -69,7 +69,7 @@ final class OnboardingShareService
                     return false;
                 }
 
-                $featureClass = get_class($toggle);
+                $featureClass = $toggle::class;
 
                 return (bool) ($featureValues[$featureClass] ?? false);
             })
