@@ -489,6 +489,7 @@ function FallbackIdCard({ user, studentData }: { user: User; studentData: Studen
 export default function StudentDashboard({ user, student_data, id_card }: StudentDashboardProps) {
     const { props } = usePage<{
         branding?: Branding;
+        settings?: SemesterSelectorProps;
         onboarding?: {
             forceOnLogin?: boolean;
             features?: OnboardingFeatureData[];
@@ -496,6 +497,12 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
         };
     }>();
     const currency = props.branding?.currency || "PHP";
+    const currentSemester = props.settings?.currentSemester ?? student_data.semester;
+    const currentSchoolYear = props.settings?.currentSchoolYear ?? parseInt(student_data.school_year.split("-")[0]);
+    const currentSchoolYearLabel = props.settings?.currentSchoolYear && props.settings?.availableSchoolYears 
+        ? props.settings.availableSchoolYears[props.settings.currentSchoolYear]
+        : student_data.school_year;
+
     const shouldForceOnboarding = props.onboarding?.forceOnLogin ?? false;
     const onboardingFeatures = props.onboarding?.features ?? [];
     const dismissEndpoint = props.onboarding?.dismissEndpoint;
@@ -596,9 +603,9 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                         <CardContent className="p-3.5 sm:p-4 md:p-5">
                             <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-end md:justify-between">
                                 <div className="max-w-2xl space-y-2.5 sm:space-y-3">
-                                    <Badge variant="outline" className="bg-background/75 w-fit rounded-full px-2.5 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs">
+                                    <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2.5 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs">
                                         <Sparkles className="text-primary mr-1.5 h-3 w-3" />
-                                        {getSemesterLabel(student_data.semester)} - {student_data.school_year}
+                                        {getSemesterLabel(currentSemester)} • {currentSchoolYearLabel}
                                     </Badge>
                                     <div>
                                         <h1 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
