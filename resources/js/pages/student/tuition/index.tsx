@@ -1,6 +1,7 @@
 import StudentLayout from "@/components/student/student-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -144,26 +145,33 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
         >
             <Head title="Tuition & Fees" />
 
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6">
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6"
+            >
                 {/* Header */}
-                <Card className={dashboardPanelClass}>
-                    <CardContent className="flex flex-col justify-between gap-5 p-4 md:flex-row md:items-end md:p-5">
-                        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-2">
+                <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
+                    {/* Decorative Glass Elements */}
+                    <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                    <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
+
+                    <CardContent className="relative z-10 flex flex-col justify-between gap-5 p-4 md:flex-row md:items-end md:p-5">
+                        <div className="space-y-2">
                             <div className="text-primary flex items-center gap-2 font-medium">
                                 <Wallet className="h-4 w-4" />
                                 <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Student Finance</span>
                             </div>
-                            <h1 className="text-foreground text-2xl font-semibold tracking-tight md:text-3xl">Tuition & Fees</h1>
-                            <p className="text-muted-foreground max-w-xl text-sm">
+                            <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+                                Tuition & <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Fees</span>
+                            </h1>
+                            <p className="text-muted-foreground max-w-xl text-sm sm:text-base">
                                 Overview of your financial status, assessment breakdown, and payment history for the semester.
                             </p>
-                        </motion.div>
+                        </div>
 
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="flex w-full items-center gap-3 md:w-auto"
-                        >
+                        <div className="flex w-full items-center gap-3 md:w-auto">
                             <div className="border-border/60 bg-background/65 flex items-center gap-2 rounded-lg border p-1 pl-3 shadow-sm">
                                 <Calendar className="text-muted-foreground h-4 w-4 shrink-0" />
                                 <Select
@@ -212,7 +220,7 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                                     Print SOA
                                 </Button>
                             )}
-                        </motion.div>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -563,7 +571,7 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                         </Card>
                     </motion.div>
                 )}
-            </div>
+            </motion.div>
         </StudentLayout>
     );
 }

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { SemesterSelectorProps } from "@/components/semester-selector";
 import { DigitalIdCard, type IdCardData } from "@/components/digital-id-card";
 import { type OnboardingChecklistItem, OnboardingProvider } from "@/components/onboarding-context";
 import { OnboardingExperience, type OnboardingFeatureData } from "@/components/onboarding-experience";
@@ -597,35 +599,44 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                 </OnboardingProvider>
             )}
 
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6">
+            <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6"
+            >
                 <section>
-                    <Card className={dashboardPanelClass}>
-                        <CardContent className="p-3.5 sm:p-4 md:p-5">
-                            <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-end md:justify-between">
-                                <div className="max-w-2xl space-y-2.5 sm:space-y-3">
+                    <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
+                        {/* Decorative Glass Elements */}
+                        <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                        <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
+
+                        <CardContent className="relative z-10 p-4 sm:p-5 md:p-6">
+                            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                                <div className="max-w-2xl space-y-3.5 sm:space-y-4">
                                     <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2.5 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs">
                                         <Sparkles className="text-primary mr-1.5 h-3 w-3" />
                                         {getSemesterLabel(currentSemester)} • {currentSchoolYearLabel}
                                     </Badge>
-                                    <div>
-                                        <h1 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
-                                            {greeting}, {getShortName(student_data.student_name)}
+                                    <div className="space-y-1">
+                                        <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+                                            {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(student_data.student_name)}</span>
                                         </h1>
-                                        <p className="text-muted-foreground mt-1.5 max-w-xl text-xs sm:text-sm">
+                                        <p className="text-muted-foreground max-w-xl text-sm leading-relaxed sm:text-base">
                                             Your academic status, upcoming class, grades, and announcements are grouped here for the current term.
                                         </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 sm:gap-3 md:min-w-[280px]">
-                                    <div className="border-border/60 bg-background/50 rounded-md border p-2.5 sm:p-3">
-                                        <p className="text-muted-foreground text-[9px] font-semibold tracking-wide uppercase sm:text-[10px]">Program</p>
-                                        <p className="mt-0.5 truncate text-xs font-semibold sm:mt-1 sm:text-sm" title={student_data.course || ""}>
+                                <div className="grid grid-cols-2 gap-3 md:min-w-[300px]">
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-xl border p-3 transition-colors sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[10px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Program</p>
+                                        <p className="text-foreground mt-1 truncate text-xs font-bold sm:text-sm" title={student_data.course || ""}>
                                             {student_data.course || "N/A"}
                                         </p>
                                     </div>
-                                    <div className="border-border/60 bg-background/50 rounded-md border p-2.5 sm:p-3">
-                                        <p className="text-muted-foreground text-[9px] font-semibold tracking-wide uppercase sm:text-[10px]">Student ID</p>
-                                        <p className="mt-0.5 truncate font-mono text-xs font-semibold sm:mt-1 sm:text-sm">{student_data.student_id}</p>
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-xl border p-3 transition-colors sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[10px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Student ID</p>
+                                        <p className="text-foreground mt-1 truncate font-mono text-xs font-bold sm:text-sm">{student_data.student_id}</p>
                                     </div>
                                 </div>
                             </div>
@@ -965,7 +976,7 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                         </div>
                     </aside>
                 </section>
-            </div>
+            </motion.div>
         </StudentLayout>
     );
 }

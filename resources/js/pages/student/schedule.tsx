@@ -1,5 +1,6 @@
 import StudentLayout from "@/components/student/student-layout";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { User as UserType } from "@/types/user";
@@ -116,9 +117,12 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6">
                 {/* Header Section */}
-                <Card className={`${dashboardPanelClass} overflow-hidden`}>
-                    <div className="from-primary/5 via-transparent absolute inset-0 bg-gradient-to-br to-transparent" />
-                    <CardContent className="relative flex flex-col justify-between gap-6 p-4 sm:p-5 md:flex-row md:items-end md:p-6">
+                <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
+                    {/* Decorative Glass Elements */}
+                    <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                    <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
+
+                    <CardContent className="relative z-10 flex flex-col justify-between gap-6 p-4 sm:p-5 md:flex-row md:items-end md:p-6">
                         <div className="space-y-2.5 sm:space-y-3">
                             <div className="text-primary flex items-center gap-2 font-bold">
                                 <div className="bg-primary/10 rounded-lg p-1 sm:p-1.5">
@@ -127,7 +131,9 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
                                 <span className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase sm:text-[11px]">Weekly Plan</span>
                             </div>
                             <div>
-                                <h1 className="text-foreground text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">Class Schedule</h1>
+                                <h1 className="text-foreground text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
+                                    Class <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Schedule</span>
+                                </h1>
                                 <p className="text-muted-foreground mt-1.5 flex max-w-xl items-center gap-2 text-xs leading-relaxed sm:text-sm">
                                     <Clock className="h-3.5 w-3.5 shrink-0 opacity-70 sm:h-4 sm:w-4" />
                                     Manage your enrolled class schedule for the selected academic period.
