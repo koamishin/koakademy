@@ -149,7 +149,7 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6"
+                className="mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6"
             >
                 {/* Header */}
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
@@ -157,29 +157,29 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                     <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                     <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
 
-                    <CardContent className="relative z-10 flex flex-col justify-between gap-5 p-4 md:flex-row md:items-end md:p-5">
-                        <div className="space-y-2">
+                    <CardContent className="relative z-10 flex flex-col justify-between gap-3 p-3 md:flex-row md:items-end md:gap-5 md:p-5">
+                        <div className="space-y-1.5 md:space-y-2">
                             <div className="text-primary flex items-center gap-2 font-medium">
-                                <Wallet className="h-4 w-4" />
-                                <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Student Finance</span>
+                                <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                <span className="text-muted-foreground text-[9px] font-semibold tracking-wide uppercase md:text-[10px]">Student Finance</span>
                             </div>
-                            <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+                            <h1 className="text-foreground text-xl leading-tight font-bold tracking-tight sm:text-3xl md:text-4xl">
                                 Tuition & <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Fees</span>
                             </h1>
-                            <p className="text-muted-foreground max-w-xl text-sm sm:text-base">
+                            <p className="text-muted-foreground hidden max-w-xl text-sm sm:block sm:text-base">
                                 Overview of your financial status, assessment breakdown, and payment history for the semester.
                             </p>
                         </div>
 
-                        <div className="flex w-full items-center gap-3 md:w-auto">
-                            <div className="border-border/60 bg-background/65 flex items-center gap-2 rounded-lg border p-1 pl-3 shadow-sm">
-                                <Calendar className="text-muted-foreground h-4 w-4 shrink-0" />
+                        <div className="flex w-full items-center gap-2 md:w-auto md:gap-3">
+                            <div className="border-border/60 bg-background/65 flex min-w-0 flex-1 items-center gap-1.5 rounded-lg border p-1 pl-2 shadow-sm md:gap-2 md:pl-3">
+                                <Calendar className="text-muted-foreground h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" />
                                 <Select
                                     value={`${filters.school_year}|${filters.semester}`}
                                     onValueChange={handleFilterChange}
                                     disabled={isFilterLoading}
                                 >
-                                    <SelectTrigger className="text-foreground h-9 w-full border-0 bg-transparent px-2 text-sm font-medium shadow-none focus:ring-0 md:w-[220px]">
+                                    <SelectTrigger className="text-foreground h-8 w-full border-0 bg-transparent px-1.5 text-xs font-medium shadow-none focus:ring-0 md:h-9 md:w-[220px] md:px-2 md:text-sm">
                                         <SelectValue placeholder="Select Term" />
                                     </SelectTrigger>
                                     <SelectContent align="end">
@@ -205,7 +205,7 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="rounded-lg shadow-sm"
+                                    className="hidden rounded-lg shadow-sm sm:inline-flex"
                                     onClick={() => {
                                         window.open(
                                             route("student.tuition.soa", {
@@ -235,10 +235,10 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                             className="relative overflow-hidden"
                         >
                             <div className="relative rounded-lg border border-amber-500/35 bg-amber-500/10 shadow-sm">
-                                <div className="relative p-4 md:p-6">
-                                    <div className="flex items-start gap-3 md:gap-4">
+                                <div className="relative p-3 md:p-6">
+                                    <div className="flex items-start gap-2.5 md:gap-4">
                                         {/* Icon Container */}
-                                        <div className="shrink-0 rounded-lg bg-amber-500/15 p-2.5 text-amber-500 md:p-3">
+                                        <div className="shrink-0 rounded-lg bg-amber-500/15 p-2 text-amber-500 md:p-3">
                                             <Wrench className="h-4 w-4 md:h-5 md:w-5" />
                                         </div>
 
@@ -254,12 +254,12 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                                                 </span>
                                             </div>
 
-                                            <p className="mb-3 text-xs leading-relaxed text-amber-800/90 md:text-base dark:text-amber-200/90">
+                                            <p className="mb-2 line-clamp-2 text-xs leading-relaxed text-amber-800/90 md:mb-3 md:line-clamp-none md:text-base dark:text-amber-200/90">
                                                 The tuition and fees system is currently being maintained. The values displayed on this page
                                                 <span className="font-semibold text-amber-900 dark:text-amber-100"> may not be accurate</span>.
                                             </p>
 
-                                            <div className="flex">
+                                            <div className="hidden md:flex">
                                                 <div className="bg-background/45 inline-flex items-center gap-2 rounded-lg border border-amber-300/50 px-3 py-1.5 shadow-sm md:px-4 md:py-2 dark:border-amber-600/30">
                                                     <ShieldAlert className="h-3.5 w-3.5 text-amber-600 md:h-4 md:w-4 dark:text-amber-400" />
                                                     <span className="text-[11px] font-medium text-amber-900 md:text-sm dark:text-amber-100">

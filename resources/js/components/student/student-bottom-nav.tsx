@@ -24,7 +24,7 @@ interface StudentBottomNavPageProps {
  * Left pair: Academics, Schedule · Center: Home · Right pair: Tuition, News
  */
 const MOBILE_NAV_ORDER = [
-    { id: "classes", label: "Academics", icon: IconSchool, url: "/student/classes" },
+    { id: "classes", label: "Classes", icon: IconSchool, url: "/student/classes" },
     { id: "schedule", label: "Schedule", icon: IconCalendar, url: "/student/schedule" },
     { id: "dashboard", label: "Home", icon: IconDashboard, url: "/student/dashboard", center: true },
     { id: "tuition", label: "Tuition", icon: IconReceipt, url: "/student/tuition" },
@@ -123,25 +123,25 @@ export function StudentBottomNav() {
                                         {/* Outer glow ring */}
                                         <span
                                             className={cn(
-                                                "absolute top-0.5 h-12 w-12 rounded-full transition-all duration-300",
-                                                active ? "bg-primary/20 scale-110 blur-sm" : "scale-100 bg-transparent",
+                                                "absolute top-1 h-11 w-11 rounded-full transition-all duration-300",
+                                                active ? "bg-primary/15 scale-105 blur-sm" : "scale-100 bg-transparent",
                                             )}
                                         />
                                         {/* Elevated pill */}
                                         <span
                                             className={cn(
-                                                "relative z-10 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300",
+                                                "relative z-10 flex h-11 w-11 items-center justify-center rounded-full shadow-md transition-all duration-300",
                                                 active
-                                                    ? "bg-primary text-primary-foreground shadow-primary/40"
+                                                    ? "bg-primary text-primary-foreground shadow-primary/25"
                                                     : "bg-muted text-foreground shadow-black/10 dark:shadow-black/30",
                                             )}
                                         >
-                                            <Icon className="size-6" stroke={active ? 2.2 : 1.6} />
+                                            <Icon className="size-[21px]" stroke={active ? 2.1 : 1.8} />
                                         </span>
                                         <span
                                             className={cn(
                                                 "mt-1 text-[10px] font-semibold tracking-wide transition-colors",
-                                                active ? "text-primary" : "text-muted-foreground",
+                                                active ? "text-primary" : "text-foreground/60",
                                             )}
                                         >
                                             {item.label}
@@ -165,15 +165,15 @@ export function StudentBottomNav() {
                                     <div
                                         className={cn(
                                             "flex h-7 w-7 items-center justify-center transition-all duration-200",
-                                            active ? "text-primary" : "text-muted-foreground",
+                                            active ? "text-primary" : "text-foreground/60",
                                         )}
                                     >
-                                        <Icon className="size-[22px]" stroke={active ? 2 : 1.5} />
+                                        <Icon className="size-[21px]" stroke={active ? 2.1 : 1.8} />
                                     </div>
                                     <span
                                         className={cn(
                                             "mt-0.5 max-w-full truncate text-[10px] leading-tight font-medium transition-colors",
-                                            active ? "text-primary" : "text-muted-foreground",
+                                            active ? "text-primary" : "text-foreground/60",
                                         )}
                                     >
                                         {item.label}

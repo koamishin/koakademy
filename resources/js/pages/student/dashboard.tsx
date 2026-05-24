@@ -15,7 +15,6 @@ import { type User } from "@/types/user";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { motion } from "framer-motion";
 import {
-    AlertCircle,
     ArrowRight,
     Bell,
     BookOpen,
@@ -26,12 +25,14 @@ import {
     Eye,
     EyeOff,
     GraduationCap,
+    HelpCircle,
     LayoutGrid,
     MapPin,
     Sparkles,
     TrendingUp,
     Trophy,
     UserRound,
+    type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -373,6 +374,379 @@ function CourseCard({ classItem, index }: { classItem: ClassInfo; index: number 
     );
 }
 
+function MobileQuickActions() {
+    const actions = [
+        { label: "Profile", href: "/student/profile", icon: UserRound },
+        { label: "Tuition", href: "/student/tuition", icon: CreditCard },
+        { label: "Schedule", href: "/student/schedule", icon: Calendar },
+        { label: "Help", href: "/student/help", icon: HelpCircle },
+    ];
+
+    return (
+        <section className="md:hidden">
+            <div className="grid grid-cols-4 gap-1.5">
+                {actions.map((action) => {
+                    const Icon = action.icon;
+
+                    return (
+                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-1">
+                            <span className="border-border/60 bg-card/85 group-hover:border-primary/40 group-hover:bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors">
+                                <Icon className="text-primary h-[18px] w-[18px]" strokeWidth={1.8} />
+                            </span>
+                            <span className="text-foreground/60 group-hover:text-foreground max-w-full truncate text-[10px] font-medium transition-colors">
+                                {action.label}
+                            </span>
+                        </Link>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function MobileMetricCard({
+    icon: Icon,
+    label,
+    value,
+    detail,
+    tone,
+    privateValue = false,
+}: {
+    icon: typeof Trophy;
+    label: string;
+    value: string | number;
+    detail: string;
+    tone: string;
+    privateValue?: boolean;
+}) {
+    const [revealed, setRevealed] = useState(!privateValue);
+    const iconTone = tone.split(" ").find((className) => className.startsWith("text-")) ?? "text-primary";
+
+    return (
+        <Card className="border-border/60 bg-card/75 overflow-hidden rounded-lg shadow-sm">
+            <CardContent className="relative min-h-[86px] p-2.5">
+                <Icon className={cn("pointer-events-none absolute top-3 right-3 h-6 w-6 opacity-25", iconTone)} strokeWidth={1.8} />
+                <div className="relative z-10 pr-7">
+                    <div className="flex items-center gap-1.5">
+                        <p className="text-foreground/60 text-[10px] font-bold tracking-wide uppercase">{label}</p>
+                        {privateValue && (
+                            <button
+                                type="button"
+                                onClick={() => setRevealed((current) => !current)}
+                                className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                                aria-label={revealed ? "Hide balance" : "Show balance"}
+                            >
+                                {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                        )}
+                    </div>
+                    <p className="text-foreground mt-0.5 truncate text-xl font-bold tracking-tight">{revealed ? value : "Hidden"}</p>
+                    <p className="text-foreground/60 mt-0.5 line-clamp-1 text-[11px]">{detail}</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function MobileAnnouncementDot({ type }: { type: AnnouncementInfo["type"] }) {
+    return (
+        <span
+            className={cn(
+                "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                type === "important" ? "bg-rose-500" : type === "warning" ? "bg-amber-500" : "bg-blue-500",
+            )}
+        />
+    );
+}
+
+function getMobileGreetingCopy(greeting: string): { headline: string; subline: string } {
+    if (greeting === "Good morning") {
+        return {
+            headline: "Rise and shine",
+            subline: "Let's make today count.",
+        };
+    }
+
+    if (greeting === "Good afternoon") {
+        return {
+            headline: "Keep the momentum",
+            subline: "Your afternoon snapshot is ready.",
+        };
+    }
+
+    return {
+        headline: "Evening check-in",
+        subline: "Wrap up today's progress.",
+    };
+}
+
+function getMobileHeroInsight({
+    nextClass,
+    studentData,
+    gwa,
+    currency,
+}: {
+    nextClass: { classItem: ClassInfo; segment: ScheduleSegment; day: string } | null;
+    studentData: StudentDashboardProps["student_data"];
+    gwa: string | null;
+    currency: string;
+}): { icon: LucideIcon; label: string; value: string; href: string } {
+    if (nextClass) {
+        return {
+            icon: Calendar,
+            label: "Next class",
+            value: `${nextClass.classItem.subject_code} at ${nextClass.segment.timeString.split(" - ")[0]}`,
+            href: "/student/schedule",
+        };
+    }
+
+    if (studentData.tuition_balance > 0) {
+        return {
+            icon: CreditCard,
+            label: "Balance due",
+            value: formatMoney(studentData.tuition_balance, currency),
+            href: "/student/tuition",
+        };
+    }
+
+    if (gwa) {
+        return {
+            icon: Trophy,
+            label: "Current GWA",
+            value: gwa,
+            href: "/student/classes",
+        };
+    }
+
+    return {
+        icon: BookOpen,
+        label: "Academic load",
+        value: `${studentData.enrolled_classes.length} subjects`,
+        href: "/student/classes",
+    };
+}
+
+function MobileStudentDashboard({
+    greeting,
+    studentData,
+    currentSemester,
+    currentSchoolYearLabel,
+    gwa,
+    gradedCount,
+    nextClass,
+    urgentAnnouncements,
+    currency,
+}: {
+    greeting: string;
+    studentData: StudentDashboardProps["student_data"];
+    currentSemester: number;
+    currentSchoolYearLabel: string;
+    gwa: string | null;
+    gradedCount: number;
+    nextClass: { classItem: ClassInfo; segment: ScheduleSegment; day: string } | null;
+    urgentAnnouncements: number;
+    currency: string;
+}) {
+    const visibleAnnouncements = studentData.announcements.slice(0, 3);
+    const visibleClasses = studentData.enrolled_classes.slice(0, 3);
+    const greetingCopy = getMobileGreetingCopy(greeting);
+    const heroInsight = getMobileHeroInsight({ nextClass, studentData, gwa, currency });
+    const HeroInsightIcon = heroInsight.icon;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="mx-auto flex w-full max-w-md flex-col gap-2.5 p-3 pb-24 md:hidden"
+        >
+            <section>
+                <Card className={cn(dashboardPanelClass, "relative overflow-hidden rounded-xl")}>
+                    <div className="bg-primary/10 absolute -top-16 -right-16 h-32 w-32 rounded-full blur-3xl" />
+                    <div className="from-primary/35 absolute inset-y-4 left-0 w-1 rounded-r-full bg-gradient-to-b to-primary/5" />
+                    <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                    <CardContent className="relative z-10 space-y-2.5 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <Badge variant="outline" className="border-border/60 bg-background/65 text-foreground/70 rounded-full px-2 py-0.5 text-[9px] leading-none font-semibold">
+                                <Sparkles className="text-primary mr-1 h-2.5 w-2.5" />
+                                {getSemesterLabel(currentSemester)} &bull; {currentSchoolYearLabel}
+                            </Badge>
+                            <span className="border-emerald-500/20 bg-emerald-500/10 text-emerald-500 rounded-full border px-1.5 py-0.5 text-[9px] leading-none font-semibold">
+                                Active
+                            </span>
+                        </div>
+
+                        <div className="pr-6">
+                            <p className="text-foreground/65 text-[10px] leading-tight font-medium">{greetingCopy.subline}</p>
+                            <h1 className="text-foreground mt-0.5 text-[1.18rem] leading-tight font-bold tracking-tight">
+                                {greetingCopy.headline}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(studentData.student_name)}</span>
+                            </h1>
+                        </div>
+
+                        <Link
+                            href={heroInsight.href}
+                            className="border-border/50 bg-background/55 hover:border-primary/40 hover:bg-background/75 flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors"
+                        >
+                            <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+                                <HeroInsightIcon className="h-3.5 w-3.5" strokeWidth={1.9} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="text-foreground/60 block text-[8px] leading-none font-bold tracking-wider uppercase">{heroInsight.label}</span>
+                                <span className="text-foreground mt-1 block truncate text-[11px] leading-tight font-semibold">{heroInsight.value}</span>
+                            </span>
+                            <ArrowRight className="text-foreground/45 h-3.5 w-3.5 shrink-0" />
+                        </Link>
+
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                            <div className="border-border/50 bg-background/45 min-w-0 rounded-lg border px-2.5 py-1.5">
+                                <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Program</p>
+                                <p className="text-foreground mt-0.5 truncate text-[11px] leading-tight font-semibold">{studentData.course || "N/A"}</p>
+                            </div>
+                            <div className="border-border/50 bg-background/45 rounded-lg border px-2.5 py-1.5">
+                                <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Student ID</p>
+                                <p className="text-foreground mt-0.5 truncate font-mono text-[11px] leading-tight font-semibold">{studentData.student_id}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </section>
+
+            <MobileQuickActions />
+
+            <section>
+                <Card className="border-border/60 bg-card/75 overflow-hidden rounded-xl shadow-sm">
+                    <CardContent className="relative p-3.5">
+                        <Calendar className="text-primary pointer-events-none absolute top-3.5 right-3.5 h-11 w-11 opacity-15" />
+                        <div className="relative z-10">
+                            <p className="text-foreground/60 text-[10px] font-bold tracking-wide uppercase">Up Next</p>
+                            {nextClass ? (
+                                <div className="mt-1.5 space-y-1.5">
+                                    <div className="flex items-start justify-between gap-3 pr-10">
+                                        <h2 className="text-foreground line-clamp-2 text-base leading-tight font-semibold">
+                                            {nextClass.classItem.subject_title}
+                                        </h2>
+                                        <Badge variant="outline" className="bg-background/60 shrink-0 font-mono text-[10px]">
+                                            {nextClass.classItem.subject_code}
+                                        </Badge>
+                                    </div>
+                                    <div className="text-foreground/65 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                                        <span className="flex items-center gap-1">
+                                            <Clock className="h-3.5 w-3.5" />
+                                            {nextClass.day}, {nextClass.segment.timeString}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <MapPin className="h-3.5 w-3.5" />
+                                            {nextClass.classItem.room}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mt-2 flex items-center justify-between gap-3 pr-12">
+                                    <p className="text-foreground/65 text-sm">No scheduled classes yet.</p>
+                                    <Button asChild variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-xs">
+                                        <Link href="/student/schedule">View</Link>
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </section>
+
+            <section className="grid grid-cols-2 gap-2.5">
+                <MobileMetricCard icon={Trophy} label="GWA" value={gwa || "N/A"} detail={gwa ? `${gradedCount} graded subjects` : "No grades posted"} tone="bg-amber-500/10 text-amber-500" />
+                <MobileMetricCard icon={BookOpen} label="Subjects" value={studentData.enrolled_classes.length} detail={`${studentData.total_units} total units`} tone="bg-blue-500/10 text-blue-500" />
+                <MobileMetricCard
+                    icon={CheckCircle2}
+                    label="Clearance"
+                    value={studentData.clearance_status ? "Cleared" : "Pending"}
+                    detail={studentData.clearance_status ? "No requirement flagged" : "Requirements needed"}
+                    tone={studentData.clearance_status ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}
+                />
+                <MobileMetricCard
+                    icon={CreditCard}
+                    label="Balance"
+                    value={formatMoney(studentData.tuition_balance, currency)}
+                    detail="Tuition and fees"
+                    tone="bg-violet-500/10 text-violet-500"
+                    privateValue
+                />
+            </section>
+
+            <section>
+                <Card className={cn(dashboardPanelClass, "rounded-xl")}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <Bell className="text-primary h-4 w-4" />
+                            Notice Board
+                        </CardTitle>
+                        <Badge variant={urgentAnnouncements > 0 ? "destructive" : "secondary"} className="rounded-full text-[10px]">
+                            {urgentAnnouncements} urgent
+                        </Badge>
+                    </CardHeader>
+                    <CardContent className="space-y-2 p-4 pt-1">
+                        {visibleAnnouncements.length > 0 ? (
+                            visibleAnnouncements.map((announcement) => (
+                                <div key={announcement.id} className="border-border/50 bg-background/35 flex gap-3 rounded-lg border p-3">
+                                    <MobileAnnouncementDot type={announcement.type} />
+                                    <div className="min-w-0">
+                                        <p className="line-clamp-1 text-sm font-semibold">{announcement.title}</p>
+                                        <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{announcement.content}</p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="border-border/50 bg-background/35 rounded-lg border border-dashed p-5 text-center">
+                                <Bell className="text-muted-foreground mx-auto h-7 w-7" />
+                                <p className="mt-2 text-sm font-medium">No announcements</p>
+                                <p className="text-muted-foreground mt-1 text-xs">New notices will appear here.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </section>
+
+            <section>
+                <Card className={cn(dashboardPanelClass, "rounded-xl")}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <BookOpen className="text-primary h-4 w-4" />
+                            Current Subjects
+                        </CardTitle>
+                        <Button asChild variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs">
+                            <Link href="/student/classes">
+                                View
+                                <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                        </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-2 p-4 pt-1">
+                        {visibleClasses.length > 0 ? (
+                            visibleClasses.map((classItem, index) => (
+                                <div key={classItem.id} className="border-border/50 bg-background/35 flex gap-3 rounded-lg border p-3">
+                                    <span className={cn("mt-1 h-8 w-1 shrink-0 rounded-full", classAccents[index % classAccents.length])} />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="line-clamp-1 text-sm font-semibold">{classItem.subject_title}</p>
+                                        <p className="text-muted-foreground mt-1 truncate text-xs">
+                                            {classItem.subject_code} &bull; {classItem.room}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="border-border/50 bg-background/35 rounded-lg border border-dashed p-5 text-center">
+                                <BookOpen className="text-muted-foreground mx-auto h-7 w-7" />
+                                <p className="mt-2 text-sm font-medium">No enrolled subjects</p>
+                                <p className="text-muted-foreground mt-1 text-xs">Your subjects will appear after enrollment.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </section>
+        </motion.div>
+    );
+}
+
 function SchedulePanel({ classes }: { classes: ClassInfo[] }) {
     const [selectedDay, setSelectedDay] = useState(getTodayName());
     const dayClasses = useMemo(() => {
@@ -599,11 +973,23 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                 </OnboardingProvider>
             )}
 
+            <MobileStudentDashboard
+                greeting={greeting}
+                studentData={student_data}
+                currentSemester={currentSemester}
+                currentSchoolYearLabel={currentSchoolYearLabel}
+                gwa={gwa}
+                gradedCount={gradedCount}
+                nextClass={nextClass}
+                urgentAnnouncements={urgentAnnouncements}
+                currency={currency}
+            />
+
             <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6"
+                className="mx-auto hidden w-full max-w-7xl flex-col gap-4 p-4 pb-16 md:flex md:gap-6 md:p-6"
             >
                 <section>
                     <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
@@ -611,38 +997,40 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                         <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                         <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
 
-                        <CardContent className="relative z-10 p-4 sm:p-5 md:p-6">
-                            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-                                <div className="max-w-2xl space-y-3.5 sm:space-y-4">
-                                    <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2.5 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs">
-                                        <Sparkles className="text-primary mr-1.5 h-3 w-3" />
+                        <CardContent className="relative z-10 p-2.5 sm:p-5 md:p-6">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                <div className="max-w-2xl space-y-2 sm:space-y-4">
+                                    <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs">
+                                        <Sparkles className="text-primary mr-1 h-2.5 w-2.5 sm:mr-1.5 sm:h-3 sm:w-3" />
                                         {getSemesterLabel(currentSemester)} • {currentSchoolYearLabel}
                                     </Badge>
-                                    <div className="space-y-1">
-                                        <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+                                    <div>
+                                        <h1 className="text-foreground text-[1.35rem] leading-[1.15] font-bold tracking-tight sm:text-3xl md:text-4xl">
                                             {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(student_data.student_name)}</span>
                                         </h1>
-                                        <p className="text-muted-foreground max-w-xl text-sm leading-relaxed sm:text-base">
+                                        <p className="text-muted-foreground hidden max-w-xl text-sm leading-relaxed sm:block sm:text-base">
                                             Your academic status, upcoming class, grades, and announcements are grouped here for the current term.
                                         </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3 md:min-w-[300px]">
-                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-xl border p-3 transition-colors sm:p-4">
-                                        <p className="text-muted-foreground group-hover/info:text-primary text-[10px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Program</p>
-                                        <p className="text-foreground mt-1 truncate text-xs font-bold sm:text-sm" title={student_data.course || ""}>
+                                <div className="grid grid-cols-2 gap-2 md:min-w-[300px] md:gap-3">
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Program</p>
+                                        <p className="text-foreground mt-0.5 truncate text-[11px] font-bold sm:mt-1 sm:text-sm" title={student_data.course || ""}>
                                             {student_data.course || "N/A"}
                                         </p>
                                     </div>
-                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-xl border p-3 transition-colors sm:p-4">
-                                        <p className="text-muted-foreground group-hover/info:text-primary text-[10px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Student ID</p>
-                                        <p className="text-foreground mt-1 truncate font-mono text-xs font-bold sm:text-sm">{student_data.student_id}</p>
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Student ID</p>
+                                        <p className="text-foreground mt-0.5 truncate font-mono text-[11px] font-bold sm:mt-1 sm:text-sm">{student_data.student_id}</p>
                                     </div>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
                 </section>
+
+                <MobileQuickActions />
 
                 <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <StatTile
@@ -932,48 +1320,6 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                             </CardContent>
                         </Card>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/profile">
-                                    <UserRound className="h-4 w-4" />
-                                    Profile
-                                </Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/tuition">
-                                    <CreditCard className="h-4 w-4" />
-                                    Tuition
-                                </Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/schedule">
-                                    <Calendar className="h-4 w-4" />
-                                    Schedule
-                                </Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/help">
-                                    <AlertCircle className="h-4 w-4" />
-                                    Help
-                                </Link>
-                            </Button>
-                        </div>
                     </aside>
                 </section>
             </motion.div>

@@ -535,7 +535,7 @@ export default function StudentClasses({ user, student_name, course_name, progre
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6"
+                className="mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6"
             >
                 {/* Hero Section */}
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
@@ -543,18 +543,18 @@ export default function StudentClasses({ user, student_name, course_name, progre
                     <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                     <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
 
-                    <CardContent className="relative z-10 space-y-6 p-4 sm:p-5 md:p-6">
-                        <div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-end">
-                            <div className="space-y-1.5 sm:space-y-2">
-                                <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2.5 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs">
+                    <CardContent className="relative z-10 space-y-3 p-3 sm:p-5 md:space-y-6 md:p-6">
+                        <div className="flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
+                            <div className="space-y-1 sm:space-y-2">
+                                <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs">
                                     <Sparkles className="text-primary mr-1.5 h-3 w-3" />
                                     My Academics
                                 </Badge>
                                 <div>
-                                    <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
+                                    <h1 className="text-foreground text-xl leading-tight font-bold tracking-tight sm:text-3xl md:text-4xl">
                                         Academic <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Journey</span>
                                     </h1>
-                                    <p className="text-muted-foreground mt-1.5 flex items-center gap-2 text-xs sm:text-sm">
+                                    <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-[11px] sm:text-sm">
                                         <GraduationCap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         {course_name}
                                     </p>
@@ -586,22 +586,22 @@ export default function StudentClasses({ user, student_name, course_name, progre
 
                         {/* Progress Stats (Only show in Interactive Mode) */}
                         {viewMode === "interactive" && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-4 md:grid-cols-2">
-                                <Card className={cn(dashboardCardClass, "group relative min-h-[110px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]")}>
-                                    <div className="absolute top-4 right-5 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25">
-                                        <Trophy className="h-10 w-10 text-amber-500 sm:h-14 sm:w-14" />
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-2.5 md:grid-cols-2 md:gap-4">
+                                <Card className={cn(dashboardCardClass, "group relative min-h-[88px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]")}>
+                                    <div className="absolute top-3 right-3 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 sm:top-4 sm:right-5">
+                                        <Trophy className="h-9 w-9 text-amber-500 sm:h-14 sm:w-14" />
                                     </div>
-                                    <CardContent className="relative z-10 flex h-full flex-col justify-end p-4 pr-14 sm:p-5 sm:pr-20">
+                                    <CardContent className="relative z-10 flex h-full flex-col justify-end p-3 pr-12 sm:p-5 sm:pr-20">
                                         <div>
                                             <h3 className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase sm:text-xs">Course Completion</h3>
-                                            <div className="mt-1.5 flex items-baseline gap-2 sm:mt-2">
-                                                <span className="text-foreground text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">
+                                            <div className="mt-1 flex items-baseline gap-2 sm:mt-2">
+                                                <span className="text-foreground text-lg font-bold tracking-tight sm:text-2xl md:text-3xl">
                                                     {progress.percentage}%
                                                 </span>
                                                 <span className="text-muted-foreground text-[10px] font-medium sm:text-xs">Complete</span>
                                             </div>
                                         </div>
-                                        <div className="mt-3 space-y-2 sm:mt-4">
+                                        <div className="mt-2 space-y-1.5 sm:mt-4 sm:space-y-2">
                                             <div className="text-muted-foreground flex justify-between text-[10px] font-medium sm:text-xs">
                                                 <span>{progress.earned} Units Earned</span>
                                                 <span>{progress.total} Total Units</span>
@@ -618,10 +618,10 @@ export default function StudentClasses({ user, student_name, course_name, progre
                                     </CardContent>
                                 </Card>
 
-                                <Card className={cn(dashboardCardClass, "group relative min-h-[110px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]")}>
-                                    <CardContent className="relative flex h-full flex-col justify-end p-4 pr-14 sm:p-5 sm:pr-20">
-                                        <div className="absolute top-4 right-5 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25">
-                                            <Sparkles className={cn("h-10 w-10 sm:h-14 sm:w-14", gwaToneClass(overallGwa, gradingConfig))} />
+                                <Card className={cn(dashboardCardClass, "group relative min-h-[88px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]")}>
+                                    <CardContent className="relative flex h-full flex-col justify-end p-3 pr-12 sm:p-5 sm:pr-20">
+                                        <div className="absolute top-3 right-3 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 sm:top-4 sm:right-5">
+                                            <Sparkles className={cn("h-9 w-9 sm:h-14 sm:w-14", gwaToneClass(overallGwa, gradingConfig))} />
                                         </div>
                                         <div className="relative z-10">
                                             <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase sm:text-xs">Overall GWA</p>
