@@ -1,8 +1,7 @@
-import { cn } from "@/lib/utils";
-import { SemesterSelectorProps } from "@/components/semester-selector";
 import { DigitalIdCard, type IdCardData } from "@/components/digital-id-card";
-import { type OnboardingChecklistItem, OnboardingProvider } from "@/components/onboarding-context";
+import { OnboardingProvider, type OnboardingChecklistItem } from "@/components/onboarding-context";
 import { OnboardingExperience, type OnboardingFeatureData } from "@/components/onboarding-experience";
+import { SemesterSelectorProps } from "@/components/semester-selector";
 import StudentLayout from "@/components/student/student-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { type User } from "@/types/user";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { motion } from "framer-motion";
@@ -563,15 +563,18 @@ function MobileStudentDashboard({
             <section>
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden rounded-xl")}>
                     <div className="bg-primary/10 absolute -top-16 -right-16 h-32 w-32 rounded-full blur-3xl" />
-                    <div className="from-primary/35 absolute inset-y-4 left-0 w-1 rounded-r-full bg-gradient-to-b to-primary/5" />
-                    <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                    <div className="from-primary/35 to-primary/5 absolute inset-y-4 left-0 w-1 rounded-r-full bg-gradient-to-b" />
+                    <div className="via-primary/30 absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent to-transparent" />
                     <CardContent className="relative z-10 space-y-2.5 p-3">
                         <div className="flex items-center justify-between gap-2">
-                            <Badge variant="outline" className="border-border/60 bg-background/65 text-foreground/70 rounded-full px-2 py-0.5 text-[9px] leading-none font-semibold">
+                            <Badge
+                                variant="outline"
+                                className="border-border/60 bg-background/65 text-foreground/70 rounded-full px-2 py-0.5 text-[9px] leading-none font-semibold"
+                            >
                                 <Sparkles className="text-primary mr-1 h-2.5 w-2.5" />
                                 {getSemesterLabel(currentSemester)} &bull; {currentSchoolYearLabel}
                             </Badge>
-                            <span className="border-emerald-500/20 bg-emerald-500/10 text-emerald-500 rounded-full border px-1.5 py-0.5 text-[9px] leading-none font-semibold">
+                            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] leading-none font-semibold text-emerald-500">
                                 Active
                             </span>
                         </div>
@@ -579,7 +582,10 @@ function MobileStudentDashboard({
                         <div className="pr-6">
                             <p className="text-foreground/65 text-[10px] leading-tight font-medium">{greetingCopy.subline}</p>
                             <h1 className="text-foreground mt-0.5 text-[1.18rem] leading-tight font-bold tracking-tight">
-                                {greetingCopy.headline}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(studentData.student_name)}</span>
+                                {greetingCopy.headline},{" "}
+                                <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">
+                                    {getShortName(studentData.student_name)}
+                                </span>
                             </h1>
                         </div>
 
@@ -591,8 +597,12 @@ function MobileStudentDashboard({
                                 <HeroInsightIcon className="h-3.5 w-3.5" strokeWidth={1.9} />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="text-foreground/60 block text-[8px] leading-none font-bold tracking-wider uppercase">{heroInsight.label}</span>
-                                <span className="text-foreground mt-1 block truncate text-[11px] leading-tight font-semibold">{heroInsight.value}</span>
+                                <span className="text-foreground/60 block text-[8px] leading-none font-bold tracking-wider uppercase">
+                                    {heroInsight.label}
+                                </span>
+                                <span className="text-foreground mt-1 block truncate text-[11px] leading-tight font-semibold">
+                                    {heroInsight.value}
+                                </span>
                             </span>
                             <ArrowRight className="text-foreground/45 h-3.5 w-3.5 shrink-0" />
                         </Link>
@@ -600,11 +610,15 @@ function MobileStudentDashboard({
                         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                             <div className="border-border/50 bg-background/45 min-w-0 rounded-lg border px-2.5 py-1.5">
                                 <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Program</p>
-                                <p className="text-foreground mt-0.5 truncate text-[11px] leading-tight font-semibold">{studentData.course || "N/A"}</p>
+                                <p className="text-foreground mt-0.5 truncate text-[11px] leading-tight font-semibold">
+                                    {studentData.course || "N/A"}
+                                </p>
                             </div>
                             <div className="border-border/50 bg-background/45 rounded-lg border px-2.5 py-1.5">
                                 <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Student ID</p>
-                                <p className="text-foreground mt-0.5 truncate font-mono text-[11px] leading-tight font-semibold">{studentData.student_id}</p>
+                                <p className="text-foreground mt-0.5 truncate font-mono text-[11px] leading-tight font-semibold">
+                                    {studentData.student_id}
+                                </p>
                             </div>
                         </div>
                     </CardContent>
@@ -654,8 +668,20 @@ function MobileStudentDashboard({
             </section>
 
             <section className="grid grid-cols-2 gap-2.5">
-                <MobileMetricCard icon={Trophy} label="GWA" value={gwa || "N/A"} detail={gwa ? `${gradedCount} graded subjects` : "No grades posted"} tone="bg-amber-500/10 text-amber-500" />
-                <MobileMetricCard icon={BookOpen} label="Subjects" value={studentData.enrolled_classes.length} detail={`${studentData.total_units} total units`} tone="bg-blue-500/10 text-blue-500" />
+                <MobileMetricCard
+                    icon={Trophy}
+                    label="GWA"
+                    value={gwa || "N/A"}
+                    detail={gwa ? `${gradedCount} graded subjects` : "No grades posted"}
+                    tone="bg-amber-500/10 text-amber-500"
+                />
+                <MobileMetricCard
+                    icon={BookOpen}
+                    label="Subjects"
+                    value={studentData.enrolled_classes.length}
+                    detail={`${studentData.total_units} total units`}
+                    tone="bg-blue-500/10 text-blue-500"
+                />
                 <MobileMetricCard
                     icon={CheckCircle2}
                     label="Clearance"
@@ -875,9 +901,10 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
     const currency = props.branding?.currency || "PHP";
     const currentSemester = props.settings?.currentSemester ?? student_data.semester;
     const currentSchoolYear = props.settings?.currentSchoolYear ?? parseInt(student_data.school_year.split("-")[0]);
-    const currentSchoolYearLabel = props.settings?.currentSchoolYear && props.settings?.availableSchoolYears 
-        ? props.settings.availableSchoolYears[props.settings.currentSchoolYear]
-        : student_data.school_year;
+    const currentSchoolYearLabel =
+        props.settings?.currentSchoolYear && props.settings?.availableSchoolYears
+            ? props.settings.availableSchoolYears[props.settings.currentSchoolYear]
+            : student_data.school_year;
 
     const shouldForceOnboarding = props.onboarding?.forceOnLogin ?? false;
     const onboardingFeatures = props.onboarding?.features ?? [];
@@ -985,7 +1012,7 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                 currency={currency}
             />
 
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
@@ -1000,13 +1027,19 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                         <CardContent className="relative z-10 p-2.5 sm:p-5 md:p-6">
                             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                                 <div className="max-w-2xl space-y-2 sm:space-y-4">
-                                    <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs">
+                                    <Badge
+                                        variant="outline"
+                                        className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs"
+                                    >
                                         <Sparkles className="text-primary mr-1 h-2.5 w-2.5 sm:mr-1.5 sm:h-3 sm:w-3" />
                                         {getSemesterLabel(currentSemester)} • {currentSchoolYearLabel}
                                     </Badge>
                                     <div>
                                         <h1 className="text-foreground text-[1.35rem] leading-[1.15] font-bold tracking-tight sm:text-3xl md:text-4xl">
-                                            {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(student_data.student_name)}</span>
+                                            {greeting},{" "}
+                                            <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">
+                                                {getShortName(student_data.student_name)}
+                                            </span>
                                         </h1>
                                         <p className="text-muted-foreground hidden max-w-xl text-sm leading-relaxed sm:block sm:text-base">
                                             Your academic status, upcoming class, grades, and announcements are grouped here for the current term.
@@ -1015,14 +1048,23 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 md:min-w-[300px] md:gap-3">
                                     <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
-                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Program</p>
-                                        <p className="text-foreground mt-0.5 truncate text-[11px] font-bold sm:mt-1 sm:text-sm" title={student_data.course || ""}>
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
+                                            Program
+                                        </p>
+                                        <p
+                                            className="text-foreground mt-0.5 truncate text-[11px] font-bold sm:mt-1 sm:text-sm"
+                                            title={student_data.course || ""}
+                                        >
                                             {student_data.course || "N/A"}
                                         </p>
                                     </div>
                                     <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
-                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">Student ID</p>
-                                        <p className="text-foreground mt-0.5 truncate font-mono text-[11px] font-bold sm:mt-1 sm:text-sm">{student_data.student_id}</p>
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
+                                            Student ID
+                                        </p>
+                                        <p className="text-foreground mt-0.5 truncate font-mono text-[11px] font-bold sm:mt-1 sm:text-sm">
+                                            {student_data.student_id}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -1319,7 +1361,6 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                                 </ScrollArea>
                             </CardContent>
                         </Card>
-
                     </aside>
                 </section>
             </motion.div>
