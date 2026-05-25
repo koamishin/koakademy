@@ -744,7 +744,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     const [search, setSearch] = React.useState(() => filters.search || "");
     const [isSearchLoading, setIsSearchLoading] = React.useState(false);
     const [isSelectedClassLoading, setIsSelectedClassLoading] = React.useState(false);
-    const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
+    const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
     const [localClassification, setLocalClassification] = React.useState(filters.classification || "all");
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
     const [isEditOpen, setIsEditOpen] = React.useState(false);
