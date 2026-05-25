@@ -109,6 +109,8 @@ final class EnrollmentPipelineService
             $steps = $defaults['steps'];
         }
 
+        $steps = $this->normalizeStepConnections($steps);
+
         $entryStepKey = $this->sanitizeString($input['entry_step_key'] ?? null, $steps[0]['key']);
         $completionStepKey = $this->sanitizeString($input['completion_step_key'] ?? null, $steps[count($steps) - 1]['key']);
 
@@ -202,6 +204,8 @@ final class EnrollmentPipelineService
                 'is_core' => false,
                 'key' => $step['key'],
                 'action_type' => $step['action_type'],
+                'actions' => $step['actions'] ?? $this->actionsForActionType($step['action_type']),
+                'next_step_key' => $step['next_step_key'] ?? null,
                 'is_completion' => $completionStepKey === $step['key'],
             ])
             ->values()
@@ -328,7 +332,12 @@ final class EnrollmentPipelineService
                 continue;
             }
 
-            return $steps[$index + 1] ?? null;
+            $nextStepKey = $step['next_step_key'] ?? null;
+            if (is_string($nextStepKey) && $nextStepKey !== '') {
+                return collect($steps)->first(fn (array $candidate): bool => $candidate['key'] === $nextStepKey);
+            }
+
+            return null;
         }
 
         return null;
@@ -345,11 +354,9 @@ final class EnrollmentPipelineService
                 continue;
             }
 
-            if ($index === 0) {
-                return null;
-            }
+            $currentKey = $step['key'];
 
-            return $steps[$index - 1];
+            return collect($steps)->first(fn (array $candidate): bool => ($candidate['next_step_key'] ?? null) === $currentKey);
         }
 
         return null;
@@ -448,6 +455,7 @@ final class EnrollmentPipelineService
                     'color' => 'yellow',
                     'allowed_roles' => [],
                     'action_type' => 'standard',
+                    'actions' => ['advance_status'],
                 ],
                 [
                     'key' => 'department_verification',
@@ -456,6 +464,7 @@ final class EnrollmentPipelineService
                     'color' => 'blue',
                     'allowed_roles' => [],
                     'action_type' => 'department_verification',
+                    'actions' => ['department_verification'],
                 ],
                 [
                     'key' => 'payment_verification',
@@ -464,6 +473,7 @@ final class EnrollmentPipelineService
                     'color' => 'green',
                     'allowed_roles' => [],
                     'action_type' => 'cashier_verification',
+                    'actions' => ['cashier_verification'],
                 ],
             ],
             'entry_step_key' => 'pending',
@@ -610,8 +620,19 @@ final class EnrollmentPipelineService
         return array_values(array_unique($normalized));
     }
 
-    private function sanitizeActionType(mixed $actionType): string
+    /**
+     * @param  array<int, string>  $actions
+     */
+    private function sanitizeActionType(mixed $actionType, array $actions = []): string
     {
+        if (in_array('cashier_verification', $actions, true)) {
+            return 'cashier_verification';
+        }
+
+        if (in_array('department_verification', $actions, true)) {
+            return 'department_verification';
+        }
+
         if (! is_string($actionType)) {
             return 'standard';
         }
@@ -621,6 +642,48 @@ final class EnrollmentPipelineService
         return in_array($normalized, ['standard', 'department_verification', 'cashier_verification'], true)
             ? $normalized
             : 'standard';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function sanitizeStepActions(mixed $actions, string $fallbackActionType): array
+    {
+        if (! is_array($actions)) {
+            return $this->actionsForActionType($fallbackActionType);
+        }
+
+        $allowed = ['advance_status', 'department_verification', 'cashier_verification'];
+        $normalized = [];
+
+        foreach ($actions as $action) {
+            if (! is_string($action)) {
+                continue;
+            }
+
+            $action = mb_trim(mb_strtolower($action));
+            if (! in_array($action, $allowed, true)) {
+                continue;
+            }
+
+            $normalized[] = $action;
+        }
+
+        $normalized = array_values(array_unique($normalized));
+
+        return $normalized === [] ? $this->actionsForActionType($fallbackActionType) : $normalized;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function actionsForActionType(string $actionType): array
+    {
+        return match ($actionType) {
+            'department_verification' => ['department_verification'],
+            'cashier_verification' => ['cashier_verification'],
+            default => ['advance_status'],
+        };
     }
 
     /**
@@ -650,17 +713,58 @@ final class EnrollmentPipelineService
             $generatedKey = 'step_'.($index + 1);
             $key = $this->sanitizeStepKey($stepRaw['key'] ?? $generatedKey, $generatedKey);
 
+            $fallbackActionType = $this->sanitizeActionType($stepRaw['action_type'] ?? 'standard');
+            $actions = $this->sanitizeStepActions($stepRaw['actions'] ?? null, $fallbackActionType);
+
             $steps[] = [
                 'key' => $key,
                 'status' => $status,
                 'label' => $label,
                 'color' => $this->sanitizeColor($stepRaw['color'] ?? null, 'gray'),
                 'allowed_roles' => $this->sanitizeRoles($stepRaw['allowed_roles'] ?? []),
-                'action_type' => $this->sanitizeActionType($stepRaw['action_type'] ?? 'standard'),
+                'action_type' => $this->sanitizeActionType($stepRaw['action_type'] ?? 'standard', $actions),
+                'actions' => $actions,
+                'next_step_key' => array_key_exists('next_step_key', $stepRaw)
+                    ? $this->sanitizeNullableStepKey($stepRaw['next_step_key'] ?? null)
+                    : '__next_by_order__',
             ];
         }
 
-        return array_values($steps);
+        return $this->normalizeStepConnections(array_values($steps));
+    }
+
+    private function sanitizeNullableStepKey(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $slug = str($value)->slug('_')->toString();
+
+        return $slug === '' ? null : $slug;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $steps
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeStepConnections(array $steps): array
+    {
+        $stepKeys = collect($steps)->pluck('key')->all();
+
+        foreach ($steps as $index => $step) {
+            if (! array_key_exists('next_step_key', $step) || ($step['next_step_key'] ?? null) === '__next_by_order__') {
+                $steps[$index]['next_step_key'] = $steps[$index + 1]['key'] ?? null;
+
+                continue;
+            }
+
+            if (($step['next_step_key'] ?? null) !== null && ! in_array($step['next_step_key'], $stepKeys, true)) {
+                $steps[$index]['next_step_key'] = null;
+            }
+        }
+
+        return $steps;
     }
 
     /**
@@ -688,6 +792,7 @@ final class EnrollmentPipelineService
                 'color' => $this->sanitizeColor($input['pending_color'] ?? null, $defaults['steps'][0]['color']),
                 'allowed_roles' => $this->sanitizeRoles($input['pending_roles'] ?? []),
                 'action_type' => 'standard',
+                'actions' => ['advance_status'],
             ],
             [
                 'key' => 'department_verification',
@@ -696,6 +801,7 @@ final class EnrollmentPipelineService
                 'color' => $this->sanitizeColor($input['department_verified_color'] ?? null, $defaults['steps'][1]['color']),
                 'allowed_roles' => $this->sanitizeRoles($input['department_verified_roles'] ?? []),
                 'action_type' => 'department_verification',
+                'actions' => ['department_verification'],
             ],
         ];
 
@@ -722,6 +828,7 @@ final class EnrollmentPipelineService
                     'color' => $this->sanitizeColor($stepRaw['color'] ?? null, 'indigo'),
                     'allowed_roles' => $this->sanitizeRoles($stepRaw['allowed_roles'] ?? []),
                     'action_type' => 'standard',
+                    'actions' => ['advance_status'],
                 ];
             }
         }
@@ -733,6 +840,7 @@ final class EnrollmentPipelineService
             'color' => $this->sanitizeColor($input['cashier_verified_color'] ?? null, $defaults['steps'][2]['color']),
             'allowed_roles' => $this->sanitizeRoles($input['cashier_verified_roles'] ?? []),
             'action_type' => 'cashier_verification',
+            'actions' => ['cashier_verification'],
         ];
 
         return $steps;
@@ -826,6 +934,7 @@ final class EnrollmentPipelineService
                 'label' => $step['label'],
                 'color' => $step['color'],
                 'allowed_roles' => $step['allowed_roles'],
+                'actions' => $step['actions'] ?? $this->actionsForActionType($step['action_type'] ?? 'standard'),
             ];
         }
 

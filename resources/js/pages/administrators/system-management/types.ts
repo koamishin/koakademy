@@ -121,6 +121,7 @@ export interface MailConfig {
 }
 
 export type EnrollmentPipelineActionType = "standard" | "department_verification" | "cashier_verification";
+export type EnrollmentPipelineStepAction = "advance_status" | "department_verification" | "cashier_verification";
 
 export interface EnrollmentPipelineStep {
     key: string;
@@ -129,6 +130,8 @@ export interface EnrollmentPipelineStep {
     color: string;
     allowed_roles: string[];
     action_type: EnrollmentPipelineActionType;
+    actions?: EnrollmentPipelineStepAction[];
+    next_step_key?: string | null;
 }
 
 export interface EnrollmentPipelineSettings {

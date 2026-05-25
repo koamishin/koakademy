@@ -3,22 +3,55 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuLabel,
+    ContextMenuSeparator,
+    ContextMenuSub,
+    ContextMenuSubContent,
+    ContextMenuSubTrigger,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DndContext, type DragEndEvent, PointerSensor, useDraggable, useSensor, useSensors } from "@dnd-kit/core";
 import { useForm } from "@inertiajs/react";
-import { AnimatePresence, motion } from "framer-motion";
-import { LayoutDashboard, Loader2, MoveDown, MoveUp, PieChart, Plus, Save, Settings, Split, Trash2, Workflow } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+    ArrowRight,
+    BarChart3,
+    BookOpenCheck,
+    CheckCircle2,
+    CircleDollarSign,
+    GraduationCap,
+    GripVertical,
+    Loader2,
+    LockKeyhole,
+    MousePointerClick,
+    Pencil,
+    Plus,
+    Save,
+    Scissors,
+    Settings2,
+    Sparkles,
+    Target,
+    Trash2,
+    Users,
+    Workflow,
+} from "lucide-react";
+import { type PointerEvent as ReactPointerEvent, useCallback, useMemo, useRef, useState } from "react";
 
 import { submitSystemForm } from "./form-submit";
 import SystemManagementLayout from "./layout";
 import type {
     EnrollmentPipelineActionType,
     EnrollmentPipelineStep,
+    EnrollmentPipelineStepAction,
     EnrollmentStatMetric,
     EnrollmentStatsCard,
     SystemManagementPageProps,
@@ -42,10 +75,43 @@ interface EnrollmentPipelineFormData {
 
 const colorOptions = ["yellow", "blue", "green", "emerald", "teal", "gray", "amber", "red", "indigo", "orange"] as const;
 
-const stepTypeOptions: Array<{ value: EnrollmentPipelineActionType; label: string }> = [
-    { value: "standard", label: "Standard Step" },
-    { value: "department_verification", label: "Verification Step" },
-    { value: "cashier_verification", label: "Payment Verification Step" },
+const colorHex: Record<(typeof colorOptions)[number], string> = {
+    yellow: "#facc15",
+    blue: "#3b82f6",
+    green: "#22c55e",
+    emerald: "#10b981",
+    teal: "#14b8a6",
+    gray: "#6b7280",
+    amber: "#f59e0b",
+    red: "#ef4444",
+    indigo: "#6366f1",
+    orange: "#f97316",
+};
+
+const actionOptions: Array<{
+    value: EnrollmentPipelineActionType;
+    label: string;
+    description: string;
+    icon: typeof CheckCircle2;
+}> = [
+    {
+        value: "standard",
+        label: "Move to this status",
+        description: "Use this for review steps that only need approval and a status change.",
+        icon: CheckCircle2,
+    },
+    {
+        value: "department_verification",
+        label: "Run department verification",
+        description: "Executes the department verification flow, including the existing status update and notifications.",
+        icon: BookOpenCheck,
+    },
+    {
+        value: "cashier_verification",
+        label: "Require cashier/payment verification",
+        description: "Routes this step through the payment verification flow instead of a simple approval button.",
+        icon: CircleDollarSign,
+    },
 ];
 
 const statsMetricOptions: Array<{ value: EnrollmentStatMetric; label: string }> = [
@@ -55,6 +121,66 @@ const statsMetricOptions: Array<{ value: EnrollmentStatMetric; label: string }> 
     { value: "status_count", label: "Status Count" },
     { value: "paid_count", label: "Fully Paid Count" },
 ];
+
+const slugify = (value: string, fallback: string): string => {
+    const slug = value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    return slug.length > 0 ? slug : fallback;
+};
+
+const actionsForActionType = (actionType: EnrollmentPipelineActionType): EnrollmentPipelineStepAction[] => {
+    if (actionType === "department_verification") {
+        return ["department_verification"];
+    }
+
+    if (actionType === "cashier_verification") {
+        return ["cashier_verification"];
+    }
+
+    return ["advance_status"];
+};
+
+const normalizeActionType = (step: EnrollmentPipelineStep): EnrollmentPipelineActionType => {
+    if (step.actions?.includes("cashier_verification")) {
+        return "cashier_verification";
+    }
+
+    if (step.actions?.includes("department_verification")) {
+        return "department_verification";
+    }
+
+    return step.action_type || "standard";
+};
+
+const createDefaultStep = (index: number): EnrollmentPipelineStep => ({
+    key: `step_${index}`,
+    status: `step_${index}`,
+    label: `Step ${index}`,
+    color: "indigo",
+    allowed_roles: [],
+    action_type: "standard",
+    actions: ["advance_status"],
+    next_step_key: null,
+});
+
+interface CanvasNodePosition {
+    x: number;
+    y: number;
+}
+
+const canvasNodeWidth = 360;
+const canvasNodeHeight = 112;
+
+const getCanvasNodeId = (step: EnrollmentPipelineStep, index: number): string => `${step.key || "step"}-${index}`;
+
+const defaultCanvasPosition = (index: number): CanvasNodePosition => ({
+    x: 80 + (index % 2) * 420,
+    y: 72 + Math.floor(index / 2) * 180,
+});
 
 export default function SystemManagementEnrollmentPipelinePage({
     user,
@@ -76,14 +202,20 @@ export default function SystemManagementEnrollmentPipelinePage({
             .filter((courseId) => availableEnrollmentCourseIds.has(courseId)),
         entry_step_key: enrollment_pipeline?.entry_step_key || initialSteps[0]?.key || "",
         completion_step_key: enrollment_pipeline?.completion_step_key || initialSteps[initialSteps.length - 1]?.key || "",
-        steps: initialSteps.map((step) => ({
-            key: step.key,
-            status: step.status,
-            label: step.label,
-            color: step.color || "indigo",
-            allowed_roles: step.allowed_roles || [],
-            action_type: step.action_type || "standard",
-        })),
+        steps: initialSteps.map((step, index) => {
+            const actionType = normalizeActionType(step);
+
+            return {
+                key: step.key || `step_${index + 1}`,
+                status: step.status,
+                label: step.label,
+                color: step.color || "indigo",
+                allowed_roles: step.allowed_roles || [],
+                action_type: actionType,
+                actions: step.actions?.length ? step.actions : actionsForActionType(actionType),
+                next_step_key: step.next_step_key ?? initialSteps[index + 1]?.key ?? null,
+            };
+        }),
         automation: {
             auto_create_student_enrollment: enrollment_pipeline?.automation?.auto_create_student_enrollment ?? false,
             auto_assign_subjects: enrollment_pipeline?.automation?.auto_assign_subjects ?? false,
@@ -97,6 +229,56 @@ export default function SystemManagementEnrollmentPipelinePage({
     const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(initialSteps.length > 0 ? 0 : null);
     const [selectedRoleByStep, setSelectedRoleByStep] = useState<Record<number, string>>({});
     const [enrollmentCourseSearch, setEnrollmentCourseSearch] = useState("");
+    const [nodePositions, setNodePositions] = useState<Record<string, CanvasNodePosition>>(() =>
+        Object.fromEntries(initialSteps.map((step, index) => [getCanvasNodeId(step, index), defaultCanvasPosition(index)])),
+    );
+    const [connectingFromIndex, setConnectingFromIndex] = useState<number | null>(null);
+    const [dragConnection, setDragConnection] = useState<{ sourceIndex: number; currentPoint: CanvasNodePosition } | null>(null);
+    const canvasRef = useRef<HTMLDivElement | null>(null);
+
+    const formErrors = pipelineForm.errors as Record<string, string | undefined>;
+    const selectedStep = selectedStepIndex !== null ? pipelineForm.data.steps[selectedStepIndex] : undefined;
+    const selectedNextStep = selectedStep?.next_step_key
+        ? pipelineForm.data.steps.find((step) => step.key === selectedStep.next_step_key)
+        : undefined;
+    const selectedIncomingSteps = selectedStep ? pipelineForm.data.steps.filter((step) => step.next_step_key === selectedStep.key) : [];
+    const entryStep = pipelineForm.data.steps.find((step) => step.key === pipelineForm.data.entry_step_key) ?? pipelineForm.data.steps[0];
+    const completionStep =
+        pipelineForm.data.steps.find((step) => step.key === pipelineForm.data.completion_step_key) ??
+        pipelineForm.data.steps[pipelineForm.data.steps.length - 1];
+    const canvasNodes = useMemo(
+        () =>
+            pipelineForm.data.steps.map((step, index) => {
+                const id = getCanvasNodeId(step, index);
+
+                return {
+                    id,
+                    step,
+                    index,
+                    position: nodePositions[id] ?? defaultCanvasPosition(index),
+                };
+            }),
+        [nodePositions, pipelineForm.data.steps],
+    );
+    const canvasSensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 4,
+            },
+        }),
+    );
+    const getCanvasPoint = useCallback((clientX: number, clientY: number): CanvasNodePosition => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+
+        if (!rect) {
+            return { x: 0, y: 0 };
+        }
+
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top,
+        };
+    }, []);
 
     const roleComboboxOptions: ComboboxOption[] = useMemo(
         () =>
@@ -115,11 +297,7 @@ export default function SystemManagementEnrollmentPipelinePage({
             return available_enrollment_courses ?? [];
         }
 
-        return (available_enrollment_courses ?? []).filter((course) => {
-            const haystack = `${course.code} ${course.title}`.toLowerCase();
-
-            return haystack.includes(search);
-        });
+        return (available_enrollment_courses ?? []).filter((course) => `${course.code} ${course.title}`.toLowerCase().includes(search));
     }, [available_enrollment_courses, enrollmentCourseSearch]);
 
     const selectedEnrollmentCourses = useMemo(() => {
@@ -128,106 +306,79 @@ export default function SystemManagementEnrollmentPipelinePage({
         return (available_enrollment_courses ?? []).filter((course) => selectedIds.has(course.id));
     }, [available_enrollment_courses, pipelineForm.data.enrollment_courses]);
 
-    const toggleEnrollmentCourse = (courseId: number, checked: boolean) => {
-        const normalizedIds = pipelineForm.data.enrollment_courses.map((id) => Number(id));
-
-        if (checked && !normalizedIds.includes(courseId)) {
-            pipelineForm.setData("enrollment_courses", [...normalizedIds, courseId]);
-
+    const updatePipelineStep = (index: number, updater: (step: EnrollmentPipelineStep) => EnrollmentPipelineStep) => {
+        const currentStep = pipelineForm.data.steps[index];
+        if (!currentStep) {
             return;
         }
 
-        if (!checked) {
-            pipelineForm.setData(
-                "enrollment_courses",
-                normalizedIds.filter((selectedId) => selectedId !== courseId),
-            );
-        }
-    };
-
-    const selectAllEnrollmentCourses = () => {
-        pipelineForm.setData(
-            "enrollment_courses",
-            (available_enrollment_courses ?? []).map((course) => course.id),
-        );
-    };
-
-    const clearEnrollmentCourses = () => {
-        pipelineForm.setData("enrollment_courses", []);
-    };
-
-    const removeEnrollmentCourse = (courseId: number) => {
-        pipelineForm.setData(
-            "enrollment_courses",
-            pipelineForm.data.enrollment_courses.filter((selectedId) => selectedId !== courseId),
-        );
-    };
-
-    const updatePipelineStep = (index: number, field: keyof EnrollmentPipelineStep, value: string | string[]) => {
-        const steps = [...pipelineForm.data.steps];
-        if (!steps[index]) {
-            return;
-        }
-
-        if (field === "allowed_roles") {
-            steps[index].allowed_roles = value as string[];
-        } else if (field === "action_type") {
-            steps[index].action_type = value as EnrollmentPipelineActionType;
-        } else {
-            steps[index][field] = value as never;
-        }
+        const updatedStep = updater(currentStep);
+        const steps = pipelineForm.data.steps.map((step, stepIndex) => (stepIndex === index ? updatedStep : step));
 
         pipelineForm.setData("steps", steps);
+
+        if (updatedStep.key !== currentStep.key) {
+            if (pipelineForm.data.entry_step_key === currentStep.key) {
+                pipelineForm.setData("entry_step_key", updatedStep.key);
+            }
+
+            if (pipelineForm.data.completion_step_key === currentStep.key) {
+                pipelineForm.setData("completion_step_key", updatedStep.key);
+            }
+        }
     };
 
-    const addRoleToStep = (index: number) => {
-        const selectedRole = selectedRoleByStep[index];
-        if (!selectedRole) {
-            return;
-        }
-
-        const roles = pipelineForm.data.steps[index]?.allowed_roles || [];
-        if (roles.includes(selectedRole)) {
-            return;
-        }
-
-        updatePipelineStep(index, "allowed_roles", [...roles, selectedRole]);
-        setSelectedRoleByStep((current) => ({ ...current, [index]: "" }));
+    const setStepField = (index: number, field: keyof EnrollmentPipelineStep, value: string | string[]) => {
+        updatePipelineStep(index, (step) => ({
+            ...step,
+            [field]: value,
+        }));
     };
 
-    const removeRoleFromStep = (index: number, roleName: string) => {
-        const roles = pipelineForm.data.steps[index]?.allowed_roles || [];
-        updatePipelineStep(
-            index,
-            "allowed_roles",
-            roles.filter((role) => role !== roleName),
-        );
+    const setStepAction = (index: number, actionType: EnrollmentPipelineActionType) => {
+        updatePipelineStep(index, (step) => ({
+            ...step,
+            action_type: actionType,
+            actions: actionsForActionType(actionType),
+        }));
     };
 
     const addPipelineStep = () => {
         const nextIndex = pipelineForm.data.steps.length + 1;
-        pipelineForm.setData("steps", [
-            ...pipelineForm.data.steps,
-            {
-                key: `step_${nextIndex}`,
-                status: "",
-                label: `New Step ${nextIndex}`,
-                color: "indigo",
-                allowed_roles: [],
-                action_type: "standard",
-            },
-        ]);
-        setSelectedStepIndex(pipelineForm.data.steps.length);
+        const step = createDefaultStep(nextIndex);
+        const previousStep = pipelineForm.data.steps[pipelineForm.data.steps.length - 1];
+        const steps = previousStep
+            ? pipelineForm.data.steps.map((currentStep, index) =>
+                  index === pipelineForm.data.steps.length - 1 ? { ...currentStep, next_step_key: step.key } : currentStep,
+              )
+            : pipelineForm.data.steps;
+        const nextSteps = [...steps, step];
+        const nodeId = getCanvasNodeId(step, nextSteps.length - 1);
+
+        pipelineForm.setData("steps", nextSteps);
+        pipelineForm.setData("completion_step_key", step.key);
+        setNodePositions((current) => ({ ...current, [nodeId]: defaultCanvasPosition(nextSteps.length - 1) }));
+
+        if (!pipelineForm.data.entry_step_key) {
+            pipelineForm.setData("entry_step_key", step.key);
+        }
+
+        setSelectedStepIndex(nextSteps.length - 1);
     };
 
     const removePipelineStep = (index: number) => {
-        const steps = pipelineForm.data.steps.filter((_, stepIndex) => stepIndex !== index);
+        const removedStep = pipelineForm.data.steps[index];
+        const steps = pipelineForm.data.steps
+            .filter((_, stepIndex) => stepIndex !== index)
+            .map((step) => (step.next_step_key === removedStep?.key ? { ...step, next_step_key: null } : step));
+
         pipelineForm.setData("steps", steps);
 
-        if (pipelineForm.data.entry_step_key === pipelineForm.data.steps[index]?.key) {
+        if (removedStep?.key === pipelineForm.data.entry_step_key) {
             pipelineForm.setData("entry_step_key", steps[0]?.key || "");
         }
-        if (pipelineForm.data.completion_step_key === pipelineForm.data.steps[index]?.key) {
+
+        if (removedStep?.key === pipelineForm.data.completion_step_key) {
             pipelineForm.setData("completion_step_key", steps[steps.length - 1]?.key || "");
         }
 
@@ -256,19 +407,236 @@ export default function SystemManagementEnrollmentPipelinePage({
         }
     };
 
-    const updateStatsCard = (index: number, field: keyof EnrollmentStatsCard, value: string | string[]) => {
-        const cards = [...pipelineForm.data.enrollment_stats.cards];
-        if (!cards[index]) {
+    const handleCanvasDragEnd = (event: DragEndEvent) => {
+        const { active, delta } = event;
+        const id = String(active.id);
+        const currentPosition = nodePositions[id] ?? defaultCanvasPosition(canvasNodes.find((node) => node.id === id)?.index ?? 0);
+
+        setNodePositions((current) => ({
+            ...current,
+            [id]: {
+                x: Math.max(16, currentPosition.x + delta.x),
+                y: Math.max(16, currentPosition.y + delta.y),
+            },
+        }));
+    };
+
+    const connectStepToNext = (sourceIndex: number, targetIndex: number) => {
+        if (sourceIndex === targetIndex) {
             return;
         }
 
-        if (field === "statuses") {
-            cards[index].statuses = value as string[];
-        } else if (field === "metric") {
-            cards[index].metric = value as EnrollmentStatMetric;
-        } else {
-            cards[index][field] = value as never;
+        const targetStep = pipelineForm.data.steps[targetIndex];
+        if (!targetStep) {
+            return;
         }
+
+        pipelineForm.setData(
+            "steps",
+            pipelineForm.data.steps.map((step, index) => (index === sourceIndex ? { ...step, next_step_key: targetStep.key } : step)),
+        );
+        setConnectingFromIndex(null);
+    };
+
+    const beginVisualConnection = (sourceIndex: number) => {
+        setSelectedStepIndex(sourceIndex);
+        setConnectingFromIndex(sourceIndex);
+    };
+
+    const completeVisualConnection = (targetIndex: number) => {
+        if (connectingFromIndex === null || connectingFromIndex === targetIndex) {
+            return;
+        }
+
+        connectStepToNext(connectingFromIndex, targetIndex);
+    };
+
+    const disconnectStep = (sourceIndex: number) => {
+        pipelineForm.setData(
+            "steps",
+            pipelineForm.data.steps.map((step, index) => (index === sourceIndex ? { ...step, next_step_key: null } : step)),
+        );
+        setConnectingFromIndex((current) => (current === sourceIndex ? null : current));
+    };
+
+    const findConnectionTarget = (point: CanvasNodePosition, sourceIndex: number) => {
+        const portHitArea = 28;
+
+        return canvasNodes.find(
+            (node) =>
+                node.index !== sourceIndex &&
+                point.x >= node.position.x - portHitArea &&
+                point.x <= node.position.x + canvasNodeWidth + portHitArea &&
+                point.y >= node.position.y - portHitArea &&
+                point.y <= node.position.y + canvasNodeHeight + portHitArea,
+        );
+    };
+
+    const startVisualConnectionDrag = (sourceIndex: number, event: ReactPointerEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+
+        const pointerStart = getCanvasPoint(event.clientX, event.clientY);
+        const sourceNode = canvasNodes.find((node) => node.index === sourceIndex);
+        const sourcePoint = sourceNode
+            ? {
+                  x: sourceNode.position.x + canvasNodeWidth,
+                  y: sourceNode.position.y + canvasNodeHeight / 2,
+              }
+            : pointerStart;
+        let hasMoved = false;
+
+        const handlePointerMove = (pointerEvent: PointerEvent) => {
+            const currentPoint = getCanvasPoint(pointerEvent.clientX, pointerEvent.clientY);
+            hasMoved = hasMoved || Math.abs(currentPoint.x - pointerStart.x) > 4 || Math.abs(currentPoint.y - pointerStart.y) > 4;
+
+            setDragConnection({
+                sourceIndex,
+                currentPoint,
+            });
+        };
+
+        const handlePointerUp = (pointerEvent: PointerEvent) => {
+            document.removeEventListener("pointermove", handlePointerMove);
+            document.removeEventListener("pointerup", handlePointerUp);
+
+            const targetNode = findConnectionTarget(getCanvasPoint(pointerEvent.clientX, pointerEvent.clientY), sourceIndex);
+
+            if (targetNode) {
+                connectStepToNext(sourceIndex, targetNode.index);
+            } else if (hasMoved) {
+                setConnectingFromIndex(null);
+            }
+
+            setDragConnection(null);
+        };
+
+        setSelectedStepIndex(sourceIndex);
+        setConnectingFromIndex(sourceIndex);
+        setDragConnection({
+            sourceIndex,
+            currentPoint: sourcePoint,
+        });
+
+        document.addEventListener("pointermove", handlePointerMove);
+        document.addEventListener("pointerup", handlePointerUp);
+    };
+
+    const organizeCanvas = () => {
+        const visited = new Set<string>();
+        const orderedIndexes: number[] = [];
+        let currentStep: EnrollmentPipelineStep | undefined =
+            pipelineForm.data.steps.find((step) => step.key === pipelineForm.data.entry_step_key) ?? pipelineForm.data.steps[0];
+
+        while (currentStep && !visited.has(currentStep.key)) {
+            const currentIndex = pipelineForm.data.steps.findIndex((step) => step.key === currentStep?.key);
+            if (currentIndex === -1) {
+                break;
+            }
+
+            visited.add(currentStep.key);
+            orderedIndexes.push(currentIndex);
+            currentStep = pipelineForm.data.steps.find((step) => step.key === currentStep?.next_step_key);
+        }
+
+        pipelineForm.data.steps.forEach((step, index) => {
+            if (!visited.has(step.key)) {
+                orderedIndexes.push(index);
+            }
+        });
+
+        setNodePositions(
+            Object.fromEntries(
+                orderedIndexes.map((stepIndex, visualIndex) => [
+                    getCanvasNodeId(pipelineForm.data.steps[stepIndex], stepIndex),
+                    defaultCanvasPosition(visualIndex),
+                ]),
+            ),
+        );
+    };
+
+    const duplicatePipelineStep = (index: number) => {
+        const step = pipelineForm.data.steps[index];
+        if (!step) {
+            return;
+        }
+
+        const nextIndex = pipelineForm.data.steps.length + 1;
+        const duplicatedStep: EnrollmentPipelineStep = {
+            ...step,
+            key: `${step.key}_copy_${nextIndex}`,
+            status: `${step.status}_copy_${nextIndex}`,
+            label: `${step.label} Copy`,
+            next_step_key: null,
+        };
+        const nextSteps = [...pipelineForm.data.steps, duplicatedStep];
+
+        pipelineForm.setData("steps", nextSteps);
+        setNodePositions((current) => ({
+            ...current,
+            [getCanvasNodeId(duplicatedStep, nextSteps.length - 1)]: defaultCanvasPosition(nextSteps.length - 1),
+        }));
+        setSelectedStepIndex(nextSteps.length - 1);
+    };
+
+    const addRoleToStep = (index: number) => {
+        const selectedRole = selectedRoleByStep[index];
+        if (!selectedRole) {
+            return;
+        }
+
+        const roles = pipelineForm.data.steps[index]?.allowed_roles || [];
+        if (roles.includes(selectedRole)) {
+            return;
+        }
+
+        setStepField(index, "allowed_roles", [...roles, selectedRole]);
+        setSelectedRoleByStep((current) => ({ ...current, [index]: "" }));
+    };
+
+    const removeRoleFromStep = (index: number, roleName: string) => {
+        const roles = pipelineForm.data.steps[index]?.allowed_roles || [];
+        setStepField(
+            index,
+            "allowed_roles",
+            roles.filter((role) => role !== roleName),
+        );
+    };
+
+    const toggleEnrollmentCourse = (courseId: number, checked: boolean) => {
+        const normalizedIds = pipelineForm.data.enrollment_courses.map((id) => Number(id));
+
+        if (checked && !normalizedIds.includes(courseId)) {
+            pipelineForm.setData("enrollment_courses", [...normalizedIds, courseId]);
+
+            return;
+        }
+
+        if (!checked) {
+            pipelineForm.setData(
+                "enrollment_courses",
+                normalizedIds.filter((selectedId) => selectedId !== courseId),
+            );
+        }
+    };
+
+    const selectAllEnrollmentCourses = () => {
+        pipelineForm.setData(
+            "enrollment_courses",
+            (available_enrollment_courses ?? []).map((course) => course.id),
+        );
+    };
+
+    const updateStatsCard = (index: number, field: keyof EnrollmentStatsCard, value: string | string[]) => {
+        const cards = pipelineForm.data.enrollment_stats.cards.map((card, cardIndex) => {
+            if (cardIndex !== index) {
+                return card;
+            }
+
+            return {
+                ...card,
+                [field]: value,
+            };
+        });
 
         pipelineForm.setData("enrollment_stats", { cards });
     };
@@ -298,7 +666,17 @@ export default function SystemManagementEnrollmentPipelinePage({
     const toggleStatsCardStatus = (index: number, statusValue: string) => {
         const statuses = pipelineForm.data.enrollment_stats.cards[index]?.statuses || [];
         const nextStatuses = statuses.includes(statusValue) ? statuses.filter((status) => status !== statusValue) : [...statuses, statusValue];
+
         updateStatsCard(index, "statuses", nextStatuses);
+    };
+
+    const submit = () => {
+        submitSystemForm({
+            form: pipelineForm,
+            routeName: "administrators.system-management.enrollment-pipeline.update",
+            successMessage: "Enrollment pipeline updated successfully.",
+            errorMessage: "Failed to update enrollment pipeline.",
+        });
     };
 
     return (
@@ -307,795 +685,759 @@ export default function SystemManagementEnrollmentPipelinePage({
             access={access}
             activeSection="pipeline"
             heading="Enrollment Pipeline"
-            description="Define workflow steps, role gates, and enrollment dashboard metric cards."
+            description="Create the approval path new applicants follow, and choose what each approval step executes."
         >
-            <div className="mb-6 flex items-center justify-end">
-                <Button
-                    onClick={() =>
-                        submitSystemForm({
-                            form: pipelineForm,
-                            routeName: "administrators.system-management.enrollment-pipeline.update",
-                            successMessage: "Enrollment pipeline updated successfully.",
-                            errorMessage: "Failed to update enrollment pipeline.",
-                        })
-                    }
-                    disabled={pipelineForm.processing}
-                    size="lg"
-                    className="shadow-sm transition-all hover:shadow-md"
-                >
-                    {pipelineForm.processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Pipeline
-                </Button>
-            </div>
+            <div className="space-y-6">
+                <Card className="border-primary/15 bg-primary/5 overflow-hidden shadow-none">
+                    <CardContent className="flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-2">
+                            <div className="text-primary flex items-center gap-2 text-sm font-medium">
+                                <Sparkles className="h-4 w-4" /> Guided setup
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-semibold tracking-tight">Build a focused enrollment approval workflow</h2>
+                                <p className="text-muted-foreground mt-1 max-w-3xl text-sm">
+                                    Existing status codes are kept intact. New steps can be added, reordered, and assigned an action without changing
+                                    the rest of enrollment management.
+                                </p>
+                            </div>
+                        </div>
+                        <Button onClick={submit} disabled={pipelineForm.processing} size="lg" className="shrink-0 shadow-sm">
+                            {pipelineForm.processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Pipeline
+                        </Button>
+                    </CardContent>
+                </Card>
 
-            <Tabs defaultValue="workflow" className="w-full space-y-6">
-                <div className="flex w-full items-center justify-between border-b pb-0">
-                    <TabsList className="h-auto gap-6 bg-transparent p-0">
-                        <TabsTrigger
-                            value="workflow"
-                            className="text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-foreground flex items-center gap-2 rounded-none border-b-2 border-transparent px-2 py-3 font-medium transition-all data-[state=active]:shadow-none"
-                        >
-                            <Workflow className="h-4 w-4" />
-                            Pipeline Steps
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="analytics"
-                            className="text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-foreground flex items-center gap-2 rounded-none border-b-2 border-transparent px-2 py-3 font-medium transition-all data-[state=active]:shadow-none"
-                        >
-                            <PieChart className="h-4 w-4" />
-                            Analytics Cards
-                        </TabsTrigger>
-                    </TabsList>
+                <div className="grid gap-4 md:grid-cols-3">
+                    <PipelineSummaryCard icon={Workflow} label="Workflow steps" value={pipelineForm.data.steps.length.toString()} />
+                    <PipelineSummaryCard
+                        icon={Users}
+                        label="Visible courses"
+                        value={selectedEnrollmentCourses.length > 0 ? selectedEnrollmentCourses.length.toString() : "All"}
+                    />
+                    <PipelineSummaryCard icon={CheckCircle2} label="Completion" value={completionStep?.label || "Not set"} />
                 </div>
 
-                <TabsContent value="workflow" className="animate-in fade-in-50 space-y-6 duration-500 outline-none">
-                    <Card className="border-primary/10 bg-primary/5 shadow-none">
-                        <CardHeader className="pb-4">
-                            <div className="flex items-center gap-2">
-                                <Settings className="text-primary h-5 w-5" />
-                                <CardTitle className="text-lg">General Settings</CardTitle>
-                            </div>
-                            <CardDescription>Set the starting and ending points for the enrollment process.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-6 md:grid-cols-3">
-                            <div className="space-y-2">
-                                <Label htmlFor="submitted_label">"Submitted" Status Name</Label>
-                                <Input
-                                    id="submitted_label"
-                                    value={pipelineForm.data.submitted_label}
-                                    onChange={(event) => pipelineForm.setData("submitted_label", event.target.value)}
-                                    className="bg-background"
-                                />
-                                <p className="text-muted-foreground text-[10px]">The status name before processing begins.</p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="entry_step_key">Starting Step</Label>
-                                <Select
-                                    value={pipelineForm.data.entry_step_key}
-                                    onValueChange={(value) => pipelineForm.setData("entry_step_key", value)}
-                                >
-                                    <SelectTrigger id="entry_step_key" className="bg-background">
-                                        <SelectValue placeholder="Select step" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {pipelineForm.data.steps.map((step, index) => (
-                                            <SelectItem key={`entry-${step.key || index}`} value={step.key || `step_${index + 1}`}>
-                                                {step.label || step.status || `Step ${index + 1}`}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-muted-foreground text-[10px]">The first step an applicant lands on.</p>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="completion_step_key">Final Completion Step</Label>
-                                <Select
-                                    value={pipelineForm.data.completion_step_key}
-                                    onValueChange={(value) => pipelineForm.setData("completion_step_key", value)}
-                                >
-                                    <SelectTrigger id="completion_step_key" className="bg-background">
-                                        <SelectValue placeholder="Select step" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {pipelineForm.data.steps.map((step, index) => (
-                                            <SelectItem key={`comp-${step.key || index}`} value={step.key || `step_${index + 1}`}>
-                                                {step.label || step.status || `Step ${index + 1}`}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-muted-foreground text-[10px]">The step when enrollment is fully completed.</p>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <Tabs defaultValue="workflow" className="space-y-6">
+                    <TabsList className="grid w-full max-w-3xl grid-cols-4">
+                        <TabsTrigger value="workflow" className="gap-2">
+                            <Workflow className="h-4 w-4" /> Workflow
+                        </TabsTrigger>
+                        <TabsTrigger value="basics" className="gap-2">
+                            <Settings2 className="h-4 w-4" /> Basics
+                        </TabsTrigger>
+                        <TabsTrigger value="automation" className="gap-2">
+                            <GraduationCap className="h-4 w-4" /> Automation
+                        </TabsTrigger>
+                        <TabsTrigger value="analytics" className="gap-2">
+                            <BarChart3 className="h-4 w-4" /> Analytics
+                        </TabsTrigger>
+                    </TabsList>
 
-                    <Card className="border shadow-none">
-                        <CardHeader className="pb-4">
-                            <div className="flex items-center gap-2">
-                                <LayoutDashboard className="text-primary h-5 w-5" />
-                                <CardTitle className="text-lg">Available Courses for New Applicants</CardTitle>
+                    <TabsContent value="workflow" className="space-y-6 outline-none">
+                        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.65fr)]">
+                            <div className="grid gap-6 xl:col-span-2 xl:grid-cols-[minmax(0,1.35fr)_minmax(380px,0.65fr)]">
+                                <Card className="shadow-none">
+                                    <CardHeader>
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <Workflow className="text-primary h-5 w-5" />
+                                                    <CardTitle>Approval flow</CardTitle>
+                                                </div>
+                                                <CardDescription>
+                                                    Drag nodes around the canvas, click to edit, and connect the next step from the editor.
+                                                </CardDescription>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button type="button" variant="outline" onClick={organizeCanvas} size="sm">
+                                                    <Target className="mr-2 h-4 w-4" /> Organize
+                                                </Button>
+                                                <Button type="button" onClick={addPipelineStep} size="sm">
+                                                    <Plus className="mr-2 h-4 w-4" /> Add step
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="bg-muted/30 text-muted-foreground flex flex-col gap-3 rounded-lg border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <MousePointerClick className="h-4 w-4" />
+                                                Drag nodes, click to inspect, or use node ports to visually connect/disconnect the workflow.
+                                            </div>
+                                            {connectingFromIndex !== null && (
+                                                <div className="bg-background text-foreground flex items-center gap-2 rounded-md border px-2 py-1">
+                                                    <span>
+                                                        Connecting from{" "}
+                                                        {pipelineForm.data.steps[connectingFromIndex]?.label || `Step ${connectingFromIndex + 1}`}
+                                                    </span>
+                                                    <Button type="button" variant="ghost" size="sm" onClick={() => setConnectingFromIndex(null)}>
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {pipelineForm.data.steps.length === 0 ? (
+                                            <div className="rounded-xl border border-dashed p-8 text-center">
+                                                <Workflow className="text-muted-foreground mx-auto mb-3 h-8 w-8" />
+                                                <p className="font-medium">No approval steps yet</p>
+                                                <p className="text-muted-foreground mt-1 text-sm">Add your first step to start the pipeline.</p>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                ref={canvasRef}
+                                                className="bg-muted/20 relative min-h-[720px] overflow-hidden rounded-2xl border p-4"
+                                            >
+                                                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-size-[28px_28px] opacity-60" />
+                                                <DndContext sensors={canvasSensors} onDragEnd={handleCanvasDragEnd}>
+                                                    <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full">
+                                                        {canvasNodes.map((node) => {
+                                                            const nextNode = canvasNodes.find(
+                                                                (candidate) => candidate.step.key === node.step.next_step_key,
+                                                            );
+                                                            if (!nextNode) {
+                                                                return null;
+                                                            }
+
+                                                            const startX = node.position.x + canvasNodeWidth;
+                                                            const startY = node.position.y + canvasNodeHeight / 2;
+                                                            const endX = nextNode.position.x;
+                                                            const endY = nextNode.position.y + canvasNodeHeight / 2;
+                                                            const controlOffset = Math.max(80, Math.abs(endX - startX) / 2);
+
+                                                            return (
+                                                                <g key={`${node.id}-${nextNode.id}`}>
+                                                                    <path
+                                                                        d={`M ${startX} ${startY} C ${startX + controlOffset} ${startY}, ${endX - controlOffset} ${endY}, ${endX} ${endY}`}
+                                                                        fill="none"
+                                                                        stroke="var(--primary)"
+                                                                        strokeDasharray="6 6"
+                                                                        strokeLinecap="round"
+                                                                        strokeWidth="3"
+                                                                        opacity="0.85"
+                                                                    />
+                                                                    <circle cx={endX} cy={endY} r="5" fill="var(--primary)" />
+                                                                </g>
+                                                            );
+                                                        })}
+                                                        {dragConnection &&
+                                                            canvasNodes
+                                                                .filter((node) => node.index === dragConnection.sourceIndex)
+                                                                .map((sourceNode) => {
+                                                                    const startX = sourceNode.position.x + canvasNodeWidth;
+                                                                    const startY = sourceNode.position.y + canvasNodeHeight / 2;
+                                                                    const endX = dragConnection.currentPoint.x;
+                                                                    const endY = dragConnection.currentPoint.y;
+                                                                    const controlOffset = Math.max(80, Math.abs(endX - startX) / 2);
+
+                                                                    return (
+                                                                        <path
+                                                                            key={`preview-${sourceNode.id}`}
+                                                                            d={`M ${startX} ${startY} C ${startX + controlOffset} ${startY}, ${endX - controlOffset} ${endY}, ${endX} ${endY}`}
+                                                                            fill="none"
+                                                                            stroke="var(--primary)"
+                                                                            strokeLinecap="round"
+                                                                            strokeWidth="3"
+                                                                            opacity="0.95"
+                                                                        />
+                                                                    );
+                                                                })}
+                                                    </svg>
+
+                                                    {canvasNodes.map((node) => {
+                                                        const stepAction =
+                                                            actionOptions.find((option) => option.value === node.step.action_type) ??
+                                                            actionOptions[0];
+
+                                                        return (
+                                                            <WorkflowCanvasNode
+                                                                key={node.id}
+                                                                id={node.id}
+                                                                step={node.step}
+                                                                index={node.index}
+                                                                position={node.position}
+                                                                actionLabel={stepAction.label}
+                                                                isSelected={selectedStepIndex === node.index}
+                                                                isEntry={pipelineForm.data.entry_step_key === node.step.key}
+                                                                isCompletion={pipelineForm.data.completion_step_key === node.step.key}
+                                                                onSelect={() => {
+                                                                    if (connectingFromIndex !== null && connectingFromIndex !== node.index) {
+                                                                        completeVisualConnection(node.index);
+                                                                        return;
+                                                                    }
+
+                                                                    setSelectedStepIndex(node.index);
+                                                                }}
+                                                                onDelete={() => removePipelineStep(node.index)}
+                                                                onDuplicate={() => duplicatePipelineStep(node.index)}
+                                                                onDisconnect={() => disconnectStep(node.index)}
+                                                                onSetEntry={() => pipelineForm.setData("entry_step_key", node.step.key)}
+                                                                onSetCompletion={() => pipelineForm.setData("completion_step_key", node.step.key)}
+                                                                onConnect={(targetIndex) => connectStepToNext(node.index, targetIndex)}
+                                                                onStartConnect={() => beginVisualConnection(node.index)}
+                                                                onStartConnectDrag={(event) => startVisualConnectionDrag(node.index, event)}
+                                                                onFinishConnect={() => completeVisualConnection(node.index)}
+                                                                isConnectingFrom={connectingFromIndex === node.index}
+                                                                isConnectionTarget={
+                                                                    connectingFromIndex !== null && connectingFromIndex !== node.index
+                                                                }
+                                                                availableTargets={pipelineForm.data.steps.map((step, index) => ({
+                                                                    index,
+                                                                    label: step.label || step.status || `Step ${index + 1}`,
+                                                                }))}
+                                                            />
+                                                        );
+                                                    })}
+                                                </DndContext>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {selectedStep ? (
+                                    <Card className="shadow-none xl:sticky xl:top-6 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto">
+                                        <CardHeader>
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <CardTitle>Visual inspector</CardTitle>
+                                                    <CardDescription>Configure the selected node without leaving the canvas.</CardDescription>
+                                                </div>
+                                                <div className="flex items-center gap-1 rounded-md border p-1">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => selectedStepIndex !== null && duplicatePipelineStep(selectedStepIndex)}
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                        onClick={() => selectedStepIndex !== null && removePipelineStep(selectedStepIndex)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="space-y-5">
+                                            <div className="bg-muted/20 rounded-2xl border p-4">
+                                                <div className="flex items-start gap-3">
+                                                    <div
+                                                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-sm"
+                                                        style={{
+                                                            backgroundColor: colorHex[selectedStep.color as keyof typeof colorHex] ?? colorHex.gray,
+                                                        }}
+                                                    >
+                                                        {Number(selectedStepIndex) + 1}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <p className="truncate font-semibold">
+                                                                {selectedStep.label || `Step ${Number(selectedStepIndex) + 1}`}
+                                                            </p>
+                                                            {pipelineForm.data.entry_step_key === selectedStep.key && <Badge>Entry</Badge>}
+                                                            {pipelineForm.data.completion_step_key === selectedStep.key && (
+                                                                <Badge variant="secondary">Completion</Badge>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-muted-foreground mt-1 truncate font-mono text-xs">{selectedStep.status}</p>
+                                                        <div className="mt-3 grid gap-2 text-xs">
+                                                            <div className="bg-background rounded-lg border px-3 py-2">
+                                                                <span className="text-muted-foreground">Next:</span>{" "}
+                                                                <span className="font-medium">{selectedNextStep?.label || "Not connected"}</span>
+                                                            </div>
+                                                            <div className="bg-background rounded-lg border px-3 py-2">
+                                                                <span className="text-muted-foreground">Incoming:</span>{" "}
+                                                                <span className="font-medium">
+                                                                    {selectedIncomingSteps.length > 0
+                                                                        ? selectedIncomingSteps.map((step) => step.label).join(", ")
+                                                                        : "None"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid gap-4 md:grid-cols-2">
+                                                <div className="space-y-2 md:col-span-2">
+                                                    <Label>Step name</Label>
+                                                    <Input
+                                                        value={selectedStep.label}
+                                                        onChange={(event) =>
+                                                            selectedStepIndex !== null && setStepField(selectedStepIndex, "label", event.target.value)
+                                                        }
+                                                        placeholder="Department Review"
+                                                    />
+                                                    <FieldError message={formErrors[`steps.${selectedStepIndex}.label`]} />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Badge color</Label>
+                                                    <Select
+                                                        value={selectedStep.color}
+                                                        onValueChange={(value) =>
+                                                            selectedStepIndex !== null && setStepField(selectedStepIndex, "color", value)
+                                                        }
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {colorOptions.map((color) => (
+                                                                <SelectItem key={color} value={color}>
+                                                                    <span className="flex items-center gap-2 capitalize">
+                                                                        <span
+                                                                            className="h-3 w-3 rounded-full"
+                                                                            style={{ backgroundColor: colorHex[color] }}
+                                                                        />
+                                                                        {color}
+                                                                    </span>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Internal status code</Label>
+                                                    <Input
+                                                        value={selectedStep.status}
+                                                        onChange={(event) =>
+                                                            selectedStepIndex !== null &&
+                                                            setStepField(selectedStepIndex, "status", slugify(event.target.value, "step_status"))
+                                                        }
+                                                        className="font-mono"
+                                                        placeholder="department_review"
+                                                    />
+                                                    <p className="text-muted-foreground text-xs">
+                                                        Avoid changing this for active statuses unless you are intentionally migrating records.
+                                                    </p>
+                                                    <FieldError message={formErrors[`steps.${selectedStepIndex}.status`]} />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <Label className="text-base font-semibold">Action executed on approval</Label>
+                                                    <p className="text-muted-foreground mt-1 text-sm">
+                                                        Pick the backend flow this step should run when it becomes the next approval step.
+                                                    </p>
+                                                </div>
+                                                <div className="grid gap-3">
+                                                    {actionOptions.map((option) => {
+                                                        const Icon = option.icon;
+                                                        const selected = selectedStep.action_type === option.value;
+
+                                                        return (
+                                                            <button
+                                                                key={option.value}
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    selectedStepIndex !== null && setStepAction(selectedStepIndex, option.value)
+                                                                }
+                                                                className={`rounded-xl border p-4 text-left transition ${
+                                                                    selected
+                                                                        ? "border-primary bg-primary/5 ring-primary/20 ring-2"
+                                                                        : "hover:border-primary/40 hover:bg-muted/40"
+                                                                }`}
+                                                            >
+                                                                <span className="flex gap-3">
+                                                                    <span className="bg-primary/10 text-primary mt-0.5 rounded-lg p-2">
+                                                                        <Icon className="h-4 w-4" />
+                                                                    </span>
+                                                                    <span>
+                                                                        <span className="block font-medium">{option.label}</span>
+                                                                        <span className="text-muted-foreground mt-1 block text-sm">
+                                                                            {option.description}
+                                                                        </span>
+                                                                    </span>
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-muted/20 space-y-3 rounded-xl border p-4">
+                                                <div className="flex items-start gap-2">
+                                                    <ArrowRight className="text-primary mt-0.5 h-4 w-4" />
+                                                    <div className="flex-1 space-y-3">
+                                                        <div>
+                                                            <Label className="text-base font-semibold">Connect next node</Label>
+                                                            <p className="text-muted-foreground mt-1 text-sm">
+                                                                Choose which step comes after this node. This updates the saved approval sequence.
+                                                            </p>
+                                                        </div>
+                                                        <div className="grid gap-2">
+                                                            <Select
+                                                                value=""
+                                                                onValueChange={(value) =>
+                                                                    selectedStepIndex !== null && connectStepToNext(selectedStepIndex, Number(value))
+                                                                }
+                                                            >
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Connect to another step..." />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {pipelineForm.data.steps.map((step, index) => {
+                                                                        if (index === selectedStepIndex) {
+                                                                            return null;
+                                                                        }
+
+                                                                        return (
+                                                                            <SelectItem key={`${step.key}-${index}`} value={String(index)}>
+                                                                                {step.label || step.status || `Step ${index + 1}`}
+                                                                            </SelectItem>
+                                                                        );
+                                                                    })}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <div className="grid gap-2 sm:grid-cols-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant={connectingFromIndex === selectedStepIndex ? "default" : "outline"}
+                                                                    onClick={() =>
+                                                                        selectedStepIndex !== null && beginVisualConnection(selectedStepIndex)
+                                                                    }
+                                                                >
+                                                                    <ArrowRight className="mr-2 h-4 w-4" /> Draw connection
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    onClick={() => selectedStepIndex !== null && disconnectStep(selectedStepIndex)}
+                                                                    disabled={!selectedStep.next_step_key}
+                                                                >
+                                                                    <Scissors className="mr-2 h-4 w-4" /> Disconnect
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-muted/20 space-y-3 rounded-xl border p-4">
+                                                <div className="flex items-start gap-2">
+                                                    <LockKeyhole className="text-primary mt-0.5 h-4 w-4" />
+                                                    <div>
+                                                        <Label className="text-base font-semibold">Approver roles</Label>
+                                                        <p className="text-muted-foreground mt-1 text-sm">
+                                                            Leave empty to allow any staff member with enrollment access. Super admins always have
+                                                            access.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2 sm:flex-row">
+                                                    <Combobox
+                                                        options={roleComboboxOptions}
+                                                        value={selectedRoleByStep[Number(selectedStepIndex)] || ""}
+                                                        onValueChange={(value) =>
+                                                            setSelectedRoleByStep((current) => ({ ...current, [Number(selectedStepIndex)]: value }))
+                                                        }
+                                                        placeholder="Select role..."
+                                                        searchPlaceholder="Search roles..."
+                                                        emptyText="No role found."
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        onClick={() => selectedStepIndex !== null && addRoleToStep(selectedStepIndex)}
+                                                        disabled={!selectedRoleByStep[Number(selectedStepIndex)]}
+                                                    >
+                                                        <Plus className="mr-2 h-4 w-4" /> Add role
+                                                    </Button>
+                                                </div>
+                                                {selectedStep.allowed_roles.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {selectedStep.allowed_roles.map((roleName) => (
+                                                            <Badge key={roleName} variant="secondary" className="gap-2">
+                                                                {roleName}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        selectedStepIndex !== null && removeRoleFromStep(selectedStepIndex, roleName)
+                                                                    }
+                                                                    className="text-muted-foreground hover:text-destructive"
+                                                                    aria-label={`Remove ${roleName}`}
+                                                                >
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </button>
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-muted-foreground bg-background rounded-md border border-dashed p-3 text-sm">
+                                                        No role restrictions configured for this step.
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <Button
+                                                    type="button"
+                                                    variant={pipelineForm.data.entry_step_key === selectedStep.key ? "default" : "outline"}
+                                                    onClick={() => pipelineForm.setData("entry_step_key", selectedStep.key)}
+                                                >
+                                                    Set as entry
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant={pipelineForm.data.completion_step_key === selectedStep.key ? "default" : "outline"}
+                                                    onClick={() => pipelineForm.setData("completion_step_key", selectedStep.key)}
+                                                >
+                                                    Set as completion
+                                                </Button>
+                                            </div>
+
+                                            <details className="rounded-lg border p-4">
+                                                <summary className="cursor-pointer text-sm font-medium">Advanced: stable step ID</summary>
+                                                <div className="mt-3 space-y-2">
+                                                    <Label>Step ID</Label>
+                                                    <Input
+                                                        value={selectedStep.key}
+                                                        onChange={(event) =>
+                                                            selectedStepIndex !== null &&
+                                                            setStepField(selectedStepIndex, "key", slugify(event.target.value, "step"))
+                                                        }
+                                                        className="font-mono"
+                                                    />
+                                                    <p className="text-muted-foreground text-xs">
+                                                        This links entry/completion markers and legacy aliases. Keep it stable for existing workflows.
+                                                    </p>
+                                                    <FieldError message={formErrors[`steps.${selectedStepIndex}.key`]} />
+                                                </div>
+                                            </details>
+                                        </CardContent>
+                                    </Card>
+                                ) : null}
                             </div>
-                            <CardDescription>
-                                Select which active courses appear in the public enrollment form. Leave empty to allow all active courses.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="relative w-full sm:max-w-md">
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="basics" className="space-y-6 outline-none">
+                        <Card className="shadow-none">
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <Settings2 className="text-primary h-5 w-5" />
+                                    <CardTitle>Basic enrollment settings</CardTitle>
+                                </div>
+                                <CardDescription>Configure only the applicant-facing entry settings when you need them.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-5">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="submitted_label_tab">Initial submitted label</Label>
+                                        <Input
+                                            id="submitted_label_tab"
+                                            value={pipelineForm.data.submitted_label}
+                                            onChange={(event) => pipelineForm.setData("submitted_label", event.target.value)}
+                                            placeholder="Submitted"
+                                        />
+                                        <FieldError message={formErrors.submitted_label} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Entry and completion</Label>
+                                        <div className="bg-muted/30 rounded-md border px-3 py-2 text-sm">
+                                            <span className="font-medium">{entryStep?.label || "No entry step"}</span>
+                                            <span className="text-muted-foreground"> → </span>
+                                            <span className="font-medium">{completionStep?.label || "No completion step"}</span>
+                                        </div>
+                                        <p className="text-muted-foreground text-xs">Set these from the selected workflow node.</p>
+                                    </div>
+                                </div>
+
+                                <Separator />
+
+                                <div className="space-y-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                        <div className="space-y-1">
+                                            <Label htmlFor="course_search_tab">Courses shown to new applicants</Label>
+                                            <p className="text-muted-foreground text-xs">Leave empty to show every active course.</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button type="button" variant="outline" size="sm" onClick={selectAllEnrollmentCourses}>
+                                                Select all
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => pipelineForm.setData("enrollment_courses", [])}
+                                            >
+                                                Clear
+                                            </Button>
+                                        </div>
+                                    </div>
                                     <Input
+                                        id="course_search_tab"
                                         value={enrollmentCourseSearch}
                                         onChange={(event) => setEnrollmentCourseSearch(event.target.value)}
-                                        placeholder="Search courses by code or title..."
-                                        className="w-full"
+                                        placeholder="Search by code or course title..."
                                     />
+                                    <div className="max-h-72 space-y-1 overflow-y-auto rounded-lg border p-2">
+                                        {filteredEnrollmentCourses.length === 0 ? (
+                                            <p className="text-muted-foreground py-6 text-center text-sm">No matching courses found.</p>
+                                        ) : (
+                                            filteredEnrollmentCourses.map((course) => (
+                                                <label
+                                                    key={course.id}
+                                                    className="hover:bg-muted/60 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2"
+                                                >
+                                                    <Checkbox
+                                                        checked={pipelineForm.data.enrollment_courses.includes(course.id)}
+                                                        onCheckedChange={(value) => toggleEnrollmentCourse(course.id, value === true)}
+                                                    />
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate text-sm font-medium">{course.title}</span>
+                                                        <span className="text-muted-foreground block font-mono text-xs">{course.code}</span>
+                                                    </span>
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Button type="button" variant="outline" onClick={selectAllEnrollmentCourses}>
-                                        Select All
-                                    </Button>
-                                    <Button type="button" variant="ghost" onClick={clearEnrollmentCourses}>
-                                        Clear
-                                    </Button>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="automation" className="space-y-6 outline-none">
+                        <Card className="shadow-none">
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <GraduationCap className="text-primary h-5 w-5" />
+                                    <CardTitle>Applicant automation</CardTitle>
                                 </div>
-                            </div>
-
-                            <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border p-3">
-                                {filteredEnrollmentCourses.length === 0 ? (
-                                    <p className="text-muted-foreground py-4 text-center text-sm">No matching courses found.</p>
-                                ) : (
-                                    filteredEnrollmentCourses.map((course) => {
-                                        const isChecked = pipelineForm.data.enrollment_courses.includes(course.id);
-
-                                        return (
-                                            <label
-                                                key={course.id}
-                                                className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2"
-                                            >
-                                                <Checkbox
-                                                    checked={isChecked}
-                                                    onCheckedChange={(checked) => toggleEnrollmentCourse(course.id, checked === true)}
-                                                />
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-medium leading-tight">{course.title}</p>
-                                                    <p className="text-muted-foreground font-mono text-xs">{course.code}</p>
-                                                </div>
-                                            </label>
-                                        );
-                                    })
-                                )}
-                            </div>
-
-                            <div className="text-muted-foreground text-xs">
-                                {pipelineForm.data.enrollment_courses.length > 0
-                                    ? `${pipelineForm.data.enrollment_courses.length} course(s) selected for new applicants.`
-                                    : "No restrictions selected: all active courses will be shown in the enrollment form."}
-                            </div>
-
-                            {selectedEnrollmentCourses.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedEnrollmentCourses.map((course) => (
-                                        <Badge key={course.id} variant="secondary" className="gap-2 px-3 py-1">
-                                            <span className="font-mono text-[11px]">{course.code}</span>
-                                            <span className="max-w-[220px] truncate">{course.title}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeEnrollmentCourse(course.id)}
-                                                className="text-muted-foreground hover:text-foreground"
-                                                aria-label={`Remove ${course.code}`}
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                            </button>
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border shadow-none">
-                        <CardHeader className="pb-4">
-                            <div className="flex items-center gap-2">
-                                <Settings className="text-primary h-5 w-5" />
-                                <CardTitle className="text-lg">Applicant Automation</CardTitle>
-                            </div>
-                            <CardDescription>
-                                Control what happens automatically after a new student application is submitted.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-start gap-3 rounded-lg border p-3">
-                                <Switch
-                                    id="default_new_applicant_to_first_year"
+                                <CardDescription>Optional actions that run when a new applicant is submitted.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <AutomationSwitch
+                                    id="default_new_applicant_to_first_year_tab"
+                                    title="Treat new applicants as 1st year automatically"
+                                    description="Required before auto-creating enrollment records or assigning subjects."
                                     checked={pipelineForm.data.automation.default_new_applicant_to_first_year}
-                                    onCheckedChange={(checked) => {
-                                        const enabled = checked === true;
-
+                                    onCheckedChange={(enabled) =>
                                         pipelineForm.setData("automation", {
                                             ...pipelineForm.data.automation,
                                             default_new_applicant_to_first_year: enabled,
                                             auto_create_student_enrollment: enabled
                                                 ? pipelineForm.data.automation.auto_create_student_enrollment
                                                 : false,
-                                            auto_assign_subjects: enabled
-                                                ? pipelineForm.data.automation.auto_assign_subjects
-                                                : false,
-                                        });
-                                    }}
+                                            auto_assign_subjects: enabled ? pipelineForm.data.automation.auto_assign_subjects : false,
+                                        })
+                                    }
                                 />
-                                <div className="space-y-1">
-                                    <Label htmlFor="default_new_applicant_to_first_year" className="cursor-pointer font-medium">Treat new applicants as 1st year automatically</Label>
-                                    <p className="text-muted-foreground text-xs">
-                                        Enables first-year-based auto enrollment policies for new applicants.
-                                    </p>
+                                <AutomationSwitch
+                                    id="auto_create_student_enrollment_tab"
+                                    title="Auto-create Student Enrollment record"
+                                    description="Creates an enrollment record immediately for every new applicant."
+                                    checked={pipelineForm.data.automation.auto_create_student_enrollment}
+                                    disabled={!pipelineForm.data.automation.default_new_applicant_to_first_year}
+                                    onCheckedChange={(enabled) =>
+                                        pipelineForm.setData("automation", {
+                                            ...pipelineForm.data.automation,
+                                            auto_create_student_enrollment: enabled,
+                                            auto_assign_subjects: enabled ? pipelineForm.data.automation.auto_assign_subjects : false,
+                                        })
+                                    }
+                                />
+                                <AutomationSwitch
+                                    id="auto_assign_subjects_tab"
+                                    title="Auto-assign available subjects/classes"
+                                    description="Uses the applicant course and active academic period to assign available classes."
+                                    checked={pipelineForm.data.automation.auto_assign_subjects}
+                                    disabled={
+                                        !pipelineForm.data.automation.default_new_applicant_to_first_year ||
+                                        !pipelineForm.data.automation.auto_create_student_enrollment
+                                    }
+                                    onCheckedChange={(enabled) =>
+                                        pipelineForm.setData("automation", {
+                                            ...pipelineForm.data.automation,
+                                            auto_assign_subjects: enabled,
+                                        })
+                                    }
+                                />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="analytics" className="space-y-6 outline-none">
+                        <Card className="shadow-none">
+                            <CardHeader>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <CardTitle>Enrollment analytics cards</CardTitle>
+                                        <CardDescription>Configure the summary cards shown in enrollment dashboards.</CardDescription>
+                                    </div>
+                                    <Button type="button" onClick={addStatsCard}>
+                                        <Plus className="mr-2 h-4 w-4" /> Add card
+                                    </Button>
                                 </div>
-                            </div>
-
-                            {pipelineForm.data.automation.default_new_applicant_to_first_year && (
-                                <>
-                                    <div className="flex items-start gap-3 rounded-lg border p-3">
-                                        <Switch
-                                            id="auto_create_student_enrollment"
-                                            checked={pipelineForm.data.automation.auto_create_student_enrollment}
-                                            onCheckedChange={(checked) =>
-                                                pipelineForm.setData("automation", {
-                                                    ...pipelineForm.data.automation,
-                                                    auto_create_student_enrollment: checked === true,
-                                                    auto_assign_subjects: checked === true
-                                                        ? pipelineForm.data.automation.auto_assign_subjects
-                                                        : false,
-                                                })
-                                            }
-                                        />
-                                        <div className="space-y-1">
-                                            <Label htmlFor="auto_create_student_enrollment" className="cursor-pointer font-medium">Auto-create Student Enrollment record</Label>
-                                            <p className="text-muted-foreground text-xs">
-                                                When enabled, a dedicated enrollment record is created immediately for every new applicant.
-                                            </p>
-                                        </div>
+                            </CardHeader>
+                            <CardContent>
+                                {pipelineForm.data.enrollment_stats.cards.length === 0 ? (
+                                    <div className="rounded-xl border border-dashed p-10 text-center">
+                                        <BarChart3 className="text-muted-foreground mx-auto mb-3 h-9 w-9" />
+                                        <p className="font-medium">No analytics cards configured</p>
+                                        <p className="text-muted-foreground mt-1 text-sm">Add a card to show totals or counts by pipeline status.</p>
                                     </div>
-
-                                    <div className="flex items-start gap-3 rounded-lg border p-3">
-                                        <Switch
-                                            id="auto_assign_subjects"
-                                            checked={pipelineForm.data.automation.auto_assign_subjects}
-                                            onCheckedChange={(checked) =>
-                                                pipelineForm.setData("automation", {
-                                                    ...pipelineForm.data.automation,
-                                                    auto_assign_subjects: checked === true,
-                                                })
-                                            }
-                                            disabled={!pipelineForm.data.automation.auto_create_student_enrollment}
-                                        />
-                                        <div className="space-y-1">
-                                            <Label htmlFor="auto_assign_subjects" className="cursor-pointer font-medium">Auto-assign available subjects/classes</Label>
-                                            <p className="text-muted-foreground text-xs">
-                                                Uses the chosen course plus current school year/semester to add available subjects and open class sections.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                            {!pipelineForm.data.automation.default_new_applicant_to_first_year && (
-                                <div className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-                                    Enable first-year treatment first to reveal applicant automation options.
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <div className="flex flex-col items-start gap-8 lg:flex-row">
-                        {/* Visual Master Pipeline */}
-                        <div className="flex w-full shrink-0 flex-col gap-5 lg:w-[40%] xl:w-1/3">
-                            <div className="flex items-center justify-between">
-                                <h3 className="flex items-center gap-2 text-lg font-semibold">
-                                    <Split className="text-muted-foreground h-5 w-5" /> Visual Flow
-                                </h3>
-                                <Button variant="outline" size="sm" onClick={() => addPipelineStep()} className="h-9">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Step
-                                </Button>
-                            </div>
-
-                            <div className="relative space-y-3 pb-8 pl-5">
-                                {/* Timeline vertical line */}
-                                <div className="bg-border/80 absolute top-6 bottom-4 left-[35px] w-[2px] rounded-full" />
-
-                                <AnimatePresence mode="popLayout">
-                                    {pipelineForm.data.steps.map((step, index) => {
-                                        const isSelected = selectedStepIndex === index;
-                                        const isEntry = pipelineForm.data.entry_step_key === step.key;
-                                        const isCompletion = pipelineForm.data.completion_step_key === step.key;
-
-                                        return (
-                                            <motion.div
-                                                layout
-                                                initial={{ opacity: 0, y: 15 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, scale: 0.95 }}
-                                                transition={{ duration: 0.2 }}
-                                                key={`${step.key}-${index}`}
-                                                className="group relative z-10 flex items-center gap-4"
-                                            >
-                                                <div
-                                                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${
-                                                        isSelected
-                                                            ? "bg-primary border-primary text-primary-foreground z-20 scale-110 shadow-md"
-                                                            : "bg-background border-border text-muted-foreground group-hover:border-primary/50 group-hover:text-primary z-10"
-                                                    }`}
-                                                >
-                                                    {index + 1}
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelectedStepIndex(index)}
-                                                    className={`flex-1 rounded-xl border p-3.5 text-left transition-all ${
-                                                        isSelected
-                                                            ? "ring-primary border-primary bg-primary/5 shadow-sm ring-2"
-                                                            : "border-border bg-card hover:border-primary/40 hover:bg-accent/50 hover:shadow-sm"
-                                                    } focus-visible:ring-primary/50 focus-visible:ring-2 focus-visible:outline-none`}
-                                                >
-                                                    <div className="mb-1 flex items-start justify-between gap-2">
-                                                        <span className="line-clamp-2 text-sm leading-tight font-medium">
-                                                            {step.label || `Step ${index + 1}`}
-                                                        </span>
-                                                        <div className="flex shrink-0 flex-col gap-1">
-                                                            {isEntry && (
-                                                                <Badge variant="default" className="px-1.5 py-0 text-[10px] leading-tight">
-                                                                    Entry
-                                                                </Badge>
-                                                            )}
-                                                            {isCompletion && (
-                                                                <Badge
-                                                                    variant="secondary"
-                                                                    className="bg-muted-foreground text-primary-foreground px-1.5 py-0 text-[10px] leading-tight"
-                                                                >
-                                                                    End
-                                                                </Badge>
-                                                            )}
+                                ) : (
+                                    <div className="grid gap-4 lg:grid-cols-2">
+                                        {pipelineForm.data.enrollment_stats.cards.map((card, index) => (
+                                            <Card key={`${card.key}-${index}`} className="shadow-none">
+                                                <CardHeader className="pb-3">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1 space-y-2">
+                                                            <Input
+                                                                value={card.label}
+                                                                onChange={(event) => updateStatsCard(index, "label", event.target.value)}
+                                                                placeholder="Card title"
+                                                                className="text-base font-semibold"
+                                                            />
+                                                            <FieldError message={formErrors[`enrollment_stats.cards.${index}.label`]} />
                                                         </div>
-                                                    </div>
-                                                    <div className="text-muted-foreground mt-1 flex items-center gap-1.5 truncate text-xs">
-                                                        {step.status || "No Status Defined"}
-                                                    </div>
-                                                </button>
-                                            </motion.div>
-                                        );
-                                    })}
-                                </AnimatePresence>
-                                {pipelineForm.data.steps.length === 0 && (
-                                    <div className="text-muted-foreground bg-muted/40 ml-12 rounded-xl border-2 border-dashed p-8 text-center text-sm">
-                                        <Workflow className="text-muted-foreground/50 mx-auto mb-3 h-8 w-8" />
-                                        <p>No steps defined.</p>
-                                        <p className="mt-1">Add a step to begin generating your visual pipeline.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Detail Editor Form */}
-                        <div className="w-full flex-1 lg:w-[60%] xl:w-2/3">
-                            <AnimatePresence mode="wait">
-                                {selectedStepIndex !== null && pipelineForm.data.steps[selectedStepIndex] ? (
-                                    <motion.div
-                                        key={`editor-${selectedStepIndex}`}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -20 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        <Card className="relative overflow-hidden border shadow-md">
-                                            <div className="bg-primary absolute top-0 left-0 h-full w-1.5" />
-                                            <CardHeader className="bg-muted/20 border-b pb-4">
-                                                <div className="flex flex-wrap items-center justify-between gap-4">
-                                                    <div>
-                                                        <div className="mb-1 flex items-center gap-2">
-                                                            <div className="bg-primary/10 text-primary flex h-6 w-6 items-center justify-center rounded-md font-mono text-xs font-bold">
-                                                                {selectedStepIndex + 1}
-                                                            </div>
-                                                            <CardTitle className="text-lg">Step Details</CardTitle>
-                                                        </div>
-                                                        <CardDescription>
-                                                            Define what happens during{" "}
-                                                            <strong className="text-foreground">
-                                                                {pipelineForm.data.steps[selectedStepIndex].label || `Step ${selectedStepIndex + 1}`}
-                                                            </strong>
-                                                            .
-                                                        </CardDescription>
-                                                    </div>
-                                                    <div className="bg-background flex items-center gap-1 rounded-md border p-1">
                                                         <Button
                                                             type="button"
-                                                            size="icon"
                                                             variant="ghost"
-                                                            className="text-muted-foreground hover:text-foreground h-8 w-8"
-                                                            onClick={() => movePipelineStep(selectedStepIndex, "up")}
-                                                            disabled={selectedStepIndex === 0}
-                                                            title="Move Step Up"
-                                                        >
-                                                            <MoveUp className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
                                                             size="icon"
-                                                            variant="ghost"
-                                                            className="text-muted-foreground hover:text-foreground h-8 w-8"
-                                                            onClick={() => movePipelineStep(selectedStepIndex, "down")}
-                                                            disabled={selectedStepIndex === pipelineForm.data.steps.length - 1}
-                                                            title="Move Step Down"
-                                                        >
-                                                            <MoveDown className="h-4 w-4" />
-                                                        </Button>
-                                                        <div className="bg-border mx-1 h-5 w-px" />
-                                                        <Button
-                                                            type="button"
-                                                            size="icon"
-                                                            variant="ghost"
-                                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8"
-                                                            onClick={() => removePipelineStep(selectedStepIndex)}
-                                                            title="Delete Step"
+                                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                            onClick={() => removeStatsCard(index)}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </div>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="space-y-6 pt-6">
-                                                <div className="grid gap-5 md:grid-cols-2">
-                                                    <div className="space-y-2">
-                                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                                            Internal Step ID
-                                                        </Label>
-                                                        <Input
-                                                            value={pipelineForm.data.steps[selectedStepIndex].key}
-                                                            onChange={(event) => updatePipelineStep(selectedStepIndex, "key", event.target.value)}
-                                                            className="font-mono text-sm"
-                                                            placeholder="e.g. step_1"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                                            Badge Color
-                                                        </Label>
-                                                        <Select
-                                                            value={pipelineForm.data.steps[selectedStepIndex].color}
-                                                            onValueChange={(value) => updatePipelineStep(selectedStepIndex, "color", value)}
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {colorOptions.map((color) => (
-                                                                    <SelectItem key={color} value={color}>
-                                                                        <div className="flex items-center gap-2 capitalize">
-                                                                            <div
-                                                                                className={`h-3 w-3 rounded-full bg-${color}-500`}
-                                                                                style={{
-                                                                                    backgroundColor:
-                                                                                        color === "yellow"
-                                                                                            ? "#facc15"
-                                                                                            : color === "red"
-                                                                                              ? "#ef4444"
-                                                                                              : color === "blue"
-                                                                                                ? "#3b82f6"
-                                                                                                : color === "green"
-                                                                                                  ? "#22c55e"
-                                                                                                  : color === "indigo"
-                                                                                                    ? "#6366f1"
-                                                                                                    : "currentColor",
-                                                                                }}
-                                                                            />
-                                                                            {color}
-                                                                        </div>
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                                            Applicant-Facing Name
-                                                        </Label>
-                                                        <Input
-                                                            value={pipelineForm.data.steps[selectedStepIndex].label}
-                                                            onChange={(event) => updatePipelineStep(selectedStepIndex, "label", event.target.value)}
-                                                            placeholder="e.g. Awaiting Verification"
-                                                        />
-                                                        <p className="text-muted-foreground mt-1 text-[10px]">What the applicant sees.</p>
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                                            Internal Status Code
-                                                        </Label>
-                                                        <Input
-                                                            value={pipelineForm.data.steps[selectedStepIndex].status}
-                                                            onChange={(event) => updatePipelineStep(selectedStepIndex, "status", event.target.value)}
-                                                            placeholder="e.g. pending_verification"
-                                                            className="font-mono text-sm"
-                                                        />
-                                                        <p className="text-muted-foreground mt-1 text-[10px]">
-                                                            How the system tracks this status in the database.
-                                                        </p>
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                                            Special Behavior
-                                                        </Label>
-                                                        <Select
-                                                            value={pipelineForm.data.steps[selectedStepIndex].action_type}
-                                                            onValueChange={(value) =>
-                                                                updatePipelineStep(
-                                                                    selectedStepIndex,
-                                                                    "action_type",
-                                                                    value as EnrollmentPipelineActionType,
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {stepTypeOptions.map((option) => (
-                                                                    <SelectItem key={option.value} value={option.value}>
-                                                                        {option.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <p className="text-muted-foreground mt-1 text-[10px]">
-                                                            Determines if this step requires specific system actions (like cashier verification).
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <Separator />
-
-                                                <div className="bg-muted/30 hover:border-border space-y-4 rounded-xl border border-dashed p-5 transition-colors">
-                                                    <div>
-                                                        <Label className="text-foreground flex items-center gap-2 text-base font-semibold">
-                                                            Staff Permissions
-                                                        </Label>
-                                                        <p className="text-muted-foreground mt-1 mb-4 text-sm">
-                                                            Only these staff roles can approve or modify applications in this step.
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                                                        <div className="bg-background flex-1 rounded-md shadow-sm">
-                                                            <Combobox
-                                                                options={roleComboboxOptions}
-                                                                value={selectedRoleByStep[selectedStepIndex] || ""}
-                                                                onValueChange={(value) =>
-                                                                    setSelectedRoleByStep((current) => ({ ...current, [selectedStepIndex]: value }))
-                                                                }
-                                                                placeholder="Select role to add..."
-                                                                searchPlaceholder="Search roles..."
-                                                                emptyText="No role found."
-                                                            />
-                                                        </div>
-                                                        <Button
-                                                            type="button"
-                                                            variant="secondary"
-                                                            onClick={() => addRoleToStep(selectedStepIndex)}
-                                                            disabled={!selectedRoleByStep[selectedStepIndex]}
-                                                            className="shadow-sm"
-                                                        >
-                                                            <Plus className="mr-1.5 h-4 w-4" />
-                                                            Add Role
-                                                        </Button>
-                                                    </div>
-
-                                                    <div className="mt-4">
-                                                        {pipelineForm.data.steps[selectedStepIndex].allowed_roles.length === 0 ? (
-                                                            <div className="border-primary/50 bg-background text-muted-foreground rounded-r-md border-l-2 py-1.5 pl-3 text-sm">
-                                                                <span className="text-foreground font-medium">Public Access:</span> No role
-                                                                restrictions applied.
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex flex-wrap gap-2 pt-1">
-                                                                <AnimatePresence>
-                                                                    {pipelineForm.data.steps[selectedStepIndex].allowed_roles.map((roleName) => (
-                                                                        <motion.div
-                                                                            key={roleName}
-                                                                            initial={{ opacity: 0, scale: 0.8 }}
-                                                                            animate={{ opacity: 1, scale: 1 }}
-                                                                            exit={{ opacity: 0, scale: 0.8 }}
-                                                                            transition={{ duration: 0.15 }}
-                                                                        >
-                                                                            <Badge
-                                                                                variant="secondary"
-                                                                                className="bg-background hover:bg-background gap-2 border py-1.5 pr-1.5 pl-3 text-sm shadow-sm"
-                                                                            >
-                                                                                {roleName}
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => removeRoleFromStep(selectedStepIndex, roleName)}
-                                                                                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md p-1 transition-colors"
-                                                                                    title="Remove Role"
-                                                                                >
-                                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                                </button>
-                                                                            </Badge>
-                                                                        </motion.div>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <div className="grid gap-4 sm:grid-cols-3">
+                                                        <div className="space-y-2 sm:col-span-2">
+                                                            <Label>Metric</Label>
+                                                            <Select
+                                                                value={card.metric}
+                                                                onValueChange={(value) => updateStatsCard(index, "metric", value)}
+                                                            >
+                                                                <SelectTrigger>
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {statsMetricOptions.map((metric) => (
+                                                                        <SelectItem key={metric.value} value={metric.value}>
+                                                                            {metric.label}
+                                                                        </SelectItem>
                                                                     ))}
-                                                                </AnimatePresence>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                ) : (
-                                    <motion.div
-                                        key="empty-editor"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        className="bg-muted/10 text-muted-foreground flex h-full min-h-[400px] items-center justify-center rounded-xl border-2 border-dashed p-8"
-                                    >
-                                        <div className="max-w-sm text-center">
-                                            <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border shadow-sm">
-                                                <LayoutDashboard className="text-muted-foreground/60 h-8 w-8" />
-                                            </div>
-                                            <p className="text-foreground text-lg font-medium">Select a Step to Edit</p>
-                                            <p className="text-muted-foreground/80 mt-2 text-sm">
-                                                Click any step line from the visual flow on the left to change its name, color, and staff permissions,
-                                                or add a new step.
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="analytics" className="animate-in fade-in-50 space-y-6 duration-500 outline-none">
-                    <div className="flex items-center justify-between border-b pb-4">
-                        <div>
-                            <h3 className="text-xl font-semibold">Enrollment Stats Cards</h3>
-                            <p className="text-muted-foreground mt-1 text-sm">
-                                Cards from this configuration appear in enrollment analytics widgets.
-                            </p>
-                        </div>
-                        <Button type="button" onClick={addStatsCard} className="h-9 shadow-sm">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Metric Card
-                        </Button>
-                    </div>
-
-                    {pipelineForm.data.enrollment_stats.cards.length === 0 ? (
-                        <div className="text-muted-foreground bg-muted/10 flex min-h-[300px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-16">
-                            <PieChart className="text-muted-foreground/40 mb-5 h-12 w-12" />
-                            <p className="text-foreground text-lg font-medium">No metrics cards configured</p>
-                            <p className="text-muted-foreground/80 mt-2 max-w-sm text-center text-sm">
-                                Add cards to display insightful metrics and visual reports at a glance on your admin dashboard.
-                            </p>
-                            <Button variant="outline" onClick={addStatsCard} className="mt-6">
-                                Create First Card
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                            <AnimatePresence mode="popLayout">
-                                {pipelineForm.data.enrollment_stats.cards.map((card, index) => (
-                                    <motion.div
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.95 }}
-                                        transition={{ duration: 0.2 }}
-                                        key={`${card.key}-${index}`}
-                                    >
-                                        <Card className="group relative flex h-full flex-col overflow-hidden border shadow-sm transition-all hover:shadow-md">
-                                            <div
-                                                className="absolute top-0 left-0 h-1 w-full"
-                                                style={{
-                                                    backgroundColor:
-                                                        card.color === "yellow"
-                                                            ? "#facc15"
-                                                            : card.color === "red"
-                                                              ? "#ef4444"
-                                                              : card.color === "blue"
-                                                                ? "#3b82f6"
-                                                                : card.color === "emerald"
-                                                                  ? "#10b981"
-                                                                  : card.color === "green"
-                                                                    ? "#22c55e"
-                                                                    : card.color === "indigo"
-                                                                      ? "#6366f1"
-                                                                      : card.color === "teal"
-                                                                        ? "#14b8a6"
-                                                                        : card.color === "amber"
-                                                                          ? "#f59e0b"
-                                                                          : card.color === "orange"
-                                                                            ? "#f97316"
-                                                                            : "#6b7280",
-                                                }}
-                                            />
-                                            <CardHeader className="pt-5 pb-3">
-                                                <div className="flex items-start justify-between gap-4">
-                                                    <div className="w-full space-y-1.5">
-                                                        <Input
-                                                            value={card.label}
-                                                            onChange={(event) => updateStatsCard(index, "label", event.target.value)}
-                                                            placeholder="Card Title"
-                                                            className="hover:border-border focus:border-border -ml-1 h-9 border-transparent bg-transparent px-1 text-lg font-semibold shadow-none transition-colors"
-                                                        />
-                                                        <div className="text-muted-foreground flex items-center gap-2 px-1 text-xs">
-                                                            <span className="bg-muted/60 rounded border px-1.5 py-0.5 font-mono text-[10px]">
-                                                                {card.key || "no-key"}
-                                                            </span>
+                                                                </SelectContent>
+                                                            </Select>
                                                         </div>
-                                                    </div>
-                                                    <Button
-                                                        type="button"
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        onClick={() => removeStatsCard(index)}
-                                                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-                                                        title="Delete Card"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </CardHeader>
-                                            <CardContent className="flex-1 space-y-5 pt-2">
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div className="space-y-1.5">
-                                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                                                            Metric Type
-                                                        </Label>
-                                                        <Select
-                                                            value={card.metric}
-                                                            onValueChange={(value) => updateStatsCard(index, "metric", value)}
-                                                        >
-                                                            <SelectTrigger className="bg-background h-9 text-sm shadow-sm">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {statsMetricOptions.map((metric) => (
-                                                                    <SelectItem key={metric.value} value={metric.value}>
-                                                                        {metric.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="mt-auto space-y-1.5 align-bottom">
-                                                        <Label className="text-muted-foreground invisible hidden text-xs font-semibold tracking-wide uppercase lg:block">
-                                                            _
-                                                        </Label>
-                                                        <div className="group/color bg-background focus-within:ring-ring relative flex h-9 items-center rounded-md border px-3 shadow-sm focus-within:ring-2 focus-within:ring-offset-2">
-                                                            <div
-                                                                className="border-border/50 mr-2 h-3 w-3 shrink-0 rounded-full border"
-                                                                style={{
-                                                                    backgroundColor:
-                                                                        card.color === "yellow"
-                                                                            ? "#facc15"
-                                                                            : card.color === "red"
-                                                                              ? "#ef4444"
-                                                                              : card.color === "blue"
-                                                                                ? "#3b82f6"
-                                                                                : card.color === "emerald"
-                                                                                  ? "#10b981"
-                                                                                  : card.color === "green"
-                                                                                    ? "#22c55e"
-                                                                                    : card.color === "indigo"
-                                                                                      ? "#6366f1"
-                                                                                      : card.color === "teal"
-                                                                                        ? "#14b8a6"
-                                                                                        : card.color === "amber"
-                                                                                          ? "#f59e0b"
-                                                                                          : card.color === "orange"
-                                                                                            ? "#f97316"
-                                                                                            : "#6b7280",
-                                                                }}
-                                                            />
+                                                        <div className="space-y-2">
+                                                            <Label>Color</Label>
                                                             <Select
                                                                 value={card.color}
                                                                 onValueChange={(value) => updateStatsCard(index, "color", value)}
                                                             >
-                                                                <SelectTrigger className="h-full w-full flex-1 border-0 p-0 text-sm capitalize shadow-none focus:ring-0">
+                                                                <SelectTrigger>
                                                                     <SelectValue />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
@@ -1108,61 +1450,273 @@ export default function SystemManagementEnrollmentPipelinePage({
                                                             </Select>
                                                         </div>
                                                     </div>
-                                                    <div className="col-span-2 space-y-1.5">
-                                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                                                            Card Unique Key
-                                                        </Label>
+                                                    <div className="space-y-2">
+                                                        <Label>Card key</Label>
                                                         <Input
                                                             value={card.key}
-                                                            onChange={(event) => updateStatsCard(index, "key", event.target.value)}
-                                                            className="bg-background h-9 font-mono text-sm shadow-sm"
-                                                            placeholder="e.g. total_enrolled"
+                                                            onChange={(event) =>
+                                                                updateStatsCard(index, "key", slugify(event.target.value, `stat_${index + 1}`))
+                                                            }
+                                                            className="font-mono"
                                                         />
                                                     </div>
-                                                </div>
+                                                    {card.metric === "status_count" && (
+                                                        <div className="space-y-2">
+                                                            <Label>Count these statuses</Label>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {pipelineForm.data.steps.map((step, stepIndex) => {
+                                                                    const selected = card.statuses.includes(step.status);
 
-                                                {card.metric === "status_count" && (
-                                                    <div className="mt-2 space-y-2.5 border-t pt-4">
-                                                        <Label className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase">
-                                                            Tracked Pipeline Statuses
-                                                        </Label>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {pipelineForm.data.steps.length === 0 ? (
-                                                                <p className="text-muted-foreground bg-muted/50 w-full rounded-md border border-dashed p-2 text-xs italic">
-                                                                    No pipeline steps defined.
-                                                                </p>
-                                                            ) : (
-                                                                pipelineForm.data.steps.map((step, stepIndex) => {
-                                                                    const statusLabel = step.status || step.label || `Step ${stepIndex + 1}`;
-                                                                    const isSelected = card.statuses.includes(step.status);
                                                                     return (
                                                                         <button
-                                                                            key={`status-${statusLabel}-${stepIndex}`}
+                                                                            key={`${step.status}-${stepIndex}`}
                                                                             type="button"
-                                                                            className={`rounded-md border px-2.5 py-1.5 text-xs transition-all ${
-                                                                                isSelected
-                                                                                    ? `bg-primary text-primary-foreground border-primary font-medium shadow-sm`
-                                                                                    : `bg-background text-muted-foreground hover:bg-muted hover:text-foreground`
-                                                                            }`}
                                                                             onClick={() => toggleStatsCardStatus(index, step.status)}
+                                                                            className={`rounded-md border px-3 py-1.5 text-xs transition ${
+                                                                                selected
+                                                                                    ? "border-primary bg-primary text-primary-foreground"
+                                                                                    : "bg-background hover:bg-muted"
+                                                                            }`}
                                                                         >
-                                                                            {statusLabel}
+                                                                            {step.label || step.status}
                                                                         </button>
                                                                     );
-                                                                })
-                                                            )}
+                                                                })}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-                    )}
-                </TabsContent>
-            </Tabs>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+            </div>
         </SystemManagementLayout>
     );
+}
+
+function WorkflowCanvasNode({
+    id,
+    step,
+    index,
+    position,
+    actionLabel,
+    isSelected,
+    isEntry,
+    isCompletion,
+    onSelect,
+    onDelete,
+    onDuplicate,
+    onDisconnect,
+    onSetEntry,
+    onSetCompletion,
+    onConnect,
+    onStartConnect,
+    onStartConnectDrag,
+    onFinishConnect,
+    isConnectingFrom,
+    isConnectionTarget,
+    availableTargets,
+}: {
+    id: string;
+    step: EnrollmentPipelineStep;
+    index: number;
+    position: CanvasNodePosition;
+    actionLabel: string;
+    isSelected: boolean;
+    isEntry: boolean;
+    isCompletion: boolean;
+    onSelect: () => void;
+    onDelete: () => void;
+    onDuplicate: () => void;
+    onDisconnect: () => void;
+    onSetEntry: () => void;
+    onSetCompletion: () => void;
+    onConnect: (targetIndex: number) => void;
+    onStartConnect: () => void;
+    onStartConnectDrag: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+    onFinishConnect: () => void;
+    isConnectingFrom: boolean;
+    isConnectionTarget: boolean;
+    availableTargets: Array<{ index: number; label: string }>;
+}) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+    const style = {
+        left: position.x,
+        top: position.y,
+        width: canvasNodeWidth,
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        zIndex: isDragging ? 30 : isSelected ? 25 : 20,
+    };
+
+    const nodeButton = (
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={onSelect}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect();
+                }
+            }}
+            className={`group bg-card relative min-h-28 w-full rounded-2xl border p-4 text-left shadow-sm transition ${
+                isDragging
+                    ? "border-primary scale-[1.01] opacity-90 shadow-xl"
+                    : isSelected
+                      ? "border-primary bg-primary/5 ring-primary/20 ring-2"
+                      : "hover:border-primary/40 hover:bg-background hover:shadow-md"
+            }`}
+        >
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onFinishConnect();
+                }}
+                disabled={!isConnectionTarget}
+                className={`border-background absolute top-1/2 left-0 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow-sm transition ${
+                    isConnectionTarget ? "bg-primary ring-primary/20 ring-4" : "bg-muted-foreground/60"
+                }`}
+                aria-label="Connect incoming workflow line here"
+            />
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onStartConnect();
+                }}
+                onPointerDown={onStartConnectDrag}
+                className={`border-background absolute top-1/2 right-0 h-6 w-6 translate-x-1/2 -translate-y-1/2 cursor-crosshair rounded-full border-2 shadow-sm transition ${
+                    isConnectingFrom ? "bg-primary ring-primary/30 ring-4" : "bg-primary hover:ring-primary/20 hover:ring-4"
+                }`}
+                aria-label="Start workflow connection from this node"
+            />
+
+            <span className="flex items-start gap-3">
+                <span
+                    className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-sm"
+                    style={{ backgroundColor: colorHex[step.color as keyof typeof colorHex] ?? colorHex.gray }}
+                >
+                    {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 space-y-1.5">
+                    <span className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{step.label || `Step ${index + 1}`}</span>
+                        {isEntry && <Badge>Entry</Badge>}
+                        {isCompletion && <Badge variant="secondary">Completion</Badge>}
+                    </span>
+                    <span className="text-muted-foreground block truncate font-mono text-xs">{step.status || "missing_status"}</span>
+                    <span className="text-muted-foreground block text-xs">{actionLabel}</span>
+                </span>
+                <span
+                    {...attributes}
+                    {...listeners}
+                    onClick={(event) => event.stopPropagation()}
+                    className="bg-background text-muted-foreground hover:text-foreground mt-0.5 inline-flex cursor-grab touch-none rounded-lg border p-2 transition active:cursor-grabbing"
+                    aria-label={`Drag ${step.label || `Step ${index + 1}`}`}
+                >
+                    <GripVertical className="h-4 w-4" />
+                </span>
+            </span>
+        </div>
+    );
+
+    return (
+        <div ref={setNodeRef} style={style} className="absolute">
+            <ContextMenu>
+                <ContextMenuTrigger asChild>{nodeButton}</ContextMenuTrigger>
+                <ContextMenuContent className="w-56">
+                    <ContextMenuLabel>{step.label || `Step ${index + 1}`}</ContextMenuLabel>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={onSelect}>
+                        <Pencil className="h-4 w-4" /> Edit logic
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={onDuplicate}>
+                        <Plus className="h-4 w-4" /> Duplicate node
+                    </ContextMenuItem>
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            <ArrowRight className="h-4 w-4" /> Connect to
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent className="w-56">
+                            {availableTargets
+                                .filter((target) => target.index !== index)
+                                .map((target) => (
+                                    <ContextMenuItem key={target.index} onSelect={() => onConnect(target.index)}>
+                                        {target.label}
+                                    </ContextMenuItem>
+                                ))}
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuItem onSelect={onDisconnect} disabled={!step.next_step_key}>
+                        <Scissors className="h-4 w-4" /> Disconnect outgoing line
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={onSetEntry}>Set as entry</ContextMenuItem>
+                    <ContextMenuItem onSelect={onSetCompletion}>Set as completion</ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem variant="destructive" onSelect={onDelete}>
+                        <Trash2 className="h-4 w-4" /> Delete node
+                    </ContextMenuItem>
+                </ContextMenuContent>
+            </ContextMenu>
+        </div>
+    );
+}
+
+function PipelineSummaryCard({ icon: Icon, label, value }: { icon: typeof Workflow; label: string; value: string }) {
+    return (
+        <Card className="shadow-none">
+            <CardContent className="flex items-center gap-3 p-4">
+                <div className="bg-primary/10 text-primary rounded-lg p-2">
+                    <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+                    <p className="truncate text-lg font-semibold">{value}</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function AutomationSwitch({
+    id,
+    title,
+    description,
+    checked,
+    disabled = false,
+    onCheckedChange,
+}: {
+    id: string;
+    title: string;
+    description: string;
+    checked: boolean;
+    disabled?: boolean;
+    onCheckedChange: (checked: boolean) => void;
+}) {
+    return (
+        <div className="flex items-start gap-3 rounded-lg border p-3">
+            <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={(value) => onCheckedChange(value === true)} />
+            <div className="space-y-1">
+                <Label htmlFor={id} className="cursor-pointer font-medium">
+                    {title}
+                </Label>
+                <p className="text-muted-foreground text-xs">{description}</p>
+            </div>
+        </div>
+    );
+}
+
+function FieldError({ message }: { message?: string }) {
+    if (!message) {
+        return null;
+    }
+
+    return <p className="text-destructive text-xs">{message}</p>;
 }

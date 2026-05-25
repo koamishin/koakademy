@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\NotificationChannel;
 use App\Http\Requests\Administrators\StoreSchoolRequest;
 use App\Http\Requests\Administrators\UpdateApiManagementRequest;
+use App\Http\Requests\Administrators\UpdateEnrollmentPipelineRequest;
 use App\Http\Requests\Administrators\UpdateSchoolRequest;
 use App\Http\Requests\Administrators\UpdateSchoolStatusRequest;
 use App\Models\Course;
@@ -556,10 +557,8 @@ final class AdministratorSystemManagementController extends Controller
         return Redirect::back()->with('success', 'Mail configuration updated and environment synced.');
     }
 
-    public function updateEnrollmentPipeline(Request $request)
+    public function updateEnrollmentPipeline(UpdateEnrollmentPipelineRequest $request): RedirectResponse
     {
-        $this->authorize('updateEnrollmentPipeline', GeneralSetting::class);
-
         $generalSettingsService = app(GeneralSettingsService::class);
         $settings = $generalSettingsService->getGlobalSettingsModel();
 
@@ -570,54 +569,7 @@ final class AdministratorSystemManagementController extends Controller
             $generalSettingsService->replaceGlobalSettings($settings);
         }
 
-        $validated = $request->validate([
-            'submitted_label' => ['required', 'string', 'max:100'],
-            'enrollment_courses' => ['nullable', 'array'],
-            'enrollment_courses.*' => ['integer'],
-            'steps' => ['nullable', 'array', 'min:1'],
-            'steps.*.key' => ['nullable', 'string', 'max:100'],
-            'steps.*.status' => ['required_with:steps', 'string', 'max:100'],
-            'steps.*.label' => ['required_with:steps', 'string', 'max:100'],
-            'steps.*.color' => ['required_with:steps', 'string', 'max:50'],
-            'steps.*.allowed_roles' => ['nullable', 'array'],
-            'steps.*.allowed_roles.*' => ['string', 'exists:roles,name'],
-            'steps.*.action_type' => ['nullable', 'string', 'in:standard,department_verification,cashier_verification'],
-            'entry_step_key' => ['nullable', 'string', 'max:100'],
-            'completion_step_key' => ['nullable', 'string', 'max:100'],
-            'automation' => ['nullable', 'array'],
-            'automation.auto_create_student_enrollment' => ['nullable', 'boolean'],
-            'automation.auto_assign_subjects' => ['nullable', 'boolean'],
-            'automation.default_new_applicant_to_first_year' => ['nullable', 'boolean'],
-            'pending_status' => ['required_without:steps', 'string', 'max:100'],
-            'pending_label' => ['required_without:steps', 'string', 'max:100'],
-            'pending_color' => ['required_without:steps', 'string', 'max:50'],
-            'pending_roles' => ['nullable', 'array'],
-            'pending_roles.*' => ['string', 'exists:roles,name'],
-            'department_verified_status' => ['required_without:steps', 'string', 'max:100'],
-            'department_verified_label' => ['required_without:steps', 'string', 'max:100'],
-            'department_verified_color' => ['required_without:steps', 'string', 'max:50'],
-            'department_verified_roles' => ['nullable', 'array'],
-            'department_verified_roles.*' => ['string', 'exists:roles,name'],
-            'cashier_verified_status' => ['required_without:steps', 'string', 'max:100'],
-            'cashier_verified_label' => ['required_without:steps', 'string', 'max:100'],
-            'cashier_verified_color' => ['required_without:steps', 'string', 'max:50'],
-            'cashier_verified_roles' => ['nullable', 'array'],
-            'cashier_verified_roles.*' => ['string', 'exists:roles,name'],
-            'additional_steps' => ['nullable', 'array'],
-            'additional_steps.*.status' => ['required', 'string', 'max:100'],
-            'additional_steps.*.label' => ['required', 'string', 'max:100'],
-            'additional_steps.*.color' => ['required', 'string', 'max:50'],
-            'additional_steps.*.allowed_roles' => ['nullable', 'array'],
-            'additional_steps.*.allowed_roles.*' => ['string', 'exists:roles,name'],
-            'enrollment_stats' => ['nullable', 'array'],
-            'enrollment_stats.cards' => ['nullable', 'array'],
-            'enrollment_stats.cards.*.key' => ['nullable', 'string', 'max:100'],
-            'enrollment_stats.cards.*.label' => ['required_with:enrollment_stats.cards', 'string', 'max:100'],
-            'enrollment_stats.cards.*.metric' => ['required_with:enrollment_stats.cards', 'string', 'in:total_records,active_records,trashed_records,status_count,paid_count'],
-            'enrollment_stats.cards.*.statuses' => ['nullable', 'array'],
-            'enrollment_stats.cards.*.statuses.*' => ['string', 'max:100'],
-            'enrollment_stats.cards.*.color' => ['nullable', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
 
         $moreConfigs = $settings->more_configs ?? [];
         $moreConfigs['enrollment_pipeline'] = $this->enrollmentPipelineService->sanitizeForStorage($validated);

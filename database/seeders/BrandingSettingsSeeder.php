@@ -4,42 +4,62 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Settings\SiteSettings;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use JsonException;
 
 final class BrandingSettingsSeeder extends Seeder
 {
-    public function run(SiteSettings $settings): void
+    /**
+     * Run the database seeds.
+     *
+     * @throws JsonException
+     */
+    public function run(): void
     {
-        // Only set if not already set
-        if (! $settings->app_name) {
-            $settings->app_name = 'KoAkademy';
+        $now = now();
+        $rows = [];
+
+        foreach ($this->defaultSiteSettings() as $name => $value) {
+            $rows[] = [
+                'group' => 'site',
+                'name' => $name,
+                'locked' => false,
+                'payload' => json_encode($value, JSON_THROW_ON_ERROR),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
         }
 
-        if (! $settings->app_short_name) {
-            $settings->app_short_name = 'KOA';
-        }
+        DB::table('settings')->insertOrIgnore($rows);
+    }
 
-        if (! $settings->organization_name) {
-            $settings->organization_name = 'KoAkademy';
-        }
-
-        if (! $settings->organization_short_name) {
-            $settings->organization_short_name = 'KOA';
-        }
-
-        if (! $settings->tagline) {
-            $settings->tagline = 'Your Campus, Your Connection';
-        }
-
-        if (! $settings->theme_color) {
-            $settings->theme_color = '#0f172a';
-        }
-
-        if (! $settings->currency) {
-            $settings->currency = 'PHP';
-        }
-
-        $settings->save();
+    /**
+     * @return array<string, string|null>
+     */
+    private function defaultSiteSettings(): array
+    {
+        return [
+            'name' => 'KoAkademy',
+            'description' => 'KoAkademy Administrative System',
+            'logo' => '',
+            'favicon' => '',
+            'og_image' => '',
+            'app_name' => 'KoAkademy',
+            'app_short_name' => 'KOA',
+            'organization_name' => 'KoAkademy',
+            'organization_short_name' => 'KOA',
+            'organization_address' => '',
+            'support_email' => '',
+            'support_phone' => '',
+            'tagline' => 'Your Campus, Your Connection',
+            'copyright_text' => '',
+            'theme_color' => '#0f172a',
+            'currency' => 'PHP',
+            'auth_layout' => 'split',
+            'portal_name' => 'KoAkademy',
+            'portal_description' => 'KoAkademy portal - manage your classes, students, and schedules',
+            'portal_og_image' => '',
+        ];
     }
 }
