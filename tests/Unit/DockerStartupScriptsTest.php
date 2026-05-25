@@ -97,3 +97,10 @@ test('scout indexing script stays portable and configurable', function (): void 
     expect($script)->toContain('SCOUT_INDEX_MODELS');
     expect($script)->toContain('class_uses_recursive');
 });
+
+test('site settings defines a safe default for auth layout', function (): void {
+    $settingsClass = file_get_contents(base_path('app/Settings/SiteSettings.php'));
+
+    expect($settingsClass)->toContain("private const string DEFAULT_AUTH_LAYOUT = 'split';");
+    expect($settingsClass)->toContain('public ?string $auth_layout = self::DEFAULT_AUTH_LAYOUT;');
+});

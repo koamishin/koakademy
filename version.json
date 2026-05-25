@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.4",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.4",
-  "commit": "3237136d1d562c2d212ff9c860bde2eee1d7d23c",
+  "version": "1.5.0-dev.0.5",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.5",
+  "commit": "8a1ebb2c37d14d5e3ec376ec27307621c88be3a0",
   "branch": "master",
-  "timestamp": "2026-05-18T00:56:07Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26007778685",
-  "release_type": "chore",
+  "timestamp": "2026-05-26T00:44:42Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26425665476",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.4 - chore: add missing use statements for Log and Feature in EnrollmentRegistrationController",
-    "previous": "1.5.0-dev.0.3"
+    "current": "Version 1.5.0-dev.0.5 - Merge pull request #83 from yukazakiri/t3code/41ada7ad",
+    "previous": "1.5.0-dev.0.4"
   },
   "metadata": {
     "author": "yukazakiri",
