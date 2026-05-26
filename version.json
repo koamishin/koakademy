@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.7",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.7",
-  "commit": "92e2259a989e03a6342fd39d9913217b3405ae1e",
+  "version": "1.5.0-dev.0.8",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.8",
+  "commit": "d72bd756e1c629180f0b0690212b00e1ac1e206a",
   "branch": "master",
-  "timestamp": "2026-05-26T04:57:31Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26433009827",
+  "timestamp": "2026-05-26T07:04:44Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26437401963",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.7 - redesigned create modal in class",
-    "previous": "1.5.0-dev.0.6"
+    "current": "Version 1.5.0-dev.0.8 - Fix student create and edit relation syncing",
+    "previous": "1.5.0-dev.0.7"
   },
   "metadata": {
     "author": "yukazakiri",
