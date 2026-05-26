@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.5",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.5",
-  "commit": "8a1ebb2c37d14d5e3ec376ec27307621c88be3a0",
+  "version": "1.5.0-dev.0.6",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.6",
+  "commit": "675421078ef1f80a3331f2f4b89487d4425eafed",
   "branch": "master",
-  "timestamp": "2026-05-26T00:44:42Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26425665476",
+  "timestamp": "2026-05-26T01:28:30Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26426949933",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.5 - Merge pull request #83 from yukazakiri/t3code/41ada7ad",
-    "previous": "1.5.0-dev.0.4"
+    "current": "Version 1.5.0-dev.0.6 - Expand enrollment pipeline workflow editor",
+    "previous": "1.5.0-dev.0.5"
   },
   "metadata": {
     "author": "yukazakiri",
