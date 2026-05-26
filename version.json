@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.6",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.6",
-  "commit": "675421078ef1f80a3331f2f4b89487d4425eafed",
+  "version": "1.5.0-dev.0.7",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.7",
+  "commit": "92e2259a989e03a6342fd39d9913217b3405ae1e",
   "branch": "master",
-  "timestamp": "2026-05-26T01:28:30Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26426949933",
+  "timestamp": "2026-05-26T04:57:31Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26433009827",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.6 - Expand enrollment pipeline workflow editor",
-    "previous": "1.5.0-dev.0.5"
+    "current": "Version 1.5.0-dev.0.7 - redesigned create modal in class",
+    "previous": "1.5.0-dev.0.6"
   },
   "metadata": {
     "author": "yukazakiri",
