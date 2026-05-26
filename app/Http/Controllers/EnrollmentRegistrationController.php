@@ -210,6 +210,7 @@ final class EnrollmentRegistrationController extends Controller
             $studentContactId = null;
             $studentContactAttributes = $this->onlyExistingColumns('student_contacts', [
                 'personal_contact' => $payload['contacts']['personal_contact'] ?? null,
+                'facebook_contact' => $payload['contacts']['facebook'] ?? null,
                 'facebook' => $payload['contacts']['facebook'] ?? null,
                 'twitter' => $payload['contacts']['twitter'] ?? null,
                 'instagram' => $payload['contacts']['instagram'] ?? null,
@@ -225,11 +226,13 @@ final class EnrollmentRegistrationController extends Controller
 
             $studentParentInfoId = null;
             $studentParentInfoAttributes = $this->onlyExistingColumns('student_parents_info', [
-                'father_name' => $payload['parents']['father_name'] ?? null,
+                'father_name' => $payload['parents']['father_name'] ?? ($payload['parents']['fathers_name'] ?? null),
+                'fathers_name' => $payload['parents']['father_name'] ?? ($payload['parents']['fathers_name'] ?? null),
                 'father_occupation' => $payload['parents']['father_occupation'] ?? null,
                 'father_contact' => $payload['parents']['father_contact'] ?? null,
                 'father_email' => $payload['parents']['father_email'] ?? null,
-                'mother_name' => $payload['parents']['mother_name'] ?? null,
+                'mother_name' => $payload['parents']['mother_name'] ?? ($payload['parents']['mothers_name'] ?? null),
+                'mothers_name' => $payload['parents']['mother_name'] ?? ($payload['parents']['mothers_name'] ?? null),
                 'mother_occupation' => $payload['parents']['mother_occupation'] ?? null,
                 'mother_contact' => $payload['parents']['mother_contact'] ?? null,
                 'mother_email' => $payload['parents']['mother_email'] ?? null,
@@ -247,10 +250,15 @@ final class EnrollmentRegistrationController extends Controller
             $studentEducationInfoId = null;
             $studentEducationInfoAttributes = $this->onlyExistingColumns('student_education_info', [
                 'elementary_school' => $payload['education']['elementary_school'] ?? null,
+                'elementary_graduate_year' => $payload['education']['elementary_year_graduated'] ?? ($payload['education']['elementary_graduate_year'] ?? null),
                 'elementary_year_graduated' => $payload['education']['elementary_year_graduated'] ?? null,
+                'junior_high_school_name' => $payload['education']['high_school'] ?? ($payload['education']['junior_high_school_name'] ?? null),
                 'high_school' => $payload['education']['high_school'] ?? null,
+                'junior_high_graduation_year' => $payload['education']['high_school_year_graduated'] ?? ($payload['education']['junior_high_graduation_year'] ?? null),
                 'high_school_year_graduated' => $payload['education']['high_school_year_graduated'] ?? null,
+                'senior_high_name' => $payload['education']['senior_high_school'] ?? ($payload['education']['senior_high_name'] ?? null),
                 'senior_high_school' => $payload['education']['senior_high_school'] ?? null,
+                'senior_high_graduate_year' => $payload['education']['senior_high_year_graduated'] ?? ($payload['education']['senior_high_graduate_year'] ?? null),
                 'senior_high_year_graduated' => $payload['education']['senior_high_year_graduated'] ?? null,
                 'college_school' => $payload['education']['college_school'] ?? null,
                 'college_course' => $payload['education']['college_course'] ?? null,

@@ -28,10 +28,18 @@ final class StudentEducationInfo extends Model
 
     protected $fillable = [
         'elementary_school',
+        'elementary_graduate_year',
+        'elementary_school_address',
         'elementary_year_graduated',
         'high_school',
+        'junior_high_school_name',
+        'junior_high_school_address',
+        'junior_high_graduation_year',
         'high_school_year_graduated',
         'senior_high_school',
+        'senior_high_name',
+        'senior_high_address',
+        'senior_high_graduate_year',
         'senior_high_year_graduated',
         'college_school',
         'college_course',

@@ -1196,23 +1196,25 @@ function StatCard({
     value,
     subtext,
     className,
+    colorClass = "bg-primary/10 text-primary",
 }: {
     icon: any;
     label: string;
     value: string | number;
     subtext?: string;
     className?: string;
+    colorClass?: string;
 }) {
     return (
-        <Card className={className}>
-            <CardContent className="flex items-start justify-between space-y-0 p-4">
-                <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground text-sm font-medium">{label}</span>
-                    <span className="text-2xl font-bold tracking-tight">{value}</span>
-                    {subtext && <span className="text-muted-foreground text-xs">{subtext}</span>}
+        <Card className={`transition-all hover:shadow-md ${className || ""}`}>
+            <CardContent className="flex items-center gap-4 p-6">
+                <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${colorClass}`}>
+                    <Icon className="h-7 w-7" />
                 </div>
-                <div className="bg-muted/50 rounded-lg p-2">
-                    <Icon className="text-muted-foreground h-5 w-5" />
+                <div className="flex flex-col">
+                    <span className="text-muted-foreground text-sm font-bold tracking-wide uppercase">{label}</span>
+                    <span className="text-foreground text-2xl font-extrabold tracking-tight">{value}</span>
+                    {subtext && <span className="text-muted-foreground mt-0.5 text-xs font-medium">{subtext}</span>}
                 </div>
             </CardContent>
         </Card>
@@ -1239,7 +1241,7 @@ export default function AdministratorClassShow({
                 accessorKey: "student.name",
                 header: ({ column }) => {
                     return (
-                        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
+                        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4 font-bold">
                             Student
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         </Button>
@@ -1247,12 +1249,12 @@ export default function AdministratorClassShow({
                 },
                 cell: ({ row }) => (
                     <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold">
+                        <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full text-xs font-extrabold">
                             {row.original.student?.name.charAt(0)}
                         </div>
                         <div>
-                            <div className="font-medium">{row.original.student?.name}</div>
-                            <div className="text-muted-foreground font-mono text-xs">{row.original.student?.student_id}</div>
+                            <div className="font-bold">{row.original.student?.name}</div>
+                            <div className="text-muted-foreground font-mono text-xs font-medium">{row.original.student?.student_id}</div>
                         </div>
                     </div>
                 ),
@@ -1262,8 +1264,8 @@ export default function AdministratorClassShow({
                 header: "Course & Year",
                 cell: ({ row }) => (
                     <div>
-                        <div className="text-sm">{row.original.student?.course || "N/A"}</div>
-                        <div className="text-muted-foreground text-xs">
+                        <div className="text-sm font-bold">{row.original.student?.course || "N/A"}</div>
+                        <div className="text-muted-foreground text-xs font-medium">
                             {row.original.student?.academic_year ? `Year ${row.original.student.academic_year}` : ""}
                         </div>
                     </div>
@@ -1285,14 +1287,14 @@ export default function AdministratorClassShow({
                 accessorKey: "total_average",
                 header: ({ column }) => (
                     <div className="text-right">
-                        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-mr-4">
+                        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-mr-4 font-bold">
                             Performance
                             <ArrowUpDown className="ml-2 h-4 w-4" />
                         </Button>
                     </div>
                 ),
                 cell: ({ row }) => (
-                    <div className="pr-6 text-right font-mono font-medium">
+                    <div className="pr-6 text-right font-mono font-bold">
                         {row.original.total_average ? row.original.total_average.toFixed(2) : "—"}
                     </div>
                 ),
@@ -1308,13 +1310,14 @@ export default function AdministratorClassShow({
                                     <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" className="rounded-xl">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuItem
                                     onClick={() => {
                                         setStudentToMove(row.original);
                                         setMoveStudentDialogOpen(true);
                                     }}
+                                    className="cursor-pointer"
                                 >
                                     <ArrowRightLeft className="mr-2 h-4 w-4" />
                                     Move to Section
@@ -1411,13 +1414,12 @@ export default function AdministratorClassShow({
         <AdminLayout user={user} title="Class Details">
             <Head title={`Class • ${classItem.record_title}`} />
             <TooltipProvider>
-                <div className="mx-auto max-w-7xl space-y-6">
+                <div className="mx-auto w-full max-w-7xl space-y-6 md:space-y-8">
                     {/* Hero Section */}
                     <div
-                        className="bg-card relative overflow-hidden rounded-2xl border shadow-sm transition-all"
+                        className="bg-card relative overflow-hidden rounded-xl border shadow-sm transition-all"
                         style={{
                             backgroundColor: classItem.settings?.banner_image_url ? undefined : hexToRgba(accentColor, 0.05) || undefined,
-                            borderColor: hexToRgba(accentColor, 0.2) || undefined,
                         }}
                     >
                         {/* Background Banner Image or Gradient */}
@@ -1432,79 +1434,65 @@ export default function AdministratorClassShow({
                             />
                         ) : (
                             <div
-                                className="absolute inset-0 z-0 bg-gradient-to-tr from-transparent opacity-10"
+                                className="absolute inset-0 z-0 bg-gradient-to-tr from-transparent opacity-20"
                                 style={{
                                     backgroundImage: `linear-gradient(to top right, transparent, ${accentColor})`,
                                 }}
                             />
                         )}
 
-                        <div className="relative z-10 flex flex-col gap-6 p-6 sm:p-8 md:flex-row md:items-end md:justify-between">
-                            <div className="space-y-4">
-                                <div className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-muted-foreground hover:text-foreground h-6 px-0 hover:bg-transparent"
-                                        asChild
-                                    >
-                                        <Link href={route("administrators.classes.index")}>
-                                            <ChevronLeft className="mr-1 h-3 w-3" />
-                                            Back to Classes
-                                        </Link>
-                                    </Button>
-                                    <span className="opacity-50">/</span>
-                                    <span>{classItem.school_year}</span>
-                                    <span className="opacity-50">/</span>
-                                    <span className="uppercase">{classItem.semester}</span>
-                                </div>
-
-                                <div>
-                                    <h1 className="text-foreground text-3xl font-extrabold tracking-tight sm:text-4xl">{classItem.record_title}</h1>
-                                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                                        <Badge className="bg-primary text-primary-foreground border-0 px-2 py-0.5 text-xs font-semibold shadow-sm">
-                                            {classItem.subject_code}
-                                        </Badge>
-                                        <Badge
-                                            variant="secondary"
-                                            className="border-border bg-background/50 px-2 py-0.5 text-xs font-medium shadow-sm backdrop-blur-sm"
+                        <div className="relative z-10 p-8 sm:p-10">
+                            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+                                <div className="space-y-4">
+                                    <div className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-muted-foreground hover:text-foreground h-6 px-0 hover:bg-transparent"
+                                            asChild
                                         >
-                                            SECTION {classItem.section}
-                                        </Badge>
-                                        <Badge variant="outline" className="bg-background/50 px-2 py-0.5 text-xs font-medium backdrop-blur-sm">
-                                            {classItem.classification?.toUpperCase() ?? "N/A"}
-                                        </Badge>
+                                            <Link href={route("administrators.classes.index")}>
+                                                <ChevronLeft className="mr-1 h-3 w-3" />
+                                                Back to Classes
+                                            </Link>
+                                        </Button>
+                                        <span className="opacity-50">/</span>
+                                        <span className="font-bold">{classItem.school_year}</span>
+                                        <span className="opacity-50">/</span>
+                                        <span className="font-bold uppercase">{classItem.semester}</span>
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                {/* Instructor Preview */}
-                                {classItem.faculty && (
-                                    <div className="bg-background/60 flex items-center gap-3 rounded-full border px-4 py-2 shadow-sm backdrop-blur-md sm:mr-4">
-                                        <Avatar className="border-background h-8 w-8 border-2 shadow-sm">
-                                            <AvatarImage src={classItem.faculty.avatar_url ?? undefined} />
-                                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                                {classItem.faculty.name.charAt(0)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs leading-none font-bold">{classItem.faculty.name}</span>
-                                            <span className="text-muted-foreground text-[10px] font-medium">Instructor</span>
+                                    <div>
+                                        <h1 className="text-foreground text-4xl font-black tracking-tight sm:text-5xl drop-shadow-sm">{classItem.record_title}</h1>
+                                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                                            <Badge variant="default" className="px-3 py-1 text-sm font-bold shadow-sm">
+                                                {classItem.subject_code}
+                                            </Badge>
+                                            <Badge
+                                                variant="secondary"
+                                                className="px-3 py-1 text-sm font-bold shadow-sm"
+                                            >
+                                                SEC {classItem.section}
+                                            </Badge>
+                                            <Badge variant="outline" className="px-3 py-1 text-sm font-bold">
+                                                {classItem.classification?.toUpperCase() ?? "N/A"}
+                                            </Badge>
                                         </div>
                                     </div>
-                                )}
+                                </div>
 
-                                <div className="flex w-full items-center gap-2 sm:w-auto">
-                                    <Button onClick={() => setScheduleDialogOpen(true)} className="flex-1 shadow-sm sm:flex-none">
-                                        <Settings2 className="mr-2 h-4 w-4" />
-                                        Manage Schedule
-                                    </Button>
-                                    <Button size="icon" asChild variant="secondary" className="shrink-0 shadow-sm" title="Open in Filament">
-                                        <a href={classItem.filament?.view_url ?? "#"} target="_blank" rel="noreferrer">
-                                            <ArrowUpRight className="h-4 w-4" />
-                                        </a>
-                                    </Button>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                    <div className="flex w-full items-center gap-2 sm:w-auto">
+                                        <Button size="lg" onClick={() => setScheduleDialogOpen(true)} className="flex-1 shadow-sm sm:flex-none font-bold">
+                                            <CalendarIcon className="mr-2 h-5 w-5" />
+                                            Manage Schedule
+                                        </Button>
+                                        <Button size="icon" asChild variant="secondary" className="h-11 w-11 shrink-0 shadow-sm" title="Open in Filament">
+                                            <a href={classItem.filament?.view_url ?? "#"} target="_blank" rel="noreferrer">
+                                                <ArrowUpRight className="h-5 w-5" />
+                                            </a>
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1528,602 +1516,492 @@ export default function AdministratorClassShow({
                     />
 
                     {/* Main Content Area */}
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:gap-8">
-                        {/* Left Column (Main Details) */}
-                        <div className="space-y-6 lg:col-span-2">
-                            <Tabs defaultValue="overview" className="w-full">
-                                <TabsList className="mb-6 h-12 w-full justify-start gap-6 rounded-none border-b bg-transparent p-0">
-                                    <TabsTrigger
-                                        value="overview"
-                                        className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                                    >
-                                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                                        Overview
-                                    </TabsTrigger>
-                                    <TabsTrigger
-                                        value="details"
-                                        className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                                    >
-                                        <ListTodo className="mr-2 h-4 w-4" />
-                                        Details & Settings
-                                    </TabsTrigger>
-                                    <TabsTrigger
-                                        value="schedule"
-                                        className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        Visual Schedule
-                                    </TabsTrigger>
-                                    <TabsTrigger
-                                        value="enrollments"
-                                        className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                                    >
-                                        <Users className="mr-2 h-4 w-4" />
-                                        Enrollments
-                                        <Badge
-                                            variant="secondary"
-                                            className="bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20 ml-2"
-                                        >
-                                            {enrollments.total}
-                                        </Badge>
-                                    </TabsTrigger>
-                                </TabsList>
+                    <Tabs defaultValue="overview" className="w-full">
+                        <TabsList className="mb-8 flex h-auto w-full flex-wrap justify-start gap-2 p-1 sm:flex-nowrap sm:overflow-x-auto bg-muted">
+                            <TabsTrigger
+                                value="overview"
+                                className="px-6 py-2 text-sm font-bold transition-all"
+                            >
+                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                Overview
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="schedule"
+                                className="px-6 py-2 text-sm font-bold transition-all"
+                            >
+                                <Clock className="mr-2 h-4 w-4" />
+                                Schedule
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="enrollments"
+                                className="px-6 py-2 text-sm font-bold transition-all"
+                            >
+                                <Users className="mr-2 h-4 w-4" />
+                                Students
+                                <Badge
+                                    variant="secondary"
+                                    className="ml-2 px-1.5 py-0.5 text-xs font-bold"
+                                >
+                                    {enrollments.total}
+                                </Badge>
+                            </TabsTrigger>
+                        </TabsList>
 
-                                {/* OVERVIEW TAB */}
-                                <TabsContent value="overview" className="m-0 space-y-6">
-                                    {/* Stats Overview */}
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                        <StatCard
-                                            icon={Users}
-                                            label="Total Enrollment"
-                                            value={`${classItem.students_count}/${classItem.maximum_slots || "∞"}`}
-                                            subtext={
-                                                enrollmentStatusTone === "success"
-                                                    ? "Within capacity"
-                                                    : enrollmentStatusTone === "warning"
-                                                      ? "Nearing capacity"
-                                                      : "Over capacity"
-                                            }
-                                            className={enrollmentStatusTone === "destructive" ? "border-destructive/50 bg-destructive/5" : ""}
-                                        />
-                                        <StatCard
-                                            icon={CalendarIcon}
-                                            label="Weekly Sessions"
-                                            value={meetingsCount}
-                                            subtext={meetingsCount > 0 ? "Active schedule" : "No schedule set"}
-                                        />
-                                        <StatCard
-                                            icon={MapPin}
-                                            label="Primary Room"
-                                            value={uniqueRoomNames[0] || "—"}
-                                            subtext={uniqueRoomNames.length > 1 ? `+${uniqueRoomNames.length - 1} other rooms` : "Assigned location"}
-                                        />
-                                        <StatCard
-                                            icon={GraduationCap}
-                                            label="Instructor"
-                                            value={classItem.faculty?.name.split(" ").slice(-1)[0] || "Unassigned"}
-                                            subtext="Faculty Head"
-                                        />
-                                    </div>
+                        {/* OVERVIEW TAB */}
+                        <TabsContent value="overview" className="m-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {/* Stats Overview */}
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <StatCard
+                                    icon={Users}
+                                    label="Total Enrollment"
+                                    value={`${classItem.students_count}/${classItem.maximum_slots || "∞"}`}
+                                    subtext={
+                                        enrollmentStatusTone === "success"
+                                            ? "Within capacity"
+                                            : enrollmentStatusTone === "warning"
+                                              ? "Nearing capacity"
+                                              : "Over capacity"
+                                    }
+                                    colorClass={
+                                        enrollmentStatusTone === "destructive" ? "bg-destructive/15 text-destructive" :
+                                        enrollmentStatusTone === "warning" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+                                        "bg-primary/10 text-primary"
+                                    }
+                                    className={enrollmentStatusTone === "destructive" ? "border-destructive/50" : ""}
+                                />
+                                <StatCard
+                                    icon={CalendarIcon}
+                                    label="Weekly Sessions"
+                                    value={meetingsCount}
+                                    subtext={meetingsCount > 0 ? "Active schedule" : "No schedule set"}
+                                />
+                                <StatCard
+                                    icon={MapPin}
+                                    label="Primary Room"
+                                    value={uniqueRoomNames[0] || "—"}
+                                    subtext={uniqueRoomNames.length > 1 ? `+${uniqueRoomNames.length - 1} other rooms` : "Assigned location"}
+                                />
+                                <StatCard
+                                    icon={GraduationCap}
+                                    label="Fill Rate"
+                                    value={classItem.maximum_slots ? `${Math.round((classItem.students_count / classItem.maximum_slots) * 100)}%` : "N/A"}
+                                    subtext="Of maximum capacity"
+                                />
+                            </div>
 
-                                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                                        {/* Left Content: Features */}
-                                        <div className="space-y-6 lg:col-span-2">
-                                            <Card className="border-border/60 shadow-sm">
-                                                <CardHeader className="bg-muted/10 border-b px-6 py-4">
-                                                    <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                                                        <Layers className="text-primary h-4 w-4" />
-                                                        Active Capabilities
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="flex flex-wrap gap-2 p-6">
-                                                    {featureBadges.map((feature) => (
-                                                        <Badge
-                                                            key={feature.key}
-                                                            variant={feature.enabled ? "default" : "secondary"}
-                                                            className={
-                                                                feature.enabled
-                                                                    ? "bg-primary/10 text-primary hover:bg-primary/20 border-0"
-                                                                    : "opacity-50"
-                                                            }
-                                                        >
-                                                            {feature.enabled && <CheckCircle2 className="mr-1 h-3 w-3" />}
-                                                            {feature.label}
+                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                                {/* Instructor Card */}
+                                <Card className="flex flex-col justify-between shadow-sm transition-all hover:shadow-md">
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                            <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                                <GraduationCap className="h-5 w-5" />
+                                            </span>
+                                            Course Instructor
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="pt-4 pb-8 flex flex-col items-center text-center">
+                                        {classItem.faculty ? (
+                                            <>
+                                                <div className="relative mb-4">
+                                                    <div className="absolute -inset-1 rounded-full bg-primary/20 blur-md"></div>
+                                                    <Avatar className="relative h-24 w-24 border-4 border-background shadow-sm">
+                                                        <AvatarImage src={classItem.faculty.avatar_url ?? undefined} />
+                                                        <AvatarFallback className="text-3xl font-black bg-primary/10 text-primary">{classItem.faculty.name.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                </div>
+                                                <h3 className="text-2xl font-extrabold tracking-tight">{classItem.faculty.name}</h3>
+                                                <p className="text-muted-foreground text-sm font-bold mt-2 break-all bg-muted/50 px-3 py-1 rounded-full">{classItem.faculty.email}</p>
+                                                
+                                                <div className="mt-8 flex w-full justify-around bg-muted/30 p-4 rounded-xl shadow-sm border border-border/50">
+                                                    <div className="text-center">
+                                                        <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase mb-1">Role</div>
+                                                        <div className="text-sm font-extrabold text-foreground">Faculty</div>
+                                                    </div>
+                                                    <div className="w-px bg-border"></div>
+                                                    <div className="text-center">
+                                                        <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase mb-1">Status</div>
+                                                        <div className="text-xs font-black text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400 px-2 py-0.5 rounded-md uppercase tracking-wide">Active</div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex h-full flex-col items-center justify-center py-8">
+                                                <div className="bg-muted p-4 rounded-full mb-4">
+                                                    <Users className="h-10 w-10 text-muted-foreground opacity-50" />
+                                                </div>
+                                                <p className="font-extrabold text-lg">No instructor assigned</p>
+                                                <p className="text-muted-foreground text-sm mt-1 font-medium">Update this class in the admin panel to assign someone.</p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Features and Tags */}
+                                <div className="lg:col-span-2 space-y-6">
+                                    <Card className="shadow-sm overflow-hidden h-full flex flex-col transition-all hover:shadow-md">
+                                        <CardHeader className="bg-muted/10 border-b px-8 py-6">
+                                            <CardTitle className="flex items-center gap-3 text-lg font-bold">
+                                                <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                                    <FileText className="h-5 w-5" />
+                                                </span>
+                                                Class Configuration & Tags
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-8 flex-1 flex flex-col gap-8">
+                                            
+                                            {/* Subjects & Courses */}
+                                            <div>
+                                                <h4 className="text-xs font-extrabold text-muted-foreground tracking-widest uppercase mb-4">Subjects & Associated Courses</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {classItem.subjects?.length ? (
+                                                        classItem.subjects.map((s) => (
+                                                            <Badge key={s} variant="outline" className="font-bold px-3 py-1.5 text-sm">
+                                                                {s}
+                                                            </Badge>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-muted-foreground text-sm font-bold bg-muted/50 px-4 py-2 rounded-xl">No subjects listed</span>
+                                                    )}
+                                                    {splitBadges(classItem.associated_courses).map((c) => (
+                                                        <Badge key={c} variant="secondary" className="font-bold px-3 py-1.5 text-sm">
+                                                            {c}
                                                         </Badge>
                                                     ))}
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-
-                                        {/* Right Content: Quick Info */}
-                                        <div className="space-y-6">
-                                            <Card className="border-border/60 shadow-sm">
-                                                <CardHeader className="bg-muted/10 border-b pb-4">
-                                                    <CardTitle className="mt-2 text-center text-base font-semibold">Class Subjects & Tags</CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="pt-6">
-                                                    <div className="flex flex-wrap justify-center gap-1">
-                                                        {classItem.subjects?.length ? (
-                                                            classItem.subjects.map((s) => (
-                                                                <Badge key={s} variant="outline" className="bg-background font-normal">
-                                                                    {s}
-                                                                </Badge>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-muted-foreground text-sm">—</span>
-                                                        )}
-                                                        {splitBadges(classItem.associated_courses).map((c) => (
-                                                            <Badge key={c} variant="secondary" className="bg-muted font-normal">
-                                                                {c}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </div>
-                                    </div>
-                                </TabsContent>
-                                {/* DETAILS TAB */}
-                                <TabsContent value="details" className="m-0 space-y-6">
-                                    <Card className="border-border/60 shadow-sm">
-                                        <CardHeader className="bg-muted/10 border-b pb-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-1">
-                                                    <CardTitle className="mt-2 flex items-center gap-2 text-center text-base font-semibold">
-                                                        <Palette className="text-primary h-4 w-4" />
-                                                        Theme & Branding
-                                                    </CardTitle>
-                                                    <CardDescription>Customize how this class appears to students</CardDescription>
                                                 </div>
                                             </div>
-                                        </CardHeader>
-                                        <CardContent className="space-y-6 pt-6"></CardContent>
+
+                                            <Separator className="bg-border/50" />
+
+                                            {/* Capabilities */}
+                                            <div>
+                                                <h4 className="text-xs font-extrabold text-muted-foreground tracking-widest uppercase mb-4">Active Capabilities</h4>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                    {featureBadges.map((feature) => (
+                                                        <div 
+                                                            key={feature.key} 
+                                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                                                                feature.enabled 
+                                                                ? "bg-primary/5 border-primary/20 text-primary shadow-sm" 
+                                                                : "bg-muted/20 border-dashed text-muted-foreground opacity-70"
+                                                            }`}
+                                                        >
+                                                            {feature.enabled ? <CheckCircle2 className="h-5 w-5 text-primary shrink-0" /> : <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />}
+                                                            <span className="text-sm font-bold leading-tight">{feature.label}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                        </CardContent>
                                     </Card>
-                                </TabsContent>
+                                </div>
+                            </div>
+                        </TabsContent>
 
-                                {/* SCHEDULE TAB */}
-                                <TabsContent value="schedule" className="m-0 space-y-6">
-                                    {/* Schedule Card */}
-                                    <Card className="border-border/60 overflow-hidden shadow-sm">
-                                        <CardHeader className="bg-muted/20 border-b px-6 py-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="space-y-1">
-                                                    <CardTitle className="flex items-center gap-2 text-lg">
-                                                        <Clock className="text-primary h-5 w-5" />
-                                                        Class Schedule
-                                                    </CardTitle>
-                                                    <CardDescription>Weekly timetable overview</CardDescription>
-                                                </div>
-                                                <Tabs defaultValue="matrix" className="w-auto">
-                                                    <TabsList className="h-8">
-                                                        <TabsTrigger value="matrix" className="h-7 text-xs">
-                                                            Timetable
-                                                        </TabsTrigger>
-                                                        <TabsTrigger value="list" className="h-7 text-xs">
-                                                            List View
-                                                        </TabsTrigger>
-                                                    </TabsList>
-                                                </Tabs>
+                        {/* SCHEDULE TAB */}
+                        <TabsContent value="schedule" className="m-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <Tabs defaultValue="matrix" className="w-full">
+                                <Card className="shadow-sm overflow-hidden transition-all hover:shadow-md">
+                                    <CardHeader className="bg-muted/10 border-b px-8 py-5">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="space-y-1">
+                                                <CardTitle className="flex items-center gap-3 text-lg font-bold">
+                                                    <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                                        <Clock className="h-5 w-5" />
+                                                    </span>
+                                                    {classItem.record_title} Timetable
+                                                </CardTitle>
+                                                <CardDescription className="font-medium ml-11">Visual overview of the weekly schedule</CardDescription>
                                             </div>
-                                        </CardHeader>
-                                        <CardContent className="p-0">
-                                            <Tabs defaultValue="matrix" className="w-full">
-                                                <div className="bg-muted/40 flex items-center justify-between border-b px-6 py-3">
-                                                    <div className="text-muted-foreground text-sm font-medium">View Mode</div>
-                                                    <TabsList className="h-8">
-                                                        <TabsTrigger value="matrix" className="h-7 text-xs">
-                                                            Timetable
-                                                        </TabsTrigger>
-                                                        <TabsTrigger value="list" className="h-7 text-xs">
-                                                            List
-                                                        </TabsTrigger>
-                                                    </TabsList>
-                                                </div>
-
-                                                <TabsContent value="matrix" className="m-0 p-0">
-                                                    {scheduleEntriesExist && timetableWindow ? (
-                                                        <ScrollArea className="w-full whitespace-nowrap">
-                                                            <div className="bg-background min-w-[800px] p-4">
-                                                                {/* Header Row */}
-                                                                <div className="grid grid-cols-[60px_1fr] border-b">
-                                                                    <div className="text-muted-foreground border-r p-2 text-xs font-medium">Time</div>
-                                                                    <div className="grid grid-cols-7">
-                                                                        {timetableBlocksByDay.map((day) => (
-                                                                            <div key={day.key} className="border-r p-2 text-center last:border-r-0">
-                                                                                <div className="text-xs font-bold uppercase">{day.shortLabel}</div>
-                                                                            </div>
-                                                                        ))}
+                                            
+                                            <TabsList className="h-11 p-1 rounded-xl bg-background shadow-sm border">
+                                                <TabsTrigger value="matrix" className="h-9 rounded-lg text-sm font-bold px-6">
+                                                    Grid View
+                                                </TabsTrigger>
+                                                <TabsTrigger value="list" className="h-9 rounded-lg text-sm font-bold px-6">
+                                                    List View
+                                                </TabsTrigger>
+                                            </TabsList>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        <TabsContent value="matrix" className="m-0 p-0 animate-in fade-in">
+                                            {scheduleEntriesExist && timetableWindow ? (
+                                                <ScrollArea className="w-full whitespace-nowrap">
+                                                    <div className="bg-background min-w-[800px] p-6">
+                                                        {/* Header Row */}
+                                                        <div className="grid grid-cols-[70px_1fr] border-b-2">
+                                                            <div className="text-muted-foreground border-r p-3 text-xs font-extrabold tracking-wider uppercase">Time</div>
+                                                            <div className="grid grid-cols-7">
+                                                                {timetableBlocksByDay.map((day) => (
+                                                                    <div key={day.key} className="border-r p-3 text-center last:border-r-0">
+                                                                        <div className="text-sm font-extrabold uppercase">{day.shortLabel}</div>
                                                                     </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Body */}
+                                                        <div className="relative grid grid-cols-[70px_1fr]">
+                                                            {/* Time Labels Column */}
+                                                            <div className="bg-muted/5 relative border-r" style={{ height: timetableHeight }}>
+                                                                {timetableHours.map((minutes) => {
+                                                                    const top =
+                                                                        ((minutes - timetableWindow.startMinutes) /
+                                                                            timetableWindow.slotMinutes) *
+                                                                        timetableWindow.slotHeight;
+                                                                    return (
+                                                                        <div
+                                                                            key={minutes}
+                                                                            className="text-muted-foreground absolute w-full -translate-y-1/2 pr-3 text-right text-xs font-bold"
+                                                                            style={{ top }}
+                                                                        >
+                                                                            {formatTimeLabel(minutes)}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            {/* Days Columns */}
+                                                            <div
+                                                                className="bg-background relative grid grid-cols-7"
+                                                                style={{ height: timetableHeight }}
+                                                            >
+                                                                {/* Horizontal Guide Lines */}
+                                                                <div className="pointer-events-none absolute inset-0 z-0">
+                                                                    {timetableHours.map((minutes) => {
+                                                                        const top =
+                                                                            ((minutes - timetableWindow.startMinutes) /
+                                                                                timetableWindow.slotMinutes) *
+                                                                            timetableWindow.slotHeight;
+                                                                        return (
+                                                                            <div
+                                                                                key={minutes}
+                                                                                className="border-border/60 absolute w-full border-t border-dashed"
+                                                                                style={{ top }}
+                                                                            />
+                                                                        );
+                                                                    })}
                                                                 </div>
 
-                                                                {/* Body */}
-                                                                <div className="relative grid grid-cols-[60px_1fr]">
-                                                                    {/* Time Labels Column */}
-                                                                    <div className="bg-muted/5 relative border-r" style={{ height: timetableHeight }}>
-                                                                        {timetableHours.map((minutes) => {
+                                                                {timetableBlocksByDay.map((day, idx) => (
+                                                                    <div
+                                                                        key={day.key}
+                                                                        className={`relative border-r last:border-r-0 ${idx % 2 === 0 ? "bg-background" : "bg-muted/5"}`}
+                                                                    >
+                                                                        {day.blocks.map((block) => {
                                                                             const top =
-                                                                                ((minutes - timetableWindow.startMinutes) /
+                                                                                ((block.startMinutes - timetableWindow.startMinutes) /
                                                                                     timetableWindow.slotMinutes) *
                                                                                 timetableWindow.slotHeight;
+                                                                            const height =
+                                                                                ((block.endMinutes - block.startMinutes) /
+                                                                                    timetableWindow.slotMinutes) *
+                                                                                timetableWindow.slotHeight;
+                                                                            const width = `${100 / block.laneCount}%`;
+                                                                            const left = `${(block.lane / block.laneCount) * 100}%`;
+
                                                                             return (
-                                                                                <div
-                                                                                    key={minutes}
-                                                                                    className="text-muted-foreground absolute w-full -translate-y-1/2 pr-2 text-right text-[10px]"
-                                                                                    style={{ top }}
-                                                                                >
-                                                                                    {formatTimeLabel(minutes)}
-                                                                                </div>
+                                                                                <Tooltip key={block.id}>
+                                                                                    <TooltipTrigger asChild>
+                                                                                        <div
+                                                                                            className={`absolute z-10 p-0.5 transition-all hover:z-20 hover:scale-[1.03]`}
+                                                                                            style={{
+                                                                                                top,
+                                                                                                height,
+                                                                                                left,
+                                                                                                width,
+                                                                                            }}
+                                                                                        >
+                                                                                            <div
+                                                                                                className={`flex h-full w-full flex-col overflow-hidden rounded-xl border-2 px-2 py-1.5 text-xs shadow-md ${block.hasConflict ? "bg-destructive/10 border-destructive text-destructive" : ""}`}
+                                                                                                style={
+                                                                                                    !block.hasConflict
+                                                                                                        ? {
+                                                                                                              backgroundColor: timetableEventFill,
+                                                                                                              borderColor: timetableEventBorder,
+                                                                                                              color: timetableEventText,
+                                                                                                          }
+                                                                                                        : {}
+                                                                                                }
+                                                                                            >
+                                                                                                <span className="truncate font-extrabold">
+                                                                                                    {block.timeRange}
+                                                                                                </span>
+                                                                                                <span className="truncate font-medium opacity-90">
+                                                                                                    {block.roomName}
+                                                                                                </span>
+                                                                                                {block.hasConflict && (
+                                                                                                    <AlertCircle className="mt-auto h-4 w-4" />
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </TooltipTrigger>
+                                                                                    <TooltipContent className="rounded-xl p-3 shadow-xl">
+                                                                                        <div className="text-sm">
+                                                                                            <div className="font-extrabold text-base mb-1">{day.label}</div>
+                                                                                            <div className="font-medium"><Clock className="inline mr-1 h-3 w-3" /> {block.timeRange}</div>
+                                                                                            <div className="font-medium mt-1"><MapPin className="inline mr-1 h-3 w-3" /> {block.roomName}</div>
+                                                                                            {block.hasConflict && (
+                                                                                                <div className="text-destructive mt-2 font-bold bg-destructive/10 p-1.5 rounded-lg flex items-center gap-1">
+                                                                                                    <AlertCircle className="h-4 w-4" /> Conflict Detected
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </TooltipContent>
+                                                                                </Tooltip>
                                                                             );
                                                                         })}
                                                                     </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <ScrollBar orientation="horizontal" />
+                                                </ScrollArea>
+                                            ) : (
+                                                <div className="text-muted-foreground flex h-64 flex-col items-center justify-center text-sm">
+                                                    <div className="bg-muted p-4 rounded-full mb-4">
+                                                        <CalendarIcon className="h-10 w-10 opacity-50" />
+                                                    </div>
+                                                    <p className="font-bold text-lg text-foreground">No schedule configured</p>
+                                                    <p className="mt-1">Click 'Manage Schedule' to add class sessions.</p>
+                                                </div>
+                                            )}
+                                        </TabsContent>
 
-                                                                    {/* Days Columns */}
-                                                                    <div
-                                                                        className="bg-background relative grid grid-cols-7"
-                                                                        style={{ height: timetableHeight }}
-                                                                    >
-                                                                        {/* Horizontal Guide Lines */}
-                                                                        <div className="pointer-events-none absolute inset-0 z-0">
-                                                                            {timetableHours.map((minutes) => {
-                                                                                const top =
-                                                                                    ((minutes - timetableWindow.startMinutes) /
-                                                                                        timetableWindow.slotMinutes) *
-                                                                                    timetableWindow.slotHeight;
-                                                                                return (
-                                                                                    <div
-                                                                                        key={minutes}
-                                                                                        className="border-border/40 absolute w-full border-t border-dashed"
-                                                                                        style={{ top }}
-                                                                                    />
-                                                                                );
-                                                                            })}
-                                                                        </div>
-
-                                                                        {timetableBlocksByDay.map((day, idx) => (
-                                                                            <div
-                                                                                key={day.key}
-                                                                                className={`relative border-r last:border-r-0 ${idx % 2 === 0 ? "bg-background" : "bg-muted/5"}`}
-                                                                            >
-                                                                                {day.blocks.map((block) => {
-                                                                                    const top =
-                                                                                        ((block.startMinutes - timetableWindow.startMinutes) /
-                                                                                            timetableWindow.slotMinutes) *
-                                                                                        timetableWindow.slotHeight;
-                                                                                    const height =
-                                                                                        ((block.endMinutes - block.startMinutes) /
-                                                                                            timetableWindow.slotMinutes) *
-                                                                                        timetableWindow.slotHeight;
-                                                                                    const width = `${100 / block.laneCount}%`;
-                                                                                    const left = `${(block.lane / block.laneCount) * 100}%`;
-
-                                                                                    return (
-                                                                                        <Tooltip key={block.id}>
-                                                                                            <TooltipTrigger asChild>
-                                                                                                <div
-                                                                                                    className={`absolute z-10 p-0.5 transition-all hover:z-20 hover:scale-[1.02]`}
-                                                                                                    style={{
-                                                                                                        top,
-                                                                                                        height,
-                                                                                                        left,
-                                                                                                        width,
-                                                                                                    }}
-                                                                                                >
-                                                                                                    <div
-                                                                                                        className={`flex h-full w-full flex-col overflow-hidden rounded border px-1.5 py-1 text-[10px] shadow-sm ${block.hasConflict ? "bg-destructive/10 border-destructive text-destructive" : ""}`}
-                                                                                                        style={
-                                                                                                            !block.hasConflict
-                                                                                                                ? {
-                                                                                                                      backgroundColor:
-                                                                                                                          timetableEventFill,
-                                                                                                                      borderColor:
-                                                                                                                          timetableEventBorder,
-                                                                                                                      color: timetableEventText,
-                                                                                                                  }
-                                                                                                                : {}
-                                                                                                        }
-                                                                                                    >
-                                                                                                        <span className="truncate font-semibold">
-                                                                                                            {block.timeRange}
-                                                                                                        </span>
-                                                                                                        <span className="truncate opacity-80">
-                                                                                                            {block.roomName}
-                                                                                                        </span>
-                                                                                                        {block.hasConflict && (
-                                                                                                            <AlertCircle className="mt-auto h-3 w-3" />
-                                                                                                        )}
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </TooltipTrigger>
-                                                                                            <TooltipContent>
-                                                                                                <div className="text-xs">
-                                                                                                    <div className="font-bold">{day.label}</div>
-                                                                                                    <div>{block.timeRange}</div>
-                                                                                                    <div>{block.roomName}</div>
-                                                                                                    {block.hasConflict && (
-                                                                                                        <div className="text-destructive mt-1 font-bold">
-                                                                                                            Conflict Detected
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            </TooltipContent>
-                                                                                        </Tooltip>
-                                                                                    );
-                                                                                })}
+                                        <TabsContent value="list" className="m-0 p-0 animate-in fade-in">
+                                            <div className="divide-y divide-border/50">
+                                                {scheduleEntriesByDay.filter((d) => d.entries.length > 0).length === 0 ? (
+                                                    <div className="text-muted-foreground flex h-64 flex-col items-center justify-center text-sm">
+                                                        <div className="bg-muted p-4 rounded-full mb-4">
+                                                            <ListTodo className="h-10 w-10 opacity-50" />
+                                                        </div>
+                                                        <p className="font-bold text-lg text-foreground">No schedule configured</p>
+                                                    </div>
+                                                ) : (
+                                                    scheduleEntriesByDay.map((day) => {
+                                                        if (day.entries.length === 0) return null;
+                                                        return (
+                                                            <div
+                                                                key={day.key}
+                                                                className="hover:bg-muted/10 transition-colors flex flex-col gap-4 p-6 sm:flex-row sm:items-center"
+                                                            >
+                                                                <div className="w-32 flex-shrink-0">
+                                                                    <span className="text-base font-extrabold uppercase tracking-wide">{day.label}</span>
+                                                                </div>
+                                                                <div className="flex-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                                    {day.entries.map((entry, i) => (
+                                                                        <div
+                                                                            key={i}
+                                                                            className="bg-background flex flex-col gap-2 rounded-2xl border p-4 text-sm shadow-sm"
+                                                                        >
+                                                                            <div className="flex items-center gap-2 font-bold text-primary">
+                                                                                <Clock className="h-4 w-4" />
+                                                                                <span>{entry.time_range}</span>
                                                                             </div>
-                                                                        ))}
-                                                                    </div>
+                                                                            <div className="flex items-center gap-2 font-semibold text-muted-foreground">
+                                                                                <MapPin className="h-4 w-4" />
+                                                                                <span>{entry.room.name}</span>
+                                                                            </div>
+                                                                            {entry.has_conflict && (
+                                                                                <Badge variant="destructive" className="mt-2 self-start rounded-lg px-2 py-0.5">
+                                                                                    Conflict
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
                                                             </div>
-                                                            <ScrollBar orientation="horizontal" />
-                                                        </ScrollArea>
-                                                    ) : (
-                                                        <div className="text-muted-foreground flex h-48 flex-col items-center justify-center text-sm">
-                                                            <CalendarIcon className="mb-2 h-10 w-10 opacity-20" />
-                                                            <p>No schedule configured for this class.</p>
-                                                        </div>
-                                                    )}
-                                                </TabsContent>
-
-                                                <TabsContent value="list" className="m-0 p-0">
-                                                    <div className="divide-y">
-                                                        {scheduleEntriesByDay.filter((d) => d.entries.length > 0).length === 0 ? (
-                                                            <div className="text-muted-foreground p-8 text-center text-sm">
-                                                                No schedule entries found.
-                                                            </div>
-                                                        ) : (
-                                                            scheduleEntriesByDay.map((day) => {
-                                                                if (day.entries.length === 0) return null;
-                                                                return (
-                                                                    <div
-                                                                        key={day.key}
-                                                                        className="hover:bg-muted/5 flex flex-col gap-4 p-4 sm:flex-row sm:items-start"
-                                                                    >
-                                                                        <div className="w-24 flex-shrink-0 pt-1">
-                                                                            <span className="text-sm font-semibold">{day.label}</span>
-                                                                        </div>
-                                                                        <div className="flex-1 space-y-2">
-                                                                            {day.entries.map((entry, i) => (
-                                                                                <div
-                                                                                    key={i}
-                                                                                    className="bg-background flex items-center gap-3 rounded-md border p-2 text-sm"
-                                                                                >
-                                                                                    <div className="flex min-w-[140px] items-center gap-2">
-                                                                                        <Clock className="text-muted-foreground h-3.5 w-3.5" />
-                                                                                        <span className="font-mono text-xs">{entry.time_range}</span>
-                                                                                    </div>
-                                                                                    <div className="flex flex-1 items-center gap-2">
-                                                                                        <MapPin className="text-muted-foreground h-3.5 w-3.5" />
-                                                                                        <span>{entry.room.name}</span>
-                                                                                    </div>
-                                                                                    {entry.has_conflict && (
-                                                                                        <Badge variant="destructive" className="h-5 text-[10px]">
-                                                                                            Conflict
-                                                                                        </Badge>
-                                                                                    )}
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                );
-                                                            })
-                                                        )}
-                                                    </div>
-                                                </TabsContent>
-                                            </Tabs>
-                                        </CardContent>
-                                    </Card>
-                                </TabsContent>
-
-                                {/* ENROLLMENTS TAB */}
-                                <TabsContent value="enrollments" className="m-0 space-y-6">
-                                    {/* Students Table */}
-                                    <Card className="border-border/60 shadow-sm">
-                                        <CardHeader className="bg-muted/10 flex flex-row items-center justify-between border-b px-6 py-4">
-                                            <div className="space-y-1">
-                                                <CardTitle className="flex items-center gap-2 text-lg">
-                                                    <Users className="text-primary h-5 w-5" />
-                                                    Active Enrollments
-                                                </CardTitle>
-                                                <CardDescription>{enrollments.total} student records found</CardDescription>
+                                                        );
+                                                    })
+                                                )}
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="bg-background h-8 gap-2 shadow-sm"
-                                                    onClick={() =>
-                                                        window.open(
-                                                            route("administrators.classes.export-student-list", {
-                                                                class: classItem.id,
-                                                                format: "excel",
-                                                            }),
-                                                            "_blank",
-                                                        )
-                                                    }
-                                                >
-                                                    <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-                                                    <span className="hidden sm:inline">Export Excel</span>
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="bg-background h-8 gap-2 shadow-sm"
-                                                    onClick={() =>
-                                                        window.open(
-                                                            route("administrators.classes.export-student-list", {
-                                                                class: classItem.id,
-                                                                format: "pdf",
-                                                            }),
-                                                            "_blank",
-                                                        )
-                                                    }
-                                                >
-                                                    <FileText className="h-3.5 w-3.5 text-red-500" />
-                                                    <span className="hidden sm:inline">Export PDF</span>
-                                                </Button>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="border-b p-0">
-                                            <DataTable columns={columns} data={enrollments.data} />
-                                        </CardContent>
-                                        {enrollments.total > enrollments.data.length && (
-                                            <div className="bg-muted/5 flex justify-center p-4">
-                                                <div className="flex gap-2">
-                                                    {enrollments.prev_page_url && (
-                                                        <Button variant="outline" size="sm" asChild>
-                                                            <Link href={enrollments.prev_page_url} preserveState>
-                                                                Previous
-                                                            </Link>
-                                                        </Button>
-                                                    )}
-                                                    {enrollments.next_page_url && (
-                                                        <Button variant="outline" size="sm" asChild>
-                                                            <Link href={enrollments.next_page_url} preserveState>
-                                                                Next
-                                                            </Link>
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </Card>
-                                </TabsContent>
+                                        </TabsContent>
+                                    </CardContent>
+                                </Card>
                             </Tabs>
-                        </div>
+                        </TabsContent>
 
-                        {/* Right Column (Sidebar) */}
-                        <div className="space-y-6">
-                            {/* Faculty Card */}
-                            <Card className="border-border/60 shadow-sm">
-                                <CardHeader className="bg-muted/20 border-b pb-4">
-                                    <CardTitle className="text-base font-semibold">Instructor</CardTitle>
+                        {/* ENROLLMENTS TAB */}
+                        <TabsContent value="enrollments" className="m-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <Card className="shadow-sm overflow-hidden transition-all hover:shadow-md">
+                                <CardHeader className="bg-muted/10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b px-8 py-6">
+                                    <div className="space-y-1">
+                                        <CardTitle className="flex items-center gap-3 text-lg font-bold">
+                                            <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                                <Users className="h-5 w-5" />
+                                            </span>
+                                            {classItem.record_title} Students
+                                        </CardTitle>
+                                        <CardDescription className="font-medium ml-11">
+                                            {classItem.students_count} enrolled / {classItem.maximum_slots || "∞"} capacity
+                                        </CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-10 gap-2 shadow-sm font-bold"
+                                            onClick={() =>
+                                                window.open(
+                                                    route("administrators.classes.export-student-list", {
+                                                        class: classItem.id,
+                                                        format: "excel",
+                                                    }),
+                                                    "_blank",
+                                                )
+                                            }
+                                        >
+                                            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                                            <span className="hidden sm:inline">Export Excel</span>
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-10 gap-2 shadow-sm font-bold"
+                                            onClick={() =>
+                                                window.open(
+                                                    route("administrators.classes.export-student-list", {
+                                                        class: classItem.id,
+                                                        format: "pdf",
+                                                    }),
+                                                    "_blank",
+                                                )
+                                            }
+                                        >
+                                            <FileText className="h-4 w-4 text-destructive" />
+                                            <span className="hidden sm:inline">Export PDF</span>
+                                        </Button>
+                                    </div>
                                 </CardHeader>
-                                <CardContent className="pt-6">
-                                    {classItem.faculty ? (
-                                        <div className="text-center">
-                                            <Avatar className="border-muted mx-auto h-20 w-20 border-4">
-                                                <AvatarImage src={classItem.faculty.avatar_url ?? undefined} />
-                                                <AvatarFallback className="text-xl">{classItem.faculty.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="mt-4">
-                                                <h3 className="text-lg font-bold">{classItem.faculty.name}</h3>
-                                                <p className="text-muted-foreground text-sm break-all">{classItem.faculty.email}</p>
-                                            </div>
-                                            <div className="mt-6 grid grid-cols-2 gap-2 text-center">
-                                                <div className="bg-muted/30 rounded p-2">
-                                                    <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Dept</div>
-                                                    <div className="mt-0.5 text-sm font-medium">Faculty</div>
-                                                </div>
-                                                <div className="bg-muted/30 rounded p-2">
-                                                    <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Status</div>
-                                                    <div className="mt-0.5 text-sm font-medium text-emerald-600">Active</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="text-muted-foreground py-6 text-center">
-                                            <Users className="mx-auto mb-2 h-10 w-10 opacity-20" />
-                                            <p>No instructor assigned</p>
-                                        </div>
-                                    )}
+                                <CardContent className="border-b p-0 [&_.p-4]:px-8">
+                                    <DataTable columns={columns} data={enrollments.data} />
                                 </CardContent>
-                            </Card>
-
-                            {/* Class Details */}
-                            <Card className="border-border/60 shadow-sm">
-                                <CardHeader className="bg-muted/20 border-b pb-4">
-                                    <CardTitle className="text-base font-semibold">Class Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0">
-                                    <Table>
-                                        <TableBody>
-                                            <TableRow className="hover:bg-transparent">
-                                                <TableCell className="text-muted-foreground text-xs font-medium uppercase">Subjects</TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex flex-wrap justify-end gap-1">
-                                                        {classItem.subjects?.length ? (
-                                                            classItem.subjects.map((s) => (
-                                                                <Badge key={s} variant="outline" className="font-normal">
-                                                                    {s}
-                                                                </Badge>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-muted-foreground">—</span>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow className="hover:bg-transparent">
-                                                <TableCell className="text-muted-foreground text-xs font-medium uppercase">Courses</TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex flex-wrap justify-end gap-1">
-                                                        {splitBadges(classItem.associated_courses).map((c) => (
-                                                            <Badge key={c} variant="secondary" className="font-normal">
-                                                                {c}
-                                                            </Badge>
-                                                        ))}
-                                                        {!classItem.associated_courses && <span className="text-muted-foreground">—</span>}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                            <TableRow className="hover:bg-transparent">
-                                                <TableCell className="text-muted-foreground text-xs font-medium uppercase">Created</TableCell>
-                                                <TableCell className="text-right text-sm">Automatic</TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-
-                            {/* Settings / Features */}
-                            <Card className="border-border/60 shadow-sm">
-                                <CardHeader className="bg-muted/20 border-b pb-4">
-                                    <CardTitle className="text-base font-semibold">Configuration</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4 p-4">
-                                    <div className="space-y-2">
-                                        <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">Features</span>
-                                        <div className="flex flex-col gap-2">
-                                            {featureBadges.map((feature) => (
-                                                <div key={feature.key} className="flex items-center justify-between text-sm">
-                                                    <span className="text-foreground/80">{feature.label}</span>
-                                                    {feature.enabled ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                                    ) : (
-                                                        <div className="border-muted-foreground/30 h-4 w-4 rounded-full border" />
-                                                    )}
-                                                </div>
-                                            ))}
+                                {enrollments.total > enrollments.data.length && (
+                                    <div className="bg-muted/5 flex justify-center p-6">
+                                        <div className="flex gap-2">
+                                            {enrollments.prev_page_url && (
+                                                <Button variant="outline" size="sm" asChild className="font-bold">
+                                                    <Link href={enrollments.prev_page_url} preserveState>
+                                                        Previous
+                                                    </Link>
+                                                </Button>
+                                            )}
+                                            {enrollments.next_page_url && (
+                                                <Button variant="outline" size="sm" asChild className="font-bold">
+                                                    <Link href={enrollments.next_page_url} preserveState>
+                                                        Next
+                                                    </Link>
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
-
-                                    <Separator />
-
-                                    <div className="space-y-2">
-                                        <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">Appearance</span>
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span>Theme</span>
-                                            <Badge variant="outline">{classItem.settings?.theme || "Default"}</Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span>Accent</span>
-                                            <div className="flex items-center gap-2">
-                                                <div
-                                                    className="h-3 w-3 rounded-full"
-                                                    style={{
-                                                        backgroundColor: classItem.settings?.accent_color ?? "transparent",
-                                                    }}
-                                                />
-                                                <span className="text-muted-foreground font-mono text-xs">
-                                                    {classItem.settings?.accent_color ?? "N/A"}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
+                                )}
                             </Card>
-                        </div>
-                    </div>
+                        </TabsContent>
+                    </Tabs>
                 </div>
             </TooltipProvider>
         </AdminLayout>

@@ -182,9 +182,9 @@ final class ProfileController extends Controller
                     'code' => $student->Course->code,
                     'title' => $student->Course->title,
                 ] : null,
-                'contacts' => $student->studentContactsInfo,
-                'education' => $student->studentEducationInfo,
-                'parents' => $student->studentParentInfo,
+                'contacts' => $this->studentProfileContacts($student),
+                'education' => $this->studentProfileEducation($student),
+                'parents' => $this->studentProfileParents($student),
             ] : null,
             'endpoints' => $this->getEndpoints($request),
         ]);
@@ -543,37 +543,7 @@ final class ProfileController extends Controller
 
         $emailChanged = $student->wasChanged('email');
 
-        // Update Contacts
-        if (isset($validated['contacts'])) {
-            if ($student->studentContactsInfo) {
-                $student->studentContactsInfo->update($validated['contacts']);
-            } else {
-                $contact = \App\Models\StudentContact::create($validated['contacts']);
-                $student->student_contact_id = $contact->id;
-            }
-        }
-
-        // Update Education
-        if (isset($validated['education'])) {
-            if ($student->studentEducationInfo) {
-                $student->studentEducationInfo->update($validated['education']);
-            } else {
-                $education = \App\Models\StudentEducationInfo::create($validated['education']);
-                $student->student_education_id = $education->id;
-            }
-        }
-
-        // Update Parents
-        if (isset($validated['parents'])) {
-            if ($student->studentParentInfo) {
-                $student->studentParentInfo->update($validated['parents']);
-            } else {
-                $parent = \App\Models\StudentParentsInfo::create($validated['parents']);
-                $student->student_parent_info = $parent->id;
-            }
-        }
-
-        $student->save();
+        $this->syncStudentProfileRelations($student, $validated);
 
         // If email changed, also update user record
         if ($emailChanged) {
@@ -779,6 +749,230 @@ final class ProfileController extends Controller
 
         // Fallback
         return redirect('/dashboard');
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function studentProfileContacts(Student $student): ?array
+    {
+        $contacts = $student->studentContactsInfo;
+
+        if (! $contacts) {
+            return null;
+        }
+
+        return [
+            'emergency_contact_name' => $contacts->emergency_contact_name,
+            'emergency_contact_phone' => $contacts->emergency_contact_phone,
+            'emergency_contact_relationship' => $contacts->emergency_contact_relationship,
+            'facebook' => $contacts->facebook ?? $contacts->facebook_contact,
+            'personal_contact' => $contacts->personal_contact,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function studentProfileEducation(Student $student): ?array
+    {
+        $education = $student->studentEducationInfo;
+
+        if (! $education) {
+            return null;
+        }
+
+        return [
+            'elementary_school' => $education->elementary_school,
+            'elementary_year_graduated' => $education->elementary_year_graduated ?? $education->elementary_graduate_year,
+            'high_school' => $education->high_school ?? $education->junior_high_school_name,
+            'high_school_year_graduated' => $education->high_school_year_graduated ?? $education->junior_high_graduation_year,
+            'senior_high_school' => $education->senior_high_school ?? $education->senior_high_name,
+            'senior_high_year_graduated' => $education->senior_high_year_graduated ?? $education->senior_high_graduate_year,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function studentProfileParents(Student $student): ?array
+    {
+        $parents = $student->studentParentInfo;
+
+        if (! $parents) {
+            return null;
+        }
+
+        return [
+            'father_name' => $parents->father_name ?? $parents->fathers_name,
+            'mother_name' => $parents->mother_name ?? $parents->mothers_name,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function syncStudentProfileRelations(Student $student, array $validated): void
+    {
+        $studentContactId = $this->upsertProfileRelatedRecord(
+            'student_contacts',
+            $student->student_contact_id,
+            $this->studentContactAttributes($student, $validated),
+        );
+
+        if ($studentContactId !== null) {
+            $student->student_contact_id = $studentContactId;
+        }
+
+        $studentEducationInfoId = $this->upsertProfileRelatedRecord(
+            'student_education_info',
+            $student->student_education_id,
+            $this->studentEducationAttributes($validated),
+        );
+
+        if ($studentEducationInfoId !== null) {
+            $student->student_education_id = $studentEducationInfoId;
+        }
+
+        $studentParentInfoId = $this->upsertProfileRelatedRecord(
+            'student_parents_info',
+            $student->student_parent_info,
+            $this->studentParentAttributes($validated),
+        );
+
+        if ($studentParentInfoId !== null) {
+            $student->student_parent_info = $studentParentInfoId;
+        }
+
+        if ($student->isDirty(['student_contact_id', 'student_education_id', 'student_parent_info'])) {
+            $student->save();
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function upsertProfileRelatedRecord(string $table, ?int $id, array $attributes): ?int
+    {
+        $attributes = $this->existingColumnAttributes($table, $attributes);
+
+        if ($id !== null) {
+            if ($attributes !== []) {
+                if (Schema::hasColumn($table, 'updated_at')) {
+                    $attributes['updated_at'] = now();
+                }
+
+                DB::table($table)->where('id', $id)->update($attributes);
+            }
+
+            return $id;
+        }
+
+        $attributes = $this->withoutBlankValues($attributes);
+
+        if ($attributes === []) {
+            return null;
+        }
+
+        if (Schema::hasColumn($table, 'created_at')) {
+            $attributes['created_at'] = now();
+        }
+
+        if (Schema::hasColumn($table, 'updated_at')) {
+            $attributes['updated_at'] = now();
+        }
+
+        return (int) DB::table($table)->insertGetId($attributes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function existingColumnAttributes(string $table, array $attributes): array
+    {
+        $filtered = [];
+
+        foreach ($attributes as $key => $value) {
+            if (! Schema::hasColumn($table, (string) $key)) {
+                continue;
+            }
+
+            $filtered[(string) $key] = $value;
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function withoutBlankValues(array $attributes): array
+    {
+        return array_filter(
+            $attributes,
+            static fn (mixed $value): bool => $value !== null && $value !== ''
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentContactAttributes(Student $student, array $validated): array
+    {
+        $contactData = $validated['contacts'] ?? [];
+
+        return [
+            'student_id' => $student->id,
+            'personal_contact' => $contactData['personal_contact'] ?? null,
+            'facebook_contact' => $contactData['facebook'] ?? null,
+            'facebook' => $contactData['facebook'] ?? null,
+            'emergency_contact_name' => $contactData['emergency_contact_name'] ?? null,
+            'emergency_contact_phone' => $contactData['emergency_contact_phone'] ?? null,
+            'emergency_contact_address' => $validated['emergency_contact'] ?? null,
+            'emergency_contact_relationship' => $contactData['emergency_contact_relationship'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentEducationAttributes(array $validated): array
+    {
+        $educationData = $validated['education'] ?? [];
+
+        return [
+            'elementary_school' => $educationData['elementary_school'] ?? null,
+            'elementary_graduate_year' => $educationData['elementary_year_graduated'] ?? null,
+            'elementary_year_graduated' => $educationData['elementary_year_graduated'] ?? null,
+            'high_school' => $educationData['high_school'] ?? null,
+            'junior_high_school_name' => $educationData['high_school'] ?? null,
+            'high_school_year_graduated' => $educationData['high_school_year_graduated'] ?? null,
+            'junior_high_graduation_year' => $educationData['high_school_year_graduated'] ?? null,
+            'senior_high_school' => $educationData['senior_high_school'] ?? null,
+            'senior_high_name' => $educationData['senior_high_school'] ?? null,
+            'senior_high_year_graduated' => $educationData['senior_high_year_graduated'] ?? null,
+            'senior_high_graduate_year' => $educationData['senior_high_year_graduated'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentParentAttributes(array $validated): array
+    {
+        $parentData = $validated['parents'] ?? [];
+
+        return [
+            'father_name' => $parentData['father_name'] ?? null,
+            'fathers_name' => $parentData['father_name'] ?? null,
+            'mother_name' => $parentData['mother_name'] ?? null,
+            'mothers_name' => $parentData['mother_name'] ?? null,
+        ];
     }
 
     /**

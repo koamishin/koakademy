@@ -36,9 +36,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -785,13 +787,18 @@ final class AdministratorStudentManagementController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'student_type' => ['required', 'string'],
-            'first_name' => ['required', 'string', 'max:50'],
-            'last_name' => ['required', 'string', 'max:50'],
-            'middle_name' => ['nullable', 'string', 'max:20'],
+            'student_type' => ['required', Rule::enum(StudentType::class)],
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
+            'middle_name' => ['nullable', 'string', 'max:100'],
+            'suffix' => ['nullable', 'string', 'max:20'],
             'gender' => ['required', 'string', 'in:male,female'],
             'birth_date' => ['required', 'date', 'before:today'],
             'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'civil_status' => ['nullable', 'string', 'max:50'],
+            'nationality' => ['nullable', 'string', 'max:50'],
+            'religion' => ['nullable', 'string', 'max:50'],
             'course_id' => [
                 Rule::requiredIf(fn (): bool => $request->student_type !== StudentType::SeniorHighSchool->value),
                 'nullable',
@@ -817,91 +824,104 @@ final class AdministratorStudentManagementController extends Controller
                 'max:20',
                 'unique:students,lrn',
             ],
+            'status' => ['required', Rule::enum(StudentStatus::class)],
             'remarks' => ['nullable', 'string'],
 
-            // Additional info
             'personal_contact' => ['nullable', 'string', 'max:20'],
             'emergency_contact_name' => ['nullable', 'string', 'max:100'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
+            'emergency_contact_address' => ['nullable', 'string', 'max:500'],
             'fathers_name' => ['nullable', 'string', 'max:100'],
             'mothers_name' => ['nullable', 'string', 'max:100'],
+            'elementary_school' => ['nullable', 'string', 'max:255'],
+            'elementary_graduate_year' => ['nullable', 'string', 'max:4'],
+            'elementary_school_address' => ['nullable', 'string', 'max:500'],
+            'junior_high_school_name' => ['nullable', 'string', 'max:255'],
+            'junior_high_graduation_year' => ['nullable', 'string', 'max:4'],
+            'junior_high_school_address' => ['nullable', 'string', 'max:500'],
+            'senior_high_name' => ['nullable', 'string', 'max:255'],
+            'senior_high_graduate_year' => ['nullable', 'string', 'max:4'],
+            'senior_high_address' => ['nullable', 'string', 'max:500'],
             'current_address' => ['nullable', 'string', 'max:500'],
             'permanent_address' => ['nullable', 'string', 'max:500'],
+            'birthplace' => ['nullable', 'string', 'max:255'],
+            'ethnicity' => ['nullable', 'string', 'max:100'],
+            'city_of_origin' => ['nullable', 'string', 'max:100'],
+            'province_of_origin' => ['nullable', 'string', 'max:100'],
+            'region_of_origin' => ['nullable', 'string', 'max:50'],
+            'is_indigenous_person' => ['nullable', 'boolean'],
+            'indigenous_group' => ['nullable', 'string', 'max:100'],
+            'withdrawal_date' => ['nullable', 'date'],
+            'withdrawal_reason' => ['nullable', 'string'],
+            'attrition_category' => ['nullable', Rule::enum(AttritionCategory::class)],
+            'dropout_date' => ['nullable', 'date'],
+            'scholarship_type' => ['nullable', Rule::enum(ScholarshipType::class)],
+            'scholarship_details' => ['nullable', 'string'],
+            'employment_status' => ['nullable', Rule::enum(EmploymentStatus::class)],
+            'employer_name' => ['nullable', 'string', 'max:255'],
+            'job_position' => ['nullable', 'string', 'max:255'],
+            'employment_date' => ['nullable', 'date'],
+            'employed_by_institution' => ['nullable', 'boolean'],
         ]);
 
         DB::transaction(function () use ($validated): void {
-            // Create main student record
-            $student = new Student();
-            $student->student_type = $validated['student_type'];
-            $student->first_name = $validated['first_name'];
-            $student->last_name = $validated['last_name'];
-            $student->middle_name = $validated['middle_name'];
-            $student->gender = $validated['gender'];
-            $student->birth_date = $validated['birth_date'];
-            $student->email = $validated['email'];
-            $student->academic_year = $validated['academic_year'];
-            $student->remarks = $validated['remarks'];
-            $student->status = StudentStatus::Enrolled; // Default status
+            $studentType = StudentType::from($validated['student_type']);
+            $status = StudentStatus::from($validated['status']);
+            $birthDate = Carbon::parse($validated['birth_date']);
 
-            // Handle Type Specifics
-            if ($validated['student_type'] === StudentType::SeniorHighSchool->value) {
+            $student = new Student();
+            $student->fill([
+                'student_type' => $studentType->value,
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'suffix' => $validated['suffix'] ?? null,
+                'gender' => $validated['gender'],
+                'birth_date' => $birthDate->toDateString(),
+                'age' => $birthDate->age,
+                'email' => $validated['email'] ?? null,
+                'phone' => $validated['phone'] ?? null,
+                'civil_status' => $validated['civil_status'] ?? null,
+                'nationality' => $validated['nationality'] ?? null,
+                'religion' => $validated['religion'] ?? null,
+                'address' => ($validated['current_address'] ?? null) ?: ($validated['permanent_address'] ?? null),
+                'emergency_contact' => $validated['emergency_contact_name'] ?? null,
+                'academic_year' => $validated['academic_year'],
+                'remarks' => $validated['remarks'] ?? null,
+                'status' => $status->value,
+                'ethnicity' => $validated['ethnicity'] ?? null,
+                'city_of_origin' => $validated['city_of_origin'] ?? null,
+                'province_of_origin' => $validated['province_of_origin'] ?? null,
+                'region_of_origin' => $validated['region_of_origin'] ?? null,
+                'is_indigenous_person' => $validated['is_indigenous_person'] ?? false,
+                'indigenous_group' => $validated['indigenous_group'] ?? null,
+                'withdrawal_date' => $validated['withdrawal_date'] ?? null,
+                'withdrawal_reason' => $validated['withdrawal_reason'] ?? null,
+                'attrition_category' => $validated['attrition_category'] ?? null,
+                'dropout_date' => $validated['dropout_date'] ?? null,
+                'scholarship_type' => $validated['scholarship_type'] ?? ScholarshipType::None->value,
+                'scholarship_details' => $validated['scholarship_details'] ?? null,
+                'employment_status' => $validated['employment_status'] ?? EmploymentStatus::NotApplicable->value,
+                'employer_name' => $validated['employer_name'] ?? null,
+                'job_position' => $validated['job_position'] ?? null,
+                'employment_date' => $validated['employment_date'] ?? null,
+                'employed_by_institution' => $validated['employed_by_institution'] ?? false,
+                'contacts' => $this->studentContactsPayload($validated),
+            ]);
+
+            if ($studentType === StudentType::SeniorHighSchool) {
                 $student->lrn = $validated['lrn'];
-                $student->student_id = $validated['lrn']; // For SHS, LRN is used as ID
+                $student->student_id = $validated['lrn'];
                 $student->shs_strand_id = $validated['shs_strand_id'];
             } else {
                 $student->student_id = $validated['student_id'];
                 $student->course_id = $validated['course_id'];
             }
 
-            // Calculate Age
-            $student->age = \Carbon\Carbon::parse($validated['birth_date'])->age;
-
             $student->save();
 
-            $generalSettingsService = app(GeneralSettingsService::class);
-            StudentStatusRecord::updateOrCreate(
-                [
-                    'student_id' => $student->id,
-                    'academic_year' => $generalSettingsService->getCurrentSchoolYearString(),
-                    'semester' => $generalSettingsService->getCurrentSemester(),
-                ],
-                [
-                    'status' => $student->status,
-                ]
-            );
-
-            $generalSettingsService = app(GeneralSettingsService::class);
-            StudentStatusRecord::updateOrCreate(
-                [
-                    'student_id' => $student->id,
-                    'academic_year' => $generalSettingsService->getCurrentSchoolYearString(),
-                    'semester' => $generalSettingsService->getCurrentSemester(),
-                ],
-                [
-                    'status' => $student->status,
-                ]
-            );
-
-            // Create Relations
-            $student->studentContactsInfo()->create([
-                'personal_contact' => $validated['personal_contact'],
-                'emergency_contact_name' => $validated['emergency_contact_name'],
-                'emergency_contact_phone' => $validated['emergency_contact_phone'],
-            ]);
-
-            $student->studentParentInfo()->create([
-                'fathers_name' => $validated['fathers_name'],
-                'mothers_name' => $validated['mothers_name'],
-            ]);
-
-            $student->personalInfo()->create([
-                'current_adress' => $validated['current_address'],
-                'permanent_address' => $validated['permanent_address'],
-            ]);
-
-            // Note: Other relations like Education, DocumentLocation created empty or on demand by model events if needed,
-            // or we could explicitly create them here if the form had fields for them.
-            // Based on the form I built, these are the fields we have.
+            $this->syncStudentRelations($student, $validated);
+            $this->syncCurrentStudentStatus($student, $status);
         });
 
         return redirect()->route('administrators.students.index')
@@ -971,9 +991,11 @@ final class AdministratorStudentManagementController extends Controller
             'first_name' => ['required', 'string', 'max:50'],
             'last_name' => ['required', 'string', 'max:50'],
             'middle_name' => ['nullable', 'string', 'max:20'],
+            'suffix' => ['nullable', 'string', 'max:20'],
             'gender' => ['required', 'string', 'in:male,female'],
             'birth_date' => ['required', 'date', 'before:today'],
             'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
             'course_id' => [
                 Rule::requiredIf(fn (): bool => $request->student_type !== StudentType::SeniorHighSchool->value),
                 'nullable',
@@ -1027,6 +1049,7 @@ final class AdministratorStudentManagementController extends Controller
             'permanent_address' => ['nullable', 'string', 'max:500'],
             'birthplace' => ['nullable', 'string', 'max:255'],
             'civil_status' => ['nullable', 'string', 'max:50'],
+            'nationality' => ['nullable', 'string', 'max:50'],
             'citizenship' => ['nullable', 'string', 'max:50'],
             'religion' => ['nullable', 'string', 'max:50'],
             'weight' => ['nullable', 'numeric'],
@@ -1039,14 +1062,14 @@ final class AdministratorStudentManagementController extends Controller
             'region_of_origin' => ['nullable', 'string', 'max:50'],
             'is_indigenous_person' => ['nullable', 'boolean'],
             'indigenous_group' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', 'string'],
+            'status' => ['nullable', Rule::enum(StudentStatus::class)],
             'withdrawal_date' => ['nullable', 'date'],
             'withdrawal_reason' => ['nullable', 'string'],
-            'attrition_category' => ['nullable', 'string'],
+            'attrition_category' => ['nullable', Rule::enum(AttritionCategory::class)],
             'dropout_date' => ['nullable', 'date'],
-            'scholarship_type' => ['nullable', 'string'],
+            'scholarship_type' => ['nullable', Rule::enum(ScholarshipType::class)],
             'scholarship_details' => ['nullable', 'string'],
-            'employment_status' => ['nullable', 'string'],
+            'employment_status' => ['nullable', Rule::enum(EmploymentStatus::class)],
             'employer_name' => ['nullable', 'string', 'max:255'],
             'job_position' => ['nullable', 'string', 'max:255'],
             'employment_date' => ['nullable', 'date'],
@@ -1059,11 +1082,19 @@ final class AdministratorStudentManagementController extends Controller
             $student->first_name = $validated['first_name'];
             $student->last_name = $validated['last_name'];
             $student->middle_name = $validated['middle_name'];
+            $student->suffix = $validated['suffix'] ?? null;
             $student->gender = $validated['gender'];
             $student->birth_date = $validated['birth_date'];
             $student->email = $validated['email'];
+            $student->phone = $validated['phone'] ?? null;
+            $student->civil_status = $validated['civil_status'] ?? null;
+            $student->nationality = $validated['nationality'] ?? ($validated['citizenship'] ?? null);
+            $student->religion = $validated['religion'] ?? null;
+            $student->address = ($validated['current_address'] ?? null) ?: ($validated['permanent_address'] ?? null);
+            $student->emergency_contact = $validated['emergency_contact_name'] ?? null;
             $student->academic_year = $validated['academic_year'];
             $student->remarks = $validated['remarks'];
+            $student->contacts = $this->studentContactsPayload($validated);
 
             // Statistical Data
             $student->ethnicity = $validated['ethnicity'] ?? null;
@@ -1099,77 +1130,14 @@ final class AdministratorStudentManagementController extends Controller
             }
 
             // Calculate Age
-            $student->age = \Carbon\Carbon::parse($validated['birth_date'])->age;
+            $student->age = Carbon::parse($validated['birth_date'])->age;
 
             $student->save();
 
-            $contactData = [
-                'personal_contact' => $validated['personal_contact'],
-                'emergency_contact_name' => $validated['emergency_contact_name'],
-                'emergency_contact_phone' => $validated['emergency_contact_phone'],
-                'emergency_contact_address' => $validated['emergency_contact_address'] ?? null,
-            ];
+            $this->syncStudentRelations($student, $validated);
 
-            if ($student->studentContactsInfo !== null) {
-                $student->studentContactsInfo->update($contactData);
-            } else {
-                $studentContact = \App\Models\StudentContact::query()->create($contactData);
-                $student->student_contact_id = $studentContact->id;
-            }
-
-            $parentData = [
-                'father_name' => $validated['fathers_name'],
-                'mother_name' => $validated['mothers_name'],
-            ];
-
-            if ($student->studentParentInfo !== null) {
-                $student->studentParentInfo->update($parentData);
-            } else {
-                $studentParentInfo = \App\Models\StudentParentsInfo::query()->create($parentData);
-                $student->student_parent_info = $studentParentInfo->id;
-            }
-
-            $educationData = [
-                'elementary_school' => $validated['elementary_school'] ?? null,
-                'elementary_year_graduated' => $validated['elementary_graduate_year'] ?? null,
-                'high_school' => $validated['junior_high_school_name'] ?? null,
-                'high_school_year_graduated' => $validated['junior_high_graduation_year'] ?? null,
-                'senior_high_school' => $validated['senior_high_name'] ?? null,
-                'senior_high_year_graduated' => $validated['senior_high_graduate_year'] ?? null,
-            ];
-
-            if ($student->studentEducationInfo !== null) {
-                $student->studentEducationInfo->update($educationData);
-            } else {
-                $studentEducationInfo = \App\Models\StudentEducationInfo::query()->create($educationData);
-                $student->student_education_id = $studentEducationInfo->id;
-            }
-
-            $personalInfoData = [
-                'current_adress' => $validated['current_address'],
-                'permanent_address' => $validated['permanent_address'],
-                'birthplace' => $validated['birthplace'] ?? null,
-                'civil_status' => $validated['civil_status'] ?? null,
-                'citizenship' => $validated['citizenship'] ?? null,
-                'religion' => $validated['religion'] ?? null,
-                'weight' => $validated['weight'] ?? null,
-                'height' => $validated['height'] ?? null,
-            ];
-
-            if ($student->personalInfo !== null) {
-                $student->personalInfo->update($personalInfoData);
-            } else {
-                $studentPersonalInfo = \App\Models\StudentsPersonalInfo::query()->create($personalInfoData);
-                $student->student_personal_id = $studentPersonalInfo->id;
-            }
-
-            if ($student->isDirty([
-                'student_contact_id',
-                'student_parent_info',
-                'student_education_id',
-                'student_personal_id',
-            ])) {
-                $student->save();
+            if (isset($validated['status'])) {
+                $this->syncCurrentStudentStatus($student, StudentStatus::from($validated['status']));
             }
         });
 
@@ -1842,6 +1810,239 @@ final class AdministratorStudentManagementController extends Controller
         } catch (Exception $e) {
             return back()->with('error', 'Failed to delete student: '.$e->getMessage());
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function syncStudentRelations(Student $student, array $validated): void
+    {
+        $studentContactId = $this->upsertRelatedRecord(
+            'student_contacts',
+            $student->student_contact_id,
+            $this->studentContactAttributes($student, $validated),
+        );
+
+        if ($studentContactId !== null) {
+            $student->student_contact_id = $studentContactId;
+        }
+
+        $studentParentInfoId = $this->upsertRelatedRecord(
+            'student_parents_info',
+            $student->student_parent_info,
+            $this->studentParentInfoAttributes($validated),
+        );
+
+        if ($studentParentInfoId !== null) {
+            $student->student_parent_info = $studentParentInfoId;
+        }
+
+        $studentEducationInfoId = $this->upsertRelatedRecord(
+            'student_education_info',
+            $student->student_education_id,
+            $this->studentEducationInfoAttributes($validated),
+        );
+
+        if ($studentEducationInfoId !== null) {
+            $student->student_education_id = $studentEducationInfoId;
+        }
+
+        $studentPersonalInfoId = $this->upsertRelatedRecord(
+            'students_personal_info',
+            $student->student_personal_id,
+            $this->studentPersonalInfoAttributes($validated),
+        );
+
+        if ($studentPersonalInfoId !== null) {
+            $student->student_personal_id = $studentPersonalInfoId;
+        }
+
+        if ($student->isDirty([
+            'student_contact_id',
+            'student_parent_info',
+            'student_education_id',
+            'student_personal_id',
+        ])) {
+            $student->save();
+        }
+    }
+
+    private function syncCurrentStudentStatus(Student $student, StudentStatus $status): void
+    {
+        $generalSettingsService = app(GeneralSettingsService::class);
+
+        StudentStatusRecord::updateOrCreate(
+            [
+                'student_id' => $student->id,
+                'academic_year' => $generalSettingsService->getCurrentSchoolYearString(),
+                'semester' => $generalSettingsService->getCurrentSemester(),
+            ],
+            [
+                'status' => $status->value,
+                'school_id' => $student->school_id,
+            ]
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function upsertRelatedRecord(string $table, ?int $id, array $attributes): ?int
+    {
+        $attributes = $this->existingColumnAttributes($table, $attributes);
+
+        if ($id !== null) {
+            if ($attributes !== []) {
+                if (Schema::hasColumn($table, 'updated_at')) {
+                    $attributes['updated_at'] = now();
+                }
+
+                DB::table($table)
+                    ->where('id', $id)
+                    ->update($attributes);
+            }
+
+            return $id;
+        }
+
+        $attributes = $this->withoutBlankValues($attributes);
+
+        if ($attributes === []) {
+            return null;
+        }
+
+        if (Schema::hasColumn($table, 'created_at')) {
+            $attributes['created_at'] = now();
+        }
+
+        if (Schema::hasColumn($table, 'updated_at')) {
+            $attributes['updated_at'] = now();
+        }
+
+        return (int) DB::table($table)->insertGetId($attributes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function existingColumnAttributes(string $table, array $attributes): array
+    {
+        $filtered = [];
+
+        foreach ($attributes as $key => $value) {
+            if (! Schema::hasColumn($table, (string) $key)) {
+                continue;
+            }
+
+            $filtered[(string) $key] = $value;
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function withoutBlankValues(array $attributes): array
+    {
+        return array_filter(
+            $attributes,
+            static fn (mixed $value): bool => $value !== null && $value !== ''
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentContactsPayload(array $validated): array
+    {
+        return $this->withoutBlankValues([
+            'personal_contact' => $validated['personal_contact'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
+            'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
+            'emergency_contact_address' => $validated['emergency_contact_address'] ?? null,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentContactAttributes(Student $student, array $validated): array
+    {
+        return [
+            'student_id' => $student->id,
+            'personal_contact' => ($validated['personal_contact'] ?? null) ?: ($validated['phone'] ?? null),
+            'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
+            'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
+            'emergency_contact_address' => $validated['emergency_contact_address'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentParentInfoAttributes(array $validated): array
+    {
+        return [
+            'fathers_name' => $validated['fathers_name'] ?? null,
+            'father_name' => $validated['fathers_name'] ?? null,
+            'mothers_name' => $validated['mothers_name'] ?? null,
+            'mother_name' => $validated['mothers_name'] ?? null,
+            'guardian_name' => $validated['emergency_contact_name'] ?? null,
+            'guardian_contact' => $validated['emergency_contact_phone'] ?? null,
+            'family_address' => $validated['emergency_contact_address'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentEducationInfoAttributes(array $validated): array
+    {
+        return [
+            'elementary_school' => $validated['elementary_school'] ?? null,
+            'elementary_graduate_year' => $validated['elementary_graduate_year'] ?? null,
+            'elementary_year_graduated' => $validated['elementary_graduate_year'] ?? null,
+            'elementary_school_address' => $validated['elementary_school_address'] ?? null,
+            'junior_high_school_name' => $validated['junior_high_school_name'] ?? null,
+            'high_school' => $validated['junior_high_school_name'] ?? null,
+            'junior_high_graduation_year' => $validated['junior_high_graduation_year'] ?? null,
+            'high_school_year_graduated' => $validated['junior_high_graduation_year'] ?? null,
+            'junior_high_school_address' => $validated['junior_high_school_address'] ?? null,
+            'senior_high_name' => $validated['senior_high_name'] ?? null,
+            'senior_high_school' => $validated['senior_high_name'] ?? null,
+            'senior_high_graduate_year' => $validated['senior_high_graduate_year'] ?? null,
+            'senior_high_year_graduated' => $validated['senior_high_graduate_year'] ?? null,
+            'senior_high_address' => $validated['senior_high_address'] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function studentPersonalInfoAttributes(array $validated): array
+    {
+        $citizenship = $validated['citizenship'] ?? ($validated['nationality'] ?? null);
+
+        return [
+            'birthplace' => $validated['birthplace'] ?? null,
+            'place_of_birth' => $validated['birthplace'] ?? null,
+            'civil_status' => $validated['civil_status'] ?? null,
+            'citizenship' => $citizenship,
+            'religion' => $validated['religion'] ?? null,
+            'weight' => $validated['weight'] ?? null,
+            'height' => $validated['height'] ?? null,
+            'current_adress' => $validated['current_address'] ?? null,
+            'permanent_address' => $validated['permanent_address'] ?? null,
+        ];
     }
 
     private function getFormOptions(): array
