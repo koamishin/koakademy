@@ -4,7 +4,24 @@ declare(strict_types=1);
 
 use App\Enums\UserRole;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\ClassEnrollment;
+use App\Models\Classes;
+use App\Models\Faculty;
+use App\Models\Schedule as ClassSchedule;
 use App\Models\User;
+use App\Services\GeneralSettingsService;
+use Database\Seeders\ClassEnrollmentSeeder;
+use Database\Seeders\ClassSeeder;
+use Database\Seeders\CourseSeeder;
+use Database\Seeders\FacultySeeder;
+use Database\Seeders\RolesSeeder;
+use Database\Seeders\RoomSeeder;
+use Database\Seeders\ScheduleSeeder;
+use Database\Seeders\SchoolDepartmentSeeder;
+use Database\Seeders\StudentRelatedTablesSeeder;
+use Database\Seeders\StudentSeeder;
+use Database\Seeders\SubjectSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
@@ -96,4 +113,78 @@ it('does not register the service worker in demo environment', function (): void
         ->assertOk()
         ->assertSee('serviceWorker.getRegistrations', false)
         ->assertDontSee('src="https://portal.dccp.test/sw.js"', false);
+});
+
+it('keeps the demo faculty account aligned with faculty seed data', function (): void {
+    $this->seed([
+        SchoolDepartmentSeeder::class,
+        RolesSeeder::class,
+        UserSeeder::class,
+        FacultySeeder::class,
+    ]);
+
+    $email = (string) config('demo.accounts.faculty.email');
+
+    $user = User::query()->where('email', $email)->first();
+
+    expect($user)->not->toBeNull()
+        ->and($user?->faculty_id_number)->not->toBeNull()
+        ->and($user?->faculty_id_number)->not->toBe('');
+
+    $faculty = Faculty::query()
+        ->where('email', $email)
+        ->where('faculty_id_number', (string) $user?->faculty_id_number)
+        ->first();
+
+    expect($faculty)->not->toBeNull();
+});
+
+it('seeds three demo classes with ten enrolled students each for the demo faculty', function (): void {
+    $this->seed([
+        SchoolDepartmentSeeder::class,
+        RolesSeeder::class,
+        UserSeeder::class,
+        CourseSeeder::class,
+        RoomSeeder::class,
+        FacultySeeder::class,
+        SubjectSeeder::class,
+        StudentRelatedTablesSeeder::class,
+        StudentSeeder::class,
+        ClassSeeder::class,
+        ScheduleSeeder::class,
+        ClassEnrollmentSeeder::class,
+    ]);
+
+    $demoFaculty = Faculty::query()->where('email', 'j.adams@koakademy.edu')->first();
+
+    expect($demoFaculty)->not->toBeNull();
+
+    $demoClasses = Classes::query()
+        ->where('faculty_id', $demoFaculty?->id)
+        ->whereIn('section', ['DEMO-A', 'DEMO-B', 'DEMO-C'])
+        ->with('Subject')
+        ->orderBy('section')
+        ->get();
+
+    $settings = app(GeneralSettingsService::class);
+    $currentSchoolYear = $settings->getCurrentSchoolYearString();
+    $currentSemester = $settings->getCurrentSemester();
+
+    expect($demoClasses)->toHaveCount(3)
+        ->and($demoClasses->pluck('Subject.course_id')->unique()->count())->toBeGreaterThanOrEqual(2)
+        ->and($demoClasses->every(fn (Classes $class): bool => $class->school_year === $currentSchoolYear))->toBeTrue()
+        ->and($demoClasses->every(fn (Classes $class): bool => (int) $class->semester === $currentSemester))->toBeTrue();
+
+    foreach ($demoClasses as $demoClass) {
+        $enrollmentCount = ClassEnrollment::query()
+            ->where('class_id', $demoClass->id)
+            ->count();
+
+        $scheduleCount = ClassSchedule::query()
+            ->where('class_id', $demoClass->id)
+            ->count();
+
+        expect($enrollmentCount)->toBe(10);
+        expect($scheduleCount)->toBeGreaterThan(0);
+    }
 });

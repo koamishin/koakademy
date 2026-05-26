@@ -16,7 +16,7 @@ import { AttendanceOverview, ClassPostEntry, ClassSettings, MetricCard, Schedule
 import { User } from "@/types/user";
 import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface ScheduleOption {
@@ -83,6 +83,36 @@ export default function ClassDetail({
     const [loadingStudentInfo, setLoadingStudentInfo] = useState(false);
     const [focusedAttendanceStudentId, setFocusedAttendanceStudentId] = useState<number | null>(null);
 
+    const settings = classData.settings;
+
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const requestedTab = new URLSearchParams(window.location.search).get("tab");
+
+        if (requestedTab === null) {
+            return;
+        }
+
+        const allowedTabs = ["stream", "classwork", "attendance", "grades"];
+
+        if (settings.enable_grade_visibility) {
+            allowedTabs.push("people");
+        }
+
+        if (!allowedTabs.includes(requestedTab)) {
+            return;
+        }
+
+        if (requestedTab === "grades" && classData.classification === "shs") {
+            return;
+        }
+
+        setActiveTab(requestedTab);
+    }, [classData.classification, settings.enable_grade_visibility]);
+
     const scheduleOptions: ScheduleOption[] = schedule.map((s) => ({
         id: s.id.toString(),
         label: `${s.day} ${s.start}-${s.end}`,
@@ -132,9 +162,6 @@ export default function ClassDetail({
         setActiveTab("attendance");
         setStudentInfoOpen(false);
     };
-
-    // Derived settings
-    const settings = classData.settings;
 
     return (
         <FacultyLayout

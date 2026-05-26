@@ -105,7 +105,10 @@ final class UserSeeder extends Seeder
         $this->createUserWithRole(
             'Dr. Jennifer Adams',
             'j.adams@koakademy.edu',
-            UserRole::Professor
+            UserRole::Professor,
+            [
+                'faculty_id_number' => 'FAC-DEMO-001',
+            ]
         );
 
         $this->createUserWithRole(
@@ -263,15 +266,18 @@ final class UserSeeder extends Seeder
         $this->command->line('Student: john.student@student.koakademy.edu / password');
     }
 
-    private function createUserWithRole(string $name, string $email, UserRole $role): User
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function createUserWithRole(string $name, string $email, UserRole $role, array $attributes = []): User
     {
-        $user = User::query()->create([
+        $user = User::query()->create(array_merge([
             'name' => $name,
             'email' => $email,
             'password' => Hash::make('password'),
             'role' => $role,
             'email_verified_at' => now(),
-        ]);
+        ], $attributes));
 
         $spatieRole = Role::findByName($role->value, 'web');
         $user->assignRole($spatieRole);

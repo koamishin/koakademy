@@ -79,6 +79,25 @@ final class FacultySeeder extends Seeder
                 'gender' => 'Male',
                 'age' => 42,
             ],
+            [
+                'faculty_id_number' => 'FAC-DEMO-001',
+                'first_name' => 'Jennifer',
+                'last_name' => 'Adams',
+                'middle_name' => 'Lopez',
+                'email' => 'j.adams@koakademy.edu',
+                'password' => Hash::make('password'),
+                'phone_number' => '09171230001',
+                'department' => 'Information Technology',
+                'office_hours' => 'Monday-Friday 8:00AM-5:00PM',
+                'birth_date' => '1981-02-14',
+                'address_line1' => '101 Demo Avenue, Quezon City',
+                'biography' => 'Demo faculty account used for previewing faculty workflows.',
+                'education' => 'PhD in Computer Science, Master in Information Technology',
+                'courses_taught' => 'Software Engineering, Programming Fundamentals',
+                'status' => 'active',
+                'gender' => 'Female',
+                'age' => 44,
+            ],
 
             // Business Administration Faculty
             [
