@@ -798,6 +798,7 @@ final class AdministratorStudentManagementController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'civil_status' => ['nullable', 'string', 'max:50'],
             'nationality' => ['nullable', 'string', 'max:50'],
+            'citizenship' => ['nullable', 'string', 'max:50'],
             'religion' => ['nullable', 'string', 'max:50'],
             'course_id' => [
                 Rule::requiredIf(fn (): bool => $request->student_type !== StudentType::SeniorHighSchool->value),
@@ -831,8 +832,24 @@ final class AdministratorStudentManagementController extends Controller
             'emergency_contact_name' => ['nullable', 'string', 'max:100'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
             'emergency_contact_address' => ['nullable', 'string', 'max:500'],
+            'emergency_contact_relationship' => ['nullable', 'string', 'max:100'],
+            'facebook_contact' => ['nullable', 'string', 'max:255'],
+            'twitter' => ['nullable', 'string', 'max:255'],
+            'instagram' => ['nullable', 'string', 'max:255'],
+            'linkedin' => ['nullable', 'string', 'max:255'],
             'fathers_name' => ['nullable', 'string', 'max:100'],
+            'father_occupation' => ['nullable', 'string', 'max:100'],
+            'father_contact' => ['nullable', 'string', 'max:30'],
+            'father_email' => ['nullable', 'email', 'max:255'],
             'mothers_name' => ['nullable', 'string', 'max:100'],
+            'mother_occupation' => ['nullable', 'string', 'max:100'],
+            'mother_contact' => ['nullable', 'string', 'max:30'],
+            'mother_email' => ['nullable', 'email', 'max:255'],
+            'guardian_name' => ['nullable', 'string', 'max:100'],
+            'guardian_relationship' => ['nullable', 'string', 'max:100'],
+            'guardian_contact' => ['nullable', 'string', 'max:30'],
+            'guardian_email' => ['nullable', 'email', 'max:255'],
+            'family_address' => ['nullable', 'string', 'max:500'],
             'elementary_school' => ['nullable', 'string', 'max:255'],
             'elementary_graduate_year' => ['nullable', 'string', 'max:4'],
             'elementary_school_address' => ['nullable', 'string', 'max:500'],
@@ -842,15 +859,35 @@ final class AdministratorStudentManagementController extends Controller
             'senior_high_name' => ['nullable', 'string', 'max:255'],
             'senior_high_graduate_year' => ['nullable', 'string', 'max:4'],
             'senior_high_address' => ['nullable', 'string', 'max:500'],
+            'college_school' => ['nullable', 'string', 'max:255'],
+            'college_course' => ['nullable', 'string', 'max:255'],
+            'college_year_graduated' => ['nullable', 'string', 'max:4'],
+            'vocational_school' => ['nullable', 'string', 'max:255'],
+            'vocational_course' => ['nullable', 'string', 'max:255'],
+            'vocational_year_graduated' => ['nullable', 'string', 'max:4'],
             'current_address' => ['nullable', 'string', 'max:500'],
             'permanent_address' => ['nullable', 'string', 'max:500'],
             'birthplace' => ['nullable', 'string', 'max:255'],
+            'weight' => ['nullable', 'numeric'],
+            'height' => ['nullable', 'string', 'max:20'],
             'ethnicity' => ['nullable', 'string', 'max:100'],
             'city_of_origin' => ['nullable', 'string', 'max:100'],
             'province_of_origin' => ['nullable', 'string', 'max:100'],
             'region_of_origin' => ['nullable', 'string', 'max:50'],
             'is_indigenous_person' => ['nullable', 'boolean'],
             'indigenous_group' => ['nullable', 'string', 'max:100'],
+            'is_pwd' => ['nullable', 'boolean'],
+            'pwd_type' => ['nullable', 'string', 'max:100'],
+            'is_solo_parent' => ['nullable', 'boolean'],
+            'is_senior_citizen' => ['nullable', 'boolean'],
+            'is_magna_carta' => ['nullable', 'boolean'],
+            'is_underprivileged' => ['nullable', 'boolean'],
+            'is_first_generation' => ['nullable', 'boolean'],
+            'income_bracket_mode' => ['nullable', 'string', 'max:50'],
+            'use_same_parent_income' => ['nullable', 'boolean'],
+            'family_income_bracket' => ['nullable', 'string', 'max:50'],
+            'father_income_bracket' => ['nullable', 'string', 'max:50'],
+            'mother_income_bracket' => ['nullable', 'string', 'max:50'],
             'withdrawal_date' => ['nullable', 'date'],
             'withdrawal_reason' => ['nullable', 'string'],
             'attrition_category' => ['nullable', Rule::enum(AttritionCategory::class)],
@@ -864,7 +901,7 @@ final class AdministratorStudentManagementController extends Controller
             'employed_by_institution' => ['nullable', 'boolean'],
         ]);
 
-        DB::transaction(function () use ($validated): void {
+        $student = DB::transaction(function () use ($validated): Student {
             $studentType = StudentType::from($validated['student_type']);
             $status = StudentStatus::from($validated['status']);
             $birthDate = Carbon::parse($validated['birth_date']);
@@ -882,7 +919,7 @@ final class AdministratorStudentManagementController extends Controller
                 'email' => $validated['email'] ?? null,
                 'phone' => $validated['phone'] ?? null,
                 'civil_status' => $validated['civil_status'] ?? null,
-                'nationality' => $validated['nationality'] ?? null,
+                'nationality' => $validated['nationality'] ?? ($validated['citizenship'] ?? null),
                 'religion' => $validated['religion'] ?? null,
                 'address' => ($validated['current_address'] ?? null) ?: ($validated['permanent_address'] ?? null),
                 'emergency_contact' => $validated['emergency_contact_name'] ?? null,
@@ -895,6 +932,18 @@ final class AdministratorStudentManagementController extends Controller
                 'region_of_origin' => $validated['region_of_origin'] ?? null,
                 'is_indigenous_person' => $validated['is_indigenous_person'] ?? false,
                 'indigenous_group' => $validated['indigenous_group'] ?? null,
+                'is_pwd' => $validated['is_pwd'] ?? false,
+                'pwd_type' => $validated['pwd_type'] ?? null,
+                'is_solo_parent' => $validated['is_solo_parent'] ?? false,
+                'is_senior_citizen' => $validated['is_senior_citizen'] ?? false,
+                'is_magna_carta' => $validated['is_magna_carta'] ?? false,
+                'is_underprivileged' => $validated['is_underprivileged'] ?? false,
+                'is_first_generation' => $validated['is_first_generation'] ?? false,
+                'income_bracket_mode' => $validated['income_bracket_mode'] ?? (string) config('income_brackets.default_mode', 'annual'),
+                'use_same_parent_income' => $validated['use_same_parent_income'] ?? true,
+                'family_income_bracket' => $validated['family_income_bracket'] ?? null,
+                'father_income_bracket' => $validated['father_income_bracket'] ?? null,
+                'mother_income_bracket' => $validated['mother_income_bracket'] ?? null,
                 'withdrawal_date' => $validated['withdrawal_date'] ?? null,
                 'withdrawal_reason' => $validated['withdrawal_reason'] ?? null,
                 'attrition_category' => $validated['attrition_category'] ?? null,
@@ -922,9 +971,11 @@ final class AdministratorStudentManagementController extends Controller
 
             $this->syncStudentRelations($student, $validated);
             $this->syncCurrentStudentStatus($student, $status);
+
+            return $student;
         });
 
-        return redirect()->route('administrators.students.index')
+        return to_route('administrators.students.edit', $student, 303)
             ->with('success', 'Student created successfully.');
     }
 
@@ -1028,10 +1079,26 @@ final class AdministratorStudentManagementController extends Controller
             'emergency_contact_name' => ['nullable', 'string', 'max:100'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
             'emergency_contact_address' => ['nullable', 'string', 'max:500'],
+            'emergency_contact_relationship' => ['nullable', 'string', 'max:100'],
+            'facebook_contact' => ['nullable', 'string', 'max:255'],
+            'twitter' => ['nullable', 'string', 'max:255'],
+            'instagram' => ['nullable', 'string', 'max:255'],
+            'linkedin' => ['nullable', 'string', 'max:255'],
 
             // Parent Info
             'fathers_name' => ['nullable', 'string', 'max:100'],
             'mothers_name' => ['nullable', 'string', 'max:100'],
+            'father_occupation' => ['nullable', 'string', 'max:100'],
+            'father_contact' => ['nullable', 'string', 'max:30'],
+            'father_email' => ['nullable', 'email', 'max:255'],
+            'mother_occupation' => ['nullable', 'string', 'max:100'],
+            'mother_contact' => ['nullable', 'string', 'max:30'],
+            'mother_email' => ['nullable', 'email', 'max:255'],
+            'guardian_name' => ['nullable', 'string', 'max:100'],
+            'guardian_relationship' => ['nullable', 'string', 'max:100'],
+            'guardian_contact' => ['nullable', 'string', 'max:30'],
+            'guardian_email' => ['nullable', 'email', 'max:255'],
+            'family_address' => ['nullable', 'string', 'max:500'],
 
             // Education Info
             'elementary_school' => ['nullable', 'string', 'max:255'],
@@ -1043,6 +1110,12 @@ final class AdministratorStudentManagementController extends Controller
             'senior_high_name' => ['nullable', 'string', 'max:255'],
             'senior_high_graduate_year' => ['nullable', 'string', 'max:4'],
             'senior_high_address' => ['nullable', 'string', 'max:500'],
+            'college_school' => ['nullable', 'string', 'max:255'],
+            'college_course' => ['nullable', 'string', 'max:255'],
+            'college_year_graduated' => ['nullable', 'string', 'max:4'],
+            'vocational_school' => ['nullable', 'string', 'max:255'],
+            'vocational_course' => ['nullable', 'string', 'max:255'],
+            'vocational_year_graduated' => ['nullable', 'string', 'max:4'],
 
             // Address & Personal Info
             'current_address' => ['nullable', 'string', 'max:500'],
@@ -1062,6 +1135,18 @@ final class AdministratorStudentManagementController extends Controller
             'region_of_origin' => ['nullable', 'string', 'max:50'],
             'is_indigenous_person' => ['nullable', 'boolean'],
             'indigenous_group' => ['nullable', 'string', 'max:100'],
+            'is_pwd' => ['nullable', 'boolean'],
+            'pwd_type' => ['nullable', 'string', 'max:100'],
+            'is_solo_parent' => ['nullable', 'boolean'],
+            'is_senior_citizen' => ['nullable', 'boolean'],
+            'is_magna_carta' => ['nullable', 'boolean'],
+            'is_underprivileged' => ['nullable', 'boolean'],
+            'is_first_generation' => ['nullable', 'boolean'],
+            'income_bracket_mode' => ['nullable', 'string', 'max:50'],
+            'use_same_parent_income' => ['nullable', 'boolean'],
+            'family_income_bracket' => ['nullable', 'string', 'max:50'],
+            'father_income_bracket' => ['nullable', 'string', 'max:50'],
+            'mother_income_bracket' => ['nullable', 'string', 'max:50'],
             'status' => ['nullable', Rule::enum(StudentStatus::class)],
             'withdrawal_date' => ['nullable', 'date'],
             'withdrawal_reason' => ['nullable', 'string'],
@@ -1103,6 +1188,18 @@ final class AdministratorStudentManagementController extends Controller
             $student->region_of_origin = $validated['region_of_origin'] ?? null;
             $student->is_indigenous_person = $validated['is_indigenous_person'] ?? false;
             $student->indigenous_group = $validated['indigenous_group'] ?? null;
+            $student->is_pwd = $validated['is_pwd'] ?? false;
+            $student->pwd_type = $validated['pwd_type'] ?? null;
+            $student->is_solo_parent = $validated['is_solo_parent'] ?? false;
+            $student->is_senior_citizen = $validated['is_senior_citizen'] ?? false;
+            $student->is_magna_carta = $validated['is_magna_carta'] ?? false;
+            $student->is_underprivileged = $validated['is_underprivileged'] ?? false;
+            $student->is_first_generation = $validated['is_first_generation'] ?? false;
+            $student->income_bracket_mode = $validated['income_bracket_mode'] ?? $student->income_bracket_mode ?? (string) config('income_brackets.default_mode', 'annual');
+            $student->use_same_parent_income = $validated['use_same_parent_income'] ?? true;
+            $student->family_income_bracket = $validated['family_income_bracket'] ?? null;
+            $student->father_income_bracket = $validated['father_income_bracket'] ?? null;
+            $student->mother_income_bracket = $validated['mother_income_bracket'] ?? null;
             $student->status = $validated['status'] ?? 'enrolled';
             $student->withdrawal_date = $validated['withdrawal_date'] ?? null;
             $student->withdrawal_reason = $validated['withdrawal_reason'] ?? null;
@@ -1959,12 +2056,60 @@ final class AdministratorStudentManagementController extends Controller
      */
     private function studentContactsPayload(array $validated): array
     {
+        $parentDetails = $this->withoutBlankValues([
+            'father_name' => $validated['fathers_name'] ?? null,
+            'father_occupation' => $validated['father_occupation'] ?? null,
+            'father_contact' => $validated['father_contact'] ?? null,
+            'father_email' => $validated['father_email'] ?? null,
+            'mother_name' => $validated['mothers_name'] ?? null,
+            'mother_occupation' => $validated['mother_occupation'] ?? null,
+            'mother_contact' => $validated['mother_contact'] ?? null,
+            'mother_email' => $validated['mother_email'] ?? null,
+            'guardian_name' => $validated['guardian_name'] ?? ($validated['emergency_contact_name'] ?? null),
+            'guardian_relationship' => $validated['guardian_relationship'] ?? ($validated['emergency_contact_relationship'] ?? null),
+            'guardian_contact' => $validated['guardian_contact'] ?? ($validated['emergency_contact_phone'] ?? null),
+            'guardian_email' => $validated['guardian_email'] ?? null,
+            'family_address' => $validated['family_address'] ?? ($validated['emergency_contact_address'] ?? null),
+        ]);
+
+        $educationDetails = $this->withoutBlankValues([
+            'elementary_school' => $validated['elementary_school'] ?? null,
+            'elementary_year_graduated' => $validated['elementary_graduate_year'] ?? null,
+            'high_school' => $validated['junior_high_school_name'] ?? null,
+            'high_school_year_graduated' => $validated['junior_high_graduation_year'] ?? null,
+            'senior_high_school' => $validated['senior_high_name'] ?? null,
+            'senior_high_year_graduated' => $validated['senior_high_graduate_year'] ?? null,
+            'college_school' => $validated['college_school'] ?? null,
+            'college_course' => $validated['college_course'] ?? null,
+            'college_year_graduated' => $validated['college_year_graduated'] ?? null,
+            'vocational_school' => $validated['vocational_school'] ?? null,
+            'vocational_course' => $validated['vocational_course'] ?? null,
+            'vocational_year_graduated' => $validated['vocational_year_graduated'] ?? null,
+        ]);
+
+        $personalDetails = $this->withoutBlankValues([
+            'birthplace' => $validated['birthplace'] ?? null,
+            'citizenship' => $validated['citizenship'] ?? ($validated['nationality'] ?? null),
+            'weight' => $validated['weight'] ?? null,
+            'height' => $validated['height'] ?? null,
+            'current_address' => $validated['current_address'] ?? null,
+            'permanent_address' => $validated['permanent_address'] ?? null,
+        ]);
+
         return $this->withoutBlankValues([
             'personal_contact' => $validated['personal_contact'] ?? null,
             'phone' => $validated['phone'] ?? null,
+            'facebook' => $validated['facebook_contact'] ?? null,
+            'twitter' => $validated['twitter'] ?? null,
+            'instagram' => $validated['instagram'] ?? null,
+            'linkedin' => $validated['linkedin'] ?? null,
             'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
             'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
             'emergency_contact_address' => $validated['emergency_contact_address'] ?? null,
+            'emergency_contact_relationship' => $validated['emergency_contact_relationship'] ?? null,
+            'parents' => $parentDetails !== [] ? $parentDetails : null,
+            'education' => $educationDetails !== [] ? $educationDetails : null,
+            'personal_info' => $personalDetails !== [] ? $personalDetails : null,
         ]);
     }
 
@@ -1977,9 +2122,15 @@ final class AdministratorStudentManagementController extends Controller
         return [
             'student_id' => $student->id,
             'personal_contact' => ($validated['personal_contact'] ?? null) ?: ($validated['phone'] ?? null),
+            'facebook_contact' => $validated['facebook_contact'] ?? null,
+            'facebook' => $validated['facebook_contact'] ?? null,
+            'twitter' => $validated['twitter'] ?? null,
+            'instagram' => $validated['instagram'] ?? null,
+            'linkedin' => $validated['linkedin'] ?? null,
             'emergency_contact_name' => $validated['emergency_contact_name'] ?? null,
             'emergency_contact_phone' => $validated['emergency_contact_phone'] ?? null,
             'emergency_contact_address' => $validated['emergency_contact_address'] ?? null,
+            'emergency_contact_relationship' => $validated['emergency_contact_relationship'] ?? null,
         ];
     }
 
@@ -1992,11 +2143,19 @@ final class AdministratorStudentManagementController extends Controller
         return [
             'fathers_name' => $validated['fathers_name'] ?? null,
             'father_name' => $validated['fathers_name'] ?? null,
+            'father_occupation' => $validated['father_occupation'] ?? null,
+            'father_contact' => $validated['father_contact'] ?? null,
+            'father_email' => $validated['father_email'] ?? null,
             'mothers_name' => $validated['mothers_name'] ?? null,
             'mother_name' => $validated['mothers_name'] ?? null,
-            'guardian_name' => $validated['emergency_contact_name'] ?? null,
-            'guardian_contact' => $validated['emergency_contact_phone'] ?? null,
-            'family_address' => $validated['emergency_contact_address'] ?? null,
+            'mother_occupation' => $validated['mother_occupation'] ?? null,
+            'mother_contact' => $validated['mother_contact'] ?? null,
+            'mother_email' => $validated['mother_email'] ?? null,
+            'guardian_name' => $validated['guardian_name'] ?? ($validated['emergency_contact_name'] ?? null),
+            'guardian_relationship' => $validated['guardian_relationship'] ?? ($validated['emergency_contact_relationship'] ?? null),
+            'guardian_contact' => $validated['guardian_contact'] ?? ($validated['emergency_contact_phone'] ?? null),
+            'guardian_email' => $validated['guardian_email'] ?? null,
+            'family_address' => $validated['family_address'] ?? ($validated['emergency_contact_address'] ?? null),
         ];
     }
 
@@ -2021,6 +2180,12 @@ final class AdministratorStudentManagementController extends Controller
             'senior_high_graduate_year' => $validated['senior_high_graduate_year'] ?? null,
             'senior_high_year_graduated' => $validated['senior_high_graduate_year'] ?? null,
             'senior_high_address' => $validated['senior_high_address'] ?? null,
+            'college_school' => $validated['college_school'] ?? null,
+            'college_course' => $validated['college_course'] ?? null,
+            'college_year_graduated' => $validated['college_year_graduated'] ?? null,
+            'vocational_school' => $validated['vocational_school'] ?? null,
+            'vocational_course' => $validated['vocational_course'] ?? null,
+            'vocational_year_graduated' => $validated['vocational_year_graduated'] ?? null,
         ];
     }
 

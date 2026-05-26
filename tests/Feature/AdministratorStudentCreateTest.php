@@ -45,7 +45,7 @@ it('stores related student information from the create page', function (): void 
     $user = User::factory()->create(['role' => UserRole::Admin]);
     $course = Course::factory()->create(['is_active' => true]);
 
-    actingAs($user)
+    $response = actingAs($user)
         ->post(portalUrlForAdministrators('/administrators/students'), [
             'student_type' => 'college',
             'student_id' => '212345',
@@ -65,6 +65,7 @@ it('stores related student information from the create page', function (): void 
             'academic_year' => '1',
             'remarks' => 'Test student',
             'personal_contact' => '09171111111',
+            'facebook_contact' => 'facebook.com/juan.delacruz',
             'emergency_contact_name' => 'Maria Dela Cruz',
             'emergency_contact_phone' => '09172222222',
             'emergency_contact_address' => '123 Guardian Street',
@@ -89,12 +90,13 @@ it('stores related student information from the create page', function (): void 
             'is_indigenous_person' => false,
             'scholarship_type' => 'none',
             'employment_status' => 'not_applicable',
-        ])
-        ->assertRedirect();
+        ]);
 
     $student = Student::withoutGlobalScopes()
         ->where('student_id', 212345)
         ->firstOrFail();
+
+    $response->assertRedirect(route('administrators.students.edit', $student));
 
     expect($student->student_contact_id)->not->toBeNull()
         ->and($student->student_parent_info)->not->toBeNull()
@@ -114,6 +116,10 @@ it('stores related student information from the create page', function (): void 
 
     if (Schema::hasColumn('student_contacts', 'emergency_contact_address')) {
         expect($contact->emergency_contact_address)->toBe('123 Guardian Street');
+    }
+
+    if (Schema::hasColumn('student_contacts', 'facebook_contact')) {
+        expect($contact->facebook_contact)->toBe('facebook.com/juan.delacruz');
     }
 
     $parent = DB::table('student_parents_info')->where('id', $student->student_parent_info)->first();
@@ -152,4 +158,52 @@ it('stores related student information from the create page', function (): void 
     }
 
     expect(DB::table('student_statuses')->where('student_id', $student->id)->where('status', 'enrolled')->exists())->toBeTrue();
+});
+
+it('updates facebook contact from the student edit payload', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create(['is_active' => true]);
+
+    $student = Student::factory()->create([
+        'student_type' => 'college',
+        'student_id' => 298765,
+        'course_id' => $course->id,
+        'academic_year' => 1,
+        'first_name' => 'Old',
+        'last_name' => 'Student',
+        'gender' => 'male',
+        'birth_date' => '2003-01-01',
+        'status' => 'enrolled',
+        'student_contact_id' => null,
+    ]);
+
+    actingAs($user)
+        ->put(portalUrlForAdministrators('/administrators/students/'.$student->id), [
+            'student_type' => 'college',
+            'student_id' => '298765',
+            'status' => 'enrolled',
+            'first_name' => 'Old',
+            'last_name' => 'Student',
+            'middle_name' => '',
+            'suffix' => '',
+            'gender' => 'male',
+            'birth_date' => '2003-01-01',
+            'email' => 'old.student@example.test',
+            'phone' => '09170000009',
+            'course_id' => (string) $course->id,
+            'academic_year' => '1',
+            'facebook_contact' => 'facebook.com/updated.student',
+        ])
+        ->assertRedirect();
+
+    $student->refresh();
+    expect($student->student_contact_id)->not->toBeNull();
+
+    if (! Schema::hasColumn('student_contacts', 'facebook_contact')) {
+        return;
+    }
+
+    $contact = DB::table('student_contacts')->where('id', $student->student_contact_id)->first();
+    expect($contact)->not->toBeNull()
+        ->and($contact->facebook_contact)->toBe('facebook.com/updated.student');
 });

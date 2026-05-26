@@ -72,6 +72,18 @@ interface Student {
     region_of_origin: string | null;
     is_indigenous_person: boolean;
     indigenous_group: string | null;
+    is_pwd: boolean;
+    pwd_type: string | null;
+    is_solo_parent: boolean;
+    is_senior_citizen: boolean;
+    is_magna_carta: boolean;
+    is_underprivileged: boolean;
+    is_first_generation: boolean;
+    income_bracket_mode: string | null;
+    use_same_parent_income: boolean | null;
+    family_income_bracket: string | null;
+    father_income_bracket: string | null;
+    mother_income_bracket: string | null;
     status: string | null;
     withdrawal_date: string | null;
     withdrawal_reason: string | null;
@@ -86,6 +98,7 @@ interface Student {
     employed_by_institution: boolean;
     Course: { code: string; title: string } | null;
     shsStrand: { strand_name: string } | null;
+    contacts: Record<string, unknown> | null;
     studentContactsInfo: Record<string, unknown> | null;
     studentParentInfo: Record<string, unknown> | null;
     studentEducationInfo: Record<string, unknown> | null;
@@ -118,8 +131,24 @@ interface EditStudentForm {
     emergency_contact_name: string;
     emergency_contact_phone: string;
     emergency_contact_address: string;
+    emergency_contact_relationship: string;
+    facebook_contact: string;
+    twitter: string;
+    instagram: string;
+    linkedin: string;
     fathers_name: string;
+    father_occupation: string;
+    father_contact: string;
+    father_email: string;
     mothers_name: string;
+    mother_occupation: string;
+    mother_contact: string;
+    mother_email: string;
+    guardian_name: string;
+    guardian_relationship: string;
+    guardian_contact: string;
+    guardian_email: string;
+    family_address: string;
     current_address: string;
     permanent_address: string;
     birthplace: string;
@@ -132,12 +161,30 @@ interface EditStudentForm {
     senior_high_name: string;
     senior_high_graduate_year: string;
     senior_high_address: string;
+    college_school: string;
+    college_course: string;
+    college_year_graduated: string;
+    vocational_school: string;
+    vocational_course: string;
+    vocational_year_graduated: string;
     ethnicity: string;
     region_of_origin: string;
     province_of_origin: string;
     city_of_origin: string;
     is_indigenous_person: boolean;
     indigenous_group: string;
+    is_pwd: boolean;
+    pwd_type: string;
+    is_solo_parent: boolean;
+    is_senior_citizen: boolean;
+    is_magna_carta: boolean;
+    is_underprivileged: boolean;
+    is_first_generation: boolean;
+    income_bracket_mode: string;
+    use_same_parent_income: boolean;
+    family_income_bracket: string;
+    father_income_bracket: string;
+    mother_income_bracket: string;
     scholarship_type: string;
     scholarship_details: string;
     employment_status: string;
@@ -248,6 +295,26 @@ function relationValue(relation: Record<string, unknown> | null, ...keys: string
     return "";
 }
 
+function nestedValue(source: Record<string, unknown> | null, path: string): string {
+    if (!source) {
+        return "";
+    }
+
+    const value = path.split(".").reduce<unknown>((current, segment) => {
+        if (!current || typeof current !== "object") {
+            return undefined;
+        }
+
+        return (current as Record<string, unknown>)[segment];
+    }, source);
+
+    if (value === null || value === undefined || value === "") {
+        return "";
+    }
+
+    return String(value);
+}
+
 export default function AdministratorStudentEdit({ user, student, options, current_enrollments = [], current_classes = [] }: EditStudentProps) {
     const [addSubjectOpen, setAddSubjectOpen] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
@@ -275,21 +342,78 @@ export default function AdministratorStudentEdit({ user, student, options, curre
         academic_year: student.academic_year ? student.academic_year.toString() : "1",
         shs_strand_id: student.shs_strand_id ? student.shs_strand_id.toString() : "",
         remarks: student.remarks || "",
-        personal_contact: relationValue(student.studentContactsInfo, "personal_contact") || student.phone || "",
-        emergency_contact_name: relationValue(student.studentContactsInfo, "emergency_contact_name"),
-        emergency_contact_phone: relationValue(student.studentContactsInfo, "emergency_contact_phone"),
-        emergency_contact_address: relationValue(student.studentContactsInfo, "emergency_contact_address"),
+        personal_contact:
+            relationValue(student.studentContactsInfo, "personal_contact") ||
+            nestedValue(student.contacts, "personal_contact") ||
+            student.phone ||
+            "",
+        emergency_contact_name:
+            relationValue(student.studentContactsInfo, "emergency_contact_name") ||
+            nestedValue(student.contacts, "emergency_contact_name") ||
+            nestedValue(student.contacts, "parents.guardian_name"),
+        emergency_contact_phone:
+            relationValue(student.studentContactsInfo, "emergency_contact_phone") ||
+            nestedValue(student.contacts, "emergency_contact_phone") ||
+            nestedValue(student.contacts, "parents.guardian_contact"),
+        emergency_contact_address:
+            relationValue(student.studentContactsInfo, "emergency_contact_address") ||
+            nestedValue(student.contacts, "emergency_contact_address") ||
+            nestedValue(student.contacts, "parents.family_address"),
+        emergency_contact_relationship:
+            relationValue(student.studentContactsInfo, "emergency_contact_relationship") ||
+            nestedValue(student.contacts, "emergency_contact_relationship") ||
+            nestedValue(student.contacts, "parents.guardian_relationship"),
+        facebook_contact: relationValue(student.studentContactsInfo, "facebook_contact", "facebook") || nestedValue(student.contacts, "facebook"),
+        twitter: relationValue(student.studentContactsInfo, "twitter") || nestedValue(student.contacts, "twitter"),
+        instagram: relationValue(student.studentContactsInfo, "instagram") || nestedValue(student.contacts, "instagram"),
+        linkedin: relationValue(student.studentContactsInfo, "linkedin") || nestedValue(student.contacts, "linkedin"),
         fathers_name: relationValue(student.studentParentInfo, "fathers_name", "father_name"),
+        father_occupation:
+            relationValue(student.studentParentInfo, "father_occupation") || nestedValue(student.contacts, "parents.father_occupation"),
+        father_contact: relationValue(student.studentParentInfo, "father_contact") || nestedValue(student.contacts, "parents.father_contact"),
+        father_email: relationValue(student.studentParentInfo, "father_email") || nestedValue(student.contacts, "parents.father_email"),
         mothers_name: relationValue(student.studentParentInfo, "mothers_name", "mother_name"),
+        mother_occupation:
+            relationValue(student.studentParentInfo, "mother_occupation") || nestedValue(student.contacts, "parents.mother_occupation"),
+        mother_contact: relationValue(student.studentParentInfo, "mother_contact") || nestedValue(student.contacts, "parents.mother_contact"),
+        mother_email: relationValue(student.studentParentInfo, "mother_email") || nestedValue(student.contacts, "parents.mother_email"),
+        guardian_name: relationValue(student.studentParentInfo, "guardian_name") || nestedValue(student.contacts, "parents.guardian_name"),
+        guardian_relationship:
+            relationValue(student.studentParentInfo, "guardian_relationship") || nestedValue(student.contacts, "parents.guardian_relationship"),
+        guardian_contact: relationValue(student.studentParentInfo, "guardian_contact") || nestedValue(student.contacts, "parents.guardian_contact"),
+        guardian_email: relationValue(student.studentParentInfo, "guardian_email") || nestedValue(student.contacts, "parents.guardian_email"),
+        family_address: relationValue(student.studentParentInfo, "family_address") || nestedValue(student.contacts, "parents.family_address"),
         elementary_school: relationValue(student.studentEducationInfo, "elementary_school"),
-        elementary_graduate_year: relationValue(student.studentEducationInfo, "elementary_graduate_year", "elementary_year_graduated"),
+        elementary_graduate_year:
+            relationValue(student.studentEducationInfo, "elementary_graduate_year", "elementary_year_graduated") ||
+            nestedValue(student.contacts, "education.elementary_year_graduated"),
         elementary_school_address: relationValue(student.studentEducationInfo, "elementary_school_address"),
-        junior_high_school_name: relationValue(student.studentEducationInfo, "junior_high_school_name", "high_school"),
-        junior_high_graduation_year: relationValue(student.studentEducationInfo, "junior_high_graduation_year", "high_school_year_graduated"),
+        junior_high_school_name:
+            relationValue(student.studentEducationInfo, "junior_high_school_name", "high_school") ||
+            nestedValue(student.contacts, "education.high_school"),
+        junior_high_graduation_year:
+            relationValue(student.studentEducationInfo, "junior_high_graduation_year", "high_school_year_graduated") ||
+            nestedValue(student.contacts, "education.high_school_year_graduated"),
         junior_high_school_address: relationValue(student.studentEducationInfo, "junior_high_school_address"),
-        senior_high_name: relationValue(student.studentEducationInfo, "senior_high_name", "senior_high_school"),
-        senior_high_graduate_year: relationValue(student.studentEducationInfo, "senior_high_graduate_year", "senior_high_year_graduated"),
+        senior_high_name:
+            relationValue(student.studentEducationInfo, "senior_high_name", "senior_high_school") ||
+            nestedValue(student.contacts, "education.senior_high_school"),
+        senior_high_graduate_year:
+            relationValue(student.studentEducationInfo, "senior_high_graduate_year", "senior_high_year_graduated") ||
+            nestedValue(student.contacts, "education.senior_high_year_graduated"),
         senior_high_address: relationValue(student.studentEducationInfo, "senior_high_address"),
+        college_school: relationValue(student.studentEducationInfo, "college_school") || nestedValue(student.contacts, "education.college_school"),
+        college_course: relationValue(student.studentEducationInfo, "college_course") || nestedValue(student.contacts, "education.college_course"),
+        college_year_graduated:
+            relationValue(student.studentEducationInfo, "college_year_graduated") ||
+            nestedValue(student.contacts, "education.college_year_graduated"),
+        vocational_school:
+            relationValue(student.studentEducationInfo, "vocational_school") || nestedValue(student.contacts, "education.vocational_school"),
+        vocational_course:
+            relationValue(student.studentEducationInfo, "vocational_course") || nestedValue(student.contacts, "education.vocational_course"),
+        vocational_year_graduated:
+            relationValue(student.studentEducationInfo, "vocational_year_graduated") ||
+            nestedValue(student.contacts, "education.vocational_year_graduated"),
         current_address: relationValue(student.personalInfo, "current_adress"),
         permanent_address: relationValue(student.personalInfo, "permanent_address"),
         birthplace: relationValue(student.personalInfo, "birthplace", "place_of_birth"),
@@ -299,6 +423,18 @@ export default function AdministratorStudentEdit({ user, student, options, curre
         region_of_origin: student.region_of_origin || "",
         is_indigenous_person: student.is_indigenous_person || false,
         indigenous_group: student.indigenous_group || "",
+        is_pwd: Boolean(student.is_pwd),
+        pwd_type: student.pwd_type || "",
+        is_solo_parent: Boolean(student.is_solo_parent),
+        is_senior_citizen: Boolean(student.is_senior_citizen),
+        is_magna_carta: Boolean(student.is_magna_carta),
+        is_underprivileged: Boolean(student.is_underprivileged),
+        is_first_generation: Boolean(student.is_first_generation),
+        income_bracket_mode: student.income_bracket_mode || "annual",
+        use_same_parent_income: student.use_same_parent_income ?? true,
+        family_income_bracket: student.family_income_bracket || "",
+        father_income_bracket: student.father_income_bracket || "",
+        mother_income_bracket: student.mother_income_bracket || "",
         withdrawal_date: dateValue(student.withdrawal_date),
         withdrawal_reason: student.withdrawal_reason || "",
         attrition_category: student.attrition_category || "",
@@ -734,11 +870,103 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                     />
                                 </div>
                                 <div className="space-y-2">
+                                    <Label htmlFor="father_occupation">Father Occupation</Label>
+                                    <Input
+                                        id="father_occupation"
+                                        value={data.father_occupation}
+                                        onChange={(event) => setData("father_occupation", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="father_contact">Father Contact</Label>
+                                    <Input
+                                        id="father_contact"
+                                        value={data.father_contact}
+                                        onChange={(event) => setData("father_contact", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="father_email">Father Email</Label>
+                                    <Input
+                                        id="father_email"
+                                        type="email"
+                                        value={data.father_email}
+                                        onChange={(event) => setData("father_email", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
                                     <Label htmlFor="mothers_name">Mother's Name</Label>
                                     <Input
                                         id="mothers_name"
                                         value={data.mothers_name}
                                         onChange={(event) => setData("mothers_name", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mother_occupation">Mother Occupation</Label>
+                                    <Input
+                                        id="mother_occupation"
+                                        value={data.mother_occupation}
+                                        onChange={(event) => setData("mother_occupation", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mother_contact">Mother Contact</Label>
+                                    <Input
+                                        id="mother_contact"
+                                        value={data.mother_contact}
+                                        onChange={(event) => setData("mother_contact", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mother_email">Mother Email</Label>
+                                    <Input
+                                        id="mother_email"
+                                        type="email"
+                                        value={data.mother_email}
+                                        onChange={(event) => setData("mother_email", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_name">Guardian Name</Label>
+                                    <Input
+                                        id="guardian_name"
+                                        value={data.guardian_name}
+                                        onChange={(event) => setData("guardian_name", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_relationship">Guardian Relationship</Label>
+                                    <Input
+                                        id="guardian_relationship"
+                                        value={data.guardian_relationship}
+                                        onChange={(event) => setData("guardian_relationship", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_contact">Guardian Contact</Label>
+                                    <Input
+                                        id="guardian_contact"
+                                        value={data.guardian_contact}
+                                        onChange={(event) => setData("guardian_contact", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_email">Guardian Email</Label>
+                                    <Input
+                                        id="guardian_email"
+                                        type="email"
+                                        value={data.guardian_email}
+                                        onChange={(event) => setData("guardian_email", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="family_address">Family Address</Label>
+                                    <Textarea
+                                        id="family_address"
+                                        value={data.family_address}
+                                        onChange={(event) => setData("family_address", event.target.value)}
+                                        rows={2}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -780,6 +1008,14 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="citizenship">Citizenship</Label>
+                                    <Input
+                                        id="citizenship"
+                                        value={data.citizenship}
+                                        onChange={(event) => setData("citizenship", event.target.value)}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="religion">Religion</Label>
@@ -867,6 +1103,54 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                             onChange={(event) => setData("senior_high_address", event.target.value)}
                                         />
                                     </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="college_school">College School (if transferee)</Label>
+                                        <Input
+                                            id="college_school"
+                                            value={data.college_school}
+                                            onChange={(event) => setData("college_school", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="college_course">College Course</Label>
+                                        <Input
+                                            id="college_course"
+                                            value={data.college_course}
+                                            onChange={(event) => setData("college_course", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="college_year_graduated">College Year Graduated</Label>
+                                        <Input
+                                            id="college_year_graduated"
+                                            value={data.college_year_graduated}
+                                            onChange={(event) => setData("college_year_graduated", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vocational_school">Vocational School</Label>
+                                        <Input
+                                            id="vocational_school"
+                                            value={data.vocational_school}
+                                            onChange={(event) => setData("vocational_school", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vocational_course">Vocational Course</Label>
+                                        <Input
+                                            id="vocational_course"
+                                            value={data.vocational_course}
+                                            onChange={(event) => setData("vocational_course", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vocational_year_graduated">Vocational Year Graduated</Label>
+                                        <Input
+                                            id="vocational_year_graduated"
+                                            value={data.vocational_year_graduated}
+                                            onChange={(event) => setData("vocational_year_graduated", event.target.value)}
+                                        />
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -934,6 +1218,123 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                         />
                                     </div>
                                 )}
+                                <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_pwd"
+                                            checked={data.is_pwd}
+                                            onCheckedChange={(checked) => setData("is_pwd", checked === true)}
+                                        />
+                                        <Label htmlFor="is_pwd" className="cursor-pointer">
+                                            PWD
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_solo_parent"
+                                            checked={data.is_solo_parent}
+                                            onCheckedChange={(checked) => setData("is_solo_parent", checked === true)}
+                                        />
+                                        <Label htmlFor="is_solo_parent" className="cursor-pointer">
+                                            Solo Parent
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_senior_citizen"
+                                            checked={data.is_senior_citizen}
+                                            onCheckedChange={(checked) => setData("is_senior_citizen", checked === true)}
+                                        />
+                                        <Label htmlFor="is_senior_citizen" className="cursor-pointer">
+                                            Senior Citizen
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_magna_carta"
+                                            checked={data.is_magna_carta}
+                                            onCheckedChange={(checked) => setData("is_magna_carta", checked === true)}
+                                        />
+                                        <Label htmlFor="is_magna_carta" className="cursor-pointer">
+                                            Magna Carta
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_underprivileged"
+                                            checked={data.is_underprivileged}
+                                            onCheckedChange={(checked) => setData("is_underprivileged", checked === true)}
+                                        />
+                                        <Label htmlFor="is_underprivileged" className="cursor-pointer">
+                                            Underprivileged
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_first_generation"
+                                            checked={data.is_first_generation}
+                                            onCheckedChange={(checked) => setData("is_first_generation", checked === true)}
+                                        />
+                                        <Label htmlFor="is_first_generation" className="cursor-pointer">
+                                            First Generation
+                                        </Label>
+                                    </div>
+                                </div>
+                                {data.is_pwd && (
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor="pwd_type">PWD Type</Label>
+                                        <Input id="pwd_type" value={data.pwd_type} onChange={(event) => setData("pwd_type", event.target.value)} />
+                                    </div>
+                                )}
+                                <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="income_bracket_mode">Income Bracket Mode</Label>
+                                        <Input
+                                            id="income_bracket_mode"
+                                            value={data.income_bracket_mode}
+                                            onChange={(event) => setData("income_bracket_mode", event.target.value)}
+                                            placeholder="annual"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="use_same_parent_income"
+                                            checked={data.use_same_parent_income}
+                                            onCheckedChange={(checked) => setData("use_same_parent_income", checked === true)}
+                                        />
+                                        <Label htmlFor="use_same_parent_income" className="cursor-pointer">
+                                            Use Same Parent Income Bracket
+                                        </Label>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="family_income_bracket">Family Income Bracket</Label>
+                                        <Input
+                                            id="family_income_bracket"
+                                            value={data.family_income_bracket}
+                                            onChange={(event) => setData("family_income_bracket", event.target.value)}
+                                        />
+                                    </div>
+                                    {!data.use_same_parent_income && (
+                                        <>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="father_income_bracket">Father Income Bracket</Label>
+                                                <Input
+                                                    id="father_income_bracket"
+                                                    value={data.father_income_bracket}
+                                                    onChange={(event) => setData("father_income_bracket", event.target.value)}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="mother_income_bracket">Mother Income Bracket</Label>
+                                                <Input
+                                                    id="mother_income_bracket"
+                                                    value={data.mother_income_bracket}
+                                                    onChange={(event) => setData("mother_income_bracket", event.target.value)}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="scholarship_type">Scholarship</Label>
                                     <Select value={data.scholarship_type} onValueChange={(value) => setData("scholarship_type", value)}>
@@ -1100,6 +1501,44 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                         onChange={(event) => setData("personal_contact", event.target.value)}
                                     />
                                 </div>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="facebook_contact">Facebook</Label>
+                                        <Input
+                                            id="facebook_contact"
+                                            value={data.facebook_contact}
+                                            onChange={(event) => setData("facebook_contact", event.target.value)}
+                                            placeholder="facebook.com/username"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="instagram">Instagram</Label>
+                                        <Input
+                                            id="instagram"
+                                            value={data.instagram}
+                                            onChange={(event) => setData("instagram", event.target.value)}
+                                            placeholder="@username"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="twitter">Twitter/X</Label>
+                                        <Input
+                                            id="twitter"
+                                            value={data.twitter}
+                                            onChange={(event) => setData("twitter", event.target.value)}
+                                            placeholder="@username"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="linkedin">LinkedIn</Label>
+                                        <Input
+                                            id="linkedin"
+                                            value={data.linkedin}
+                                            onChange={(event) => setData("linkedin", event.target.value)}
+                                            placeholder="linkedin.com/in/username"
+                                        />
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="emergency_contact_name">Guardian Name</Label>
                                     <Input
@@ -1114,6 +1553,14 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                         id="emergency_contact_phone"
                                         value={data.emergency_contact_phone}
                                         onChange={(event) => setData("emergency_contact_phone", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="emergency_contact_relationship">Guardian Relationship</Label>
+                                    <Input
+                                        id="emergency_contact_relationship"
+                                        value={data.emergency_contact_relationship}
+                                        onChange={(event) => setData("emergency_contact_relationship", event.target.value)}
                                     />
                                 </div>
                                 <div className="space-y-2">
