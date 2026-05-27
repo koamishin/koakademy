@@ -27,7 +27,8 @@ import {
     School,
     User as UserIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 declare const route: (name: string, params?: Record<string, unknown>) => string;
 
@@ -274,6 +275,20 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
 
     const { data, setData, post, processing, errors, transform } = useForm<StudentCreateForm>(BLANK_FORM);
 
+    const formRef = useRef<HTMLFormElement>(null);
+
+    useEffect(() => {
+        const errorKeys = Object.keys(errors);
+        if (errorKeys.length > 0) {
+            const firstKey = errorKeys[0];
+            const element = document.getElementById(firstKey);
+            if (element) {
+                element.scrollIntoView({ behavior: "smooth", block: "center" });
+                element.focus();
+            }
+        }
+    }, [errors]);
+
     const isSHS = data.student_type === "shs";
     const isGraduated = data.status === "graduated";
     const isWithdrawn = data.status === "withdrawn" || data.status === "dropped";
@@ -382,16 +397,31 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         transform((formData) => ({
             ...formData,
             student_id: !isSHS && !formData.student_id && previewId ? previewId.toString() : formData.student_id,
+            academic_year: parseInt(formData.academic_year, 10),
+            course_id: formData.course_id ? parseInt(formData.course_id, 10) : "",
+            shs_strand_id: formData.shs_strand_id ? parseInt(formData.shs_strand_id, 10) : "",
+            weight: formData.weight ? parseFloat(formData.weight) : "",
+            height: formData.height ? parseFloat(formData.height) : "",
+            age: formData.age ? parseInt(formData.age, 10) : "",
         }));
 
-        post(route("administrators.students.store"));
+        post(route("administrators.students.store"), {
+            onSuccess: () => {
+                toast.success("Student created successfully");
+            },
+            onError: (formErrors) => {
+                toast.error("Failed to create student", {
+                    description: Object.values(formErrors)[0] || "Please check the form for errors.",
+                });
+            },
+        });
     };
 
     return (
         <AdminLayout user={user} title="Create Student">
             <Head title="Administrators - Create Student" />
 
-            <form onSubmit={submit} className="mx-auto max-w-6xl space-y-6 pb-10">
+            <form ref={formRef} onSubmit={submit} className="mx-auto max-w-6xl space-y-6 pb-10">
                 <div className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight">Create Student</h1>
@@ -738,7 +768,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         id="height"
                                         value={data.height}
                                         onChange={(event) => setData("height", event.target.value)}
-                                        placeholder="e.g. 170 cm"
+                                        placeholder="e.g. 170"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -747,7 +777,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         id="weight"
                                         value={data.weight}
                                         onChange={(event) => setData("weight", event.target.value)}
-                                        placeholder="e.g. 60 kg"
+                                        placeholder="e.g. 60"
                                     />
                                 </div>
 
@@ -764,6 +794,9 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Label htmlFor="elementary_graduate_year">Elementary Year</Label>
                                         <Input
                                             id="elementary_graduate_year"
+                                            type="number"
+                                            min={1900}
+                                            max={new Date().getFullYear()}
                                             value={data.elementary_graduate_year}
                                             onChange={(event) => setData("elementary_graduate_year", event.target.value)}
                                         />
@@ -788,6 +821,9 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Label htmlFor="junior_high_graduation_year">Junior High Year</Label>
                                         <Input
                                             id="junior_high_graduation_year"
+                                            type="number"
+                                            min={1900}
+                                            max={new Date().getFullYear()}
                                             value={data.junior_high_graduation_year}
                                             onChange={(event) => setData("junior_high_graduation_year", event.target.value)}
                                         />
@@ -812,6 +848,9 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Label htmlFor="senior_high_graduate_year">Senior High Year</Label>
                                         <Input
                                             id="senior_high_graduate_year"
+                                            type="number"
+                                            min={1900}
+                                            max={new Date().getFullYear()}
                                             value={data.senior_high_graduate_year}
                                             onChange={(event) => setData("senior_high_graduate_year", event.target.value)}
                                         />
@@ -844,6 +883,9 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Label htmlFor="college_year_graduated">College Year Graduated</Label>
                                         <Input
                                             id="college_year_graduated"
+                                            type="number"
+                                            min={1900}
+                                            max={new Date().getFullYear()}
                                             value={data.college_year_graduated}
                                             onChange={(event) => setData("college_year_graduated", event.target.value)}
                                         />
@@ -868,6 +910,9 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Label htmlFor="vocational_year_graduated">Vocational Year Graduated</Label>
                                         <Input
                                             id="vocational_year_graduated"
+                                            type="number"
+                                            min={1900}
+                                            max={new Date().getFullYear()}
                                             value={data.vocational_year_graduated}
                                             onChange={(event) => setData("vocational_year_graduated", event.target.value)}
                                         />

@@ -880,7 +880,7 @@ final class AdministratorStudentManagementController extends Controller
             'permanent_address' => ['nullable', 'string', 'max:500'],
             'birthplace' => ['nullable', 'string', 'max:255'],
             'weight' => ['nullable', 'numeric'],
-            'height' => ['nullable', 'string', 'max:20'],
+            'height' => ['nullable', 'numeric'],
             'ethnicity' => ['nullable', 'string', 'max:100'],
             'city_of_origin' => ['nullable', 'string', 'max:100'],
             'province_of_origin' => ['nullable', 'string', 'max:100'],
@@ -1137,7 +1137,7 @@ final class AdministratorStudentManagementController extends Controller
             'citizenship' => ['nullable', 'string', 'max:50'],
             'religion' => ['nullable', 'string', 'max:50'],
             'weight' => ['nullable', 'numeric'],
-            'height' => ['nullable', 'string', 'max:20'],
+            'height' => ['nullable', 'numeric'],
 
             // Statistical Data
             'ethnicity' => ['nullable', 'string', 'max:100'],
