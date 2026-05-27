@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Features\Onboarding\FacultyDeveloperMode;
-use App\Features\Onboarding\StudentDeveloperMode;
+use App\Features\Toggles\AdminDeveloperMode;
+use App\Features\Toggles\FacultyDeveloperMode;
+use App\Features\Toggles\StudentDeveloperMode;
 use App\Http\Requests\ToggleExperimentalFeaturesRequest;
 use App\Models\ConnectedAccount;
 use App\Models\Faculty;
@@ -69,10 +70,12 @@ final class ProfileController extends Controller
 
         $isFaculty = in_array($userRole, ['professor', 'associate_professor', 'assistant_professor', 'instructor', 'part_time_faculty'], true);
         $isStudent = in_array($userRole, ['student', 'graduate_student', 'shs_student'], true);
+        $isAdmin = ! $isFaculty && ! $isStudent && $user->role?->canAccessAdminPortal();
 
         $roleType = match (true) {
             $isFaculty => 'faculty',
             $isStudent => 'student',
+            $isAdmin => 'admin',
             default => 'other',
         };
 
@@ -81,11 +84,14 @@ final class ProfileController extends Controller
             ->values()
             ->all();
 
-        $developerModeFeature = $isFaculty
-            ? FacultyDeveloperMode::class
-            : StudentDeveloperMode::class;
+        $developerModeFeature = match (true) {
+            $isFaculty => FacultyDeveloperMode::class,
+            $isStudent => StudentDeveloperMode::class,
+            $isAdmin => AdminDeveloperMode::class,
+            default => null,
+        };
 
-        $developerModeEnabled = Feature::for($user)->active($developerModeFeature);
+        $developerModeEnabled = $developerModeFeature !== null && Feature::for($user)->active($developerModeFeature);
 
         $apiTokens = [];
         if ($developerModeEnabled) {
@@ -131,7 +137,7 @@ final class ProfileController extends Controller
             'feature_flags' => [
                 'experimental' => collect($availableForRole)
                     ->filter(function (string $featureKey) use ($user): bool {
-                        $featureClass = FeatureToggleRegistry::classForKey($featureKey);
+                        $featureClass = FeatureToggleRegistry::classForKey(str_replace('onboarding-', '', $featureKey));
 
                         return (bool) Feature::for($user)->active($featureClass ?? $featureKey);
                     })
@@ -315,7 +321,7 @@ final class ProfileController extends Controller
         $requestedFeatures = array_values(array_intersect($request->input('features', []), $allowedFeatures));
 
         foreach ($allowedFeatures as $featureKey) {
-            $featureRef = FeatureToggleRegistry::classForKey($featureKey) ?? $featureKey;
+            $featureRef = FeatureToggleRegistry::classForKey(str_replace('onboarding-', '', $featureKey)) ?? $featureKey;
 
             if (in_array($featureKey, $requestedFeatures, true)) {
                 Feature::for($user)->activate($featureRef);
@@ -1030,6 +1036,7 @@ final class ProfileController extends Controller
             'email_auth_toggle' => $basePath.'/email-authentication',
             'experimental_features' => $basePath.'/experimental-features',
             'browser_sessions_logout' => $basePath.'/other-browser-sessions',
+            'api_keys' => $basePath.'/api-keys',
         ];
 
         // Only faculty and admin portals have faculty update endpoint

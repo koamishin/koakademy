@@ -8,13 +8,13 @@ use App\Features\Concerns\ResolvesFeatureToggle;
 use App\Features\Contracts\FeatureToggle;
 use App\Models\User;
 
-final class StudentDeveloperMode implements FeatureToggle
+final class AdminDeveloperMode implements FeatureToggle
 {
     use ResolvesFeatureToggle;
 
     public function key(): string
     {
-        return 'student-developer-mode';
+        return 'admin-developer-mode';
     }
 
     public function name(): string
@@ -24,12 +24,12 @@ final class StudentDeveloperMode implements FeatureToggle
 
     public function summary(): string
     {
-        return 'Access developer tools and debugging features.';
+        return 'Enable API key creation for programmatic portal access and development tools.';
     }
 
     public function audience(): string
     {
-        return 'student';
+        return 'admin';
     }
 
     public function badge(): string
@@ -39,7 +39,7 @@ final class StudentDeveloperMode implements FeatureToggle
 
     public function accent(): string
     {
-        return 'text-rose-500';
+        return 'text-violet-500';
     }
 
     public function ctaLabel(): ?string
@@ -57,14 +57,14 @@ final class StudentDeveloperMode implements FeatureToggle
         return [
             [
                 'title' => 'Developer Mode',
-                'summary' => 'Access developer tools and debugging features.',
-                'highlights' => ['Developer tools', 'Debugging features'],
+                'summary' => 'Access developer tools, API key management, and debugging features.',
+                'highlights' => ['API key management', 'Developer tools', 'Debugging features'],
                 'stats' => [
-                    ['label' => 'Status', 'value' => 'Coming soon'],
+                    ['label' => 'Status', 'value' => 'Opt-in'],
                     ['label' => 'Menu', 'value' => 'Developer Mode'],
                 ],
                 'badge' => 'Developer',
-                'accent' => 'text-rose-500',
+                'accent' => 'text-violet-500',
                 'icon' => 'code',
                 'image' => null,
             ],
@@ -73,7 +73,7 @@ final class StudentDeveloperMode implements FeatureToggle
 
     public function category(): string
     {
-        return 'Student';
+        return 'Administrator';
     }
 
     public function resolve(User $scope): bool

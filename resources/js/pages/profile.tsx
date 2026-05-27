@@ -178,6 +178,7 @@ export default function ProfilePage() {
             email_auth_toggle: string;
             experimental_features: string;
             browser_sessions_logout: string;
+            api_keys: string;
         };
     }>().props;
 
@@ -199,6 +200,7 @@ export default function ProfilePage() {
         email_auth_toggle: endpoints?.email_auth_toggle || "/profile/email-authentication",
         experimental_features: endpoints?.experimental_features || "/profile/experimental-features",
         browser_sessions_logout: endpoints?.browser_sessions_logout || "/profile/other-browser-sessions",
+        api_keys: endpoints?.api_keys || "/profile/api-keys",
     };
 
     const userForm = useForm({

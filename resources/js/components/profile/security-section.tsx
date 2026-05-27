@@ -32,6 +32,7 @@ interface SecuritySectionProps {
         two_factor_recovery_codes: string;
         security_two_factor_toggle: string;
         email_auth_toggle: string;
+        api_keys: string;
     };
     developerModeEnabled?: boolean;
 }
@@ -80,9 +81,8 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
     };
 
     const fetchApiTokens = () => {
-        const basePath = isFaculty ? "/faculty" : isStudent ? "/student" : "";
         axios
-            .get(`${basePath}/profile/api-keys`)
+            .get(paths.api_keys)
             .then((response) => {
                 setApiTokens(response.data.tokens);
             })
@@ -304,10 +304,9 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
 
     const handleAddApiKey = async (e: React.FormEvent) => {
         e.preventDefault();
-        const basePath = isFaculty ? "/faculty" : isStudent ? "/student" : "";
 
         try {
-            const response = await axios.post(`${basePath}/profile/api-keys`, {
+            const response = await axios.post(paths.api_keys, {
                 name: apiKeyForm.name,
                 abilities: apiKeyForm.abilities,
                 expires_at: apiKeyForm.expires_at || undefined,
@@ -334,10 +333,8 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
 
     const handleDeleteApiKey = async (id: number) => {
         if (confirm("Are you sure you want to delete this API key? Any applications using it will no longer have access.")) {
-            const basePath = isFaculty ? "/faculty" : isStudent ? "/student" : "";
-
             try {
-                await axios.delete(`${basePath}/profile/api-keys/${id}`);
+                await axios.delete(`${paths.api_keys}/${id}`);
                 toast.success("API key deleted successfully.");
                 fetchApiTokens();
             } catch (error) {
@@ -765,7 +762,9 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
                                                         View your{" "}
                                                         {isStudent
                                                             ? "student profile, grades, schedule, and enrollments"
-                                                            : "faculty profile, courses, and schedules"}
+                                                            : isFaculty
+                                                              ? "faculty profile, courses, and schedules"
+                                                              : "profile, account details, and portal data"}
                                                     </p>
                                                 </div>
                                             </label>
@@ -781,7 +780,11 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
                                                     <span className="text-sm font-medium">Read & Write</span>
                                                     <p className="text-muted-foreground text-xs">
                                                         Read and update your{" "}
-                                                        {isStudent ? "student profile and emergency contacts" : "faculty profile and office hours"}
+                                                        {isStudent
+                                                            ? "student profile and emergency contacts"
+                                                            : isFaculty
+                                                              ? "faculty profile and office hours"
+                                                              : "profile, account details, and settings"}
                                                     </p>
                                                 </div>
                                             </label>
