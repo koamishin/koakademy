@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.11",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.11",
-  "commit": "aac5083a2919c6492b6965746ba933851cfd081c",
+  "version": "1.6.0-dev.0.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.1",
+  "commit": "2624bf3e57629f7876a5646d43c9ea98a7881f1e",
   "branch": "master",
-  "timestamp": "2026-05-27T06:28:14Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26494614234",
+  "timestamp": "2026-05-27T06:54:48Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26495652773",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.11 - Refactor class search functionality and improve pagination handling",
-    "previous": "1.5.0-dev.0.10"
+    "current": "Version 1.6.0-dev.0.1 - Enhance settings migration by using loops for adding social media and site branding fields, improving maintainability and error handling",
+    "previous": "1.5.0-dev.0.11"
   },
   "metadata": {
     "author": "yukazakiri",
