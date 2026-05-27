@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Filament\Resources\StudentEnrollments\Api\StudentEnrollmentController;
 use App\Http\Controllers\Api\ActiveJobsController;
 use App\Http\Controllers\Api\OrganizationController;
+use App\Http\Controllers\Api\V1\Auth\SignupController;
 use App\Http\Controllers\Api\V1\ClassEnrollmentController;
 use App\Http\Controllers\Api\V1\ClassPostController;
 use App\Http\Controllers\Api\V1\GeneralSettingController;
@@ -19,6 +20,12 @@ Route::get('/user', function (Request $request) {
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::prefix('public')->name('public.')->group(function (): void {
         Route::get('/settings', [GeneralSettingController::class, 'publicWebsiteSettings'])->name('settings');
+    });
+
+    Route::prefix('auth')->name('auth.')->group(function (): void {
+        Route::post('/signup/email-lookup', [SignupController::class, 'emailLookup'])->name('signup.email-lookup');
+        Route::post('/signup/send-otp', [SignupController::class, 'sendOtp'])->name('signup.send-otp');
+        Route::post('/signup', [SignupController::class, 'signup'])->name('signup');
     });
 });
 
