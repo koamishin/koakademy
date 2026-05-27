@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Features\Onboarding\FacultyDeveloperMode;
-use App\Features\Onboarding\StudentDeveloperMode;
+use App\Features\Toggles\AdminDeveloperMode;
+use App\Features\Toggles\FacultyDeveloperMode;
+use App\Features\Toggles\StudentDeveloperMode;
 use App\Http\Requests\ApiKeyRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -120,14 +121,18 @@ final class ApiKeyController extends Controller
 
         $isFaculty = in_array($userRole, ['professor', 'associate_professor', 'assistant_professor', 'instructor', 'part_time_faculty'], true);
         $isStudent = in_array($userRole, ['student', 'graduate_student', 'shs_student'], true);
+        $isAdmin = ! $isFaculty && ! $isStudent && $user->role?->canAccessAdminPortal();
 
-        if (! $isFaculty && ! $isStudent) {
+        $developerModeFeature = match (true) {
+            $isFaculty => FacultyDeveloperMode::class,
+            $isStudent => StudentDeveloperMode::class,
+            $isAdmin => AdminDeveloperMode::class,
+            default => null,
+        };
+
+        if ($developerModeFeature === null) {
             return false;
         }
-
-        $developerModeFeature = $isFaculty
-            ? FacultyDeveloperMode::class
-            : StudentDeveloperMode::class;
 
         return Feature::for($user)->active($developerModeFeature);
     }

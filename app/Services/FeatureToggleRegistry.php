@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Features\Contracts\FeatureToggle;
+use App\Features\Toggles\AdminDeveloperMode;
 use App\Features\Toggles\FacultyActionCenter;
 use App\Features\Toggles\FacultyAnnouncements;
 use App\Features\Toggles\FacultyAssessments;
@@ -71,6 +72,9 @@ final class FeatureToggleRegistry
         'faculty-resources' => FacultyResources::class,
         'faculty-forms' => FacultyForms::class,
         'faculty-developer-mode' => FacultyDeveloperMode::class,
+
+        // Admin features
+        'admin-developer-mode' => AdminDeveloperMode::class,
 
         // Student features
         'student-dashboard' => StudentDashboard::class,

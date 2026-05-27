@@ -52,7 +52,8 @@ export function ExperimentalTab({ experimentalAvailable, experimentalFeatures, p
                 {experimentalAvailable.map((featureKey) => {
                     const isFacultyFeature = featureKey.includes("faculty-");
                     const isStudentFeature = featureKey.includes("student-");
-                    const roleLabel = isFacultyFeature ? "Faculty" : isStudentFeature ? "Student" : null;
+                    const isAdminFeature = featureKey.includes("admin-");
+                    const roleLabel = isFacultyFeature ? "Faculty" : isStudentFeature ? "Student" : isAdminFeature ? "Admin" : null;
                     const isDeveloperMode = featureKey.includes("developer-mode");
                     const featureName = featureKey
                         .replace("onboarding-", "")
