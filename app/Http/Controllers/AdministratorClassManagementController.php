@@ -86,24 +86,25 @@ final class AdministratorClassManagementController extends Controller
             ->withCount('class_enrollments');
 
         if (is_string($filters['search']) && $filters['search'] !== '') {
-            $query = $filters['search'];
+            $term = $filters['search'];
+            $like = '%'.$term.'%';
 
-            $classesQuery->where(function ($nested) use ($query): void {
-                $nested->where('subject_code', 'ilike', "%{$query}%")
-                    ->orWhere('section', 'ilike', "%{$query}%")
-                    ->orWhere('school_year', 'ilike', "%{$query}%")
-                    ->orWhereRaw("CONCAT(subject_code, ' - ', section) ILIKE ?", ["%{$query}%"])
-                    ->orWhereHas('Subject', function ($subjectQuery) use ($query): void {
-                        $subjectQuery->where('code', 'ilike', "%{$query}%")
-                            ->orWhere('title', 'ilike', "%{$query}%");
+            $classesQuery->where(function ($nested) use ($like): void {
+                $nested->whereRaw('LOWER(subject_code) LIKE LOWER(?)', [$like])
+                    ->orWhereRaw('LOWER(section) LIKE LOWER(?)', [$like])
+                    ->orWhereRaw('LOWER(school_year) LIKE LOWER(?)', [$like])
+                    ->orWhereRaw("LOWER(CONCAT(subject_code, ' - ', section)) LIKE LOWER(?)", [$like])
+                    ->orWhereHas('Subject', function ($subjectQuery) use ($like): void {
+                        $subjectQuery->whereRaw('LOWER(code) LIKE LOWER(?)', [$like])
+                            ->orWhereRaw('LOWER(title) LIKE LOWER(?)', [$like]);
                     })
-                    ->orWhereHas('SubjectByCodeFallback', function ($subjectQuery) use ($query): void {
-                        $subjectQuery->where('code', 'ilike', "%{$query}%")
-                            ->orWhere('title', 'ilike', "%{$query}%");
+                    ->orWhereHas('SubjectByCodeFallback', function ($subjectQuery) use ($like): void {
+                        $subjectQuery->whereRaw('LOWER(code) LIKE LOWER(?)', [$like])
+                            ->orWhereRaw('LOWER(title) LIKE LOWER(?)', [$like]);
                     })
-                    ->orWhereHas('ShsSubject', function ($subjectQuery) use ($query): void {
-                        $subjectQuery->where('code', 'ilike', "%{$query}%")
-                            ->orWhere('title', 'ilike', "%{$query}%");
+                    ->orWhereHas('ShsSubject', function ($subjectQuery) use ($like): void {
+                        $subjectQuery->whereRaw('LOWER(code) LIKE LOWER(?)', [$like])
+                            ->orWhereRaw('LOWER(title) LIKE LOWER(?)', [$like]);
                     });
             });
         }
