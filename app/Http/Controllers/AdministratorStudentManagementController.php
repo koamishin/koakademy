@@ -82,14 +82,25 @@ final class AdministratorStudentManagementController extends Controller
                 },
             ])
             ->when(is_string($search) && mb_trim($search) !== '', function ($builder) use ($search): void {
-                $query = mb_trim($search);
+                $query = mb_strtolower(mb_trim($search));
+                $likeQuery = "%{$query}%";
+                $driver = DB::connection()->getDriverName();
+                $studentIdExpression = $driver === 'mysql'
+                    ? 'LOWER(CAST(student_id AS CHAR))'
+                    : 'LOWER(CAST(student_id AS TEXT))';
+                $fullNameExpression = $driver === 'sqlite'
+                    ? "LOWER(COALESCE(first_name, '') || ' ' || COALESCE(last_name, ''))"
+                    : "LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')))";
+                $lastNameFirstExpression = $driver === 'sqlite'
+                    ? "LOWER(COALESCE(last_name, '') || ', ' || COALESCE(first_name, ''))"
+                    : "LOWER(CONCAT(COALESCE(last_name, ''), ', ', COALESCE(first_name, '')))";
 
-                $builder->where(function ($nested) use ($query): void {
-                    $nested->whereRaw('CAST(student_id AS TEXT) ILIKE ?', ["%{$query}%"])
-                        ->orWhere('first_name', 'ilike', "%{$query}%")
-                        ->orWhere('last_name', 'ilike', "%{$query}%")
-                        ->orWhereRaw("CONCAT(first_name, ' ', last_name) ILIKE ?", ["%{$query}%"])
-                        ->orWhereRaw("CONCAT(last_name, ', ', first_name) ILIKE ?", ["%{$query}%"]);
+                $builder->where(function ($nested) use ($fullNameExpression, $lastNameFirstExpression, $likeQuery, $studentIdExpression): void {
+                    $nested->whereRaw("{$studentIdExpression} LIKE ?", [$likeQuery])
+                        ->orWhereRaw('LOWER(first_name) LIKE ?', [$likeQuery])
+                        ->orWhereRaw('LOWER(last_name) LIKE ?', [$likeQuery])
+                        ->orWhereRaw("{$fullNameExpression} LIKE ?", [$likeQuery])
+                        ->orWhereRaw("{$lastNameFirstExpression} LIKE ?", [$likeQuery]);
                 });
             })
             ->when(is_string($type) && $type !== '' && $type !== 'all', function ($builder) use ($type): void {

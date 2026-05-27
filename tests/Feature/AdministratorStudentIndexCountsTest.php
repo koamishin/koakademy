@@ -126,6 +126,42 @@ it('keeps the global student total when filters return no matching students', fu
         );
 });
 
+it('searches students without sqlite-specific query errors', function (string $search): void {
+    GeneralSetting::factory()->create([
+        'semester' => 2,
+        'school_starting_date' => '2024-08-01',
+        'school_ending_date' => '2025-05-31',
+        'enable_clearance_check' => true,
+    ]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    Student::factory()->create([
+        'student_id' => 20240001,
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+    ]);
+
+    Student::factory()->create([
+        'student_id' => 20240002,
+        'first_name' => 'Miguel',
+        'last_name' => 'Santos',
+    ]);
+
+    actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/students?search='.urlencode($search)))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/students/index', false)
+            ->has('students.data', 1)
+            ->where('students.data.0.student_id', 20240001)
+        );
+})->with([
+    'student id' => ['20240001'],
+    'full name' => ['jane doe'],
+    'last name first' => ['DOE, JANE'],
+]);
+
 it('casts cached sidebar student counts to int', function (): void {
     GeneralSetting::factory()->create([
         'semester' => 2,
