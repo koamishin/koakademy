@@ -7,12 +7,17 @@ namespace App\Providers;
 use App\Models\GeneralSetting;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 final class NotificationChannelServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        if (! Schema::hasTable('general_settings')) {
+            return;
+        }
+
         try {
             $settings = GeneralSetting::query()->first();
 
