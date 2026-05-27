@@ -35,7 +35,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { columns, Student } from "./columns";
 import { DataTable } from "./data-table";
 
-declare let route: any;
+declare let route: (name: string, params?: Record<string, unknown> | string | number) => string;
 
 interface StudentsIndexProps {
     user: User;
@@ -84,11 +84,90 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
     const [search, setSearch] = useState(filters.search || "");
     const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
-    const handleSearch = useDebouncedCallback((term: string) => {
-        router.get(route("administrators.students.index"), { ...filters, search: term }, { preserveState: true, replace: true });
-    }, 300);
-
     const [activeFilters, setActiveFilters] = useState<FilterType[]>([]);
+
+    const filteredStudents = useMemo(() => {
+        const searchTerm = search.trim().toLowerCase();
+
+        if (searchTerm === "") {
+            return students.data;
+        }
+
+        return students.data.filter((student) =>
+            [
+                student.student_id,
+                student.name,
+                student.course,
+                student.course_title,
+                student.academic_year,
+                student.type,
+                student.status,
+                student.scholarship_type,
+                student.employment_status,
+                student.region_of_origin,
+            ]
+                .filter((value): value is string | number => value !== null && value !== undefined)
+                .some((value) => String(value).toLowerCase().includes(searchTerm)),
+        );
+    }, [search, students.data]);
+
+    const hasLocalSearch = search.trim() !== "";
+    const serverSearch = filters.search ?? "";
+    const isServerSearchCurrent = search.trim() === serverSearch.trim();
+    const shouldUseLocalSearchResults = hasLocalSearch && !isServerSearchCurrent;
+    const visibleStudents = shouldUseLocalSearchResults ? filteredStudents : students.data;
+    const visiblePagination = shouldUseLocalSearchResults
+        ? {
+              current_page: 1,
+              last_page: 1,
+              per_page: students.per_page,
+              total: filteredStudents.length,
+              next_page_url: null,
+              prev_page_url: null,
+              from: filteredStudents.length > 0 ? 1 : 0,
+              to: filteredStudents.length,
+          }
+        : {
+              current_page: students.current_page,
+              last_page: students.last_page,
+              per_page: students.per_page,
+              total: students.total,
+              next_page_url: students.next_page_url,
+              prev_page_url: students.prev_page_url,
+              from: students.from,
+              to: students.to,
+          };
+
+    const buildFilterParams = (searchTerm: string, filterValues: FilterType[] = activeFilters): Record<string, string | number | null> => {
+        const appliedFilters: Record<string, string | number | null> = {
+            search: searchTerm.trim() || null,
+            type: null,
+            status: null,
+            scholarship_type: null,
+            employment_status: null,
+            is_indigenous_person: null,
+            previous_semester_cleared: null,
+            per_page: students.per_page,
+            page: 1,
+        };
+
+        filterValues.forEach((filter) => {
+            if (filter.values.length > 0) {
+                appliedFilters[filter.field] = filter.values[0];
+            }
+        });
+
+        return appliedFilters;
+    };
+
+    const refreshStudents = useDebouncedCallback((searchTerm: string, filterValues: FilterType[]) => {
+        router.get(route("administrators.students.index"), buildFilterParams(searchTerm, filterValues), {
+            only: ["students", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    }, 350);
 
     useEffect(() => {
         const initialFilters: FilterType[] = [];
@@ -118,32 +197,22 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
     const handleFiltersChange = (newFilters: FilterType[]) => {
         setActiveFilters(newFilters);
 
-        const appliedFilters: Record<string, any> = {
-            search: search,
-            type: null,
-            status: null,
-            scholarship_type: null,
-            employment_status: null,
-            is_indigenous_person: null,
-            previous_semester_cleared: null,
-        };
-
-        newFilters.forEach((f) => {
-            if (f.values.length > 0) {
-                appliedFilters[f.field] = f.values[0];
-            }
+        router.get(route("administrators.students.index"), buildFilterParams(search, newFilters), {
+            only: ["students", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
         });
-
-        router.get(route("administrators.students.index"), appliedFilters, { preserveState: true, replace: true });
     };
 
     const clearFilters = () => {
         setActiveFilters([]);
-        router.get(
-            route("administrators.students.index"),
-            { search: search }, // Keep search, clear others
-            { preserveState: true, replace: true },
-        );
+        router.get(route("administrators.students.index"), buildFilterParams(search, []), {
+            only: ["students", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
     };
 
     const filterFields: FilterFieldConfig[] = useMemo(
@@ -315,8 +384,10 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                             className="bg-background pl-8"
                             value={search}
                             onChange={(e) => {
-                                setSearch(e.target.value);
-                                handleSearch(e.target.value);
+                                const nextSearch = e.target.value;
+
+                                setSearch(nextSearch);
+                                refreshStudents(nextSearch, activeFilters);
                             }}
                         />
                     </div>
@@ -366,24 +437,15 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                     <TabsContent value="list" className="mt-0">
                         <DataTable
                             columns={columns}
-                            data={students.data}
-                            pagination={{
-                                current_page: students.current_page,
-                                last_page: students.last_page,
-                                per_page: students.per_page,
-                                total: students.total,
-                                next_page_url: students.next_page_url,
-                                prev_page_url: students.prev_page_url,
-                                from: students.from,
-                                to: students.to,
-                            }}
+                            data={visibleStudents}
+                            pagination={visiblePagination}
                             filters={filters}
                             bulkActions={{ statusOptions: options.statuses }}
                         />
                     </TabsContent>
 
                     <TabsContent value="grid" className="mt-0">
-                        {students.data.length === 0 ? (
+                        {visibleStudents.length === 0 ? (
                             <div className="bg-muted/10 flex h-64 flex-col items-center justify-center rounded-lg border border-dashed">
                                 <Search className="mb-2 h-8 w-8 opacity-20" />
                                 <p className="text-muted-foreground">No students found matching your criteria.</p>
@@ -391,7 +453,7 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                         ) : (
                             <>
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                    {students.data.map((row) => (
+                                    {visibleStudents.map((row) => (
                                         <Card
                                             key={row.id}
                                             className="cursor-pointer transition-shadow hover:shadow-md"
@@ -466,21 +528,21 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                                 {/* Manual Pagination for Grid View using the same style as Table */}
                                 <div className="mt-4 flex items-center justify-between border-t pt-4">
                                     <div className="text-muted-foreground text-sm">
-                                        Showing {students.from} to {students.to} of {students.total} entries
+                                        Showing {visiblePagination.from} to {visiblePagination.to} of {visiblePagination.total} entries
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button variant="outline" size="sm" asChild disabled={!students.prev_page_url}>
-                                            {students.prev_page_url ? (
-                                                <Link href={students.prev_page_url} preserveState>
+                                        <Button variant="outline" size="sm" asChild disabled={!visiblePagination.prev_page_url}>
+                                            {visiblePagination.prev_page_url ? (
+                                                <Link href={visiblePagination.prev_page_url} preserveState>
                                                     Previous
                                                 </Link>
                                             ) : (
                                                 <span>Previous</span>
                                             )}
                                         </Button>
-                                        <Button variant="outline" size="sm" asChild disabled={!students.next_page_url}>
-                                            {students.next_page_url ? (
-                                                <Link href={students.next_page_url} preserveState>
+                                        <Button variant="outline" size="sm" asChild disabled={!visiblePagination.next_page_url}>
+                                            {visiblePagination.next_page_url ? (
+                                                <Link href={visiblePagination.next_page_url} preserveState>
                                                     Next
                                                 </Link>
                                             ) : (
