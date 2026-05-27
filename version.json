@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.9",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.9",
-  "commit": "b672d648a41936de1083e01850b251e4961f2039",
+  "version": "1.5.0-dev.0.10",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.10",
+  "commit": "6fa52d7b8ccfcc1f81d2cbf8633ce536a5de4f13",
   "branch": "master",
-  "timestamp": "2026-05-26T08:32:24Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26441233241",
+  "timestamp": "2026-05-27T05:58:58Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26493548730",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.9 - Add bulk attendance import workflow",
-    "previous": "1.5.0-dev.0.8"
+    "current": "Version 1.5.0-dev.0.10 - Merge pull request #85 from yukazakiri/feature/fix-student-search",
+    "previous": "1.5.0-dev.0.9"
   },
   "metadata": {
     "author": "yukazakiri",
