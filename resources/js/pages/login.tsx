@@ -116,10 +116,10 @@ export default function LoginPage() {
             {isSplitLayout ? (
                 <div className="bg-muted/30 relative hidden lg:block overflow-hidden border-l">
                     <div className="bg-primary/5 absolute inset-0 z-0">
-                        <div className="absolute top-1/2 left-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,var(--primary-color)_0%,transparent_70%)] opacity-[0.03]" />
+                        <div className="absolute top-1/2 left-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,var(--primary-color)_0%,transparent_0)] opacity-[0.03]" />
                     </div>
                     <TransitionWrapper className="relative z-10 h-full">
-                        <OnboardingPanel className="h-full" />
+                        <OnboardingPanel className="h-full" logo={resolvedBranding.logo} />
                     </TransitionWrapper>
                 </div>
             ) : null}

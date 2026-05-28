@@ -206,10 +206,12 @@ const portalFeatures: Feature[] = [
 
 interface OnboardingPanelProps {
     className?: string;
+    logo?: string;
 }
 
-export function OnboardingPanel({ className }: OnboardingPanelProps) {
-    const { appName, organizationShortName: orgShortName } = useBranding();
+export function OnboardingPanel({ className, logo: propLogo }: OnboardingPanelProps) {
+    const { appName, logo: brandingLogo, organizationShortName: orgShortName } = useBranding();
+    const logo = propLogo ?? brandingLogo;
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
@@ -335,12 +337,26 @@ export function OnboardingPanel({ className }: OnboardingPanelProps) {
                 {/* Footer Branding */}
                 <div className="mt-6 flex w-full items-center justify-between border-t border-border/40 pt-4 lg:mt-8">
                     <div className="flex items-center gap-2.5">
-                        <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-primary/20 shadow-sm backdrop-blur-sm">
-                            <Building2 className="h-4 w-4 text-primary" />
+                        <div className="bg-primary/10 flex h-9 w-9 items-center justify-center rounded-lg ring-1 ring-primary/20 shadow-sm backdrop-blur-sm overflow-hidden">
+                            <img 
+                                src={logo} 
+                                alt={`${orgShortName} Logo`} 
+                                className="h-6 w-6 object-contain"
+                                onError={(e) => {
+                                    // Fallback to Building2 icon if image fails to load
+                                    e.currentTarget.style.display = 'none';
+                                    const parent = e.currentTarget.parentElement;
+                                    if (parent) {
+                                        const icon = document.createElement('div');
+                                        icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></svg>';
+                                        parent.appendChild(icon.firstChild as Node);
+                                    }
+                                }}
+                            />
                         </div>
                         <div>
                             <div className="text-[10px] font-bold text-foreground lg:text-xs">Institutional Portal</div>
-                            <div className="text-[9px] text-muted-foreground">Official gateway for members</div>
+                            <div className="text-[9px] text-muted-foreground">Official gateway for {orgShortName}</div>
                         </div>
                     </div>
                     <div className="hidden sm:flex items-center gap-1.5 rounded-md bg-foreground/[0.03] px-2 py-1 ring-1 ring-foreground/10">
@@ -352,4 +368,5 @@ export function OnboardingPanel({ className }: OnboardingPanelProps) {
         </div>
     );
 }
+
 
