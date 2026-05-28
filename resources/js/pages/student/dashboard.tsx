@@ -383,32 +383,28 @@ function MobileQuickActions() {
     ];
 
     return (
-        <section className="md:hidden">
-            <Card className="border-border/40 bg-card/50 rounded-xl shadow-sm backdrop-blur-md">
-                <CardContent className="p-3">
-                    <div className="grid grid-cols-4 gap-3">
-                        {actions.map((action) => {
-                            const Icon = action.icon;
+        <section className="md:hidden px-1">
+            <div className="grid grid-cols-4 gap-4">
+                {actions.map((action) => {
+                    const Icon = action.icon;
 
-                            return (
-                                <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-1.5">
-                                    <div
-                                        className={cn(
-                                            "flex h-10 w-10 items-center justify-center rounded-xl shadow-sm transition-all duration-200 group-active:scale-90",
-                                            "bg-background/80 border-border/50 border group-hover:border-primary/40 group-hover:bg-primary/5",
-                                        )}
-                                    >
-                                        <Icon className="text-primary h-5 w-5" strokeWidth={1.5} />
-                                    </div>
-                                    <span className="text-foreground/70 group-hover:text-foreground max-w-full truncate text-[10px] font-semibold tracking-tight transition-colors">
-                                        {action.label}
-                                    </span>
-                                </Link>
-                            );
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
+                    return (
+                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-2">
+                            <div
+                                className={cn(
+                                    "flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-active:scale-90",
+                                    "bg-card border-border/40 border group-hover:border-primary/40 group-hover:bg-primary/5",
+                                )}
+                            >
+                                <Icon className="text-primary h-6 w-6" strokeWidth={1.5} />
+                            </div>
+                            <span className="text-foreground/70 group-hover:text-foreground max-w-full truncate text-[11px] font-bold tracking-tight transition-colors">
+                                {action.label}
+                            </span>
+                        </Link>
+                    );
+                })}
+            </div>
         </section>
     );
 }
