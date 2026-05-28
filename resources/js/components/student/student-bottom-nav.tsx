@@ -119,28 +119,30 @@ export function StudentBottomNav() {
 
                             if (isCenter) {
                                 return (
-                                    <Link key={item.id} href={item.url} className="group relative -mt-5 flex flex-col items-center" aria-label="Home">
+                                    <Link key={item.id} href={item.url} className="group relative -mt-7 flex flex-col items-center" aria-label="Home">
                                         {/* Outer glow ring */}
                                         <span
                                             className={cn(
-                                                "absolute top-1 h-11 w-11 rounded-full transition-all duration-300",
-                                                active ? "bg-primary/15 scale-105 blur-sm" : "scale-100 bg-transparent",
+                                                "absolute -inset-2.5 rounded-full opacity-0 blur-xl transition-all duration-500 group-hover:opacity-40 group-active:opacity-60",
+                                                active ? "bg-primary/40 opacity-20" : "bg-primary/20",
                                             )}
                                         />
-                                        {/* Elevated pill */}
-                                        <span
+
+                                        {/* Button Circle */}
+                                        <div
                                             className={cn(
-                                                "relative z-10 flex h-11 w-11 items-center justify-center rounded-full shadow-md transition-all duration-300",
+                                                "relative flex h-13 w-13 items-center justify-center rounded-2xl border-2 transition-all duration-300 group-active:scale-90",
                                                 active
-                                                    ? "bg-primary text-primary-foreground shadow-primary/25"
-                                                    : "bg-muted text-foreground shadow-black/10 dark:shadow-black/30",
+                                                    ? "border-primary bg-primary text-primary-foreground shadow-[0_8px_20px_-6px_rgba(var(--primary),0.5)]"
+                                                    : "border-border/60 bg-background/95 text-foreground/60 shadow-lg",
                                             )}
                                         >
-                                            <Icon className="size-[21px]" stroke={active ? 2.1 : 1.8} />
-                                        </span>
+                                            <Icon className="size-6" stroke={2.2} />
+                                        </div>
+
                                         <span
                                             className={cn(
-                                                "mt-1 text-[10px] font-semibold tracking-wide transition-colors",
+                                                "mt-1.5 text-[10px] font-bold tracking-tight uppercase transition-colors duration-200",
                                                 active ? "text-primary" : "text-foreground/60",
                                             )}
                                         >
@@ -155,8 +157,8 @@ export function StudentBottomNav() {
                                     key={item.id}
                                     href={disabled ? "#" : item.url}
                                     className={cn(
-                                        "relative flex w-14 flex-col items-center justify-end rounded-lg px-1 pt-1.5 pb-0.5 transition-colors",
-                                        active && "bg-primary/10",
+                                        "relative flex w-15 flex-col items-center justify-end rounded-xl px-1 pt-2 pb-1 transition-all duration-200 group-active:scale-95",
+                                        active && "bg-primary/5",
                                         disabled && "pointer-events-none opacity-40",
                                     )}
                                     aria-disabled={disabled}
@@ -164,16 +166,16 @@ export function StudentBottomNav() {
                                 >
                                     <div
                                         className={cn(
-                                            "flex h-7 w-7 items-center justify-center transition-all duration-200",
-                                            active ? "text-primary" : "text-foreground/60",
+                                            "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200",
+                                            active ? "text-primary" : "text-foreground/50",
                                         )}
                                     >
-                                        <Icon className="size-[21px]" stroke={active ? 2.1 : 1.8} />
+                                        <Icon className="size-[22px]" stroke={active ? 2.2 : 1.7} />
                                     </div>
                                     <span
                                         className={cn(
-                                            "mt-0.5 max-w-full truncate text-[10px] leading-tight font-medium transition-colors",
-                                            active ? "text-primary" : "text-foreground/60",
+                                            "mt-1 max-w-full truncate text-[10px] leading-tight font-bold transition-colors",
+                                            active ? "text-primary" : "text-foreground/50",
                                         )}
                                     >
                                         {item.label}

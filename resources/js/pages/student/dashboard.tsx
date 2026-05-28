@@ -384,16 +384,16 @@ function MobileQuickActions() {
 
     return (
         <section className="md:hidden">
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-4 gap-2">
                 {actions.map((action) => {
                     const Icon = action.icon;
 
                     return (
-                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-1">
-                            <span className="border-border/60 bg-card/85 group-hover:border-primary/40 group-hover:bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors">
-                                <Icon className="text-primary h-[18px] w-[18px]" strokeWidth={1.8} />
+                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-1.5">
+                            <span className="border-border/60 bg-card/85 group-active:scale-95 group-hover:border-primary/40 group-hover:bg-primary/10 flex h-11 w-11 items-center justify-center rounded-2xl border shadow-sm transition-all duration-200">
+                                <Icon className="text-primary h-5 w-5" strokeWidth={1.8} />
                             </span>
-                            <span className="text-foreground/60 group-hover:text-foreground max-w-full truncate text-[10px] font-medium transition-colors">
+                            <span className="text-foreground/60 group-hover:text-foreground max-w-full truncate text-[11px] font-semibold transition-colors">
                                 {action.label}
                             </span>
                         </Link>
@@ -421,12 +421,14 @@ function MobileMetricCard({
 }) {
     const [revealed, setRevealed] = useState(!privateValue);
     const iconTone = tone.split(" ").find((className) => className.startsWith("text-")) ?? "text-primary";
+    const bgTone = tone.split(" ").find((className) => className.startsWith("bg-")) ?? "bg-primary/10";
 
     return (
-        <Card className="border-border/60 bg-card/75 overflow-hidden rounded-lg shadow-sm">
+        <Card className="border-border/60 bg-card/75 relative overflow-hidden rounded-lg shadow-sm">
+            <div className={cn("absolute inset-y-0 left-0 w-1", bgTone.replace("/10", "/30"))} />
             <CardContent className="relative min-h-[86px] p-2.5">
                 <Icon className={cn("pointer-events-none absolute top-3 right-3 h-6 w-6 opacity-25", iconTone)} strokeWidth={1.8} />
-                <div className="relative z-10 pr-7">
+                <div className="relative z-10 pr-7 pl-1.5">
                     <div className="flex items-center gap-1.5">
                         <p className="text-foreground/60 text-[10px] font-bold tracking-wide uppercase">{label}</p>
                         {privateValue && (
@@ -574,12 +576,9 @@ function MobileStudentDashboard({
                                 <Sparkles className="text-primary mr-1 h-2.5 w-2.5" />
                                 {getSemesterLabel(currentSemester)} &bull; {currentSchoolYearLabel}
                             </Badge>
-                            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] leading-none font-semibold text-emerald-500">
-                                Active
-                            </span>
                         </div>
 
-                        <div className="pr-6">
+                        <div className="pr-6 pb-1">
                             <p className="text-foreground/65 text-[10px] leading-tight font-medium">{greetingCopy.subline}</p>
                             <h1 className="text-foreground mt-0.5 text-[1.18rem] leading-tight font-bold tracking-tight">
                                 {greetingCopy.headline},{" "}
@@ -589,36 +588,28 @@ function MobileStudentDashboard({
                             </h1>
                         </div>
 
-                        <Link
-                            href={heroInsight.href}
-                            className="border-border/50 bg-background/55 hover:border-primary/40 hover:bg-background/75 flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors"
-                        >
-                            <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
-                                <HeroInsightIcon className="h-3.5 w-3.5" strokeWidth={1.9} />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                                <span className="text-foreground/60 block text-[8px] leading-none font-bold tracking-wider uppercase">
-                                    {heroInsight.label}
-                                </span>
-                                <span className="text-foreground mt-1 block truncate text-[11px] leading-tight font-semibold">
-                                    {heroInsight.value}
-                                </span>
-                            </span>
-                            <ArrowRight className="text-foreground/45 h-3.5 w-3.5 shrink-0" />
-                        </Link>
-
-                        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                            <div className="border-border/50 bg-background/45 min-w-0 rounded-lg border px-2.5 py-1.5">
-                                <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Program</p>
-                                <p className="text-foreground mt-0.5 truncate text-[11px] leading-tight font-semibold">
-                                    {studentData.course || "N/A"}
-                                </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="border-border/50 bg-background/45 flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-1.5">
+                                <div className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-md">
+                                    <GraduationCap className="h-3.5 w-3.5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Program</p>
+                                    <p className="text-foreground mt-0.5 truncate text-[11px] leading-tight font-semibold">
+                                        {studentData.course || "N/A"}
+                                    </p>
+                                </div>
                             </div>
-                            <div className="border-border/50 bg-background/45 rounded-lg border px-2.5 py-1.5">
-                                <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Student ID</p>
-                                <p className="text-foreground mt-0.5 truncate font-mono text-[11px] leading-tight font-semibold">
-                                    {studentData.student_id}
-                                </p>
+                            <div className="border-border/50 bg-background/45 flex items-center gap-2 rounded-lg border px-2.5 py-1.5">
+                                <div className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-md">
+                                    <UserRound className="h-3.5 w-3.5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-foreground/55 text-[8px] leading-none font-bold tracking-wider uppercase">Student ID</p>
+                                    <p className="text-foreground mt-0.5 truncate font-mono text-[11px] leading-tight font-semibold">
+                                        {studentData.student_id}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </CardContent>
@@ -655,10 +646,18 @@ function MobileStudentDashboard({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="mt-2 flex items-center justify-between gap-3 pr-12">
-                                    <p className="text-foreground/65 text-sm">No scheduled classes yet.</p>
-                                    <Button asChild variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-xs">
-                                        <Link href="/student/schedule">View</Link>
+                                <div className="mt-2 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="bg-primary/5 flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-primary/20">
+                                            <Calendar className="text-primary/40 h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-foreground/65 text-[13px] font-medium">No classes for today</p>
+                                            <p className="text-foreground/45 text-[11px]">Enjoy your free time!</p>
+                                        </div>
+                                    </div>
+                                    <Button asChild variant="secondary" size="sm" className="h-8 shrink-0 rounded-full px-3 text-xs font-semibold shadow-none">
+                                        <Link href="/student/schedule">View Full</Link>
                                     </Button>
                                 </div>
                             )}
