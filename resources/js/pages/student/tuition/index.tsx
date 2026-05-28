@@ -310,7 +310,6 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                             {/* MAIN STATUS CARD */}
                             <motion.div variants={itemVariants}>
                                 <Card className="border-border/40 bg-card relative overflow-hidden rounded-xl shadow-lg shadow-black/5">
-                                    <div className="from-primary/40 to-primary/5 absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b" />
                                     <CardContent className="p-4 md:p-6">
                                         <div className="flex flex-col gap-5 md:gap-8">
                                             <div className="flex items-start justify-between">
@@ -346,7 +345,6 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
 
                                             <div className="grid grid-cols-2 gap-2.5 pt-0.5 md:gap-4">
                                                 <div className="border-border/40 bg-background/45 relative overflow-hidden rounded-lg border p-2.5 md:p-4">
-                                                    <div className="absolute inset-y-0 left-0 w-1 bg-emerald-500/40" />
                                                     <div className="flex items-center gap-1.5 opacity-60 md:gap-2">
                                                         <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
                                                         <span className="text-[8px] font-bold uppercase sm:text-[10px]">Paid</span>
@@ -354,7 +352,6 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                                                     <p className="text-foreground mt-0.5 font-mono text-sm font-bold sm:text-lg md:text-xl">{tuition.formatted_total_paid}</p>
                                                 </div>
                                                 <div className="border-border/40 bg-background/45 relative overflow-hidden rounded-lg border p-2.5 md:p-4">
-                                                    <div className="absolute inset-y-0 left-0 w-1 bg-amber-500/40" />
                                                     <div className="flex items-center gap-1.5 opacity-60 md:gap-2">
                                                         <Clock className="h-2.5 w-2.5 text-amber-500" />
                                                         <span className="text-[8px] font-bold uppercase sm:text-[10px]">Balance</span>

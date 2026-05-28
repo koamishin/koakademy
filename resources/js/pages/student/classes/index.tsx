@@ -219,7 +219,6 @@ const AcademicStatCard = ({
 
     return (
         <Card className={cn("border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card", className)}>
-            <div className={cn("absolute inset-y-0 left-0 w-1", bgTone.replace("/10", "/40"))} />
             <CardContent className="p-3 sm:p-5">
                 <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
@@ -615,7 +614,6 @@ export default function StudentClasses({ user, student_name, course_name, progre
                         {viewMode === "interactive" && (
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-3 md:grid-cols-2 md:gap-4">
                                 <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
-                                    <div className="absolute inset-y-0 left-0 w-1.5 bg-amber-500/40" />
                                     <CardContent className="p-4 sm:p-5">
                                         <div className="flex items-start justify-between">
                                             <div className="min-w-0 flex-1">
@@ -650,7 +648,6 @@ export default function StudentClasses({ user, student_name, course_name, progre
                                 </Card>
 
                                 <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
-                                    <div className={cn("absolute inset-y-0 left-0 w-1.5", overallGwa.tone?.replace("text-", "bg-")?.replace("500", "500/40") || "bg-primary/40")} />
                                     <CardContent className="p-4 sm:p-5">
                                         <div className="flex items-start justify-between">
                                             <div className="min-w-0 flex-1">

@@ -34,7 +34,6 @@ const dashboardPanelClass = "border-border/40 bg-card/60 rounded-xl shadow-sm ba
 function ScheduleStatCard({ label, value, detail, icon: Icon }: { label: string; value: string | number; detail: string; icon: typeof IconSchool }) {
     return (
         <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
-            <div className="absolute inset-y-0 left-0 w-1 bg-primary/40" />
             <CardContent className="p-2 sm:p-3">
                 <div className="flex flex-col gap-0.5">
                     <p className="text-foreground/50 text-[7px] font-bold tracking-wider uppercase sm:text-[9px]">{label}</p>

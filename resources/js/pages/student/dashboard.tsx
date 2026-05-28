@@ -434,7 +434,6 @@ function MobileMetricCard({
 
     return (
         <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm">
-            <div className={cn("absolute inset-y-0 left-0 w-1", bgTone.replace("/10", "/40"))} />
             <CardContent className="p-3">
                 <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
@@ -605,7 +604,6 @@ function MobileStudentDashboard({
             <div className="relative z-20 -mt-12 space-y-3 px-3.5 pb-24">
                 <section>
                     <Card className="border-border/40 bg-card shadow-xl shadow-black/10 overflow-hidden rounded-xl">
-                        <div className="from-primary/40 to-primary/5 absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b" />
                         <CardContent className="p-3.5">
                             <div className="flex items-center justify-between">
                                 <div>

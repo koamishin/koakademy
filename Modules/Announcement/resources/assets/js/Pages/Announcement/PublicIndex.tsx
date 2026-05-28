@@ -95,8 +95,7 @@ export default function PublicAnnouncementIndex({ user, announcements }: Announc
 
                 {/* Mobile Stats Card */}
                 <div className="md:hidden block">
-                    <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm">
-                        <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/40" />
+                    <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm">
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
