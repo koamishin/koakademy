@@ -125,7 +125,7 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
             <div className="bg-primary/10 md:hidden relative h-[110px] w-full overflow-hidden px-4 pt-5">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
-                <div className="relative z-10">
+                <div className="relative">
                     <p className="text-foreground/60 text-[9px] font-bold tracking-wider uppercase">Weekly Plan</p>
                     <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight">
                         Class <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Schedule</span>
@@ -135,7 +135,7 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
 
             <div className={cn(
                 "mx-auto flex w-full max-w-7xl flex-col gap-2.5 p-3.5 pb-20 md:gap-6 md:p-6",
-                "-mt-10 md:mt-0"
+                "relative z-20 -mt-10 md:mt-0"
             )}>
                 {/* Header Section */}
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden hidden md:block")}>

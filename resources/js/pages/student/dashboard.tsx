@@ -581,7 +581,7 @@ function MobileStudentDashboard({
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
 
-                <div className="relative z-10 flex items-center justify-between">
+                <div className="relative flex items-center justify-between">
                     <div>
                         <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">{greetingCopy.subline}</p>
                         <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight">
@@ -602,9 +602,9 @@ function MobileStudentDashboard({
                 </div>
             </div>
 
-            <div className="-mt-12 space-y-3 px-3.5 pb-24">
+            <div className="relative z-20 -mt-12 space-y-3 px-3.5 pb-24">
                 <section>
-                    <Card className="border-border/40 bg-card shadow-lg shadow-black/5 overflow-hidden rounded-xl">
+                    <Card className="border-border/40 bg-card shadow-xl shadow-black/10 overflow-hidden rounded-xl">
                         <div className="from-primary/40 to-primary/5 absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b" />
                         <CardContent className="p-3.5">
                             <div className="flex items-center justify-between">

@@ -46,7 +46,7 @@ export default function PublicAnnouncementIndex({ user, announcements }: Announc
             <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
-                <div className="relative z-10">
+                <div className="relative">
                     <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">Student Updates</p>
                     <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
                         Announce<span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">ments</span>
@@ -60,7 +60,7 @@ export default function PublicAnnouncementIndex({ user, announcements }: Announc
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className={cn(
                     "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
-                    "-mt-12 md:mt-0"
+                    "relative z-20 -mt-12 md:mt-0"
                 )}
             >
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden hidden md:block")}>
