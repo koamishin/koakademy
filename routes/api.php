@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Auth\SignupController;
 use App\Http\Controllers\Api\V1\ClassEnrollmentController;
 use App\Http\Controllers\Api\V1\ClassPostController;
 use App\Http\Controllers\Api\V1\GeneralSettingController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\StudentVerificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('/settings', [GeneralSettingController::class, 'publicWebsiteSettings'])->name('settings');
     });
 
+
+    Route::middleware(['auth:sanctum'])->prefix('profile')->name('profile.')->group(function (): void {
+        Route::get('/me', [ProfileController::class, 'show'])->name('me');
+    });
     Route::prefix('auth')->name('auth.')->group(function (): void {
         Route::post('/signup/email-lookup', [SignupController::class, 'emailLookup'])->name('signup.email-lookup');
         Route::post('/signup/send-otp', [SignupController::class, 'sendOtp'])->name('signup.send-otp');
