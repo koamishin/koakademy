@@ -33,15 +33,21 @@ const dashboardPanelClass = "border-border/40 bg-card/60 rounded-xl shadow-sm ba
 
 function ScheduleStatCard({ label, value, detail, icon: Icon }: { label: string; value: string | number; detail: string; icon: typeof IconSchool }) {
     return (
-        <Card className={`${dashboardCardClass} group relative min-h-[76px] overflow-hidden hover:-translate-y-1 sm:min-h-[120px]`}>
-            <div className="absolute top-0 left-0 h-full w-1 bg-primary/20 transition-colors group-hover:bg-primary" />
-            <Icon className="text-primary pointer-events-none absolute top-2 right-2 size-8 opacity-[0.08] transition-all duration-300 group-hover:scale-110 group-hover:opacity-15 sm:top-4 sm:right-5 sm:size-12" />
-            <CardContent className="relative p-2.5 pr-8 sm:p-4 sm:pr-16">
-                <p className="text-muted-foreground truncate text-[8px] font-bold tracking-wider uppercase sm:text-[10px]">{label}</p>
-                <div className="mt-0.5 flex items-baseline gap-1 sm:mt-2">
-                    <p className="text-foreground text-xl font-bold tracking-tight sm:text-3xl">{value}</p>
+        <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
+            <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/40" />
+            <CardContent className="p-3.5 sm:p-5">
+                <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">{label}</p>
+                        <p className="text-foreground mt-1 truncate text-lg font-bold tracking-tight sm:text-2xl md:text-3xl leading-none">
+                            {value}
+                        </p>
+                    </div>
+                    <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14">
+                        <Icon className="h-4.5 w-4.5 sm:h-8 sm:w-8" strokeWidth={2} />
+                    </div>
                 </div>
-                <p className="text-muted-foreground/80 mt-0.5 line-clamp-1 text-[9px] font-medium leading-tight sm:mt-1 sm:text-[11px]">{detail}</p>
+                <p className="text-foreground/45 mt-2.5 line-clamp-1 text-[10px] font-medium sm:text-xs">{detail}</p>
             </CardContent>
         </Card>
     );
@@ -115,9 +121,24 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
         >
             <Head title="Class Schedule" />
 
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6">
+            {/* Mobile Header Background */}
+            <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
+                <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
+                <div className="relative z-10">
+                    <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">Weekly Plan</p>
+                    <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
+                        Class <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Schedule</span>
+                    </h1>
+                </div>
+            </div>
+
+            <div className={cn(
+                "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
+                "-mt-12 md:mt-0"
+            )}>
                 {/* Header Section */}
-                <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
+                <Card className={cn(dashboardPanelClass, "relative overflow-hidden hidden md:block")}>
                     {/* Decorative Glass Elements */}
                     <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                     <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
@@ -149,6 +170,13 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Mobile Stats Row (Visible only on mobile) */}
+                <div className="md:hidden grid grid-cols-3 gap-2.5">
+                    <ScheduleStatCard label="Scheduled" value={stats.scheduledCount} detail="Classes" icon={IconCalendarStats} />
+                    <ScheduleStatCard label="Awaiting" value={stats.unscheduledCount} detail="Schedule" icon={IconStack2} />
+                    <ScheduleStatCard label="Conflicts" value={stats.conflictCount} detail="Overlap" icon={IconClockHour4} />
+                </div>
 
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                     {/* Status Section */}

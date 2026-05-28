@@ -42,13 +42,28 @@ export default function PublicAnnouncementIndex({ user, announcements }: Announc
         <PortalLayout user={user}>
             <Head title="Announcements" />
 
+            {/* Mobile Header Background */}
+            <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
+                <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
+                <div className="relative z-10">
+                    <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">Student Updates</p>
+                    <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
+                        Announce<span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">ments</span>
+                    </h1>
+                </div>
+            </div>
+
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6"
+                className={cn(
+                    "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
+                    "-mt-12 md:mt-0"
+                )}
             >
-                <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
+                <Card className={cn(dashboardPanelClass, "relative overflow-hidden hidden md:block")}>
                     {/* Decorative Glass Elements */}
                     <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                     <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
@@ -77,6 +92,26 @@ export default function PublicAnnouncementIndex({ user, announcements }: Announc
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Mobile Stats Card */}
+                <div className="md:hidden block">
+                    <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm">
+                        <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/40" />
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase">Active Notifications</p>
+                                    <p className="text-foreground mt-1 text-xl font-bold leading-none tabular-nums">
+                                        {announcements.length} <span className="text-sm font-medium text-foreground/45">Notices</span>
+                                    </p>
+                                </div>
+                                <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                                    <Megaphone className="h-5 w-5" strokeWidth={2} />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
                 <div className="grid gap-6">
                     {announcements.length === 0 ? (

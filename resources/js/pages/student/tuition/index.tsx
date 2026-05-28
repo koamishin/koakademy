@@ -145,11 +145,26 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
         >
             <Head title="Tuition & Fees" />
 
+            {/* Mobile Header Background */}
+            <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
+                <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
+                <div className="relative z-10">
+                    <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">Student Finance</p>
+                    <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
+                        Tuition & <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Fees</span>
+                    </h1>
+                </div>
+            </div>
+
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6"
+                className={cn(
+                    "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
+                    "-mt-12 md:mt-0"
+                )}
             >
                 {/* Header */}
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
@@ -159,16 +174,20 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
 
                     <CardContent className="relative z-10 flex flex-col justify-between gap-3 p-3 md:flex-row md:items-end md:gap-5 md:p-5">
                         <div className="space-y-1.5 md:space-y-2">
-                            <div className="text-primary flex items-center gap-2 font-medium">
+                            <div className="text-primary flex items-center gap-2 font-medium md:flex hidden">
                                 <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4" />
                                 <span className="text-muted-foreground text-[9px] font-semibold tracking-wide uppercase md:text-[10px]">Student Finance</span>
                             </div>
-                            <h1 className="text-foreground text-xl leading-tight font-bold tracking-tight sm:text-3xl md:text-4xl">
+                            <h1 className="text-foreground text-xl leading-tight font-bold tracking-tight sm:text-3xl md:text-4xl md:block hidden">
                                 Tuition & <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Fees</span>
                             </h1>
                             <p className="text-muted-foreground hidden max-w-xl text-sm sm:block sm:text-base">
                                 Overview of your financial status, assessment breakdown, and payment history for the semester.
                             </p>
+                            
+                            <div className="md:hidden block w-full mb-1">
+                                <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase">Active Academic Period</p>
+                            </div>
                         </div>
 
                         <div className="flex w-full items-center gap-2 md:w-auto md:gap-3">

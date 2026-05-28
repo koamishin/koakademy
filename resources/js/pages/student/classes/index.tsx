@@ -214,21 +214,26 @@ const AcademicStatCard = ({
     children?: ReactNode;
     className?: string;
 }) => {
+    const iconTone = tone.split(" ").find((c) => c.startsWith("text-")) ?? "text-primary";
+    const bgTone = tone.split(" ").find((c) => c.startsWith("bg-")) ?? "bg-primary/10";
+
     return (
-        <Card className={cn(dashboardCardClass, "group relative min-h-[132px] overflow-hidden hover:-translate-y-0.5", className)}>
-            <CardContent className="relative flex h-full flex-col justify-end p-5 pr-20 sm:min-h-[150px]">
-                <Icon
-                    className={cn(
-                        "pointer-events-none absolute top-4 right-5 h-14 w-14 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25",
-                        tone,
-                    )}
-                />
-                <div className="relative z-10 min-w-0">
-                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-                    <p className="text-foreground mt-1 truncate text-2xl font-semibold tracking-tight md:text-3xl">{value}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">{detail}</p>
-                    {children}
+        <Card className={cn("border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card", className)}>
+            <div className={cn("absolute inset-y-0 left-0 w-1.5", bgTone.replace("/10", "/40"))} />
+            <CardContent className="p-4 sm:p-5">
+                <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">{label}</p>
+                        <p className="text-foreground mt-1 truncate text-xl font-bold tracking-tight sm:text-2xl md:text-3xl leading-none">
+                            {value}
+                        </p>
+                    </div>
+                    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14", bgTone)}>
+                        <Icon className={cn("h-5 w-5 sm:h-8 sm:w-8", iconTone)} strokeWidth={2} />
+                    </div>
                 </div>
+                <p className="text-foreground/45 mt-3 line-clamp-1 text-[10px] font-medium sm:text-xs">{detail}</p>
+                {children}
             </CardContent>
         </Card>
     );
@@ -531,11 +536,26 @@ export default function StudentClasses({ user, student_name, course_name, progre
         >
             <Head title="My Academics" />
 
+            {/* Mobile Header Background */}
+            <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
+                <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
+                <div className="relative z-10">
+                    <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">My Academics</p>
+                    <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
+                        Academic <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Journey</span>
+                    </h1>
+                </div>
+            </div>
+
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6"
+                className={cn(
+                    "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
+                    "-mt-12 md:mt-0"
+                )}
             >
                 {/* Hero Section */}
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
@@ -545,7 +565,7 @@ export default function StudentClasses({ user, student_name, course_name, progre
 
                     <CardContent className="relative z-10 space-y-3 p-3 sm:p-5 md:space-y-6 md:p-6">
                         <div className="flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
-                            <div className="space-y-1 sm:space-y-2">
+                            <div className="space-y-1 sm:space-y-2 md:block hidden">
                                 <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs">
                                     <Sparkles className="text-primary mr-1.5 h-3 w-3" />
                                     My Academics
@@ -561,8 +581,15 @@ export default function StudentClasses({ user, student_name, course_name, progre
                                 </div>
                             </div>
 
+                            <div className="md:hidden block w-full">
+                                <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase">Enrolled Course</p>
+                                <p className="text-foreground mt-1 text-sm font-bold leading-tight">
+                                    {course_name}
+                                </p>
+                            </div>
+
                             {/* View Switcher Controls */}
-                            <div className="border-border/60 bg-muted/70 grid w-full grid-cols-2 gap-1 rounded-lg border p-1 sm:w-auto">
+                            <div className="border-border/60 bg-muted/70 grid w-full grid-cols-2 gap-1 rounded-xl border p-1 sm:w-auto shadow-sm">
                                 <Button
                                     variant={viewMode === "interactive" ? "default" : "ghost"}
                                     size="sm"
@@ -586,59 +613,66 @@ export default function StudentClasses({ user, student_name, course_name, progre
 
                         {/* Progress Stats (Only show in Interactive Mode) */}
                         {viewMode === "interactive" && (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-2.5 md:grid-cols-2 md:gap-4">
-                                <Card className={cn(dashboardCardClass, "group relative min-h-[88px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]")}>
-                                    <div className="absolute top-3 right-3 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 sm:top-4 sm:right-5">
-                                        <Trophy className="h-9 w-9 text-amber-500 sm:h-14 sm:w-14" />
-                                    </div>
-                                    <CardContent className="relative z-10 flex h-full flex-col justify-end p-3 pr-12 sm:p-5 sm:pr-20">
-                                        <div>
-                                            <h3 className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase sm:text-xs">Course Completion</h3>
-                                            <div className="mt-1 flex items-baseline gap-2 sm:mt-2">
-                                                <span className="text-foreground text-lg font-bold tracking-tight sm:text-2xl md:text-3xl">
-                                                    {progress.percentage}%
-                                                </span>
-                                                <span className="text-muted-foreground text-[10px] font-medium sm:text-xs">Complete</span>
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-3 md:grid-cols-2 md:gap-4">
+                                <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
+                                    <div className="absolute inset-y-0 left-0 w-1.5 bg-amber-500/40" />
+                                    <CardContent className="p-4 sm:p-5">
+                                        <div className="flex items-start justify-between">
+                                            <div className="min-w-0 flex-1">
+                                                <h3 className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">Course Completion</h3>
+                                                <div className="mt-1 flex items-baseline gap-2 sm:mt-2">
+                                                    <span className="text-foreground text-xl font-bold tracking-tight sm:text-2xl md:text-3xl leading-none">
+                                                        {progress.percentage}%
+                                                    </span>
+                                                    <span className="text-foreground/45 text-[10px] font-medium sm:text-xs">Complete</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-amber-500/10 text-amber-500 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14">
+                                                <Trophy className="h-5 w-5 sm:h-8 sm:w-8" strokeWidth={2} />
                                             </div>
                                         </div>
-                                        <div className="mt-2 space-y-1.5 sm:mt-4 sm:space-y-2">
-                                            <div className="text-muted-foreground flex justify-between text-[10px] font-medium sm:text-xs">
+                                        
+                                        <div className="mt-4 space-y-2 sm:mt-6">
+                                            <div className="text-foreground/45 flex justify-between text-[10px] font-bold sm:text-xs">
                                                 <span>{progress.earned} Units Earned</span>
                                                 <span>{progress.total} Total Units</span>
                                             </div>
-                                            <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full p-[1px] sm:h-2">
+                                            <div className="bg-muted h-2 w-full overflow-hidden rounded-full p-[1.5px]">
                                                 <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{ width: `${progress.percentage}%` }}
                                                     transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-                                                    className="bg-primary h-full rounded-full"
+                                                    className="bg-amber-500 h-full rounded-full shadow-[0_0_10px_rgba(245,158,11,0.3)]"
                                                 />
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card className={cn(dashboardCardClass, "group relative min-h-[88px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]")}>
-                                    <CardContent className="relative flex h-full flex-col justify-end p-3 pr-12 sm:p-5 sm:pr-20">
-                                        <div className="absolute top-3 right-3 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 sm:top-4 sm:right-5">
-                                            <Sparkles className={cn("h-9 w-9 sm:h-14 sm:w-14", gwaToneClass(overallGwa, gradingConfig))} />
-                                        </div>
-                                        <div className="relative z-10">
-                                            <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase sm:text-xs">Overall GWA</p>
-                                            <div
-                                                className={cn(
-                                                    "mt-0.5 font-mono text-xl font-bold tracking-tight sm:mt-1 sm:text-2xl md:text-3xl",
-                                                    gwaToneClass(overallGwa, gradingConfig),
-                                                )}
-                                            >
-                                                {formatGwa(overallGwa, gradingConfig)}
+                                <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
+                                    <div className={cn("absolute inset-y-0 left-0 w-1.5", overallGwa.tone?.replace("text-", "bg-")?.replace("500", "500/40") || "bg-primary/40")} />
+                                    <CardContent className="p-4 sm:p-5">
+                                        <div className="flex items-start justify-between">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">Overall GWA</p>
+                                                <div
+                                                    className={cn(
+                                                        "mt-1 font-mono text-xl font-bold tracking-tight sm:mt-2 sm:text-2xl md:text-3xl leading-none",
+                                                        gwaToneClass(overallGwa, gradingConfig),
+                                                    )}
+                                                >
+                                                    {formatGwa(overallGwa, gradingConfig)}
+                                                </div>
                                             </div>
-                                            <p className="text-muted-foreground mt-0.5 text-[10px] font-medium sm:mt-1 sm:text-xs">
-                                                {overallGwa.gradedCount}/{overallGwa.itemCount} subjects • {overallGwa.gradedUnits}/
-                                                {overallGwa.totalUnits} units
-                                                {gradeScaleLabel(overallGwa.scale) && ` • ${gradeScaleLabel(overallGwa.scale)}`}
-                                            </p>
+                                            <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14", gwaToneClass(overallGwa, gradingConfig).replace("text-", "bg-").replace("500", "500/10"))}>
+                                                <Sparkles className={cn("h-5 w-5 sm:h-8 sm:w-8", gwaToneClass(overallGwa, gradingConfig))} strokeWidth={2} />
+                                            </div>
                                         </div>
+                                        <p className="text-foreground/45 mt-4 line-clamp-1 text-[10px] font-medium sm:mt-6 sm:text-xs">
+                                            {overallGwa.gradedCount}/{overallGwa.itemCount} subjects • {overallGwa.gradedUnits}/
+                                            {overallGwa.totalUnits} units
+                                            {gradeScaleLabel(overallGwa.scale) && ` • ${gradeScaleLabel(overallGwa.scale)}`}
+                                        </p>
                                     </CardContent>
                                 </Card>
                             </motion.div>
