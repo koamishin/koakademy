@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.4",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.4",
-  "commit": "f9593bb856d98e5a71a4d427d49b775e8e9d3ac2",
+  "version": "1.6.0-dev.0.5",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.5",
+  "commit": "5e97acc98974aebd79b54c4cfa27c0a1342b459c",
   "branch": "master",
-  "timestamp": "2026-05-28T06:33:27Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26558242137",
+  "timestamp": "2026-05-28T07:35:36Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26561154263",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.4 - updated readme and added product image",
-    "previous": "1.6.0-dev.0.3"
+    "current": "Version 1.6.0-dev.0.5 - Merge pull request #88 from yukazakiri/codex/add-api-route-for-user-profile-access",
+    "previous": "1.6.0-dev.0.4"
   },
   "metadata": {
     "author": "yukazakiri",
