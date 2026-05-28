@@ -576,20 +576,20 @@ function MobileStudentDashboard({
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
 
-                <div className="relative flex items-center justify-between">
-                    <div>
-                        <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">{greetingCopy.subline}</p>
-                        <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight">
+                <div className="relative flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1 pr-2">
+                        <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase truncate">{greetingCopy.subline}</p>
+                        <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight leading-tight">
                             {greetingCopy.headline},{" "}
-                            <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">
+                            <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent block truncate">
                                 {getShortName(studentData.student_name)}
                             </span>
                         </h1>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="shrink-0 pt-1">
                         <Badge
                             variant="outline"
-                            className="border-border/60 bg-background/65 text-foreground/70 rounded-full px-2 py-0.5 text-[9px] font-bold"
+                            className="border-border/60 bg-background/65 text-foreground/70 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap"
                         >
                             {getSemesterLabel(currentSemester)}
                         </Badge>
