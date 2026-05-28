@@ -146,12 +146,12 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
             <Head title="Tuition & Fees" />
 
             {/* Mobile Header Background */}
-            <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
+            <div className="bg-primary/10 md:hidden relative h-[110px] w-full overflow-hidden px-4 pt-5">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
                 <div className="relative z-10">
-                    <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">Student Finance</p>
-                    <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
+                    <p className="text-foreground/60 text-[9px] font-bold tracking-wider uppercase">Student Finance</p>
+                    <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight">
                         Tuition & <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Fees</span>
                     </h1>
                 </div>
@@ -162,8 +162,8 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className={cn(
-                    "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
-                    "-mt-12 md:mt-0"
+                    "mx-auto flex w-full max-w-7xl flex-col gap-2.5 p-3.5 pb-20 md:gap-6 md:p-6",
+                    "-mt-10 md:mt-0"
                 )}
             >
                 {/* Header */}
@@ -309,57 +309,57 @@ export default function TuitionIndex({ auth, tuition, transactions, filters, his
                         <div className="space-y-6 lg:col-span-2">
                             {/* MAIN STATUS CARD */}
                             <motion.div variants={itemVariants}>
-                                <Card className={`${dashboardCardClass} group relative overflow-hidden hover:-translate-y-0.5`}>
-                                    {/* Background Patterns */}
-                                    <Wallet className="text-primary pointer-events-none absolute top-5 right-6 h-16 w-16 opacity-10 transition-all duration-200 group-hover:scale-105 group-hover:opacity-20 md:h-20 md:w-20 md:opacity-15" />
-
-                                    <CardContent className="relative z-10 p-5 pr-14 md:p-6 md:pr-28">
-                                        <div className="flex flex-col gap-6 md:gap-8">
+                                <Card className="border-border/40 bg-card relative overflow-hidden rounded-xl shadow-lg shadow-black/5">
+                                    <div className="from-primary/40 to-primary/5 absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b" />
+                                    <CardContent className="p-4 md:p-6">
+                                        <div className="flex flex-col gap-5 md:gap-8">
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <p className="text-muted-foreground mb-1 text-[10px] font-medium tracking-wide uppercase sm:text-xs">
+                                                    <p className="text-foreground/50 text-[9px] font-bold tracking-wider uppercase sm:text-xs">
                                                         Total Assessment
                                                     </p>
-                                                    <h2 className="text-foreground font-mono text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
+                                                    <h2 className="text-foreground mt-0.5 font-mono text-xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                                                         {tuition.formatted_overall_tuition}
                                                     </h2>
                                                 </div>
-                                                <div className="border-border/60 bg-primary/10 text-primary rounded-lg border p-2">
-                                                    <Sparkles className="h-4 w-4 md:h-5 md:w-5" />
+                                                <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-lg">
+                                                    <Wallet className="h-4 w-4" />
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-2.5 sm:space-y-3">
-                                                <div className="flex justify-between text-[11px] font-medium sm:text-sm">
-                                                    <span className="text-muted-foreground">Payment Status</span>
-                                                    <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[10px] font-semibold sm:px-2 sm:text-xs">
+                                            <div className="space-y-2 sm:space-y-3">
+                                                <div className="flex justify-between text-[10px] font-bold sm:text-sm">
+                                                    <span className="text-foreground/50 uppercase tracking-wider">Payment Status</span>
+                                                    <span className="bg-primary/10 text-primary rounded px-1.5 py-0.5 text-[9px] font-bold sm:px-2 sm:text-xs">
                                                         {tuition.payment_progress}% Paid
                                                     </span>
                                                 </div>
-                                                <div className="bg-muted h-2.5 w-full overflow-hidden rounded-full p-[1px] sm:h-3">
+                                                <div className="bg-muted h-2.5 w-full overflow-hidden rounded-full p-[1px]">
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{ width: `${tuition.payment_progress}%` }}
                                                         transition={{ duration: 1, delay: 0.2, ease: "easeOut" as const }}
-                                                        className="bg-primary h-full rounded-full"
+                                                        className="bg-primary h-full rounded-full shadow-[0_0_10px_rgba(var(--primary),0.3)]"
                                                     />
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-3 pt-1 md:gap-4 md:pt-2">
-                                                <div className="border-border/60 bg-background/45 rounded-lg border p-3 md:p-4">
-                                                    <div className="mb-1 flex items-center gap-1.5 opacity-80 md:gap-2">
-                                                        <CheckCircle2 className="h-3 w-3" />
-                                                        <span className="text-[9px] font-bold uppercase sm:text-[10px]">Paid Amount</span>
+                                            <div className="grid grid-cols-2 gap-2.5 pt-0.5 md:gap-4">
+                                                <div className="border-border/40 bg-background/45 relative overflow-hidden rounded-lg border p-2.5 md:p-4">
+                                                    <div className="absolute inset-y-0 left-0 w-1 bg-emerald-500/40" />
+                                                    <div className="flex items-center gap-1.5 opacity-60 md:gap-2">
+                                                        <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
+                                                        <span className="text-[8px] font-bold uppercase sm:text-[10px]">Paid</span>
                                                     </div>
-                                                    <p className="font-mono text-base font-bold sm:text-lg md:text-xl">{tuition.formatted_total_paid}</p>
+                                                    <p className="text-foreground mt-0.5 font-mono text-sm font-bold sm:text-lg md:text-xl">{tuition.formatted_total_paid}</p>
                                                 </div>
-                                                <div className="border-border/60 bg-background/45 rounded-lg border p-3 md:p-4">
-                                                    <div className="mb-1 flex items-center gap-1.5 opacity-80 md:gap-2">
-                                                        <Clock className="h-3 w-3" />
-                                                        <span className="text-[9px] font-bold uppercase sm:text-[10px]">Balance Due</span>
+                                                <div className="border-border/40 bg-background/45 relative overflow-hidden rounded-lg border p-2.5 md:p-4">
+                                                    <div className="absolute inset-y-0 left-0 w-1 bg-amber-500/40" />
+                                                    <div className="flex items-center gap-1.5 opacity-60 md:gap-2">
+                                                        <Clock className="h-2.5 w-2.5 text-amber-500" />
+                                                        <span className="text-[8px] font-bold uppercase sm:text-[10px]">Balance</span>
                                                     </div>
-                                                    <p className="font-mono text-base font-bold sm:text-lg md:text-xl">{tuition.formatted_total_balance}</p>
+                                                    <p className="text-foreground mt-0.5 font-mono text-sm font-bold sm:text-lg md:text-xl">{tuition.formatted_total_balance}</p>
                                                 </div>
                                             </div>
                                         </div>

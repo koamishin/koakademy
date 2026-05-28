@@ -218,21 +218,21 @@ const AcademicStatCard = ({
     const bgTone = tone.split(" ").find((c) => c.startsWith("bg-")) ?? "bg-primary/10";
 
     return (
-        <Card className={cn("border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card", className)}>
-            <div className={cn("absolute inset-y-0 left-0 w-1.5", bgTone.replace("/10", "/40"))} />
-            <CardContent className="p-4 sm:p-5">
+        <Card className={cn("border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card", className)}>
+            <div className={cn("absolute inset-y-0 left-0 w-1", bgTone.replace("/10", "/40"))} />
+            <CardContent className="p-3 sm:p-5">
                 <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                        <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">{label}</p>
-                        <p className="text-foreground mt-1 truncate text-xl font-bold tracking-tight sm:text-2xl md:text-3xl leading-none">
+                        <p className="text-foreground/50 text-[9px] font-bold tracking-wider uppercase sm:text-xs">{label}</p>
+                        <p className="text-foreground mt-0.5 truncate text-lg font-bold tracking-tight sm:text-2xl leading-none">
                             {value}
                         </p>
                     </div>
-                    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14", bgTone)}>
-                        <Icon className={cn("h-5 w-5 sm:h-8 sm:w-8", iconTone)} strokeWidth={2} />
+                    <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12", bgTone)}>
+                        <Icon className={cn("h-4 w-4 sm:h-7 sm:w-7", iconTone)} strokeWidth={2} />
                     </div>
                 </div>
-                <p className="text-foreground/45 mt-3 line-clamp-1 text-[10px] font-medium sm:text-xs">{detail}</p>
+                <p className="text-foreground/45 mt-2 line-clamp-1 text-[9px] font-medium sm:text-xs">{detail}</p>
                 {children}
             </CardContent>
         </Card>
@@ -537,12 +537,12 @@ export default function StudentClasses({ user, student_name, course_name, progre
             <Head title="My Academics" />
 
             {/* Mobile Header Background */}
-            <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
+            <div className="bg-primary/10 md:hidden relative h-[110px] w-full overflow-hidden px-4 pt-5">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
                 <div className="relative z-10">
-                    <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">My Academics</p>
-                    <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
+                    <p className="text-foreground/60 text-[9px] font-bold tracking-wider uppercase">My Academics</p>
+                    <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight">
                         Academic <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Journey</span>
                     </h1>
                 </div>
@@ -553,8 +553,8 @@ export default function StudentClasses({ user, student_name, course_name, progre
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className={cn(
-                    "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
-                    "-mt-12 md:mt-0"
+                    "mx-auto flex w-full max-w-7xl flex-col gap-2.5 p-3.5 pb-20 md:gap-6 md:p-6",
+                    "-mt-10 md:mt-0"
                 )}
             >
                 {/* Hero Section */}

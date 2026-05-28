@@ -33,21 +33,21 @@ const dashboardPanelClass = "border-border/40 bg-card/60 rounded-xl shadow-sm ba
 
 function ScheduleStatCard({ label, value, detail, icon: Icon }: { label: string; value: string | number; detail: string; icon: typeof IconSchool }) {
     return (
-        <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
-            <div className="absolute inset-y-0 left-0 w-1.5 bg-primary/40" />
-            <CardContent className="p-3.5 sm:p-5">
-                <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                        <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">{label}</p>
-                        <p className="text-foreground mt-1 truncate text-lg font-bold tracking-tight sm:text-2xl md:text-3xl leading-none">
+        <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
+            <div className="absolute inset-y-0 left-0 w-1 bg-primary/40" />
+            <CardContent className="p-2 sm:p-3">
+                <div className="flex flex-col gap-0.5">
+                    <p className="text-foreground/50 text-[7px] font-bold tracking-wider uppercase sm:text-[9px]">{label}</p>
+                    <div className="flex items-center justify-between">
+                        <p className="text-foreground text-base font-bold tracking-tight sm:text-2xl leading-none">
                             {value}
                         </p>
+                        <div className="bg-primary/10 text-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9">
+                            <Icon className="h-3 w-3 sm:h-5 sm:w-5" strokeWidth={2} />
+                        </div>
                     </div>
-                    <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14">
-                        <Icon className="h-4.5 w-4.5 sm:h-8 sm:w-8" strokeWidth={2} />
-                    </div>
+                    <p className="text-foreground/45 mt-0.5 truncate text-[7px] font-medium sm:text-[9px]">{detail}</p>
                 </div>
-                <p className="text-foreground/45 mt-2.5 line-clamp-1 text-[10px] font-medium sm:text-xs">{detail}</p>
             </CardContent>
         </Card>
     );
@@ -122,20 +122,20 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
             <Head title="Class Schedule" />
 
             {/* Mobile Header Background */}
-            <div className="bg-primary/10 md:hidden relative h-[140px] w-full overflow-hidden px-4 pt-6">
+            <div className="bg-primary/10 md:hidden relative h-[110px] w-full overflow-hidden px-4 pt-5">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
                 <div className="relative z-10">
-                    <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">Weekly Plan</p>
-                    <h1 className="text-foreground mt-0.5 text-2xl font-bold tracking-tight">
+                    <p className="text-foreground/60 text-[9px] font-bold tracking-wider uppercase">Weekly Plan</p>
+                    <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight">
                         Class <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Schedule</span>
                     </h1>
                 </div>
             </div>
 
             <div className={cn(
-                "mx-auto flex w-full max-w-7xl flex-col gap-3 p-4 pb-20 md:gap-6 md:p-6",
-                "-mt-12 md:mt-0"
+                "mx-auto flex w-full max-w-7xl flex-col gap-2.5 p-3.5 pb-20 md:gap-6 md:p-6",
+                "-mt-10 md:mt-0"
             )}>
                 {/* Header Section */}
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden hidden md:block")}>
@@ -172,7 +172,7 @@ export default function StudentSchedule({ user, faculty_data, rooms }: StudentSc
                 </Card>
 
                 {/* Mobile Stats Row (Visible only on mobile) */}
-                <div className="md:hidden grid grid-cols-3 gap-2.5">
+                <div className="md:hidden grid grid-cols-3 gap-2">
                     <ScheduleStatCard label="Scheduled" value={stats.scheduledCount} detail="Classes" icon={IconCalendarStats} />
                     <ScheduleStatCard label="Awaiting" value={stats.unscheduledCount} detail="Schedule" icon={IconStack2} />
                     <ScheduleStatCard label="Conflicts" value={stats.conflictCount} detail="Overlap" icon={IconClockHour4} />
