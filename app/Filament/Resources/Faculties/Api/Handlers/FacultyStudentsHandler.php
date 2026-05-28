@@ -21,6 +21,13 @@ final class FacultyStudentsHandler extends Handlers
 
     protected static string $permission = 'View:Faculty';
 
+    public static function getRouteMiddleware(): array
+    {
+        return [
+            'auth:sanctum',
+        ];
+    }
+
     /**
      * Get All Students Handled by a Faculty Member
      *
@@ -36,6 +43,35 @@ final class FacultyStudentsHandler extends Handlers
 
         if (! $faculty instanceof Faculty) {
             return self::sendNotFoundResponse('Faculty not found');
+        }
+
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Unauthenticated.',
+                'code' => 'UNAUTHENTICATED',
+            ], 401);
+        }
+
+        // Context-aware authorization check:
+        // A faculty member can only fetch their own students.
+        // Administrative users with standard View:Faculty permission can fetch anyone's students.
+        $isAuthorized = false;
+        if ($user->role && $user->role->isFaculty()) {
+            if ($user->email === $faculty->email || $user->faculty_id_number === $faculty->faculty_id_number) {
+                $isAuthorized = true;
+            }
+        } elseif ($user->can('View:Faculty')) {
+            $isAuthorized = true;
+        }
+
+        if (! $isAuthorized) {
+            return response()->json([
+                'error' => true,
+                'message' => 'User does not have the right permissions.',
+                'code' => 'FORBIDDEN',
+            ], 403);
         }
 
         // Get all class IDs for this faculty
