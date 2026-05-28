@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.3",
-  "commit": "6e0fcabc50e5851fef38577041e2af9ba6503645",
+  "version": "1.6.0-dev.0.4",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.4",
+  "commit": "f9593bb856d98e5a71a4d427d49b775e8e9d3ac2",
   "branch": "master",
-  "timestamp": "2026-05-27T16:07:45Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26522974985",
+  "timestamp": "2026-05-28T06:33:27Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26558242137",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.3 - Merge pull request #87 from yukazakiri/feature/admin-developer-mode-api-keys",
-    "previous": "1.6.0-dev.0.2"
+    "current": "Version 1.6.0-dev.0.4 - updated readme and added product image",
+    "previous": "1.6.0-dev.0.3"
   },
   "metadata": {
     "author": "yukazakiri",
