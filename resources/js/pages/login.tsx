@@ -42,8 +42,22 @@ export default function LoginPage() {
 
             {/* Background Decorative Elements */}
             <div className="bg-background pointer-events-none fixed inset-0 z-0 overflow-hidden">
-                <div className="bg-primary/5 absolute -top-[10%] -left-[10%] h-[40%] w-[40%] rounded-full blur-[120px]" />
-                <div className="bg-primary/10 absolute -right-[5%] bottom-[10%] h-[30%] w-[30%] rounded-full blur-[100px]" />
+                <motion.div 
+                    animate={{ 
+                        scale: [1, 1.1, 1],
+                        opacity: [0.3, 0.5, 0.3]
+                    }}
+                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                    className="bg-primary/10 absolute -top-[10%] -left-[10%] h-[50%] w-[50%] rounded-full blur-[140px]" 
+                />
+                <motion.div 
+                    animate={{ 
+                        scale: [1, 1.2, 1],
+                        opacity: [0.4, 0.6, 0.4]
+                    }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="bg-primary/15 absolute -right-[5%] bottom-[10%] h-[40%] w-[40%] rounded-full blur-[120px]" 
+                />
             </div>
 
             <div className="relative z-10 flex flex-col gap-4 p-6 md:p-10">
