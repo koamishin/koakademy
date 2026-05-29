@@ -77,8 +77,6 @@ final class FacultyScheduleHandler extends Handlers
             ], 403);
         }
 
-
-
         // Get all classes for this faculty member
         $classes = QueryBuilder::for(Classes::class)
             ->where('faculty_id', $faculty->id)

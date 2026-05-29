@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +17,8 @@ import {
     BookOpen,
     Briefcase,
     Calendar,
+    ChevronDown,
+    Copy,
     GraduationCap,
     Hash,
     Loader2,
@@ -165,6 +168,48 @@ const NATIONALITY_OPTIONS = [
     { value: "other", label: "Other" },
 ];
 
+const RELIGION_OPTIONS = [
+    { value: "roman_catholic", label: "Roman Catholic" },
+    { value: "islam", label: "Islam" },
+    { value: "iglesia_ni_cristo", label: "Iglesia ni Cristo" },
+    { value: "protestant", label: "Protestant" },
+    { value: "seventh_day_adventist", label: "Seventh-day Adventist" },
+    { value: "aglipayan", label: "Aglipayan" },
+    { value: "buddhist", label: "Buddhist" },
+    { value: "jehovahs_witnesses", label: "Jehovah's Witnesses" },
+    { value: "hindu", label: "Hindu" },
+    { value: "other", label: "Other" },
+];
+
+const RELATIONSHIP_OPTIONS = [
+    { value: "mother", label: "Mother" },
+    { value: "father", label: "Father" },
+    { value: "sibling", label: "Sibling" },
+    { value: "spouse", label: "Spouse" },
+    { value: "grandparent", label: "Grandparent" },
+    { value: "aunt", label: "Aunt" },
+    { value: "uncle", label: "Uncle" },
+    { value: "cousin", label: "Cousin" },
+    { value: "legal_guardian", label: "Legal Guardian" },
+    { value: "other", label: "Other" },
+];
+
+const ETHNICITY_OPTIONS = [
+    { value: "tagalog", label: "Tagalog" },
+    { value: "cebuano", label: "Cebuano" },
+    { value: "ilocano", label: "Ilocano" },
+    { value: "hiligaynon", label: "Hiligaynon (Ilonggo)" },
+    { value: "bicolano", label: "Bicolano" },
+    { value: "waray", label: "Waray" },
+    { value: "kapampangan", label: "Kapampangan" },
+    { value: "pangasinense", label: "Pangasinense" },
+    { value: "bisaya", label: "Bisaya" },
+    { value: "maranao", label: "Maranao" },
+    { value: "tausug", label: "Tausug" },
+    { value: "maguindanao", label: "Maguindanao" },
+    { value: "other", label: "Other" },
+];
+
 const BLANK_FORM: StudentCreateForm = {
     student_type: "college",
     student_id: "",
@@ -268,6 +313,19 @@ function requiredLabel(label: string) {
     );
 }
 
+function capitalizeWords(value: string): string {
+    return value.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatPhoneNumber(value: string): string {
+    const digits = value.replace(/\D/g, "");
+    if (digits.length === 0) return "";
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    if (digits.length <= 10) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)} ${digits.slice(10, 14)}`;
+}
+
 export default function AdministratorStudentCreate({ user, options }: CreateStudentProps) {
     const [previewId, setPreviewId] = useState<number | null>(null);
     const [isGeneratingId, setIsGeneratingId] = useState(false);
@@ -297,6 +355,39 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         data.employment_status !== "not_applicable" &&
         data.employment_status !== "unemployed" &&
         data.employment_status !== "further_study";
+
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+        family: false,
+        reporting: false,
+        contact: false,
+    });
+
+    const toggleSection = (key: string) => {
+        setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    // Keyboard shortcut: Ctrl+Enter to submit
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                formRef.current?.requestSubmit();
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
+    // Count filled required fields for progress
+    const requiredFields: (keyof StudentCreateForm)[] = [
+        'student_type', 'status', 'first_name', 'last_name', 'gender', 'birth_date',
+        'academic_year', ...(isSHS ? ['lrn', 'shs_strand_id'] as const : ['student_id', 'course_id'] as const),
+    ];
+    const filledRequired = requiredFields.filter((f) => {
+        const val = data[f];
+        return val !== '' && val !== false;
+    }).length;
+    const progressPercent = Math.round((filledRequired / requiredFields.length) * 100);
 
     const fieldError = (field: keyof StudentCreateForm) => (errors[field] ? <p className="text-destructive text-sm">{errors[field]}</p> : null);
 
@@ -391,6 +482,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         setData("age", age.toString());
     }, [data.birth_date]);
 
+    // Sync personal_contact with phone
+    useEffect(() => {
+        setData("personal_contact", data.phone);
+    }, [data.phone]);
+
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
 
@@ -428,6 +524,15 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                             <Badge variant="secondary">{isSHS ? "Senior High" : "College / Program"}</Badge>
                             {!isSHS && data.student_id && <Badge variant="outline">ID {data.student_id}</Badge>}
+                            <span className="text-muted-foreground text-xs">
+                                {filledRequired}/{requiredFields.length} req. fields
+                            </span>
+                        </div>
+                        <div className="mt-2 h-1.5 w-full max-w-xs rounded-full bg-secondary">
+                            <div
+                                className="h-1.5 rounded-full bg-primary transition-all duration-300"
+                                style={{ width: `${progressPercent}%` }}
+                            />
                         </div>
                     </div>
                     <div className="flex gap-2">
@@ -547,7 +652,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Input
                                             id="first_name"
                                             value={data.first_name}
-                                            onChange={(event) => setData("first_name", event.target.value)}
+                                            onChange={(event) => setData("first_name", event.target.value)} onBlur={(event) => setData("first_name", capitalizeWords(event.target.value))}
                                         />
                                         {fieldError("first_name")}
                                     </div>
@@ -556,17 +661,17 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Input
                                             id="middle_name"
                                             value={data.middle_name}
-                                            onChange={(event) => setData("middle_name", event.target.value)}
+                                            onChange={(event) => setData("middle_name", event.target.value)} onBlur={(event) => setData("middle_name", capitalizeWords(event.target.value))}
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="last_name">{requiredLabel("Last Name")}</Label>
-                                        <Input id="last_name" value={data.last_name} onChange={(event) => setData("last_name", event.target.value)} />
+                                        <Input id="last_name" value={data.last_name} onChange={(event) => setData("last_name", event.target.value)} onBlur={(event) => setData("last_name", capitalizeWords(event.target.value))} />
                                         {fieldError("last_name")}
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="suffix">Suffix</Label>
-                                        <Input id="suffix" value={data.suffix} onChange={(event) => setData("suffix", event.target.value)} />
+                                        <Input id="suffix" value={data.suffix} onChange={(event) => setData("suffix", event.target.value.toUpperCase())} />
                                     </div>
                                 </div>
 
@@ -618,7 +723,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Phone className="h-3.5 w-3.5" />
                                         Phone
                                     </Label>
-                                    <Input id="phone" value={data.phone} onChange={(event) => setData("phone", event.target.value)} />
+                                    <Input id="phone" value={data.phone} onChange={(event) => setData("phone", formatPhoneNumber(event.target.value))} />
                                 </div>
 
                                 {!isSHS ? (
@@ -687,32 +792,45 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                         </Card>
 
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <School className="text-primary h-5 w-5" />
-                                    Family, Personal, and Education
-                                </CardTitle>
+                            <CardHeader
+                                className="cursor-pointer select-none"
+                                onClick={() => toggleSection("family")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <School className="text-primary h-5 w-5" />
+                                        Family, Personal, and Education
+                                    </CardTitle>
+                                    <ChevronDown
+                                        className={cn(
+                                            "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                                            collapsedSections.family && "-rotate-90",
+                                        )}
+                                    />
+                                </div>
                             </CardHeader>
-                            <CardContent className="grid gap-5 md:grid-cols-2">
+                            {!collapsedSections.family && <CardContent className="grid gap-5 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="fathers_name">Father's Name</Label>
-                                    <Input
+                                    <AutocompleteInput
                                         id="fathers_name"
                                         value={data.fathers_name}
-                                        onChange={(event) => setData("fathers_name", event.target.value)}
+                                        onChange={(value: string) => setData("fathers_name", value)}
+                                        fieldName="fathers_name"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="mothers_name">Mother's Name</Label>
-                                    <Input
+                                    <AutocompleteInput
                                         id="mothers_name"
                                         value={data.mothers_name}
-                                        onChange={(event) => setData("mothers_name", event.target.value)}
+                                        onChange={(value: string) => setData("mothers_name", value)}
+                                        fieldName="mothers_name"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="birthplace">Birthplace</Label>
-                                    <Input id="birthplace" value={data.birthplace} onChange={(event) => setData("birthplace", event.target.value)} />
+                                    <AutocompleteInput id="birthplace" value={data.birthplace} onChange={(value: string) => setData("birthplace", value)} fieldName="birthplace" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="civil_status">Civil Status</Label>
@@ -760,7 +878,18 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="religion">Religion</Label>
-                                    <Input id="religion" value={data.religion} onChange={(event) => setData("religion", event.target.value)} />
+                                    <Select value={data.religion} onValueChange={(value) => setData("religion", value)}>
+                                        <SelectTrigger id="religion">
+                                            <SelectValue placeholder="Select religion" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {RELIGION_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="height">Height</Label>
@@ -784,10 +913,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-3">
                                     <div className="space-y-2">
                                         <Label htmlFor="elementary_school">Elementary School</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="elementary_school"
                                             value={data.elementary_school}
-                                            onChange={(event) => setData("elementary_school", event.target.value)}
+                                            onChange={(value: string) => setData("elementary_school", value)}
+                                            fieldName="elementary_school"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -811,10 +941,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="junior_high_school_name">Junior High School</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="junior_high_school_name"
                                             value={data.junior_high_school_name}
-                                            onChange={(event) => setData("junior_high_school_name", event.target.value)}
+                                            onChange={(value: string) => setData("junior_high_school_name", value)}
+                                            fieldName="junior_high_school_name"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -838,10 +969,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="senior_high_name">Senior High School</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="senior_high_name"
                                             value={data.senior_high_name}
-                                            onChange={(event) => setData("senior_high_name", event.target.value)}
+                                            onChange={(value: string) => setData("senior_high_name", value)}
+                                            fieldName="senior_high_name"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -865,18 +997,20 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="college_school">College School (if transferee)</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="college_school"
                                             value={data.college_school}
-                                            onChange={(event) => setData("college_school", event.target.value)}
+                                            onChange={(value: string) => setData("college_school", value)}
+                                            fieldName="college_school"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="college_course">College Course</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="college_course"
                                             value={data.college_course}
-                                            onChange={(event) => setData("college_course", event.target.value)}
+                                            onChange={(value: string) => setData("college_course", value)}
+                                            fieldName="college_course"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -892,18 +1026,20 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="vocational_school">Vocational School</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="vocational_school"
                                             value={data.vocational_school}
-                                            onChange={(event) => setData("vocational_school", event.target.value)}
+                                            onChange={(value: string) => setData("vocational_school", value)}
+                                            fieldName="vocational_school"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="vocational_course">Vocational Course</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="vocational_course"
                                             value={data.vocational_course}
-                                            onChange={(event) => setData("vocational_course", event.target.value)}
+                                            onChange={(value: string) => setData("vocational_course", value)}
+                                            fieldName="vocational_course"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -919,16 +1055,28 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                 </div>
                             </CardContent>
+                        }
                         </Card>
 
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Banknote className="text-primary h-5 w-5" />
-                                    Reporting Details
-                                </CardTitle>
+                            <CardHeader
+                                className="cursor-pointer select-none"
+                                onClick={() => toggleSection("reporting")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Banknote className="text-primary h-5 w-5" />
+                                        Reporting Details
+                                    </CardTitle>
+                                    <ChevronDown
+                                        className={cn(
+                                            "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                                            collapsedSections.reporting && "-rotate-90",
+                                        )}
+                                    />
+                                </div>
                             </CardHeader>
-                            <CardContent className="grid gap-5 md:grid-cols-2">
+                            {!collapsedSections.reporting && <CardContent className="grid gap-5 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="region_of_origin">Region of Origin</Label>
                                     <Select value={data.region_of_origin} onValueChange={(value) => setData("region_of_origin", value)}>
@@ -946,22 +1094,35 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="ethnicity">Ethnicity</Label>
-                                    <Input id="ethnicity" value={data.ethnicity} onChange={(event) => setData("ethnicity", event.target.value)} />
+                                    <Select value={data.ethnicity} onValueChange={(value) => setData("ethnicity", value)}>
+                                        <SelectTrigger id="ethnicity">
+                                            <SelectValue placeholder="Select ethnicity" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {ETHNICITY_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="province_of_origin">Province of Origin</Label>
-                                    <Input
+                                    <AutocompleteInput
                                         id="province_of_origin"
                                         value={data.province_of_origin}
-                                        onChange={(event) => setData("province_of_origin", event.target.value)}
+                                        onChange={(value: string) => setData("province_of_origin", value)}
+                                        fieldName="province_of_origin"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="city_of_origin">City of Origin</Label>
-                                    <Input
+                                    <AutocompleteInput
                                         id="city_of_origin"
                                         value={data.city_of_origin}
-                                        onChange={(event) => setData("city_of_origin", event.target.value)}
+                                        onChange={(value: string) => setData("city_of_origin", value)}
+                                        fieldName="city_of_origin"
                                     />
                                 </div>
                                 <div className="flex items-center gap-3 rounded-md border p-3 md:col-span-2">
@@ -1152,18 +1313,20 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                             <>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="employer_name">Employer</Label>
-                                                    <Input
+                                                    <AutocompleteInput
                                                         id="employer_name"
                                                         value={data.employer_name}
-                                                        onChange={(event) => setData("employer_name", event.target.value)}
+                                                        onChange={(value: string) => setData("employer_name", value)}
+                                                        fieldName="employer_name"
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="job_position">Position</Label>
-                                                    <Input
+                                                    <AutocompleteInput
                                                         id="job_position"
                                                         value={data.job_position}
-                                                        onChange={(event) => setData("job_position", event.target.value)}
+                                                        onChange={(value: string) => setData("job_position", value)}
+                                                        fieldName="job_position"
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
@@ -1247,25 +1410,39 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     />
                                 </div>
                             </CardContent>
+                        }
                         </Card>
                     </div>
 
                     <div className="space-y-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Phone className="text-primary h-5 w-5" />
-                                    Contact and Address
-                                </CardTitle>
+                            <CardHeader
+                                className="cursor-pointer select-none"
+                                onClick={() => toggleSection("contact")}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Phone className="text-primary h-5 w-5" />
+                                        Contact and Address
+                                    </CardTitle>
+                                    <ChevronDown
+                                        className={cn(
+                                            "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                                            collapsedSections.contact && "-rotate-90",
+                                        )}
+                                    />
+                                </div>
                             </CardHeader>
-                            <CardContent className="space-y-5">
+                            {!collapsedSections.contact && <CardContent className="space-y-5">
                                 <div className="space-y-2">
                                     <Label htmlFor="personal_contact">Student Contact</Label>
                                     <Input
                                         id="personal_contact"
                                         value={data.personal_contact}
-                                        onChange={(event) => setData("personal_contact", event.target.value)}
+                                        readOnly
+                                        className="bg-muted text-muted-foreground"
                                     />
+                                    <p className="text-muted-foreground text-xs">Auto-filled from Phone above</p>
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <div className="space-y-2">
@@ -1307,10 +1484,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="emergency_contact_name">Guardian Name</Label>
-                                    <Input
+                                    <AutocompleteInput
                                         id="emergency_contact_name"
                                         value={data.emergency_contact_name}
-                                        onChange={(event) => setData("emergency_contact_name", event.target.value)}
+                                        onChange={(value: string) => setData("emergency_contact_name", value)}
+                                        fieldName="emergency_contact_name"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -1318,16 +1496,23 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     <Input
                                         id="emergency_contact_phone"
                                         value={data.emergency_contact_phone}
-                                        onChange={(event) => setData("emergency_contact_phone", event.target.value)}
+                                        onChange={(event) => setData("emergency_contact_phone", formatPhoneNumber(event.target.value))}
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="emergency_contact_relationship">Guardian Relationship</Label>
-                                    <Input
-                                        id="emergency_contact_relationship"
-                                        value={data.emergency_contact_relationship}
-                                        onChange={(event) => setData("emergency_contact_relationship", event.target.value)}
-                                    />
+                                    <Select value={data.emergency_contact_relationship} onValueChange={(value) => setData("emergency_contact_relationship", value)}>
+                                        <SelectTrigger id="emergency_contact_relationship">
+                                            <SelectValue placeholder="Select relationship" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {RELATIONSHIP_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="emergency_contact_address">Guardian Address</Label>
@@ -1341,10 +1526,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 <div className="grid gap-3 border-t pt-4 md:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label htmlFor="father_occupation">Father Occupation</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="father_occupation"
                                             value={data.father_occupation}
-                                            onChange={(event) => setData("father_occupation", event.target.value)}
+                                            onChange={(value: string) => setData("father_occupation", value)}
+                                            fieldName="father_occupation"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1352,7 +1538,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Input
                                             id="father_contact"
                                             value={data.father_contact}
-                                            onChange={(event) => setData("father_contact", event.target.value)}
+                                            onChange={(event) => setData("father_contact", formatPhoneNumber(event.target.value))}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1366,10 +1552,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="mother_occupation">Mother Occupation</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="mother_occupation"
                                             value={data.mother_occupation}
-                                            onChange={(event) => setData("mother_occupation", event.target.value)}
+                                            onChange={(value: string) => setData("mother_occupation", value)}
+                                            fieldName="mother_occupation"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1377,7 +1564,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         <Input
                                             id="mother_contact"
                                             value={data.mother_contact}
-                                            onChange={(event) => setData("mother_contact", event.target.value)}
+                                            onChange={(event) => setData("mother_contact", formatPhoneNumber(event.target.value))}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1391,26 +1578,34 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="guardian_name">Guardian Name (Applicant Form)</Label>
-                                        <Input
+                                        <AutocompleteInput
                                             id="guardian_name"
                                             value={data.guardian_name}
-                                            onChange={(event) => setData("guardian_name", event.target.value)}
+                                            onChange={(value: string) => setData("guardian_name", value)}
+                                            fieldName="guardian_name"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="guardian_relationship">Guardian Relationship (Applicant Form)</Label>
-                                        <Input
-                                            id="guardian_relationship"
-                                            value={data.guardian_relationship}
-                                            onChange={(event) => setData("guardian_relationship", event.target.value)}
-                                        />
+                                        <Select value={data.guardian_relationship} onValueChange={(value) => setData("guardian_relationship", value)}>
+                                            <SelectTrigger id="guardian_relationship">
+                                                <SelectValue placeholder="Select relationship" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {RELATIONSHIP_OPTIONS.map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="guardian_contact">Guardian Contact (Applicant Form)</Label>
                                         <Input
                                             id="guardian_contact"
                                             value={data.guardian_contact}
-                                            onChange={(event) => setData("guardian_contact", event.target.value)}
+                                            onChange={(event) => setData("guardian_contact", formatPhoneNumber(event.target.value))}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1433,10 +1628,23 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                 </div>
                                 <div className="space-y-2 border-t pt-5">
-                                    <Label htmlFor="current_address" className="flex items-center gap-1.5">
-                                        <MapPin className="h-3.5 w-3.5" />
-                                        Current Address
-                                    </Label>
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="current_address" className="flex items-center gap-1.5">
+                                            <MapPin className="h-3.5 w-3.5" />
+                                            Current Address
+                                        </Label>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setData("current_address", data.permanent_address)}
+                                            disabled={!data.permanent_address}
+                                            className="h-auto px-2 py-1 text-xs"
+                                        >
+                                            <Copy className="mr-1 h-3 w-3" />
+                                            Same as Permanent
+                                        </Button>
+                                    </div>
                                     <Textarea
                                         id="current_address"
                                         value={data.current_address}
@@ -1454,12 +1662,36 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     />
                                 </div>
                             </CardContent>
+                        }
                         </Card>
 
-                        <Button type="submit" disabled={processing} className="w-full lg:hidden">
-                            {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            {processing ? "Creating..." : "Create Student"}
-                        </Button>
+                        </div>
+                </div>
+
+                {/* Sticky bottom bar */}
+                <div className="sticky bottom-0 z-10 -mx-4 -mb-6 border-t bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+                    <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 text-sm">
+                            <span className="text-muted-foreground hidden sm:inline">
+                                {filledRequired}/{requiredFields.length} required fields complete
+                            </span>
+                            <div className="h-1.5 w-24 rounded-full bg-secondary sm:w-32">
+                                <div
+                                    className="h-1.5 rounded-full bg-primary transition-all duration-300"
+                                    style={{ width: `${progressPercent}%` }}
+                                />
+                            </div>
+                            <span className="text-xs font-medium tabular-nums">{progressPercent}%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground hidden text-xs lg:inline">
+                                Ctrl+Enter to submit
+                            </span>
+                            <Button type="submit" disabled={processing}>
+                                {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                {processing ? "Creating..." : `Create Student`}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </form>

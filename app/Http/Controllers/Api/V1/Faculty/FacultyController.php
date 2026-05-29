@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1\Faculty;
 
 use App\Http\Controllers\Controller;
-use App\Models\Classes;
 use App\Models\ClassAttendanceSession;
 use App\Models\ClassEnrollment;
+use App\Models\Classes;
 use App\Models\Faculty;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -16,23 +16,6 @@ use Illuminate\Support\Facades\Validator;
 
 final class FacultyController extends Controller
 {
-    /**
-     * Get the authenticated faculty member's record.
-     */
-    private function getAuthenticatedFaculty(Request $request): ?Faculty
-    {
-        /** @var User|null $user */
-        $user = $request->user();
-
-        if (! $user) {
-            return null;
-        }
-
-        return Faculty::query()
-            ->where('email', $user->email)
-            ->first();
-    }
-
     /**
      * GET /api/faculty/profile
      *
@@ -286,7 +269,7 @@ final class FacultyController extends Controller
                 'students' => $class->class_enrollments->map(fn (ClassEnrollment $enrollment): array => [
                     'enrollment_id' => $enrollment->id,
                     'student_id' => $enrollment->student?->student_id,
-                    'full_name' => $enrollment->student ? trim("{$enrollment->student->last_name}, {$enrollment->student->first_name} {$enrollment->student->middle_name}") : null,
+                    'full_name' => $enrollment->student ? mb_trim("{$enrollment->student->last_name}, {$enrollment->student->first_name} {$enrollment->student->middle_name}") : null,
                     'email' => $enrollment->student?->email,
                     'course' => $enrollment->student?->Course ? [
                         'code' => $enrollment->student->Course->code,
@@ -453,7 +436,7 @@ final class FacultyController extends Controller
                 $studentMap[$sid] = [
                     'id' => $enrollment->student->id,
                     'student_id' => $enrollment->student->student_id,
-                    'full_name' => trim("{$enrollment->student->last_name}, {$enrollment->student->first_name} {$enrollment->student->middle_name}"),
+                    'full_name' => mb_trim("{$enrollment->student->last_name}, {$enrollment->student->first_name} {$enrollment->student->middle_name}"),
                     'first_name' => $enrollment->student->first_name,
                     'last_name' => $enrollment->student->last_name,
                     'email' => $enrollment->student->email,
@@ -535,7 +518,7 @@ final class FacultyController extends Controller
                 'enrollment_id' => $enrollment->id,
                 'student_id' => $enrollment->student?->student_id,
                 'full_name' => $enrollment->student
-                    ? trim("{$enrollment->student->last_name}, {$enrollment->student->first_name} {$enrollment->student->middle_name}")
+                    ? mb_trim("{$enrollment->student->last_name}, {$enrollment->student->first_name} {$enrollment->student->middle_name}")
                     : null,
                 'first_name' => $enrollment->student?->first_name,
                 'last_name' => $enrollment->student?->last_name,
@@ -873,7 +856,7 @@ final class FacultyController extends Controller
         foreach ($request->input('records') as $recordData) {
             $enrollment = ClassEnrollment::find($recordData['enrollment_id']);
 
-            if (! $enrollment || $enrollment->class_id != $classId) {
+            if (! $enrollment || $enrollment->class_id !== $classId) {
                 continue;
             }
 
@@ -1004,5 +987,22 @@ final class FacultyController extends Controller
                 'remarks' => $enrollment->remarks,
             ],
         ]);
+    }
+
+    /**
+     * Get the authenticated faculty member's record.
+     */
+    private function getAuthenticatedFaculty(Request $request): ?Faculty
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            return null;
+        }
+
+        return Faculty::query()
+            ->where('email', $user->email)
+            ->first();
     }
 }

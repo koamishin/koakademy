@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Settings\SiteSettings;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -30,9 +31,6 @@ final class BrandingSettingsSeeder extends Seeder
         if (! $settings->app_name) {
             $settings->app_name = 'KoAkademy';
         }
-
-        DB::table('settings')->insertOrIgnore($rows);
-    }
 
         if (! $settings->organization_name) {
             $settings->organization_name = 'KoAkademy';

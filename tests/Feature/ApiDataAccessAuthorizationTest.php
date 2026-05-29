@@ -536,7 +536,7 @@ describe('API Data Access - Administrative Users', function (): void {
             'email' => 'admincreated@example.com',
             'first_name' => 'Admin Created',
         ])->toArray();
-        
+
         $response = $this->postJson('/api/students', $studentData);
 
         $response->assertSuccessful();
@@ -552,7 +552,7 @@ describe('API Data Access - Administrative Users', function (): void {
             'first_name' => 'Admin Created',
         ])->toArray();
         $facultyData['password'] = 'password123';
-        
+
         $response = $this->postJson('/api/faculties', $facultyData);
 
         $response->assertSuccessful();

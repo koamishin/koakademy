@@ -1038,6 +1038,72 @@ final class AdministratorStudentManagementController extends Controller
         return response()->json(['id' => $nextId]);
     }
 
+    public function fieldValues(Request $request): JsonResponse
+    {
+        $field = $request->query('field', '');
+        $search = $request->query('search', '');
+
+        if (mb_strlen($search) < 1) {
+            return response()->json([]);
+        }
+
+        // Whitelist of allowed fields mapped to their table and column
+        $allowedFields = [
+            // Student model fields
+            'first_name' => ['students', 'first_name'],
+            'last_name' => ['students', 'last_name'],
+            'middle_name' => ['students', 'middle_name'],
+            'religion' => ['students', 'religion'],
+            'city_of_origin' => ['students', 'city_of_origin'],
+            'province_of_origin' => ['students', 'province_of_origin'],
+            'employer_name' => ['students', 'employer_name'],
+            'job_position' => ['students', 'job_position'],
+            'current_address' => ['students', 'current_address'],
+            'permanent_address' => ['students', 'permanent_address'],
+            // StudentContactsInfo fields
+            'emergency_contact_name' => ['student_contacts', 'emergency_contact_name'],
+            'emergency_contact_address' => ['student_contacts', 'emergency_contact_address'],
+            'emergency_contact_relationship' => ['student_contacts', 'emergency_contact_relationship'],
+            // StudentParentsInfo fields
+            'fathers_name' => ['student_parents_info', 'father_name'],
+            'mothers_name' => ['student_parents_info', 'mother_name'],
+            'guardian_name' => ['student_parents_info', 'guardian_name'],
+            'father_occupation' => ['student_parents_info', 'father_occupation'],
+            'mother_occupation' => ['student_parents_info', 'mother_occupation'],
+            'guardian_relationship' => ['student_parents_info', 'guardian_relationship'],
+            'family_address' => ['student_parents_info', 'family_address'],
+            // StudentEducationInfo fields
+            'elementary_school' => ['student_education_info', 'elementary_school'],
+            'junior_high_school_name' => ['student_education_info', 'junior_high_school_name'],
+            'senior_high_name' => ['student_education_info', 'senior_high_school_name'],
+            'college_school' => ['student_education_info', 'college_school'],
+            'college_course' => ['student_education_info', 'college_course'],
+            'vocational_school' => ['student_education_info', 'vocational_school'],
+            'vocational_course' => ['student_education_info', 'vocational_course'],
+            // StudentsPersonalInfo fields
+            'birthplace' => ['students_personal_info', 'birthplace'],
+            'ethnicity' => ['students_personal_info', 'ethnicity'],
+        ];
+
+        if (! array_key_exists($field, $allowedFields)) {
+            return response()->json([]);
+        }
+
+        [$table, $column] = $allowedFields[$field];
+        $like = '%' . mb_strtolower($search) . '%';
+
+        $results = DB::table($table)
+            ->whereRaw('LOWER(' . $column . ') LIKE ?', [$like])
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->distinct()
+            ->orderBy($column)
+            ->limit(15)
+            ->pluck($column);
+
+        return response()->json($results);
+    }
+
     public function update(Request $request, Student $student): RedirectResponse
     {
         $idWasGenerated = false;

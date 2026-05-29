@@ -1,0 +1,15 @@
+domains:
+    - koakademy
+php_version: "8.5"
+framework: laravel
+framework_version: "12"
+secured: true
+services:
+    - postgres-18:
+        preset: postgres
+        version: "18"
+    - mailpit
+    - redis
+workers:
+    - horizon
+    - schedule
