@@ -429,34 +429,52 @@ function MobileMetricCard({
     const bgTone = tone.split(" ").find((className) => className.startsWith("bg-")) ?? "bg-primary/10";
 
     return (
-        <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm">
-            <CardContent className="p-3">
-                <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                            <p className="text-foreground/50 text-[9px] font-bold tracking-wider uppercase">{label}</p>
-                            {privateValue && (
-                                <button
-                                    type="button"
-                                    onClick={() => setRevealed((current) => !current)}
-                                    className="text-muted-foreground/60 hover:text-foreground transition-colors"
-                                    aria-label={revealed ? "Hide balance" : "Show balance"}
-                                >
-                                    {revealed ? <EyeOff className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
-                                </button>
-                            )}
+        <motion.div
+            whileHover={{ y: -2 }}
+            className="group"
+        >
+            <Card className="border-border/30 bg-card/80 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/60">
+                {/* Gradient background accent */}
+                <div className={cn("absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-20 blur-xl transition-all duration-300 group-hover:opacity-30", bgTone)} />
+                
+                <CardContent className="relative p-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                                <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">{label}</p>
+                                {privateValue && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setRevealed((current) => !current)}
+                                        className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                                        aria-label={revealed ? "Hide balance" : "Show balance"}
+                                    >
+                                        {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                    </button>
+                                )}
+                            </div>
+                            <motion.p
+                                key={revealed ? "revealed" : "hidden"}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="text-foreground mt-1 truncate text-lg font-bold tracking-tight leading-none"
+                            >
+                                {revealed ? value : "••••••"}
+                            </motion.p>
                         </div>
-                        <p className="text-foreground mt-0.5 truncate text-base font-bold tracking-tight leading-none">
-                            {revealed ? value : "••••••"}
-                        </p>
+                        <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                            className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm", bgTone)}
+                        >
+                            <Icon className={cn("h-5 w-5", iconTone)} strokeWidth={2.2} />
+                        </motion.div>
                     </div>
-                    <div className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", bgTone)}>
-                        <Icon className={cn("h-4 w-4", iconTone)} strokeWidth={2} />
-                    </div>
-                </div>
-                <p className="text-foreground/45 mt-2 line-clamp-1 text-[9px] font-medium">{detail}</p>
-            </CardContent>
-        </Card>
+                    <p className="text-foreground/50 mt-2 line-clamp-1 text-[11px] font-medium">{detail}</p>
+                </CardContent>
+            </Card>
+        </motion.div>
     );
 }
 
