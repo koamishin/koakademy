@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.7",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.7",
-  "commit": "d6d9ed7f1ee388302650664cd3bb4ac48dd53780",
+  "version": "1.6.0-dev.0.8",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.8",
+  "commit": "c64e515525aa4629a6c43b94819ea2ecfb74ac8e",
   "branch": "master",
-  "timestamp": "2026-05-29T07:05:31Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26623136005",
+  "timestamp": "2026-05-30T08:52:54Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26679626195",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.7 - Add autocomplete input component for student form fields",
-    "previous": "1.6.0-dev.0.6"
+    "current": "Version 1.6.0-dev.0.8 - Merge pull request #91 from koamishin/master",
+    "previous": "1.6.0-dev.0.7"
   },
   "metadata": {
     "author": "yukazakiri",
