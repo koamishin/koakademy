@@ -532,12 +532,12 @@ describe('API Data Access - Administrative Users', function (): void {
 
         Sanctum::actingAs($this->adminUser);
 
-        $response = $this->postJson('/api/students', [
-            'student_id' => 'STU-ADMIN-001',
-            'first_name' => 'Admin Created',
-            'last_name' => 'Student',
+        $studentData = Student::factory()->make([
             'email' => 'admincreated@example.com',
-        ]);
+            'first_name' => 'Admin Created',
+        ])->toArray();
+
+        $response = $this->postJson('/api/students', $studentData);
 
         $response->assertSuccessful();
     });
@@ -547,12 +547,13 @@ describe('API Data Access - Administrative Users', function (): void {
 
         Sanctum::actingAs($this->adminUser);
 
-        $response = $this->postJson('/api/faculties', [
-            'faculty_id_number' => 'FAC-ADMIN-001',
-            'first_name' => 'Admin Created',
-            'last_name' => 'Faculty',
+        $facultyData = Faculty::factory()->make([
             'email' => 'admincreated@example.com',
-        ]);
+            'first_name' => 'Admin Created',
+        ])->toArray();
+        $facultyData['password'] = 'password123';
+
+        $response = $this->postJson('/api/faculties', $facultyData);
 
         $response->assertSuccessful();
     });

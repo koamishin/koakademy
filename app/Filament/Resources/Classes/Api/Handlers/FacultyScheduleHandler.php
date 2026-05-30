@@ -21,6 +21,13 @@ final class FacultyScheduleHandler extends Handlers
 
     protected static string $permission = 'View:Classes';
 
+    public static function getRouteMiddleware(): array
+    {
+        return [
+            'auth:sanctum',
+        ];
+    }
+
     /**
      * Get All Schedules for a Faculty Member
      *
@@ -39,6 +46,35 @@ final class FacultyScheduleHandler extends Handlers
 
         if (! $faculty) {
             return self::sendNotFoundResponse('Faculty not found');
+        }
+
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([
+                'error' => true,
+                'message' => 'Unauthenticated.',
+                'code' => 'UNAUTHENTICATED',
+            ], 401);
+        }
+
+        // Context-aware authorization check:
+        // A faculty member can only fetch their own schedules.
+        // Administrative users with standard View:Classes permission can fetch anyone's schedules.
+        $isAuthorized = false;
+        if ($user->role && $user->role->isFaculty()) {
+            if ($user->email === $faculty->email || $user->faculty_id_number === $faculty->faculty_id_number) {
+                $isAuthorized = true;
+            }
+        } elseif ($user->can('View:Classes')) {
+            $isAuthorized = true;
+        }
+
+        if (! $isAuthorized) {
+            return response()->json([
+                'error' => true,
+                'message' => 'User does not have the right permissions.',
+                'code' => 'FORBIDDEN',
+            ], 403);
         }
 
         // Get all classes for this faculty member

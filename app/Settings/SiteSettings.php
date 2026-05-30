@@ -67,7 +67,7 @@ final class SiteSettings extends Settings
 
     public ?string $currency = null;
 
-    public ?string $auth_layout = null;
+    public ?string $auth_layout = self::DEFAULT_AUTH_LAYOUT;
 
     // Portal-specific settings
     public ?string $portal_name = null;

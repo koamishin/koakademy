@@ -1,14 +1,14 @@
 {
-  "version": "1.5.0-dev.0.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.5.0-dev.0.2",
-  "commit": "3e9bb141f8b897919e1853f9edc60e362aa965ac",
+  "version": "1.6.0-dev.0.7",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.7",
+  "commit": "d6d9ed7f1ee388302650664cd3bb4ac48dd53780",
   "branch": "master",
-  "timestamp": "2026-05-16T11:53:29Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/25961176319",
+  "timestamp": "2026-05-29T07:05:31Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26623136005",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.5.0-dev.0.2 - Remove Redis check for Pulse ingest",
-    "previous": "1.5.0-dev.0.1"
+    "current": "Version 1.6.0-dev.0.7 - Add autocomplete input component for student form fields",
+    "previous": "1.6.0-dev.0.6"
   },
   "metadata": {
     "author": "yukazakiri",

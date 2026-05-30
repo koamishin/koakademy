@@ -6,18 +6,30 @@ namespace Database\Seeders;
 
 use App\Settings\SiteSettings;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 final class BrandingSettingsSeeder extends Seeder
 {
-    public function run(SiteSettings $settings): void
+    public function run(): void
     {
+        DB::table('settings')->updateOrInsert(
+            [
+                'group' => 'site',
+                'name' => 'auth_layout',
+            ],
+            [
+                'payload' => json_encode('split', JSON_THROW_ON_ERROR),
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        /** @var SiteSettings $settings */
+        $settings = app(SiteSettings::class);
+
         // Only set if not already set
         if (! $settings->app_name) {
             $settings->app_name = 'KoAkademy';
-        }
-
-        if (! $settings->app_short_name) {
-            $settings->app_short_name = 'KOA';
         }
 
         if (! $settings->organization_name) {
@@ -38,6 +50,10 @@ final class BrandingSettingsSeeder extends Seeder
 
         if (! $settings->currency) {
             $settings->currency = 'PHP';
+        }
+
+        if (! $settings->auth_layout) {
+            $settings->auth_layout = 'split';
         }
 
         $settings->save();

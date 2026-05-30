@@ -19,7 +19,6 @@ import { Head, Link, router, useForm } from "@inertiajs/react";
 import {
     BookOpen,
     CalendarIcon,
-    Clock,
     Copy as CopyIcon,
     Layers,
     LayoutGrid,
@@ -390,44 +389,6 @@ function parseTimeToMinutes(value: string): number | null {
     return hours * 60 + minutes;
 }
 
-function formatTimeLabel(value: string): string {
-    const totalMinutes = parseTimeToMinutes(value);
-
-    if (totalMinutes === null) {
-        return "Invalid time";
-    }
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    const normalizedHours = hours % 12 || 12;
-    const suffix = hours >= 12 ? "PM" : "AM";
-
-    return `${normalizedHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
-}
-
-function getScheduleDurationLabel(schedule: ClassSchedule): string {
-    const start = parseTimeToMinutes(schedule.start_time);
-    const end = parseTimeToMinutes(schedule.end_time);
-
-    if (start === null || end === null || end <= start) {
-        return "Invalid time range";
-    }
-
-    const duration = end - start;
-    const hours = Math.floor(duration / 60);
-    const minutes = duration % 60;
-
-    if (hours === 0) {
-        return `${minutes} min`;
-    }
-
-    if (minutes === 0) {
-        return `${hours} hr${hours === 1 ? "" : "s"}`;
-    }
-
-    return `${hours} hr ${minutes} min`;
-}
-
 function getTabForFormErrors(errors: Record<string, string>): ClassDialogTab {
     const keys = Object.keys(errors);
 
@@ -463,49 +424,44 @@ function SchedulePlanner({
     defaultRoomId: number;
     classRoomId: number;
 }) {
-    const [selectedIndex, setSelectedIndex] = React.useState(0);
-
     React.useEffect(() => {
         if (schedules.length === 0) {
             setSchedules([createDefaultSchedule(defaultRoomId)]);
-            setSelectedIndex(0);
-            return;
         }
+    }, [defaultRoomId, schedules.length, setSchedules]);
 
-        if (selectedIndex > schedules.length - 1) {
-            setSelectedIndex(Math.max(0, schedules.length - 1));
-        }
-    }, [defaultRoomId, schedules, selectedIndex, setSchedules]);
-
-    const selectedSchedule = schedules[selectedIndex] ?? null;
-    const roomLabelById = React.useMemo(() => new Map(rooms.map((room) => [room.id, room.label])), [rooms]);
+    const selectedRoomId = Number(classRoomId || defaultRoomId);
+    const selectedRoomLabel = rooms.find((room) => Number(room.id) === selectedRoomId)?.label ?? "selected class room";
 
     const updateScheduleAt = (index: number, patch: Partial<ClassSchedule>) => {
         setSchedules(schedules.map((schedule, scheduleIndex) => (scheduleIndex === index ? { ...schedule, ...patch } : schedule)));
     };
 
-    const addSchedule = () => {
-        const nextSchedule = {
-            ...createDefaultSchedule(classRoomId || defaultRoomId),
-            day_of_week: selectedSchedule?.day_of_week ?? "Monday",
-        };
-
-        setSchedules([...schedules, nextSchedule]);
-        setSelectedIndex(schedules.length);
+    const applyClassRoomToAllSchedules = () => {
+        setSchedules(schedules.map((schedule) => ({ ...schedule, room: undefined, room_id: selectedRoomId })));
     };
 
-    const duplicateSelectedSchedule = () => {
-        if (!selectedSchedule) {
-            return;
-        }
-
+    const addSchedule = () => {
+        const sourceSchedule = schedules[schedules.length - 1] ?? createDefaultSchedule(classRoomId || defaultRoomId);
         const nextSchedule = {
-            ...selectedSchedule,
+            ...createDefaultSchedule(selectedRoomId),
+            day_of_week: sourceSchedule.day_of_week,
+            start_time: sourceSchedule.start_time,
+            end_time: sourceSchedule.end_time,
             room: undefined,
+            room_id: selectedRoomId,
         };
 
         setSchedules([...schedules, nextSchedule]);
-        setSelectedIndex(schedules.length);
+    };
+
+    const duplicateAt = (index: number) => {
+        const nextSchedule = {
+            ...schedules[index],
+            id: undefined,
+            room: undefined,
+        };
+        setSchedules([...schedules, nextSchedule]);
     };
 
     const removeSchedule = (index: number) => {
@@ -513,19 +469,7 @@ function SchedulePlanner({
             return;
         }
 
-        const nextSchedules = schedules.filter((_, scheduleIndex) => scheduleIndex !== index);
-        setSchedules(nextSchedules);
-        setSelectedIndex((currentIndex) => {
-            if (currentIndex === index) {
-                return Math.max(0, index - 1);
-            }
-
-            if (currentIndex > index) {
-                return currentIndex - 1;
-            }
-
-            return currentIndex;
-        });
+        setSchedules(schedules.filter((_, scheduleIndex) => scheduleIndex !== index));
     };
 
     const activeDays = new Set(schedules.map((schedule) => schedule.day_of_week).filter(Boolean)).size;
@@ -537,204 +481,48 @@ function SchedulePlanner({
     }).length;
 
     return (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="space-y-4">
-                <div className="bg-card/70 flex flex-col gap-3 rounded-xl border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-1">
-                        <h3 className="text-sm font-semibold">Weekly schedule</h3>
-                        <p className="text-muted-foreground text-xs">
-                            Drag blocks on desktop, or use the editor to adjust time, day, and room on any screen.
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <Badge variant="secondary">
-                            {schedules.length} block{schedules.length === 1 ? "" : "s"}
-                        </Badge>
-                        <Badge variant="secondary">
-                            {activeDays} active day{activeDays === 1 ? "" : "s"}
-                        </Badge>
-                        {invalidBlocks > 0 ? <Badge variant="destructive">{invalidBlocks} invalid</Badge> : null}
-                    </div>
+        <div className="space-y-4">
+            <div className="bg-card/70 flex flex-col gap-3 rounded-xl border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">Weekly schedule</h3>
+                    <p className="text-muted-foreground text-xs">Drag blocks on desktop, or right-click a block for quick edits.</p>
                 </div>
-
-                <div className="bg-card/50 rounded-xl border p-2 shadow-sm sm:p-3">
-                    <div className="overflow-x-auto">
-                        <div className="h-[720px] min-w-[860px]">
-                            <ClassScheduleVisualizer
-                                className="h-full min-h-0"
-                                schedules={schedules}
-                                rooms={rooms}
-                                onScheduleChange={(index, nextSchedule) => {
-                                    updateScheduleAt(index, nextSchedule);
-                                    setSelectedIndex(index);
-                                }}
-                            />
-                        </div>
-                    </div>
+                <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">
+                        {schedules.length} block{schedules.length === 1 ? "" : "s"}
+                    </Badge>
+                    <Badge variant="secondary">
+                        {activeDays} active day{activeDays === 1 ? "" : "s"}
+                    </Badge>
+                    {invalidBlocks > 0 ? <Badge variant="destructive">{invalidBlocks} invalid</Badge> : null}
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={applyClassRoomToAllSchedules}>
+                        <MapPin className="mr-1 h-3.5 w-3.5" />
+                        Apply {selectedRoomLabel} to all
+                    </Button>
+                    <Button type="button" size="sm" className="h-8 text-xs" onClick={addSchedule}>
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Add block
+                    </Button>
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <div className="bg-card rounded-xl border shadow-sm">
-                    <div className="border-b p-4">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <h3 className="text-sm font-semibold">Blocks</h3>
-                                <p className="text-muted-foreground text-xs">Select a block to edit it precisely.</p>
-                            </div>
-                            <Button type="button" size="sm" onClick={addSchedule}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="space-y-3 p-4">
-                        {schedules.map((schedule, index) => {
-                            const roomLabel = roomLabelById.get(schedule.room_id) ?? "Room TBA";
-                            const isSelected = index === selectedIndex;
-
-                            return (
-                                <div
-                                    key={`${schedule.day_of_week}-${schedule.start_time}-${schedule.end_time}-${index}`}
-                                    className={`rounded-xl border transition-colors ${
-                                        isSelected ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-background"
-                                    }`}
-                                >
-                                    <button
-                                        type="button"
-                                        className="flex w-full flex-col gap-3 p-4 text-left"
-                                        onClick={() => setSelectedIndex(index)}
-                                    >
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="space-y-1">
-                                                <div className="text-sm font-semibold">Block {index + 1}</div>
-                                                <div className="text-muted-foreground text-xs">
-                                                    {schedule.day_of_week || "Choose a day"} • {getScheduleDurationLabel(schedule)}
-                                                </div>
-                                            </div>
-                                            {isSelected ? <Badge>Selected</Badge> : <Badge variant="secondary">Open</Badge>}
-                                        </div>
-
-                                        <div className="space-y-2 text-xs">
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="text-muted-foreground h-3.5 w-3.5" />
-                                                <span>
-                                                    {formatTimeLabel(schedule.start_time)} to {formatTimeLabel(schedule.end_time)}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <MapPin className="text-muted-foreground h-3.5 w-3.5" />
-                                                <span>{roomLabel}</span>
-                                            </div>
-                                        </div>
-                                    </button>
-
-                                    <div className="flex items-center justify-between gap-2 border-t px-4 py-3">
-                                        <Button type="button" variant="ghost" size="sm" onClick={duplicateSelectedSchedule} disabled={!isSelected}>
-                                            Duplicate
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-destructive"
-                                            onClick={() => removeSchedule(index)}
-                                            disabled={schedules.length <= 1}
-                                        >
-                                            <X className="mr-1 h-3.5 w-3.5" />
-                                            Remove
-                                        </Button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-
-                        <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => setSchedules(schedules.map((schedule) => ({ ...schedule, room_id: classRoomId || defaultRoomId })))}
-                        >
-                            Use class room for all blocks
-                        </Button>
+            <div className="bg-card/50 rounded-xl border p-2 shadow-sm sm:p-3">
+                <div className="overflow-x-auto">
+                    <div className="h-[720px] min-w-[860px]">
+                        <ClassScheduleVisualizer
+                            className="h-full min-h-0"
+                            schedules={schedules}
+                            rooms={rooms}
+                            dayOptions={dayOptions}
+                            onScheduleChange={(index, nextSchedule) => {
+                                updateScheduleAt(index, nextSchedule);
+                            }}
+                            onDuplicateSchedule={duplicateAt}
+                            onRemoveSchedule={removeSchedule}
+                            canRemoveSchedule={schedules.length > 1}
+                        />
                     </div>
                 </div>
-
-                {selectedSchedule ? (
-                    <div className="bg-card rounded-xl border shadow-sm">
-                        <div className="border-b p-4">
-                            <h3 className="text-sm font-semibold">Block editor</h3>
-                            <p className="text-muted-foreground text-xs">Fine-tune the selected schedule block.</p>
-                        </div>
-
-                        <div className="grid gap-4 p-4">
-                            <div className="space-y-2">
-                                <Label>Day</Label>
-                                <Select
-                                    value={selectedSchedule.day_of_week}
-                                    onValueChange={(value) => updateScheduleAt(selectedIndex, { day_of_week: value })}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select day" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {dayOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="space-y-2">
-                                    <Label>Start time</Label>
-                                    <Input
-                                        type="time"
-                                        value={selectedSchedule.start_time}
-                                        onChange={(event) => updateScheduleAt(selectedIndex, { start_time: event.target.value })}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>End time</Label>
-                                    <Input
-                                        type="time"
-                                        value={selectedSchedule.end_time}
-                                        onChange={(event) => updateScheduleAt(selectedIndex, { end_time: event.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Room</Label>
-                                <Select
-                                    value={String(selectedSchedule.room_id)}
-                                    onValueChange={(value) => updateScheduleAt(selectedIndex, { room_id: Number(value) })}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select room" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {rooms.map((room) => (
-                                            <SelectItem key={room.id} value={String(room.id)}>
-                                                {room.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="bg-muted/40 rounded-lg border px-3 py-2 text-xs">
-                                <span className="font-medium">Summary:</span> {selectedSchedule.day_of_week} •{" "}
-                                {formatTimeLabel(selectedSchedule.start_time)} to {formatTimeLabel(selectedSchedule.end_time)} •{" "}
-                                {roomLabelById.get(selectedSchedule.room_id) ?? "Room TBA"}
-                            </div>
-                        </div>
-                    </div>
-                ) : null}
             </div>
         </div>
     );
@@ -744,8 +532,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     const [search, setSearch] = React.useState(() => filters.search || "");
     const [isSearchLoading, setIsSearchLoading] = React.useState(false);
     const [isSelectedClassLoading, setIsSelectedClassLoading] = React.useState(false);
-    const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
-    const [localClassification, setLocalClassification] = React.useState(filters.classification || "all");
+    const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
     const [isEditOpen, setIsEditOpen] = React.useState(false);
     const [isCopyOpen, setIsCopyOpen] = React.useState(false);
@@ -768,16 +555,39 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
     const [subjectCodeTouched, setSubjectCodeTouched] = React.useState(false);
 
-    const filteredClassesByClassification = React.useMemo(() => {
-        if (localClassification === "all") {
-            return classes.data;
-        }
-        return classes.data.filter((cls) => cls.classification?.toLowerCase() === localClassification.toLowerCase());
-    }, [classes.data, localClassification]);
-
     React.useEffect(() => {
         setSearch(filters.search ?? "");
     }, [filters.search]);
+
+    const filteredClassesBySearch = React.useMemo(() => {
+        const searchTerm = search.trim().toLowerCase();
+
+        if (searchTerm === "") {
+            return classes.data;
+        }
+
+        return classes.data.filter((classRow) =>
+            [
+                classRow.record_title,
+                classRow.subject_code,
+                classRow.subject_title,
+                classRow.section,
+                classRow.school_year,
+                classRow.semester,
+                classRow.classification,
+                classRow.faculty,
+                classRow.shs_track,
+                classRow.shs_strand,
+            ]
+                .filter((value): value is string | number => value !== null && value !== undefined)
+                .some((value) => String(value).toLowerCase().includes(searchTerm)),
+        );
+    }, [classes.data, search]);
+
+    const serverSearch = filters.search ?? "";
+    const isServerSearchCurrent = search.trim() === serverSearch.trim();
+    const shouldUseLocalSearchResults = search.trim() !== "" && !isServerSearchCurrent;
+    const visibleClasses = shouldUseLocalSearchResults ? filteredClassesBySearch : classes.data;
 
     const handleSearch = useDebouncedCallback((term: string) => {
         router.get(
@@ -799,10 +609,13 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     }, 700);
 
     const handleFilterChange = (key: string, value: string | number | boolean | null) => {
+        const nextSearch = search.trim() ? search.trim() : null;
+
         router.get(
             route("administrators.classes.index"),
             {
                 ...filters,
+                search: nextSearch,
                 [key]: value === "all" ? null : value,
                 page: 1,
             },
@@ -1328,13 +1141,14 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     onClear: () => void;
                 }> = [];
 
-                if (localClassification && localClassification !== "all") {
-                    const label = options.classifications.find((c) => c.value === localClassification)?.label ?? localClassification;
+                const classification = filters.classification ?? "all";
+                if (classification !== "all") {
+                    const label = options.classifications.find((c) => c.value === classification)?.label ?? classification;
 
                     activeFilterBadges.push({
                         key: "classification",
                         label: `Type: ${label}`,
-                        onClear: () => setLocalClassification("all"),
+                        onClear: () => handleFilterChange("classification", null),
                     });
                 }
 
@@ -1406,12 +1220,11 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
                 const clearAll = () => {
                     setSearch("");
-                    setLocalClassification("all");
                     router.get(route("administrators.classes.index"), {}, { replace: true });
                 };
 
-                const filteredStatsTotalStudents = filteredClassesByClassification.reduce((acc, curr) => acc + curr.students_count, 0);
-                const filteredStatsTotalClasses = localClassification === "all" ? classes.total : filteredClassesByClassification.length;
+                const filteredStatsTotalStudents = visibleClasses.reduce((acc, curr) => acc + curr.students_count, 0);
+                const filteredStatsTotalClasses = shouldUseLocalSearchResults ? visibleClasses.length : classes.total;
 
                 return (
                     <div className="flex flex-col gap-6">
@@ -1458,7 +1271,11 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <Tabs value={localClassification} onValueChange={(val) => setLocalClassification(val)} className="w-auto">
+                                <Tabs
+                                    value={filters.classification ?? "all"}
+                                    onValueChange={(val) => handleFilterChange("classification", val === "all" ? null : val)}
+                                    className="w-auto"
+                                >
                                     <TabsList>
                                         <TabsTrigger value="all">All</TabsTrigger>
                                         <TabsTrigger value="college">College</TabsTrigger>
@@ -1514,7 +1331,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             </div>
                         ) : null}
 
-                        {filteredClassesByClassification.length === 0 ? (
+                        {visibleClasses.length === 0 ? (
                             <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center">
                                 <div className="bg-muted/50 border-border flex h-14 w-14 items-center justify-center rounded-full border">
                                     <Layers className="text-muted-foreground h-7 w-7" />
@@ -1531,7 +1348,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             <>
                                 {viewMode === "grid" ? (
                                     <div className="animate-in fade-in slide-in-from-bottom-4 grid gap-4 duration-500 md:grid-cols-2 2xl:grid-cols-3">
-                                        {filteredClassesByClassification.map((row) => (
+                                        {visibleClasses.map((row) => (
                                             <ClassCard
                                                 key={row.id}
                                                 classRow={row}
@@ -1547,15 +1364,32 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                         ))}
                                     </div>
                                 ) : (
-                                    <DataTable columns={columns} data={filteredClassesByClassification} pagination={undefined} filters={filters} />
+                                    <DataTable
+                                        columns={columns}
+                                        data={visibleClasses}
+                                        pagination={
+                                            shouldUseLocalSearchResults
+                                                ? {
+                                                      current_page: 1,
+                                                      last_page: 1,
+                                                      per_page: classes.per_page,
+                                                      total: visibleClasses.length,
+                                                      next_page_url: null,
+                                                      prev_page_url: null,
+                                                      from: visibleClasses.length > 0 ? 1 : 0,
+                                                      to: visibleClasses.length,
+                                                  }
+                                                : classes
+                                        }
+                                        filters={filters}
+                                    />
                                 )}
 
                                 {viewMode === "grid" && (
                                     <div className="flex items-center justify-between gap-3 border-t pt-4">
                                         <div className="text-muted-foreground text-sm">
-                                            Showing {filteredClassesByClassification.length}{" "}
-                                            {filteredClassesByClassification.length === 1 ? "class" : "classes"}
-                                            {localClassification !== "all" && ` (filtered from ${classes.total} total)`}
+                                            Showing {visibleClasses.length} {visibleClasses.length === 1 ? "class" : "classes"}
+                                            {shouldUseLocalSearchResults ? ` (from ${classes.total} total)` : ""}
                                         </div>
                                     </div>
                                 )}
@@ -1822,19 +1656,18 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                 </div>
                             ) : null}
                             <TabsContent value="details" className="m-0 space-y-6 outline-none">
-                                <div className="grid gap-6 lg:grid-cols-2">
+                                <div className="space-y-4">
                                     <Card className="border-border/60 shadow-sm">
                                         <CardHeader className="bg-muted/20 border-b pb-4">
-                                            <CardTitle className="text-base font-semibold">Academic Profile</CardTitle>
+                                            <CardTitle className="text-base font-semibold">Class basics</CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-4 pt-6">
                                             <div className="grid gap-4 sm:grid-cols-2">
                                                 <div className="space-y-3 sm:col-span-2">
-                                                    <Label>Class type</Label>
+                                                    <Label>Program type</Label>
                                                     <div className="grid gap-3 sm:grid-cols-2">
                                                         <VisualRadioButton
                                                             title="College"
-                                                            description="Higher education degrees and courses."
                                                             checked={createForm.data.classification === "college"}
                                                             onSelect={() => {
                                                                 createForm.setData("classification", "college");
@@ -1852,7 +1685,6 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                         />
                                                         <VisualRadioButton
                                                             title="Senior High School"
-                                                            description="K-12 pathway and strands."
                                                             checked={createForm.data.classification === "shs"}
                                                             onSelect={() => {
                                                                 createForm.setData("classification", "shs");
@@ -1874,7 +1706,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                 {createForm.data.classification === "college" ? (
                                                     <>
                                                         <div className="space-y-2">
-                                                            <Label>Associated courses</Label>
+                                                            <Label>Courses</Label>
                                                             <SearchableMultiSelect
                                                                 placeholder="Search and select courses..."
                                                                 searchPlaceholder="Search courses..."
@@ -1932,7 +1764,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                         </div>
 
                                                         <div className="space-y-2 sm:col-span-2">
-                                                            <Label>Class name / subject code</Label>
+                                                            <Label>Class code or name</Label>
                                                             <Input
                                                                 value={createForm.data.subject_code}
                                                                 placeholder="Auto-generated from subjects..."
@@ -1941,9 +1773,6 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                                     createForm.setData("subject_code", e.target.value);
                                                                 }}
                                                             />
-                                                            <p className="text-muted-foreground text-xs">
-                                                                Auto-generated from selected subjects. You can customize it.
-                                                            </p>
                                                         </div>
                                                     </>
                                                 ) : (
@@ -2044,7 +1873,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
                                     <Card className="border-border/60 h-fit shadow-sm">
                                         <CardHeader className="bg-muted/20 border-b pb-4">
-                                            <CardTitle className="text-base font-semibold">Logistics & Organization</CardTitle>
+                                            <CardTitle className="text-base font-semibold">Teaching details</CardTitle>
                                         </CardHeader>
                                         <CardContent className="space-y-4 pt-6">
                                             <div className="grid gap-4 sm:grid-cols-2">
@@ -2147,7 +1976,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <Label>Maximum slots</Label>
+                                                    <Label>Class size limit</Label>
                                                     <Input
                                                         type="number"
                                                         value={String(createForm.data.maximum_slots)}
@@ -2270,19 +2099,18 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                     </div>
                                 ) : null}
                                 <TabsContent value="details" className="m-0 space-y-6 outline-none">
-                                    <div className="grid gap-6 lg:grid-cols-2">
+                                    <div className="space-y-4">
                                         <Card className="border-border/60 shadow-sm">
                                             <CardHeader className="bg-muted/20 border-b pb-4">
-                                                <CardTitle className="text-base font-semibold">Academic Profile</CardTitle>
+                                                <CardTitle className="text-base font-semibold">Class basics</CardTitle>
                                             </CardHeader>
                                             <CardContent className="space-y-4 pt-6">
                                                 <div className="grid gap-4 sm:grid-cols-2">
                                                     <div className="space-y-3 sm:col-span-2">
-                                                        <Label>Class type</Label>
+                                                        <Label>Program type</Label>
                                                         <div className="grid gap-3 sm:grid-cols-2">
                                                             <VisualRadioButton
                                                                 title="College"
-                                                                description="Higher education degrees and courses."
                                                                 checked={editForm.data.classification === "college"}
                                                                 onSelect={() => {
                                                                     editForm.setData("classification", "college");
@@ -2300,7 +2128,6 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                             />
                                                             <VisualRadioButton
                                                                 title="Senior High School"
-                                                                description="K-12 pathway and strands."
                                                                 checked={editForm.data.classification === "shs"}
                                                                 onSelect={() => {
                                                                     editForm.setData("classification", "shs");
@@ -2322,7 +2149,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                     {editForm.data.classification === "college" ? (
                                                         <>
                                                             <div className="space-y-2">
-                                                                <Label>Associated courses</Label>
+                                                                <Label>Courses</Label>
                                                                 <SearchableMultiSelect
                                                                     placeholder="Search and select courses..."
                                                                     searchPlaceholder="Search courses..."
@@ -2380,7 +2207,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                             </div>
 
                                                             <div className="space-y-2 sm:col-span-2">
-                                                                <Label>Class name / subject code</Label>
+                                                                <Label>Class code or name</Label>
                                                                 <Input
                                                                     value={editForm.data.subject_code}
                                                                     placeholder="Auto-generated from subjects..."
@@ -2489,7 +2316,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
                                         <Card className="border-border/60 h-fit shadow-sm">
                                             <CardHeader className="bg-muted/20 border-b pb-4">
-                                                <CardTitle className="text-base font-semibold">Logistics & Organization</CardTitle>
+                                                <CardTitle className="text-base font-semibold">Teaching details</CardTitle>
                                             </CardHeader>
                                             <CardContent className="space-y-4 pt-6">
                                                 <div className="grid gap-4 sm:grid-cols-2">
@@ -2592,7 +2419,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                     </div>
 
                                                     <div className="space-y-2">
-                                                        <Label>Maximum slots</Label>
+                                                        <Label>Class size limit</Label>
                                                         <Input
                                                             type="number"
                                                             value={String(editForm.data.maximum_slots)}

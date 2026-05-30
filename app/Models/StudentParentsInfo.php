@@ -26,10 +26,12 @@ final class StudentParentsInfo extends Model
 
     protected $fillable = [
         'father_name',
+        'fathers_name',
         'father_occupation',
         'father_contact',
         'father_email',
         'mother_name',
+        'mothers_name',
         'mother_occupation',
         'mother_contact',
         'mother_email',

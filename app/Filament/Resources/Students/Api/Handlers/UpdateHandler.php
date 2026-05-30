@@ -45,6 +45,11 @@ final class UpdateHandler extends Handlers
             return response()->json(['message' => 'You can only update your own student record.'], 403);
         }
 
+        // Faculty should only have read access to students, not write access
+        if ($user && in_array($user->role?->value, [\App\Enums\UserRole::Instructor->value, \App\Enums\UserRole::Professor->value, \App\Enums\UserRole::Dean->value], true)) {
+            return response()->json(['message' => 'Faculty members cannot update student records.'], 403);
+        }
+
         $model->fill($request->all());
 
         $model->save();

@@ -5,9 +5,12 @@ declare(strict_types=1);
 use App\Filament\Resources\StudentEnrollments\Api\StudentEnrollmentController;
 use App\Http\Controllers\Api\ActiveJobsController;
 use App\Http\Controllers\Api\OrganizationController;
+use App\Http\Controllers\Api\V1\Auth\SignupController;
 use App\Http\Controllers\Api\V1\ClassEnrollmentController;
 use App\Http\Controllers\Api\V1\ClassPostController;
+use App\Http\Controllers\Api\V1\Faculty\FacultyController;
 use App\Http\Controllers\Api\V1\GeneralSettingController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\StudentVerificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +22,15 @@ Route::get('/user', function (Request $request) {
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::prefix('public')->name('public.')->group(function (): void {
         Route::get('/settings', [GeneralSettingController::class, 'publicWebsiteSettings'])->name('settings');
+    });
+
+    Route::middleware(['auth:sanctum'])->prefix('profile')->name('profile.')->group(function (): void {
+        Route::get('/me', [ProfileController::class, 'show'])->name('me');
+    });
+    Route::prefix('auth')->name('auth.')->group(function (): void {
+        Route::post('/signup/email-lookup', [SignupController::class, 'emailLookup'])->name('signup.email-lookup');
+        Route::post('/signup/send-otp', [SignupController::class, 'sendOtp'])->name('signup.send-otp');
+        Route::post('/signup', [SignupController::class, 'signup'])->name('signup');
     });
 });
 
@@ -134,4 +146,27 @@ Route::middleware(['web', 'auth'])->prefix('organizations')->name('api.organizat
 // Student Verification API Routes
 Route::middleware(['auth:sanctum'])->prefix('students')->name('api.students.')->group(function (): void {
     Route::post('/verify', [StudentVerificationController::class, 'verify'])->name('verify');
+});
+
+// Faculty Mobile App API Routes
+Route::middleware(['auth:sanctum'])->prefix('faculty')->name('api.faculty.')->group(function (): void {
+    Route::get('/profile', [FacultyController::class, 'profile'])->name('profile');
+    Route::put('/profile', [FacultyController::class, 'updateProfile'])->name('update-profile');
+
+    Route::get('/classes', [FacultyController::class, 'classes'])->name('classes');
+    Route::get('/classes/{classId}', [FacultyController::class, 'classDetails'])->name('class-details');
+    Route::get('/classes/{classId}/students', [FacultyController::class, 'classStudents'])->name('class-students');
+
+    Route::get('/schedules', [FacultyController::class, 'schedules'])->name('schedules');
+
+    Route::get('/students', [FacultyController::class, 'students'])->name('students');
+
+    // Attendance
+    Route::get('/classes/{classId}/attendance/sessions', [FacultyController::class, 'attendanceSessions'])->name('attendance-sessions');
+    Route::post('/classes/{classId}/attendance/sessions', [FacultyController::class, 'storeAttendanceSession'])->name('store-attendance-session');
+    Route::put('/classes/{classId}/attendance/sessions/{sessionId}', [FacultyController::class, 'updateAttendanceSession'])->name('update-attendance-session');
+    Route::post('/classes/{classId}/attendance/sessions/{sessionId}/records', [FacultyController::class, 'updateAttendanceRecords'])->name('update-attendance-records');
+
+    // Grades
+    Route::patch('/classes/{classId}/enrollments/{enrollmentId}/grades', [FacultyController::class, 'updateGrades'])->name('update-grades');
 });

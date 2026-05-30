@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Features\Onboarding\StudentSchedule;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
     config(['activitylog.enabled' => false]);
@@ -106,12 +107,17 @@ it('can update student profile information', function (): void {
     // Verify Education
     expect($this->student->studentEducationInfo)->not->toBeNull();
     expect($this->student->studentEducationInfo->elementary_school)->toBe('Elementary School');
-    expect($this->student->studentEducationInfo->elementary_year_graduated)->toBe('2012');
+    $elementaryYearColumn = Schema::hasColumn('student_education_info', 'elementary_graduate_year')
+        ? 'elementary_graduate_year'
+        : 'elementary_year_graduated';
+    expect($this->student->studentEducationInfo->{$elementaryYearColumn})->toBe('2012');
 
     // Verify Parents
     expect($this->student->studentParentInfo)->not->toBeNull();
-    expect($this->student->studentParentInfo->father_name)->toBe('Father Name');
-    expect($this->student->studentParentInfo->mother_name)->toBe('Mother Name');
+    $fatherColumn = Schema::hasColumn('student_parents_info', 'fathers_name') ? 'fathers_name' : 'father_name';
+    $motherColumn = Schema::hasColumn('student_parents_info', 'mothers_name') ? 'mothers_name' : 'mother_name';
+    expect($this->student->studentParentInfo->{$fatherColumn})->toBe('Father Name');
+    expect($this->student->studentParentInfo->{$motherColumn})->toBe('Mother Name');
 
     // Check if user email is also updated
     $this->user->refresh();

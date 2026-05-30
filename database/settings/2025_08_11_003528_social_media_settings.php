@@ -2,20 +2,19 @@
 
 declare(strict_types=1);
 
+use Spatie\LaravelSettings\Exceptions\SettingAlreadyExists;
 use Spatie\LaravelSettings\Migrations\SettingsMigration;
 
 return new class extends SettingsMigration
 {
     public function up(): void
     {
-        $this->migrator->add('social-media.linkedin', '');
-        $this->migrator->add('social-media.whatsapp', '');
-        $this->migrator->add('social-media.x', '');
-        $this->migrator->add('social-media.facebook', '');
-        $this->migrator->add('social-media.instagram', '');
-        $this->migrator->add('social-media.tiktok', '');
-        $this->migrator->add('social-media.medium', '');
-        $this->migrator->add('social-media.youtube', '');
-        $this->migrator->add('social-media.github', '');
+        foreach (['linkedin', 'whatsapp', 'x', 'facebook', 'instagram', 'tiktok', 'medium', 'youtube', 'github'] as $platform) {
+            try {
+                $this->migrator->add("social-media.{$platform}", '');
+            } catch (SettingAlreadyExists) {
+                // Already present from schema dump or earlier run
+            }
+        }
     }
 };
