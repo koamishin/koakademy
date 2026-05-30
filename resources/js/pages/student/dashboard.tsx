@@ -1,6 +1,7 @@
 import { DigitalIdCard, type IdCardData } from "@/components/digital-id-card";
-import { type OnboardingChecklistItem, OnboardingProvider } from "@/components/onboarding-context";
+import { OnboardingProvider, type OnboardingChecklistItem } from "@/components/onboarding-context";
 import { OnboardingExperience, type OnboardingFeatureData } from "@/components/onboarding-experience";
+import { SemesterSelectorProps } from "@/components/semester-selector";
 import StudentLayout from "@/components/student/student-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,11 +10,11 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { type User } from "@/types/user";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { motion } from "framer-motion";
 import {
-    AlertCircle,
     ArrowRight,
     Bell,
     BookOpen,
@@ -24,12 +25,14 @@ import {
     Eye,
     EyeOff,
     GraduationCap,
+    HelpCircle,
     LayoutGrid,
     MapPin,
     Sparkles,
     TrendingUp,
     Trophy,
     UserRound,
+    type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -291,29 +294,33 @@ function StatTile({
     const iconTone = tone.split(" ").find((className) => className.startsWith("text-")) ?? "text-primary";
 
     return (
-        <Card className={`${dashboardCardClass} group relative min-h-[132px] overflow-hidden hover:-translate-y-0.5`}>
-            <CardContent className="relative flex h-full flex-col justify-end p-5 pr-20 sm:min-h-[150px]">
+        <Card className={`${dashboardCardClass} group relative min-h-[110px] overflow-hidden hover:-translate-y-0.5 sm:min-h-[132px]`}>
+            <CardContent className="relative flex h-full flex-col justify-end p-3.5 pr-10 sm:p-5 sm:pr-20">
                 <Icon
-                    className={`pointer-events-none absolute top-4 right-5 h-14 w-14 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 ${iconTone}`}
+                    className={`pointer-events-none absolute top-3 right-3 h-8 w-8 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 sm:top-4 sm:right-5 sm:h-14 sm:w-14 ${iconTone}`}
                 />
 
-                <div className="absolute top-4 left-5 z-10">
-                    {privateValue && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="hover:bg-muted/70 h-8 w-8 rounded-md"
-                            onClick={() => setRevealed((current) => !current)}
-                        >
-                            {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                    )}
-                </div>
-
                 <div className="relative z-10 min-w-0">
-                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
-                    <p className="text-foreground mt-1 truncate text-2xl font-semibold tracking-tight md:text-3xl">{revealed ? value : "Hidden"}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">{detail}</p>
+                    <div className="flex items-center gap-1.5">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase sm:text-xs">{label}</p>
+                        {privateValue && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setRevealed((current) => !current);
+                                }}
+                                className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                            >
+                                {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            </button>
+                        )}
+                    </div>
+                    <p className="text-foreground mt-0.5 truncate text-lg font-semibold tracking-tight sm:mt-1 sm:text-2xl md:text-3xl">
+                        {revealed ? value : "Hidden"}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[10px] sm:mt-1 sm:text-xs">{detail}</p>
                 </div>
             </CardContent>
         </Card>
@@ -364,6 +371,411 @@ function CourseCard({ classItem, index }: { classItem: ClassInfo; index: number 
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+function MobileQuickActions() {
+    const actions = [
+        { label: "Profile", href: "/student/profile", icon: UserRound, color: "bg-blue-500" },
+        { label: "Tuition", href: "/student/tuition", icon: CreditCard, color: "bg-emerald-500" },
+        { label: "Schedule", href: "/student/schedule", icon: Calendar, color: "bg-amber-500" },
+        { label: "Help", href: "/student/help", icon: HelpCircle, color: "bg-violet-500" },
+    ];
+
+    return (
+        <section className="md:hidden px-1">
+            <div className="grid grid-cols-4 gap-4">
+                {actions.map((action) => {
+                    const Icon = action.icon;
+
+                    return (
+                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-2">
+                            <div
+                                className={cn(
+                                    "flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-active:scale-90",
+                                    "bg-card border-border/40 border group-hover:border-primary/40 group-hover:bg-primary/5",
+                                )}
+                            >
+                                <Icon className="text-primary h-6 w-6" strokeWidth={1.5} />
+                            </div>
+                            <span className="text-foreground/70 group-hover:text-foreground max-w-full truncate text-[11px] font-bold tracking-tight transition-colors">
+                                {action.label}
+                            </span>
+                        </Link>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function MobileMetricCard({
+    icon: Icon,
+    label,
+    value,
+    detail,
+    tone,
+    privateValue = false,
+}: {
+    icon: typeof Trophy;
+    label: string;
+    value: string | number;
+    detail: string;
+    tone: string;
+    privateValue?: boolean;
+}) {
+    const [revealed, setRevealed] = useState(!privateValue);
+    const iconTone = tone.split(" ").find((className) => className.startsWith("text-")) ?? "text-primary";
+    const bgTone = tone.split(" ").find((className) => className.startsWith("bg-")) ?? "bg-primary/10";
+
+    return (
+        <motion.div
+            whileHover={{ y: -2 }}
+            className="group"
+        >
+            <Card className="border-border/30 bg-card/80 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/60">
+                {/* Gradient background accent */}
+                <div className={cn("absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-20 blur-xl transition-all duration-300 group-hover:opacity-30", bgTone)} />
+                
+                <CardContent className="relative p-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                                <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">{label}</p>
+                                {privateValue && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setRevealed((current) => !current)}
+                                        className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                                        aria-label={revealed ? "Hide balance" : "Show balance"}
+                                    >
+                                        {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                    </button>
+                                )}
+                            </div>
+                            <motion.p
+                                key={revealed ? "revealed" : "hidden"}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="text-foreground mt-1 truncate text-lg font-bold tracking-tight leading-none"
+                            >
+                                {revealed ? value : "••••••"}
+                            </motion.p>
+                        </div>
+                        <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                            className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm", bgTone)}
+                        >
+                            <Icon className={cn("h-5 w-5", iconTone)} strokeWidth={2.2} />
+                        </motion.div>
+                    </div>
+                    <p className="text-foreground/50 mt-2 line-clamp-1 text-[11px] font-medium">{detail}</p>
+                </CardContent>
+            </Card>
+        </motion.div>
+    );
+}
+
+function MobileAnnouncementDot({ type }: { type: AnnouncementInfo["type"] }) {
+    return (
+        <span
+            className={cn(
+                "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                type === "important" ? "bg-rose-500" : type === "warning" ? "bg-amber-500" : "bg-blue-500",
+            )}
+        />
+    );
+}
+
+function getMobileGreetingCopy(greeting: string): { headline: string; subline: string } {
+    if (greeting === "Good morning") {
+        return {
+            headline: "Rise and shine",
+            subline: "Let's make today count.",
+        };
+    }
+
+    if (greeting === "Good afternoon") {
+        return {
+            headline: "Keep the momentum",
+            subline: "Your afternoon snapshot is ready.",
+        };
+    }
+
+    return {
+        headline: "Evening check-in",
+        subline: "Wrap up today's progress.",
+    };
+}
+
+function getMobileHeroInsight({
+    nextClass,
+    studentData,
+    gwa,
+    currency,
+}: {
+    nextClass: { classItem: ClassInfo; segment: ScheduleSegment; day: string } | null;
+    studentData: StudentDashboardProps["student_data"];
+    gwa: string | null;
+    currency: string;
+}): { icon: LucideIcon; label: string; value: string; href: string } {
+    if (nextClass) {
+        return {
+            icon: Calendar,
+            label: "Next class",
+            value: `${nextClass.classItem.subject_code} at ${nextClass.segment.timeString.split(" - ")[0]}`,
+            href: "/student/schedule",
+        };
+    }
+
+    if (studentData.tuition_balance > 0) {
+        return {
+            icon: CreditCard,
+            label: "Balance due",
+            value: formatMoney(studentData.tuition_balance, currency),
+            href: "/student/tuition",
+        };
+    }
+
+    if (gwa) {
+        return {
+            icon: Trophy,
+            label: "Current GWA",
+            value: gwa,
+            href: "/student/classes",
+        };
+    }
+
+    return {
+        icon: BookOpen,
+        label: "Academic load",
+        value: `${studentData.enrolled_classes.length} subjects`,
+        href: "/student/classes",
+    };
+}
+
+function MobileStudentDashboard({
+    greeting,
+    studentData,
+    currentSemester,
+    currentSchoolYearLabel,
+    gwa,
+    gradedCount,
+    nextClass,
+    urgentAnnouncements,
+    currency,
+}: {
+    greeting: string;
+    studentData: StudentDashboardProps["student_data"];
+    currentSemester: number;
+    currentSchoolYearLabel: string;
+    gwa: string | null;
+    gradedCount: number;
+    nextClass: { classItem: ClassInfo; segment: ScheduleSegment; day: string } | null;
+    urgentAnnouncements: number;
+    currency: string;
+}) {
+    const visibleAnnouncements = studentData.announcements.slice(0, 3);
+    const visibleClasses = studentData.enrolled_classes.slice(0, 3);
+    const greetingCopy = getMobileGreetingCopy(greeting);
+    const heroInsight = getMobileHeroInsight({ nextClass, studentData, gwa, currency });
+    const HeroInsightIcon = heroInsight.icon;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="mx-auto flex w-full max-w-md flex-col md:hidden"
+        >
+            <div className="bg-primary/10 relative h-[140px] w-full overflow-hidden px-4 pt-5">
+                <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
+
+                <div className="relative flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1 pr-2">
+                        <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase truncate">{greetingCopy.subline}</p>
+                        <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight leading-tight">
+                            {greetingCopy.headline},{" "}
+                            <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent block truncate">
+                                {getShortName(studentData.student_name)}
+                            </span>
+                        </h1>
+                    </div>
+                    <div className="shrink-0 pt-1">
+                        <Badge
+                            variant="outline"
+                            className="border-border/60 bg-background/65 text-foreground/70 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap"
+                        >
+                            {getSemesterLabel(currentSemester)}
+                        </Badge>
+                    </div>
+                </div>
+            </div>
+
+            <div className="relative z-20 -mt-12 space-y-3 px-3.5 pb-24">
+                <section>
+                    <Card className="border-border/40 bg-card shadow-xl shadow-black/10 overflow-hidden rounded-xl">
+                        <CardContent className="p-3.5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-foreground/50 text-[9px] font-bold tracking-wider uppercase">Enrolled Course</p>
+                                    <p className="text-foreground mt-0.5 text-[13px] font-bold leading-tight">
+                                        {studentData.course || "N/A"}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-foreground/50 text-[9px] font-bold tracking-wider uppercase">Student ID</p>
+                                    <p className="text-foreground mt-0.5 font-mono text-[13px] font-bold">
+                                        {studentData.student_id}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Separator className="bg-border/40 my-3" />
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-lg">
+                                        <GraduationCap className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-foreground/50 text-[8px] font-bold tracking-wider uppercase">Total Units</p>
+                                        <p className="text-foreground text-[13px] font-bold">{studentData.total_units} units</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2.5">
+                                    <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-lg">
+                                        <BookOpen className="h-4.5 w-4.5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-foreground/50 text-[8px] font-bold tracking-wider uppercase">Subjects</p>
+                                        <p className="text-foreground text-[13px] font-bold">{studentData.enrolled_classes.length} Enrolled</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </section>
+
+                <MobileQuickActions />
+
+                <section>
+                    <Card className="border-border/60 bg-card/75 overflow-hidden rounded-2xl shadow-sm">
+                        <CardContent className="relative p-4">
+                            <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-10" />
+                            <div className="relative z-10">
+                                <p className="text-foreground/60 text-[10px] font-bold tracking-wide uppercase">Next Class</p>
+                                {nextClass ? (
+                                    <div className="mt-2 space-y-2">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <h2 className="text-foreground line-clamp-2 text-base font-bold leading-tight">
+                                                {nextClass.classItem.subject_title}
+                                            </h2>
+                                            <Badge variant="outline" className="bg-background/60 shrink-0 font-mono text-[10px]">
+                                                {nextClass.classItem.subject_code}
+                                            </Badge>
+                                        </div>
+                                        <div className="text-foreground/65 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium">
+                                            <span className="flex items-center gap-1.5">
+                                                <Clock className="h-4 w-4 text-primary/70" />
+                                                {nextClass.day}, {nextClass.segment.timeString}
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <MapPin className="h-4 w-4 text-primary/70" />
+                                                {nextClass.classItem.room}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mt-3 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-primary/5 flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-primary/30">
+                                                <Calendar className="text-primary/40 h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-foreground/70 text-sm font-bold">No classes for today</p>
+                                                <p className="text-foreground/45 text-xs font-medium">Enjoy your free time!</p>
+                                            </div>
+                                        </div>
+                                        <Button asChild variant="secondary" size="sm" className="h-9 shrink-0 rounded-full px-4 text-xs font-bold shadow-none">
+                                            <Link href="/student/schedule">Schedule</Link>
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </section>
+
+                <section className="grid grid-cols-2 gap-3">
+                    <MobileMetricCard
+                        icon={Trophy}
+                        label="GWA"
+                        value={gwa || "N/A"}
+                        detail={gwa ? `${gradedCount} graded subjects` : "No grades posted"}
+                        tone="bg-amber-500/10 text-amber-500"
+                    />
+                    <MobileMetricCard
+                        icon={BookOpen}
+                        label="Subjects"
+                        value={studentData.enrolled_classes.length}
+                        detail={`${studentData.total_units} total units`}
+                        tone="bg-blue-500/10 text-blue-500"
+                    />
+                    <MobileMetricCard
+                        icon={CheckCircle2}
+                        label="Clearance"
+                        value={studentData.clearance_status ? "Cleared" : "Pending"}
+                        detail={studentData.clearance_status ? "No requirement flagged" : "Requirements needed"}
+                        tone={studentData.clearance_status ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}
+                    />
+                    <MobileMetricCard
+                        icon={CreditCard}
+                        label="Balance"
+                        value={formatMoney(studentData.tuition_balance, currency)}
+                        detail="Tuition and fees"
+                        tone="bg-violet-500/10 text-violet-500"
+                        privateValue
+                    />
+                </section>
+
+                <section>
+                    <Card className="border-border/40 bg-card/60 rounded-2xl">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
+                            <CardTitle className="flex items-center gap-2 text-[15px] font-bold">
+                                <Bell className="text-primary h-4 w-4" />
+                                Notice Board
+                            </CardTitle>
+                            <Badge variant={urgentAnnouncements > 0 ? "destructive" : "secondary"} className="rounded-full px-2 py-0.5 text-[9px] font-bold">
+                                {urgentAnnouncements} urgent
+                            </Badge>
+                        </CardHeader>
+                        <CardContent className="space-y-2.5 p-4 pt-1">
+                            {visibleAnnouncements.length > 0 ? (
+                                visibleAnnouncements.map((announcement) => (
+                                    <div key={announcement.id} className="border-border/40 bg-background/40 flex gap-3 rounded-xl border p-3.5 transition-colors active:bg-background/60">
+                                        <MobileAnnouncementDot type={announcement.type} />
+                                        <div className="min-w-0">
+                                            <p className="line-clamp-1 text-sm font-bold">{announcement.title}</p>
+                                            <p className="text-muted-foreground mt-1 line-clamp-2 text-xs font-medium leading-relaxed">{announcement.content}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="border-border/50 bg-background/35 rounded-xl border border-dashed p-6 text-center">
+                                    <Bell className="text-muted-foreground/30 mx-auto h-8 w-8" />
+                                    <p className="mt-3 text-sm font-bold">No announcements</p>
+                                    <p className="text-muted-foreground mt-1 text-xs">New notices will appear here.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </section>
+            </div>
+        </motion.div>
     );
 }
 
@@ -485,6 +897,7 @@ function FallbackIdCard({ user, studentData }: { user: User; studentData: Studen
 export default function StudentDashboard({ user, student_data, id_card }: StudentDashboardProps) {
     const { props } = usePage<{
         branding?: Branding;
+        settings?: SemesterSelectorProps;
         onboarding?: {
             forceOnLogin?: boolean;
             features?: OnboardingFeatureData[];
@@ -492,6 +905,13 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
         };
     }>();
     const currency = props.branding?.currency || "PHP";
+    const currentSemester = props.settings?.currentSemester ?? student_data.semester;
+    const currentSchoolYear = props.settings?.currentSchoolYear ?? parseInt(student_data.school_year.split("-")[0]);
+    const currentSchoolYearLabel =
+        props.settings?.currentSchoolYear && props.settings?.availableSchoolYears
+            ? props.settings.availableSchoolYears[props.settings.currentSchoolYear]
+            : student_data.school_year;
+
     const shouldForceOnboarding = props.onboarding?.forceOnLogin ?? false;
     const onboardingFeatures = props.onboarding?.features ?? [];
     const dismissEndpoint = props.onboarding?.dismissEndpoint;
@@ -586,35 +1006,71 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                 </OnboardingProvider>
             )}
 
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6">
+            <MobileStudentDashboard
+                greeting={greeting}
+                studentData={student_data}
+                currentSemester={currentSemester}
+                currentSchoolYearLabel={currentSchoolYearLabel}
+                gwa={gwa}
+                gradedCount={gradedCount}
+                nextClass={nextClass}
+                urgentAnnouncements={urgentAnnouncements}
+                currency={currency}
+            />
+
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="mx-auto hidden w-full max-w-7xl flex-col gap-4 p-4 pb-16 md:flex md:gap-6 md:p-6"
+            >
                 <section>
-                    <Card className={dashboardPanelClass}>
-                        <CardContent className="p-4 md:p-5">
-                            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-                                <div className="max-w-2xl space-y-3">
-                                    <Badge variant="outline" className="bg-background/75 w-fit rounded-full px-3 py-1">
-                                        <Sparkles className="text-primary mr-1.5 h-3 w-3" />
-                                        {getSemesterLabel(student_data.semester)} - {student_data.school_year}
+                    <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
+                        {/* Decorative Glass Elements */}
+                        <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                        <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
+
+                        <CardContent className="relative z-10 p-2.5 sm:p-5 md:p-6">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                <div className="max-w-2xl space-y-2 sm:space-y-4">
+                                    <Badge
+                                        variant="outline"
+                                        className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs"
+                                    >
+                                        <Sparkles className="text-primary mr-1 h-2.5 w-2.5 sm:mr-1.5 sm:h-3 sm:w-3" />
+                                        {getSemesterLabel(currentSemester)} • {currentSchoolYearLabel}
                                     </Badge>
                                     <div>
-                                        <h1 className="text-foreground text-2xl font-semibold tracking-tight md:text-3xl">
-                                            {greeting}, {getShortName(student_data.student_name)}
+                                        <h1 className="text-foreground text-[1.35rem] leading-[1.15] font-bold tracking-tight sm:text-3xl md:text-4xl">
+                                            {greeting},{" "}
+                                            <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">
+                                                {getShortName(student_data.student_name)}
+                                            </span>
                                         </h1>
-                                        <p className="text-muted-foreground mt-2 max-w-xl text-sm">
+                                        <p className="text-muted-foreground hidden max-w-xl text-sm leading-relaxed sm:block sm:text-base">
                                             Your academic status, upcoming class, grades, and announcements are grouped here for the current term.
                                         </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3 md:min-w-[280px]">
-                                    <div className="border-border/60 bg-background/50 rounded-md border p-3">
-                                        <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Program</p>
-                                        <p className="mt-1 truncate text-sm font-semibold" title={student_data.course || ""}>
+                                <div className="grid grid-cols-2 gap-2 md:min-w-[300px] md:gap-3">
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
+                                            Program
+                                        </p>
+                                        <p
+                                            className="text-foreground mt-0.5 truncate text-[11px] font-bold sm:mt-1 sm:text-sm"
+                                            title={student_data.course || ""}
+                                        >
                                             {student_data.course || "N/A"}
                                         </p>
                                     </div>
-                                    <div className="border-border/60 bg-background/50 rounded-md border p-3">
-                                        <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Student ID</p>
-                                        <p className="mt-1 truncate font-mono text-sm font-semibold">{student_data.student_id}</p>
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
+                                            Student ID
+                                        </p>
+                                        <p className="text-foreground mt-0.5 truncate font-mono text-[11px] font-bold sm:mt-1 sm:text-sm">
+                                            {student_data.student_id}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -622,7 +1078,9 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                     </Card>
                 </section>
 
-                <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <MobileQuickActions />
+
+                <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <StatTile
                         icon={Trophy}
                         label="GWA"
@@ -656,10 +1114,10 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
 
                 <section>
                     <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
-                        <CardContent className="relative grid gap-4 p-4 pr-20 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
-                            <Calendar className="text-primary pointer-events-none absolute top-4 right-5 h-16 w-16 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:h-20 md:w-20" />
+                        <CardContent className="relative grid gap-4 p-4 pr-14 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
+                            <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
                             <div className="min-w-0">
-                                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Up Next</p>
+                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase sm:text-xs">Up Next</p>
                                 {nextClass ? (
                                     <div className="mt-2 space-y-2">
                                         <h2 className="text-foreground truncate text-lg leading-tight font-semibold md:text-xl">
@@ -909,52 +1367,9 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                                 </ScrollArea>
                             </CardContent>
                         </Card>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/profile">
-                                    <UserRound className="h-4 w-4" />
-                                    Profile
-                                </Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/tuition">
-                                    <CreditCard className="h-4 w-4" />
-                                    Tuition
-                                </Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/schedule">
-                                    <Calendar className="h-4 w-4" />
-                                    Schedule
-                                </Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="hover:border-primary/30 h-11 justify-start gap-2 rounded-lg transition-all hover:-translate-y-0.5"
-                            >
-                                <Link href="/student/help">
-                                    <AlertCircle className="h-4 w-4" />
-                                    Help
-                                </Link>
-                            </Button>
-                        </div>
                     </aside>
                 </section>
-            </div>
+            </motion.div>
         </StudentLayout>
     );
 }

@@ -39,7 +39,7 @@ final class AdministratorFeatureToggleController extends Controller
                     'steps_count' => count($toggle->steps()),
                     'category' => $toggle->category(),
                     'is_active' => $state['is_globally_activated'],
-                    'pennant_class' => get_class($toggle),
+                    'pennant_class' => $toggle::class,
                     'pennant_type' => 'class',
                     'pennant_global_state' => $state['is_globally_activated'],
                     'pennant_user_overrides_count' => $state['override_count'],

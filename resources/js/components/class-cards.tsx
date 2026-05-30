@@ -206,24 +206,24 @@ export function ClassCards({ data, onEdit }: ClassCardsProps) {
                             <div className={cn("absolute inset-0 transition-opacity duration-300", theme.overlay)} />
                         </div>
 
-                        <CardHeader className="relative z-10 px-5 pt-5 pb-3">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="flex min-w-0 items-start gap-4">
+                        <CardHeader className="relative z-10 px-4 pt-4 pb-2 sm:px-5 sm:pt-5 sm:pb-3">
+                            <div className="flex items-start justify-between gap-2 sm:gap-3">
+                                <div className="flex min-w-0 items-start gap-3 sm:gap-4">
                                     <div
                                         className={cn(
-                                            "bg-muted/20 flex size-12 items-center justify-center rounded-xl shadow-sm ring-1 ring-white/20 backdrop-blur-md transition-transform group-hover:scale-110",
+                                            "bg-muted/20 flex size-10 items-center justify-center rounded-lg shadow-sm ring-1 ring-white/20 backdrop-blur-md transition-transform group-hover:scale-110 sm:size-12 sm:rounded-xl",
                                             theme.accentBg,
                                         )}
                                     >
-                                        <IconSchool className={cn("h-6 w-6", theme.accentText)} />
+                                        <IconSchool className={cn("h-5 w-5 sm:h-6 sm:w-6", theme.accentText)} />
                                     </div>
 
-                                    <div className="min-w-0 space-y-1.5">
-                                        <div className="flex flex-wrap items-center gap-2">
+                                    <div className="min-w-0 space-y-1 sm:space-y-1.5">
+                                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                             <Badge
                                                 variant="secondary"
                                                 className={cn(
-                                                    "rounded-md border px-2 py-0.5 text-xs font-semibold whitespace-nowrap shadow-sm",
+                                                    "rounded px-1.5 py-0 text-[10px] font-semibold whitespace-nowrap shadow-sm sm:rounded-md sm:px-2 sm:py-0.5 sm:text-xs",
                                                     classificationBadge,
                                                 )}
                                             >
@@ -232,20 +232,20 @@ export function ClassCards({ data, onEdit }: ClassCardsProps) {
                                             {classificationLabel && (
                                                 <Badge
                                                     variant="outline"
-                                                    className="bg-background/40 text-foreground/90 rounded-md border-white/20 backdrop-blur"
+                                                    className="bg-background/40 text-foreground/90 rounded px-1.5 py-0 text-[10px] border-white/20 backdrop-blur sm:rounded-md sm:px-2 sm:py-0.5 sm:text-xs"
                                                 >
                                                     {classItem.subject_code}
                                                 </Badge>
                                             )}
                                             <Badge
                                                 variant="outline"
-                                                className="bg-background/40 text-foreground/90 rounded-md border-white/20 backdrop-blur"
+                                                className="bg-background/40 text-foreground/90 rounded px-1.5 py-0 text-[10px] border-white/20 backdrop-blur sm:rounded-md sm:px-2 sm:py-0.5 sm:text-xs"
                                             >
-                                                Section {classItem.section}
+                                                Sect. {classItem.section}
                                             </Badge>
                                         </div>
 
-                                        <CardTitle className="line-clamp-2 text-lg leading-tight font-bold tracking-tight">
+                                        <CardTitle className="line-clamp-2 text-base leading-tight font-bold tracking-tight sm:text-lg">
                                             {classItem.subject_title}
                                         </CardTitle>
                                     </div>
@@ -256,9 +256,9 @@ export function ClassCards({ data, onEdit }: ClassCardsProps) {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="bg-background/10 text-foreground/80 hover:bg-background/30 hover:text-foreground -mt-2 -mr-2 h-8 w-8 rounded-full backdrop-blur-sm"
+                                            className="bg-background/10 text-foreground/80 hover:bg-background/30 hover:text-foreground -mt-1 -mr-1 h-7 w-7 rounded-full backdrop-blur-sm sm:-mt-2 sm:-mr-2 sm:h-8 sm:w-8"
                                         >
-                                            <IconDotsVertical className="h-4 w-4" />
+                                            <IconDotsVertical className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-48">
@@ -285,36 +285,36 @@ export function ClassCards({ data, onEdit }: ClassCardsProps) {
                             </div>
                         </CardHeader>
 
-                        <CardContent className="relative z-10 space-y-4 px-5 pb-4">
+                        <CardContent className="relative z-10 space-y-3 px-4 pb-3 sm:space-y-4 sm:px-5 sm:pb-4">
                             {/* Location & Time */}
-                            <div className="bg-muted/40 border-muted/10 flex flex-col gap-2 rounded-lg border p-3 backdrop-blur-sm">
-                                <div className="group-hover:text-foreground flex items-center gap-2.5 text-sm transition-colors">
-                                    <div className={cn("size-2 rounded-full ring-2 ring-white/20", accentDotClass)} />
+                            <div className="bg-muted/40 border-muted/10 flex flex-col gap-1.5 rounded-lg border p-2.5 backdrop-blur-sm sm:gap-2 sm:p-3">
+                                <div className="group-hover:text-foreground flex items-center gap-2 text-xs transition-colors sm:gap-2.5 sm:text-sm">
+                                    <div className={cn("size-1.5 rounded-full ring-2 ring-white/20 sm:size-2", accentDotClass)} />
                                     <span className="font-semibold opacity-90">{scheduleLabel}</span>
                                 </div>
-                                <div className="text-muted-foreground group-hover:text-foreground/80 flex items-center gap-2.5 text-sm transition-colors">
-                                    <IconMapPin className="h-4 w-4 opacity-70" />
+                                <div className="text-muted-foreground group-hover:text-foreground/80 flex items-center gap-2 text-xs transition-colors sm:gap-2.5 sm:text-sm">
+                                    <IconMapPin className="h-3.5 w-3.5 opacity-70 sm:h-4 sm:w-4" />
                                     <span>{classItem.room || "Room TBA"}</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-sm font-medium">
-                                    <IconUsers className="text-muted-foreground h-4 w-4" />
+                                <div className="flex items-center gap-2 text-xs font-medium sm:text-sm">
+                                    <IconUsers className="text-muted-foreground h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     <span>{classItem.students_count ?? 0} students</span>
                                 </div>
                             </div>
                         </CardContent>
 
-                        <CardFooter className="border-border/40 bg-background/40 relative z-10 flex items-center gap-2 border-t px-5 py-3 backdrop-blur-md">
-                            <Button asChild size="sm" className="bg-primary/90 hover:bg-primary rounded-lg font-semibold shadow-sm">
+                        <CardFooter className="border-border/40 bg-background/40 relative z-10 flex items-center gap-2 border-t px-4 py-2.5 backdrop-blur-md sm:px-5 sm:py-3">
+                            <Button asChild size="sm" className="bg-primary/90 hover:bg-primary h-8 rounded-lg text-xs font-semibold shadow-sm sm:h-9 sm:text-sm">
                                 <Link href={`${baseUrl}/${classItem.id}`}>Open Class</Link>
                             </Button>
                             <Button
                                 asChild
                                 variant="outline"
                                 size="sm"
-                                className="hover:text-foreground rounded-lg border-white/20 bg-white/10 shadow-sm hover:bg-white/20"
+                                className="hover:text-foreground h-8 rounded-lg border-white/20 bg-white/10 text-xs shadow-sm hover:bg-white/20 sm:h-9 sm:text-sm"
                             >
                                 <Link href={`${baseUrl}/${classItem.id}?view=attendance`} prefetch>
                                     Attendance

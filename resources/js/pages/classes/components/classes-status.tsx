@@ -33,24 +33,24 @@ export function ClassesStatus({ nextUp, stats, baseUrl = "/classes" }: ClassesSt
                 <div className="from-primary via-primary/90 to-primary/80 relative overflow-hidden rounded-xl bg-gradient-to-br p-1 shadow-lg lg:col-span-2">
                     <div className="pointer-events-none absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
                     <div className="bg-background/5 flex flex-col items-center justify-between gap-4 rounded-lg p-4 backdrop-blur-sm sm:flex-row sm:p-6">
-                        <div className="flex-1 space-y-1 text-center sm:text-left">
+                        <div className="flex-1 space-y-1.5 text-center sm:text-left">
                             <div className="mb-2 flex items-center justify-center gap-2 sm:justify-start">
-                                <Badge variant="secondary" className="border-0 bg-white/20 text-white shadow-none hover:bg-white/30">
+                                <Badge variant="secondary" className="border-0 bg-white/20 px-2 py-0.5 text-[10px] text-white shadow-none hover:bg-white/30 sm:text-xs">
                                     Next Class in {nextUp.in}
                                 </Badge>
                                 {nextUp.event.roomLabel && (
-                                    <span className="flex items-center gap-1 text-xs text-white/90">
+                                    <span className="flex items-center gap-1 text-[11px] text-white/90 sm:text-xs">
                                         <IconMapPin className="h-3 w-3" />
                                         {nextUp.event.roomLabel}
                                     </span>
                                 )}
                             </div>
-                            <h3 className="text-xl font-bold tracking-tight text-white sm:text-2xl">{nextUp.event.classItem.subject_title}</h3>
-                            <p className="font-medium text-white/80">
-                                {nextUp.event.classItem.subject_code} • Section {nextUp.event.classItem.section}
+                            <h3 className="text-lg font-bold tracking-tight text-white sm:text-2xl">{nextUp.event.classItem.subject_title}</h3>
+                            <p className="text-sm font-medium text-white/80 sm:text-base">
+                                {nextUp.event.classItem.subject_code} • Sect. {nextUp.event.classItem.section}
                             </p>
-                            <div className="flex items-center justify-center gap-2 text-sm text-white/70 sm:justify-start">
-                                <IconClock className="h-4 w-4" />
+                            <div className="flex items-center justify-center gap-2 text-xs text-white/70 sm:justify-start sm:text-sm">
+                                <IconClock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                 <span>
                                     {nextUp.event.startLabel} - {nextUp.event.endLabel}
                                 </span>
@@ -58,7 +58,7 @@ export function ClassesStatus({ nextUp, stats, baseUrl = "/classes" }: ClassesSt
                         </div>
 
                         <div className="flex shrink-0 gap-3">
-                            <Button asChild variant="secondary" className="font-semibold whitespace-nowrap shadow-sm">
+                            <Button asChild variant="secondary" className="h-9 rounded-lg px-6 font-semibold whitespace-nowrap shadow-sm sm:h-10 sm:px-8">
                                 <Link href={`${baseUrl}/${nextUp.event.classItem.id}`}>View Class</Link>
                             </Button>
                         </div>

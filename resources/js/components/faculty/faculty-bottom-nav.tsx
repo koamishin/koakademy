@@ -7,7 +7,7 @@ import { Link, usePage } from "@inertiajs/react";
 import {
     IconCalendar,
     IconChecklist,
-    IconDashboard,
+    IconHome,
     IconSchool,
     IconSpeakerphone,
 } from "@tabler/icons-react";
@@ -32,7 +32,7 @@ interface FacultyBottomNavPageProps {
 const MOBILE_NAV_ORDER = [
     { id: "action-center", label: "Tasks", icon: IconChecklist, url: "/faculty/action-center" },
     { id: "classes", label: "Classes", icon: IconSchool, url: "/faculty/classes" },
-    { id: "dashboard", label: "Home", icon: IconDashboard, url: "/faculty/dashboard", center: true },
+    { id: "dashboard", label: "Home", icon: IconHome, url: "/faculty/dashboard", center: true },
     { id: "schedule", label: "Schedule", icon: IconCalendar, url: "/faculty/schedule" },
     { id: "announcements", label: "News", icon: IconSpeakerphone, url: "/faculty/announcements" },
 ] as const;
@@ -98,18 +98,18 @@ export function FacultyBottomNav() {
 
                 {/* ── Bottom bar ── */}
                 <div
-                    className="safe-area-inset-bottom border-border/40 bg-background/90 border-t backdrop-blur-2xl"
+                    className="safe-area-inset-bottom border-border/50 bg-background/98 border-t shadow-[0_-10px_40px_rgba(0,0,0,0.15)] backdrop-blur-xl"
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                 >
                     {/* Swipe-up grab handle */}
                     {resolvedUser ? (
-                        <div className="pointer-events-none flex select-none items-center justify-center pt-1.5">
-                            <span className="bg-muted-foreground/20 block h-[3px] w-8 rounded-full" />
+                        <div className="pointer-events-none flex select-none items-center justify-center pt-2">
+                            <span className="bg-muted-foreground/25 block h-1 w-10 rounded-full" />
                         </div>
                     ) : null}
 
-                    <div className="mx-auto flex max-w-md items-end justify-around px-2 pb-1.5">
+                    <div className="mx-auto flex max-w-md items-end justify-around px-2 pb-3">
                         {MOBILE_NAV_ORDER.map((item) => {
                             const active = isActive(item.url);
                             const disabled = disabledMap[item.id] ?? false;
@@ -118,36 +118,36 @@ export function FacultyBottomNav() {
 
                             if (isCenter) {
                                 return (
-                                    <Link
-                                        key={item.id}
-                                        href={item.url}
-                                        className="group relative -mt-5 flex flex-col items-center"
-                                        aria-label="Home"
-                                    >
+                                    <Link key={item.id} href={item.url} className="group relative -mt-8 flex flex-col items-center" aria-label="Home">
                                         {/* Outer glow ring */}
-                                        <span
-                                            className={cn(
-                                                "absolute top-0.5 h-12 w-12 rounded-full transition-all duration-300",
-                                                active
-                                                    ? "bg-primary/20 scale-110 blur-sm"
-                                                    : "bg-transparent scale-100",
-                                            )}
+                                        <motion.span
+                                            animate={active ? { scale: 1.2, opacity: 0.3 } : { scale: 1, opacity: 0 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                            className="absolute -inset-3 rounded-full bg-primary/40 blur-xl"
                                         />
-                                        {/* Elevated pill */}
-                                        <span
+
+                                        {/* Button Circle */}
+                                        <motion.div
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.92 }}
                                             className={cn(
-                                                "relative z-10 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-300",
+                                                "relative flex h-14 w-14 items-center justify-center rounded-2xl border-2 transition-all duration-300 overflow-hidden",
                                                 active
-                                                    ? "bg-primary text-primary-foreground shadow-primary/40"
-                                                    : "bg-muted text-foreground shadow-black/10 dark:shadow-black/30",
+                                                    ? "border-primary bg-primary text-primary-foreground shadow-[0_10px_30px_-8px_rgba(var(--primary),0.6)]"
+                                                    : "border-border/70 bg-background text-foreground/70 shadow-xl",
                                             )}
                                         >
-                                            <Icon className="size-6" stroke={active ? 2.2 : 1.6} />
-                                        </span>
+                                            {/* Inner gradient for active state */}
+                                            {active && (
+                                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
+                                            )}
+                                            <Icon className="relative size-7" stroke={2.3} />
+                                        </motion.div>
+
                                         <span
                                             className={cn(
-                                                "mt-1 text-[10px] font-semibold tracking-wide transition-colors",
-                                                active ? "text-primary" : "text-muted-foreground",
+                                                "mt-1.5 text-[11px] font-bold tracking-tight transition-all duration-200",
+                                                active ? "text-primary scale-105" : "text-foreground/60",
                                             )}
                                         >
                                             {item.label}
@@ -161,24 +161,27 @@ export function FacultyBottomNav() {
                                     key={item.id}
                                     href={disabled ? "#" : item.url}
                                     className={cn(
-                                        "relative flex w-14 flex-col items-center justify-end px-1 pt-1.5 pb-0.5 transition-colors",
+                                        "relative flex w-16 flex-col items-center justify-end rounded-2xl px-1 pt-2 pb-1 transition-all duration-200",
+                                        active && "bg-primary/8",
                                         disabled && "pointer-events-none opacity-40",
                                     )}
                                     aria-disabled={disabled}
                                     title={item.label}
                                 >
-                                    <div
+                                    <motion.div
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.95 }}
                                         className={cn(
-                                            "flex h-7 w-7 items-center justify-center transition-all duration-200",
-                                            active ? "text-primary" : "text-muted-foreground",
+                                            "flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200",
+                                            active ? "bg-primary/10 text-primary" : "text-foreground/60",
                                         )}
                                     >
-                                        <Icon className="size-[22px]" stroke={active ? 2 : 1.5} />
-                                    </div>
+                                        <Icon className="size-[24px]" stroke={active ? 2.3 : 1.8} />
+                                    </motion.div>
                                     <span
                                         className={cn(
-                                            "mt-0.5 max-w-full truncate text-[10px] font-medium leading-tight transition-colors",
-                                            active ? "text-primary" : "text-muted-foreground",
+                                            "mt-1 max-w-full truncate text-[11px] leading-tight font-semibold transition-colors",
+                                            active ? "text-primary" : "text-foreground/60",
                                         )}
                                     >
                                         {item.label}
@@ -189,8 +192,8 @@ export function FacultyBottomNav() {
                                         {active && (
                                             <motion.div
                                                 layoutId="faculty-bottom-nav-dot"
-                                                className="bg-primary h-1 w-1 rounded-full"
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                                className="bg-primary h-1.5 w-4 rounded-full"
+                                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                             />
                                         )}
                                     </div>

@@ -1,4 +1,5 @@
 import { Head, usePage } from "@inertiajs/react";
+import { motion } from "framer-motion";
 
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { resolveBranding, type Branding } from "@/lib/branding";
@@ -38,14 +39,40 @@ export default function LoginPage() {
                     content={`The official academic portal for ${organizationName}. Access student records, grades, schedules, and faculty resources.`}
                 />
             </Head>
-            <div className="relative flex flex-col gap-4 p-6 md:p-10">
+
+            {/* Background Decorative Elements */}
+            <div className="bg-background pointer-events-none fixed inset-0 z-0 overflow-hidden">
+                <motion.div 
+                    animate={{ 
+                        scale: [1, 1.1, 1],
+                        opacity: [0.3, 0.5, 0.3]
+                    }}
+                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                    className="bg-primary/10 absolute -top-[10%] -left-[10%] h-[50%] w-[50%] rounded-full blur-[140px]" 
+                />
+                <motion.div 
+                    animate={{ 
+                        scale: [1, 1.2, 1],
+                        opacity: [0.4, 0.6, 0.4]
+                    }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="bg-primary/15 absolute -right-[5%] bottom-[10%] h-[40%] w-[40%] rounded-full blur-[120px]" 
+                />
+            </div>
+
+            <div className="relative z-10 flex flex-col gap-4 p-4 sm:p-6 md:p-10">
                 <div className="flex items-center justify-between md:justify-start">
-                    <a href="#" className="flex items-center gap-2 font-medium">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md">
-                            <img src={resolvedBranding.logo} alt={`${organizationShortName} Logo`} className="h-10 w-10 object-contain" />
+                    <motion.a
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        href="#"
+                        className="flex items-center gap-2 sm:gap-3 font-medium"
+                    >
+                        <div className="bg-primary/10 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl shadow-sm ring-1 ring-primary/20 backdrop-blur-sm">
+                            <img src={resolvedBranding.logo} alt={`${organizationShortName} Logo`} className="h-6 w-6 sm:h-8 sm:w-8 object-contain" />
                         </div>
-                        <span className="text-foreground text-4xl font-extrabold tracking-tight">{appName}</span>
-                    </a>
+                        <span className="text-foreground text-2xl sm:text-3xl font-extrabold tracking-tight sm:text-4xl">{appName}</span>
+                    </motion.a>
                     <div className="md:absolute md:top-6 md:right-6">
                         <ThemeToggle />
                     </div>
@@ -54,24 +81,32 @@ export default function LoginPage() {
                     <div
                         className={
                             authLayout === "card"
-                                ? "bg-card border-border w-full max-w-md space-y-6 rounded-2xl border p-6 shadow-sm"
+                                ? "bg-card/50 border-border w-full max-w-md space-y-6 rounded-2xl sm:rounded-3xl border p-4 sm:p-6 md:p-8 shadow-2xl backdrop-blur-md"
                                 : authLayout === "minimal"
                                   ? "w-full max-w-sm space-y-4"
-                                  : "w-full max-w-sm space-y-6"
+                                  : "w-full max-w-sm space-y-8"
                         }
                     >
-                        <div className="space-y-2 text-center">
-                            <div className="mb-3 text-left">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.1 }}
+                            className="space-y-4 text-center"
+                        >
+                            <div className="mb-4 text-left">
                                 <AnnouncementBanner announcements={announcements ?? []} />
                             </div>
-                            <h1 className="text-foreground text-2xl font-bold tracking-tight">Academic Management Portal</h1>
-                            <p className="text-muted-foreground text-sm text-pretty">
-                                Welcome to the official {appName}. A centralized platform for {organizationName} students and faculty to manage
-                                academic records, schedules, and class requirements efficiently.
-                            </p>
-                        </div>
+                            <div className="space-y-2">
+                                <h1 className="text-foreground text-2xl sm:text-3xl font-bold tracking-tight sm:text-4xl">
+                                    Academic Management <span className="text-primary">Portal</span>
+                                </h1>
+                                <p className="text-muted-foreground mx-auto max-w-sm text-sm text-pretty sm:text-base">
+                                    Welcome back to {appName}. Sign in to manage your academic records and class requirements.
+                                </p>
+                            </div>
+                        </motion.div>
 
-                        <TransitionWrapper>
+                        <TransitionWrapper delay={0.2}>
                             <LoginForm errors={errors} status={status} demoMode={demoMode} />
                         </TransitionWrapper>
                     </div>
@@ -79,9 +114,12 @@ export default function LoginPage() {
             </div>
 
             {isSplitLayout ? (
-                <div className="bg-muted relative hidden lg:block">
-                    <TransitionWrapper className="h-full">
-                        <OnboardingPanel className="h-full" />
+                <div className="bg-muted/30 relative hidden lg:block overflow-hidden border-l">
+                    <div className="bg-primary/5 absolute inset-0 z-0">
+                        <div className="absolute top-1/2 left-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,var(--primary-color)_0%,transparent_0)] opacity-[0.03]" />
+                    </div>
+                    <TransitionWrapper className="relative z-10 h-full">
+                        <OnboardingPanel className="h-full" logo={resolvedBranding.logo} />
                     </TransitionWrapper>
                 </div>
             ) : null}

@@ -98,11 +98,6 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                 </button>
 
                 <div className="ml-auto flex min-w-0 items-center gap-2">
-                    {settings && (
-                        <div className="hidden md:flex">
-                            <SemesterSelector {...settings} />
-                        </div>
-                    )}
                     <AnimatedThemeToggler className="text-primary hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring inline-flex h-9 w-9 items-center justify-center gap-2 rounded-md px-0 text-sm font-medium whitespace-nowrap transition-all duration-200 focus-visible:ring-1 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0" />
 
                     {/* Desktop Text Info */}

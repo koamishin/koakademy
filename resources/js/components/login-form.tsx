@@ -212,15 +212,6 @@ export function LoginForm({
         <div className={cn("flex flex-col gap-6", className)} {...props}>
             <form onSubmit={submit}>
                 <div className="flex flex-col gap-6">
-                    <div className="flex flex-col items-center gap-2">
-                        <h2 className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text pb-1 text-3xl font-bold text-transparent">
-                            Welcome back
-                        </h2>
-                        <div className="text-muted-foreground mx-auto w-full max-w-[250px] text-center text-sm text-balance">
-                            Enter your credentials to access your account dashboard
-                        </div>
-                    </div>
-
                     <div className="grid gap-5">
                         <div className="group relative grid gap-2">
                             <Label htmlFor="email" className="sr-only">
@@ -320,16 +311,16 @@ export function LoginForm({
                                                     key={account.role}
                                                     type="button"
                                                     variant="outline"
-                                                    className="border-primary/20 bg-background/70 hover:bg-primary/10 h-auto justify-start gap-3 px-3 py-3 text-left transition-all duration-300"
+                                                    className="border-primary/20 bg-background/70 hover:bg-primary/10 h-auto justify-start gap-2 sm:gap-3 px-3 py-2.5 sm:py-3 text-left transition-all duration-300"
                                                     onClick={() => handleDemoLogin(account.role)}
                                                     disabled={processing || loggingInWithPasskey}
                                                 >
-                                                    <span className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
-                                                        <Icon className="h-4 w-4" />
+                                                    <span className="bg-primary/10 text-primary flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl">
+                                                        <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     </span>
-                                                    <span className="grid gap-0.5">
-                                                        <span className="text-foreground text-sm font-semibold">Continue as {account.label}</span>
-                                                        <span className="text-muted-foreground text-xs leading-snug">{account.description}</span>
+                                                    <span className="grid gap-0.5 flex-1 min-w-0">
+                                                        <span className="text-foreground text-sm font-semibold truncate">Continue as {account.label}</span>
+                                                        <span className="text-muted-foreground text-xs leading-snug line-clamp-2">{account.description}</span>
                                                     </span>
                                                 </Button>
                                             );
