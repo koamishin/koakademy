@@ -60,18 +60,18 @@ export default function LoginPage() {
                 />
             </div>
 
-            <div className="relative z-10 flex flex-col gap-4 p-6 md:p-10">
+            <div className="relative z-10 flex flex-col gap-4 p-4 sm:p-6 md:p-10">
                 <div className="flex items-center justify-between md:justify-start">
                     <motion.a
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         href="#"
-                        className="flex items-center gap-3 font-medium"
+                        className="flex items-center gap-2 sm:gap-3 font-medium"
                     >
-                        <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-xl shadow-sm ring-1 ring-primary/20 backdrop-blur-sm">
-                            <img src={resolvedBranding.logo} alt={`${organizationShortName} Logo`} className="h-8 w-8 object-contain" />
+                        <div className="bg-primary/10 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl shadow-sm ring-1 ring-primary/20 backdrop-blur-sm">
+                            <img src={resolvedBranding.logo} alt={`${organizationShortName} Logo`} className="h-6 w-6 sm:h-8 sm:w-8 object-contain" />
                         </div>
-                        <span className="text-foreground text-3xl font-extrabold tracking-tight sm:text-4xl">{appName}</span>
+                        <span className="text-foreground text-2xl sm:text-3xl font-extrabold tracking-tight sm:text-4xl">{appName}</span>
                     </motion.a>
                     <div className="md:absolute md:top-6 md:right-6">
                         <ThemeToggle />
@@ -81,7 +81,7 @@ export default function LoginPage() {
                     <div
                         className={
                             authLayout === "card"
-                                ? "bg-card/50 border-border w-full max-w-md space-y-6 rounded-3xl border p-8 shadow-2xl backdrop-blur-md"
+                                ? "bg-card/50 border-border w-full max-w-md space-y-6 rounded-2xl sm:rounded-3xl border p-4 sm:p-6 md:p-8 shadow-2xl backdrop-blur-md"
                                 : authLayout === "minimal"
                                   ? "w-full max-w-sm space-y-4"
                                   : "w-full max-w-sm space-y-8"
@@ -97,7 +97,7 @@ export default function LoginPage() {
                                 <AnnouncementBanner announcements={announcements ?? []} />
                             </div>
                             <div className="space-y-2">
-                                <h1 className="text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
+                                <h1 className="text-foreground text-2xl sm:text-3xl font-bold tracking-tight sm:text-4xl">
                                     Academic Management <span className="text-primary">Portal</span>
                                 </h1>
                                 <p className="text-muted-foreground mx-auto max-w-sm text-sm text-pretty sm:text-base">
