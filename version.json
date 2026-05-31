@@ -11,8 +11,8 @@
     "previous": "1.6.0-dev.0.9"
   },
   "metadata": {
-    "author": "yukazakiri",
+    "author": "SorenOutis",
     "workflow": "Auto Pre-release and Docker Tag",
-    "repository": "yukazakiri/koakademy"
+    "repository": "koamishin/koakademy"
   }
 }

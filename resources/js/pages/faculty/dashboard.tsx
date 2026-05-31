@@ -166,6 +166,30 @@ function getGreeting(): string {
     return "Good evening";
 }
 
+function getFacultyGreetingCopy(greeting: string): { headline: string; subline: string; summary: string } {
+    if (greeting === "Good morning") {
+        return {
+            headline: "Ready for today's classes",
+            subline: "Morning teaching brief",
+            summary: "Your schedule, class tools, and daily actions are ready.",
+        };
+    }
+
+    if (greeting === "Good afternoon") {
+        return {
+            headline: "Keep the class flow moving",
+            subline: "Afternoon faculty snapshot",
+            summary: "Jump back into attendance, classes, and follow-ups.",
+        };
+    }
+
+    return {
+        headline: "Time to wrap with clarity",
+        subline: "Evening faculty check-in",
+        summary: "Review today, close out tasks, and get ready for the next class day.",
+    };
+}
+
 // Faculty onboarding checklist items
 const facultyChecklist: OnboardingChecklistItem[] = [
     {
@@ -311,22 +335,22 @@ function MobileQuickActions() {
     ];
 
     return (
-        <section className="md:hidden px-1">
-            <div className="grid grid-cols-4 gap-4">
+        <section className="px-0.5 md:hidden">
+            <div className="grid grid-cols-4 gap-2.5">
                 {actions.map((action) => {
                     const Icon = action.icon;
 
                     return (
-                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-2">
+                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-1.5">
                             <div
                                 className={cn(
-                                    "flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-active:scale-90",
+                                    "flex h-11 w-11 items-center justify-center rounded-xl shadow-sm transition-all duration-200 group-active:scale-90",
                                     "bg-card border-border/40 border group-hover:border-primary/40 group-hover:bg-primary/5",
                                 )}
                             >
-                                <Icon className="text-primary h-6 w-6" strokeWidth={1.5} />
+                                <Icon className="text-primary h-5 w-5" strokeWidth={1.6} />
                             </div>
-                            <span className="text-foreground/70 group-hover:text-foreground max-w-full truncate text-[11px] font-bold tracking-tight transition-colors">
+                            <span className="text-foreground/70 group-hover:text-foreground max-w-full truncate text-[10px] font-bold tracking-tight transition-colors">
                                 {action.label}
                             </span>
                         </Link>
@@ -361,15 +385,15 @@ function MobileMetricCard({
             whileHover={{ y: -2 }}
             className="group"
         >
-            <Card className="border-border/30 bg-card/80 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/60">
+            <Card className="border-border/30 bg-card/80 relative overflow-hidden rounded-xl shadow-sm transition-all duration-200 hover:border-border/60 hover:shadow-md">
                 {/* Gradient background accent */}
                 <div className={cn("absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-20 blur-xl transition-all duration-300 group-hover:opacity-30", bgTone)} />
                 
-                <CardContent className="relative p-4">
+                <CardContent className="relative p-3">
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                                <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">{label}</p>
+                                <p className="text-foreground/60 truncate text-[9px] font-bold tracking-wider uppercase">{label}</p>
                                 {privateValue && (
                                     <button
                                         type="button"
@@ -386,7 +410,7 @@ function MobileMetricCard({
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.2 }}
-                                className="text-foreground mt-1 truncate text-lg font-bold tracking-tight leading-none"
+                                className="text-foreground mt-1 truncate text-base leading-none font-bold tracking-tight"
                             >
                                 {revealed ? value : "••••••"}
                             </motion.p>
@@ -394,12 +418,12 @@ function MobileMetricCard({
                         <motion.div
                             whileHover={{ scale: 1.1, rotate: 5 }}
                             transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                            className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm", bgTone)}
+                            className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm", bgTone)}
                         >
-                            <Icon className={cn("h-5 w-5", iconTone)} strokeWidth={2.2} />
+                            <Icon className={cn("h-4 w-4", iconTone)} strokeWidth={2.2} />
                         </motion.div>
                     </div>
-                    <p className="text-foreground/50 mt-2 line-clamp-1 text-[11px] font-medium">{detail}</p>
+                    <p className="text-foreground/50 mt-1.5 line-clamp-1 text-[10px] font-medium">{detail}</p>
                 </CardContent>
             </Card>
         </motion.div>
@@ -506,6 +530,7 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
     const totalStudents = faculty_data.upcoming_classes.reduce((sum, c) => sum + c.students_count, 0);
     const hasClasses = faculty_data.upcoming_classes.length > 0;
     const nextClass = faculty_data.today_schedule.entries[0];
+    const greetingCopy = getFacultyGreetingCopy(greeting);
 
     return (
         <motion.div
@@ -515,23 +540,38 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
             className="mx-auto flex w-full max-w-md flex-col md:hidden"
         >
             {/* 1. Greeting Card */}
-            <div className="bg-primary/10 relative h-auto w-full overflow-hidden px-4 pt-5 pb-8">
+            <div className="bg-primary/10 relative h-auto w-full overflow-hidden px-4 pt-5 pb-7">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
 
                 <div className="relative flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1 pr-2">
-                        <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase truncate">
+                        <p className="text-foreground/60 truncate text-[10px] font-bold tracking-wider uppercase">
+                            {greetingCopy.subline}
+                        </p>
+                        <p className="sr-only">
                             {getSemesterLabel(currentSemester)} • {currentSchoolYear}
                         </p>
-                        <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight leading-tight">
-                            {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(user.name)}</span>
+                        <h1 className="text-foreground mt-0.5 text-xl leading-tight font-bold tracking-tight">
+                            {greetingCopy.headline},{" "}
+                            <span className="from-primary to-primary/60 block truncate bg-gradient-to-r bg-clip-text text-transparent">
+                                {getShortName(user.name)}
+                            </span>
                         </h1>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <Badge
+                                variant="outline"
+                                className="border-border/60 bg-background/65 text-foreground/70 rounded-full px-2 py-0.5 text-[9px] font-bold whitespace-nowrap"
+                            >
+                                {getSemesterLabel(currentSemester)}
+                            </Badge>
+                            <span className="text-foreground/45 text-[10px] font-semibold">{currentSchoolYear}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div className="relative z-20 -mt-4 space-y-4 px-3.5 pb-24">
+            <div className="relative z-20 -mt-4 space-y-3 px-3.5 pb-32">
                 {/* 2. KOA Official ID */}
                 {id_card && (
                     <section>
@@ -552,8 +592,35 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
                 {/* 3. Quick Action Buttons */}
                 <MobileQuickActions />
 
-                {/* 4. Stat Cards */}
-                <section className="grid grid-cols-2 gap-3">
+                {/* 4. Next Class */}
+                <section>
+                    <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
+                        <CardContent className="relative flex items-center gap-3 p-3.5 pr-12">
+                            <Calendar className="text-primary pointer-events-none absolute top-3.5 right-3.5 h-8 w-8 opacity-20 transition-all duration-200 group-hover:scale-105 group-hover:opacity-30" />
+                            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
+                                <Clock className="size-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Next Class</p>
+                                {nextClass ? (
+                                    <div className="mt-1 min-w-0">
+                                        <h2 className="text-foreground truncate text-sm leading-tight font-semibold">{nextClass.subject_title}</h2>
+                                        <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px]">
+                                            <span>{nextClass.start_time} - {nextClass.end_time}</span>
+                                            <span>•</span>
+                                            <span className="truncate">{nextClass.room}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-muted-foreground mt-1 text-sm">No classes scheduled today.</p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </section>
+
+                {/* 5. Stat Cards */}
+                <section className="grid grid-cols-2 gap-2.5">
                     <MobileMetricCard
                         icon={BookOpen}
                         label="Classes"
@@ -582,42 +649,6 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
                         detail="Total notices"
                         tone="bg-violet-500/10 text-violet-500"
                     />
-                </section>
-
-                {/* 5. Next Class */}
-                <section>
-                    <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
-                        <CardContent className="relative grid gap-4 p-4 pr-10 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
-                            <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
-                            <div className="min-w-0">
-                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Next Class</p>
-                                {nextClass ? (
-                                    <div className="mt-2 space-y-2">
-                                        <h2 className="text-foreground truncate text-lg leading-tight font-semibold md:text-xl">
-                                            {nextClass.subject_title}
-                                        </h2>
-                                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                                            <span className="flex items-center gap-1.5">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                {nextClass.start_time} - {nextClass.end_time}
-                                            </span>
-                                            <span className="flex items-center gap-1.5">
-                                                <MapPin className="h-3.5 w-3.5" />
-                                                {nextClass.room}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-muted-foreground mt-2 text-sm">No classes scheduled today. Enjoy your free time!</p>
-                                )}
-                            </div>
-                            {nextClass && (
-                                <Badge variant="outline" className="border-border/60 bg-background/60 hidden rounded-full px-3 py-1 md:inline-flex">
-                                    {nextClass.subject_code}
-                                </Badge>
-                            )}
-                        </CardContent>
-                    </Card>
                 </section>
 
                 {/* 6. Today's Schedule */}
@@ -740,6 +771,7 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
 
     const hasClasses = faculty_data.upcoming_classes.length > 0;
     const greeting = getGreeting();
+    const greetingCopy = getFacultyGreetingCopy(greeting);
     const totalStudents = faculty_data.upcoming_classes.reduce((sum, c) => sum + c.students_count, 0);
     const urgentAnnouncements = faculty_data.announcements.filter(a => a.type === "important" || a.type === "warning").length;
 
@@ -787,10 +819,13 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
                                     </Badge>
                                     <div>
                                         <h1 className="text-foreground text-3xl leading-tight font-bold tracking-tight">
-                                            {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(user.name)}</span>
+                                            {greetingCopy.headline},{" "}
+                                            <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">
+                                                {getShortName(user.name)}
+                                            </span>
                                         </h1>
                                         <p className="text-muted-foreground mt-1 max-w-xl text-sm leading-relaxed">
-                                            Start with today, then jump into classes, attendance, or grading.
+                                            {greetingCopy.summary}
                                         </p>
                                     </div>
                                 </div>
