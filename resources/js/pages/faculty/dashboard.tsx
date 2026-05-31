@@ -313,10 +313,10 @@ function ClassListCard({ classItem, index }: { classItem: DashboardClass; index:
 
 function MobileQuickActions() {
     const actions = [
-        { label: "Profile", href: "/faculty/profile", icon: UserRound, color: "bg-blue-500" },
+        { label: "Grades & Reports", href: "/faculty/grades", icon: TrendingUp, color: "bg-blue-500" },
         { label: "Classes", href: "/faculty/classes", icon: BookOpen, color: "bg-emerald-500" },
         { label: "Schedule", href: "/faculty/schedule", icon: Calendar, color: "bg-amber-500" },
-        { label: "Help", href: "/faculty/help", icon: HelpCircle, color: "bg-violet-500" },
+        { label: "Attendance", href: "/faculty/attendance", icon: CheckCircle2, color: "bg-violet-500" },
     ];
 
     return (
@@ -415,9 +415,10 @@ function MobileMetricCard({
     );
 }
 
-function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, currentSchoolYear, user }: { greeting: string; faculty_data: DashboardProps['faculty_data']; currentSemester: string; currentSchoolYear: string; user: User }) {
+function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, currentSchoolYear, user, id_card, qrCode, refreshCode, isRefreshing }: { greeting: string; faculty_data: DashboardProps['faculty_data']; currentSemester: string; currentSchoolYear: string; user: User; id_card: DashboardProps['id_card']; qrCode: string; refreshCode: () => void; isRefreshing: boolean }) {
     const totalStudents = faculty_data.upcoming_classes.reduce((sum, c) => sum + c.students_count, 0);
     const hasClasses = faculty_data.upcoming_classes.length > 0;
+    const nextClass = faculty_data.today_schedule.entries[0];
 
     return (
         <motion.div
@@ -426,7 +427,8 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="mx-auto flex w-full max-w-md flex-col md:hidden"
         >
-            <div className="bg-primary/10 relative h-[140px] w-full overflow-hidden px-4 pt-5">
+            {/* 1. Greeting Card */}
+            <div className="bg-primary/10 relative h-auto w-full overflow-hidden px-4 pt-5 pb-8">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
 
@@ -442,8 +444,28 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
                 </div>
             </div>
 
-            <div className="relative z-20 -mt-12 space-y-3 px-3.5 pb-24">
-                {/* Quick Stats */}
+            <div className="relative z-20 -mt-4 space-y-4 px-3.5 pb-24">
+                {/* 2. KOA Official ID */}
+                {id_card && (
+                    <section>
+                        <DigitalIdCard
+                            cardData={id_card.card_data}
+                            photoUrl={id_card.photo_url}
+                            qrCode={qrCode}
+                            isValid={id_card.is_valid}
+                            isCompact
+                            onRefresh={() => {
+                                refreshCode();
+                            }}
+                            isRefreshing={isRefreshing}
+                        />
+                    </section>
+                )}
+
+                {/* 3. Quick Action Buttons */}
+                <MobileQuickActions />
+
+                {/* 4. Stat Cards */}
                 <section className="grid grid-cols-2 gap-3">
                     <MobileMetricCard
                         icon={BookOpen}
@@ -475,29 +497,26 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
                     />
                 </section>
 
-                {/* Quick Actions */}
-                <MobileQuickActions />
-
-                {/* Today's Schedule */}
+                {/* 5. Next Class */}
                 <section>
                     <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
                         <CardContent className="relative grid gap-4 p-4 pr-10 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
                             <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
                             <div className="min-w-0">
-                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Today's Schedule</p>
-                                {faculty_data.today_schedule.entries.length > 0 ? (
+                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Next Class</p>
+                                {nextClass ? (
                                     <div className="mt-2 space-y-2">
                                         <h2 className="text-foreground truncate text-lg leading-tight font-semibold md:text-xl">
-                                            {faculty_data.today_schedule.entries[0].subject_title}
+                                            {nextClass.subject_title}
                                         </h2>
                                         <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                                             <span className="flex items-center gap-1.5">
                                                 <Clock className="h-3.5 w-3.5" />
-                                                {faculty_data.today_schedule.entries[0].start_time} - {faculty_data.today_schedule.entries[0].end_time}
+                                                {nextClass.start_time} - {nextClass.end_time}
                                             </span>
                                             <span className="flex items-center gap-1.5">
                                                 <MapPin className="h-3.5 w-3.5" />
-                                                {faculty_data.today_schedule.entries[0].room}
+                                                {nextClass.room}
                                             </span>
                                         </div>
                                     </div>
@@ -505,13 +524,80 @@ function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, curre
                                     <p className="text-muted-foreground mt-2 text-sm">No classes scheduled today. Enjoy your free time!</p>
                                 )}
                             </div>
-                            {faculty_data.today_schedule.entries.length > 0 && (
+                            {nextClass && (
                                 <Badge variant="outline" className="border-border/60 bg-background/60 hidden rounded-full px-3 py-1 md:inline-flex">
-                                    {faculty_data.today_schedule.entries[0].subject_code}
+                                    {nextClass.subject_code}
                                 </Badge>
                             )}
                         </CardContent>
                     </Card>
+                </section>
+
+                {/* 6. Today's Schedule */}
+                <section>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Today's Schedule</p>
+                    </div>
+                    {faculty_data.today_schedule.entries.length > 0 ? (
+                        <div className="space-y-2">
+                            {faculty_data.today_schedule.entries.map((entry, index) => (
+                                <Card key={index} className={dashboardCardClass}>
+                                    <CardContent className="flex items-center gap-3 p-3">
+                                        <div className={`${classAccents[index % classAccents.length]} h-10 w-1.5 rounded-full shrink-0`} />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-foreground truncate text-sm font-semibold">{entry.subject_title}</p>
+                                            <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+                                                <span>{entry.start_time} - {entry.end_time}</span>
+                                                <span>•</span>
+                                                <span>{entry.room}</span>
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                                            {entry.subject_code}
+                                        </Badge>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <Card className={dashboardPanelClass}>
+                            <CardContent className="text-center p-6">
+                                <p className="text-muted-foreground text-sm">No classes scheduled today</p>
+                            </CardContent>
+                        </Card>
+                    )}
+                </section>
+
+                {/* 7. Current Semester Classes */}
+                <section>
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Current Semester Classes</p>
+                    </div>
+                    {hasClasses ? (
+                        <div className="space-y-2">
+                            {faculty_data.upcoming_classes.slice(0, 3).map((classItem, index) => (
+                                <Card key={classItem.id} className={dashboardCardClass}>
+                                    <CardContent className="flex items-center gap-3 p-3">
+                                        <div className={`${classAccents[index % classAccents.length]} h-10 w-1.5 rounded-full shrink-0`} />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-foreground truncate text-sm font-semibold">{classItem.subject_title}</p>
+                                            <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+                                                <span>{classItem.section}</span>
+                                                <span>•</span>
+                                                <span>{classItem.students_count} students</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
+                        <Card className={dashboardPanelClass}>
+                            <CardContent className="text-center p-6">
+                                <p className="text-muted-foreground text-sm">No classes assigned this semester</p>
+                            </CardContent>
+                        </Card>
+                    )}
                 </section>
             </div>
         </motion.div>
@@ -582,6 +668,10 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
                 currentSemester={current_semester}
                 currentSchoolYear={current_school_year}
                 user={user}
+                id_card={id_card}
+                qrCode={qrCode}
+                refreshCode={handleRefreshQr}
+                isRefreshing={isRefreshingQr}
             />
 
             {/* Desktop Dashboard */}
