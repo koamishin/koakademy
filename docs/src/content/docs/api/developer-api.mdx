@@ -1,7 +1,7 @@
 ---
 title: Developer API Documentation
 description: Reference documentation for integrating with KoAkademy APIs
-title-nav: Developer API
+titleNav: Developer API
 ---
 
 # KoAkademy Developer API
@@ -12,7 +12,7 @@ Use this page as the entry point for KoAkademy API integration. It summarizes au
 
 The API is primarily read-oriented for student and enrollment data, with authenticated write access on allowed resources.
 
-<!-- title-nav: Quick Links -->
+{/* title-nav: Quick Links */}
 
 ## Quick Links
 
@@ -20,7 +20,7 @@ The API is primarily read-oriented for student and enrollment data, with authent
 - [Student Verification API](./student-verification-api.mdx) - Verify student credentials
 - [Student Management API](./student-api.mdx) - Full CRUD operations
 
-<!-- title-nav: Overview -->
+{/* title-nav: Overview */}
 
 ## Overview
 
@@ -40,7 +40,7 @@ https://api.koakademy.edu/api
 - **Pagination** - Efficient data fetching with pagination
 - **Filtering & Sorting** - Flexible query options
 
-<!-- title-nav: Available Endpoints -->
+{/* title-nav: Available Endpoints */}
 
 ## Available Endpoints
 
@@ -80,7 +80,7 @@ https://api.koakademy.edu/api
 | GET    | `/settings/user/preferences` | Get user preferences    |
 | PATCH  | `/settings/user/preferences` | Update user preferences |
 
-<!-- title-nav: Authentication -->
+{/* title-nav: Authentication */}
 
 ## Authentication
 
@@ -105,7 +105,7 @@ fetch("https://api.koakademy.edu/api/settings", {
 });
 ```
 
-<!-- title-nav: Code Examples -->
+{/* title-nav: Code Examples */}
 
 ## Code Examples
 
@@ -186,7 +186,7 @@ $response = file_get_contents(
 $data = json_decode($response, true);
 ```
 
-<!-- title-nav: Response Format -->
+{/* title-nav: Response Format */}
 
 ## Response Format
 
@@ -236,18 +236,19 @@ $data = json_decode($response, true);
 }
 ```
 
-<!-- title-nav: Important Notes -->
+{/* title-nav: Important Notes */}
 
 ## Important Notes
 
-<Warning>
-    **Read-Only Focus**: This API is primarily for reading data. While you can update your own profile information, you cannot access or modify other
-    students' data.
-</Warning>
+:::caution[Read-Only Focus]
+This API is primarily for reading data. While you can update your own profile information, you cannot access or modify other students' data.
+:::
 
-<Note>**Authentication Required**: All endpoints require a valid authentication token. Sign up or log in to get started.</Note>
+:::note
+**Authentication Required**: All endpoints require a valid authentication token. Sign up or log in to get started.
+:::
 
-<!-- title-nav: Best Practices -->
+{/* title-nav: Best Practices */}
 
 ## Best Practices
 
@@ -257,7 +258,7 @@ $data = json_decode($response, true);
 4. **Pagination** - Use pagination when fetching lists to improve performance
 5. **Rate Limiting** - Be respectful with the number of requests
 
-<!-- title-nav: Project Ideas -->
+{/* title-nav: Project Ideas */}
 
 ## Project Ideas
 
@@ -269,7 +270,7 @@ Here are some project ideas you can build using this API:
 4. **Payment Reminder** - Get notified about tuition payments
 5. **Academic Calendar** - Display important dates
 
-<!-- title-nav: Security Tips -->
+{/* title-nav: Security Tips */}
 
 ## Security Tips
 
@@ -279,7 +280,7 @@ Here are some project ideas you can build using this API:
 - Rotate tokens periodically
 - Use HTTPS for all requests
 
-<!-- title-nav: Getting Help -->
+{/* title-nav: Getting Help */}
 
 ## Getting Help
 
@@ -289,7 +290,7 @@ If you have questions:
 - Review the code examples above
 - Contact IT support for technical issues
 
-<!-- title-nav: Related Documentation -->
+{/* title-nav: Related Documentation */}
 
 ## Related Documentation
 

@@ -1,0 +1,114 @@
+---
+title: Development
+description: Daily contributor workflow, testing, and conventions.
+---
+
+This guide covers the daily workflow for KoAkademy contributors. Commands differ slightly depending on whether you use Herd/native PHP or Laravel Sail.
+
+## Starting Your Day
+
+### Herd / Native
+
+```bash
+# Start the frontend dev server
+npm run dev
+
+# In another terminal, if not using Herd:
+php artisan serve
+```
+
+If you use Redis queues:
+
+```bash
+php artisan horizon
+# or
+php artisan queue:work
+```
+
+### Sail / Docker
+
+```bash
+vendor/bin/sail up -d
+vendor/bin/sail npm run dev
+```
+
+## Project Structure
+
+```text
+app/                    Application code (models, controllers, services)
+app/Filament/           Filament admin resources, pages, and widgets
+app/Settings/           Database-backed settings objects
+app/Services/           Shared application services
+bootstrap/              Laravel bootstrap
+config/                 Configuration files
+database/               Migrations, factories, seeders
+database/settings/      Settings migrations
+resources/js/           React frontend (Inertia pages + components)
+routes/                 Web, admin, portal, and API routes
+scripts/                Developer setup and utility scripts
+tests/                  Pest feature and unit tests
+```
+
+## Useful Commands
+
+### Herd / Native
+
+```bash
+php artisan migrate
+php artisan make:test --pest Feature/ExampleFeatureTest
+php artisan route:list --except-vendor
+php artisan config:show app.name
+npm run dev
+npm run build
+npm run lint
+php artisan test --compact
+vendor/bin/pint --dirty
+```
+
+### Sail / Docker
+
+```bash
+vendor/bin/sail artisan migrate
+vendor/bin/sail artisan make:test --pest Feature/ExampleFeatureTest
+vendor/bin/sail artisan route:list --except-vendor
+vendor/bin/sail artisan config:show app.name
+vendor/bin/sail npm run dev
+vendor/bin/sail npm run build
+vendor/bin/sail npm run lint
+vendor/bin/sail artisan test --compact
+vendor/bin/sail bin pint --dirty
+```
+
+## Local Defaults
+
+For Herd/native development, KoAkademy defaults to lightweight services:
+
+```ini
+DB_CONNECTION=sqlite
+CACHE_STORE=database
+QUEUE_CONNECTION=sync
+MAIL_MAILER=log
+```
+
+Redis and Mailpit are optional. If enabled through the Windows setup script or manual `docker run`, they use `127.0.0.1` in `.env`.
+
+## Conventions
+
+- Use Herd/native commands when PHP runs on your host machine.
+- Use `vendor/bin/sail` only when PHP runs inside Sail containers.
+- Keep branding dynamic — use `config()` or database settings instead of hardcoded names.
+- Follow existing patterns in neighboring files before adding new abstractions.
+- Reuse factories and seeders when writing tests.
+- Prefer named routes and Wayfinder helpers over hardcoded URLs.
+- Validate input with form requests or existing validation patterns.
+
+## Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| `vendor/bin/sail` missing | Run `composer install` if using Sail |
+| Vite assets stale | Run `npm run build` or restart `npm run dev` |
+| Domains don't resolve | Use Herd or check hosts file entries |
+| SQLite database missing | Run `touch database/database.sqlite` then `php artisan migrate` |
+| Database connection refused | Check the selected DB service and `.env` host |
+| SSL certificate errors | Use Herd SSL or run the SSL helper scripts |
