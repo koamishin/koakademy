@@ -1,0 +1,119 @@
+/* KoAkademy shadcn theme mapped to Starlight.
+   Starlight defaults to dark values on :root and light values on [data-theme='light']. */
+
+:root,
+:root[data-theme="dark"] {
+    /* shadcn dark palette */
+    --ko-background: oklch(0.1913 0 0);
+    --ko-foreground: oklch(0.9173 0.0133 82.4015);
+    --ko-card: oklch(0.2264 0 0);
+    --ko-primary: oklch(0.852 0.0205 100.6306);
+    --ko-primary-foreground: oklch(0.3329 0 0);
+    --ko-secondary: oklch(0.252 0 0);
+    --ko-muted: oklch(0.285 0 0);
+    --ko-muted-foreground: oklch(0.6348 0.0113 81.7875);
+    --ko-accent: oklch(0.3329 0 0);
+    --ko-border: oklch(0.2931 0 0);
+    --ko-sidebar: oklch(0.173 0 0);
+    --ko-sidebar-accent: oklch(0.3329 0 0);
+
+    /* Starlight core colors */
+    --sl-color-white: var(--ko-foreground) !important;
+    --sl-color-gray-1: var(--ko-foreground) !important;
+    --sl-color-gray-2: oklch(0.852 0.0205 100.6306) !important;
+    --sl-color-gray-3: var(--ko-muted-foreground) !important;
+    --sl-color-gray-4: oklch(0.4681 0.0069 84.5829) !important;
+    --sl-color-gray-5: var(--ko-muted) !important;
+    --sl-color-gray-6: var(--ko-secondary) !important;
+    --sl-color-black: var(--ko-background) !important;
+
+    --sl-color-accent-low: var(--ko-accent) !important;
+    --sl-color-accent: var(--ko-primary) !important;
+    --sl-color-accent-high: var(--ko-foreground) !important;
+
+    --sl-color-text: var(--ko-foreground) !important;
+    --sl-color-text-accent: var(--ko-primary) !important;
+    --sl-color-text-invert: var(--ko-primary-foreground) !important;
+    --sl-color-bg: var(--ko-background) !important;
+    --sl-color-bg-nav: var(--ko-sidebar) !important;
+    --sl-color-bg-sidebar: var(--ko-sidebar) !important;
+    --sl-color-bg-inline-code: var(--ko-muted) !important;
+    --sl-color-bg-accent: var(--ko-primary) !important;
+    --sl-color-hairline-light: var(--ko-border) !important;
+    --sl-color-hairline: var(--ko-border) !important;
+    --sl-color-hairline-shade: var(--ko-background) !important;
+
+    --sl-font: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --sl-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    --sl-shadow-sm: 0px 6px 15px 0px hsl(0 0% 0% / 0.3), 0px 1px 2px -1px hsl(0 0% 0% / 0.3) !important;
+    --sl-shadow-md: 0px 6px 15px 0px hsl(0 0% 0% / 0.3), 0px 2px 4px -1px hsl(0 0% 0% / 0.3) !important;
+    --sl-shadow-lg: 0px 6px 15px 0px hsl(0 0% 0% / 0.3), 0px 4px 6px -1px hsl(0 0% 0% / 0.3) !important;
+}
+
+:root[data-theme="light"] {
+    /* shadcn light palette */
+    --ko-background: oklch(0.9195 0.0169 88.003);
+    --ko-foreground: oklch(0.235 0 0);
+    --ko-card: oklch(0.953 0.0156 86.4257);
+    --ko-primary: oklch(0.3012 0 0);
+    --ko-primary-foreground: oklch(0.9169 0.0175 99.616);
+    --ko-secondary: oklch(0.8647 0.0201 87.5232);
+    --ko-muted: oklch(0.834 0.0232 87.163);
+    --ko-muted-foreground: oklch(0.4688 0.0136 84.5932);
+    --ko-accent: oklch(0.9169 0.0175 99.616);
+    --ko-border: oklch(0.8434 0.0231 87.1621);
+    --ko-sidebar: oklch(0.8985 0.0199 87.5195);
+    --ko-sidebar-accent: oklch(0.9169 0.0175 99.616);
+
+    /* Starlight core colors */
+    --sl-color-white: var(--ko-foreground) !important;
+    --sl-color-gray-1: var(--ko-foreground) !important;
+    --sl-color-gray-2: oklch(0.3012 0 0) !important;
+    --sl-color-gray-3: var(--ko-muted-foreground) !important;
+    --sl-color-gray-4: oklch(0.7057 0.025 82.0932) !important;
+    --sl-color-gray-5: var(--ko-border) !important;
+    --sl-color-gray-6: var(--ko-secondary) !important;
+    --sl-color-gray-7: var(--ko-card) !important;
+    --sl-color-black: var(--ko-background) !important;
+
+    --sl-color-accent-low: var(--ko-accent) !important;
+    --sl-color-accent: var(--ko-primary) !important;
+    --sl-color-accent-high: var(--ko-foreground) !important;
+
+    --sl-color-text: var(--ko-foreground) !important;
+    --sl-color-text-accent: var(--ko-primary) !important;
+    --sl-color-text-invert: var(--ko-primary-foreground) !important;
+    --sl-color-bg: var(--ko-background) !important;
+    --sl-color-bg-nav: var(--ko-sidebar) !important;
+    --sl-color-bg-sidebar: var(--ko-sidebar) !important;
+    --sl-color-bg-inline-code: var(--ko-muted) !important;
+    --sl-color-bg-accent: var(--ko-primary) !important;
+    --sl-color-hairline-light: var(--ko-border) !important;
+    --sl-color-hairline: var(--ko-border) !important;
+    --sl-color-hairline-shade: var(--ko-border) !important;
+
+    --sl-shadow-sm: 0px 4px 10px 0px hsl(0 0% 0% / 0.1), 0px 1px 2px -1px hsl(0 0% 0% / 0.1) !important;
+    --sl-shadow-md: 0px 4px 10px 0px hsl(0 0% 0% / 0.1), 0px 2px 4px -1px hsl(0 0% 0% / 0.1) !important;
+    --sl-shadow-lg: 0px 4px 10px 0px hsl(0 0% 0% / 0.1), 0px 4px 6px -1px hsl(0 0% 0% / 0.1) !important;
+}
+
+/* Round Starlight surfaces to match shadcn radius. */
+.card,
+.pagination-links a,
+.site-search button,
+.sl-markdown-content pre,
+.starlight-aside {
+    border-radius: 0.5rem;
+}
+
+/* Make sidebar active states match shadcn's accent surface. */
+.sidebar-content a[aria-current="page"] {
+    background: var(--ko-sidebar-accent);
+    color: var(--ko-primary);
+    border-radius: calc(0.5rem - 2px);
+}
+
+:root[data-theme="dark"] .sidebar-content a[aria-current="page"] {
+    color: var(--ko-primary);
+}

@@ -1,0 +1,392 @@
+---
+title: Installation
+description: Install KoAkademy on macOS, Linux, or Windows — with SQLite by default and optional Docker services.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+KoAkademy supports multiple local development setups. The default setup uses **SQLite**, `database` cache, `sync` queues, and `log` mail, so you can run the app without Docker, Redis, Mailpit, PostgreSQL, or MySQL.
+
+| Method | Docker Required | Default Database | Best For |
+|---|---|---|---|
+| [Laravel Herd](#laravel-herd) | No | SQLite | macOS or Windows — zero-config `.test` domains |
+| [Native / Manual](#native-manual) | No | SQLite | Linux, macOS, or full-control setups |
+| [Docker / Sail](#docker--laravel-sail) | Yes | PostgreSQL in Compose | Reproducible contributor environment |
+| [Quick PHP Server](#quick-php-server) | No | SQLite | Trying the app quickly |
+| [XAMPP / WAMP](#xampp--wamp) | No | MySQL | Windows traditional Apache stack |
+
+:::note
+Docker is optional for local development. If Docker is installed and running, the Windows setup script will ask whether you want to start optional services such as PostgreSQL, MySQL, Redis, or Mailpit using `docker run`.
+:::
+
+---
+
+## Laravel Herd
+
+[Laravel Herd](https://herd.laravel.com/) is the fastest non-Docker path on **macOS** and **Windows**. Herd provides PHP, Composer, Node, SSL, and automatic `.test` domain resolution.
+
+### Windows Automated Setup
+
+```powershell "Windows PowerShell"
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+.\scripts\dev-setup.ps1
+```
+
+The setup script now works like this:
+
+1. Checks PHP, Composer, Node, npm, and Herd.
+2. Creates `.env` from `.env.example`.
+3. Uses **SQLite by default**.
+4. Checks if Docker is installed and running.
+5. If Docker is running, prompts for optional services:
+   - PostgreSQL via `postgres:17-alpine`
+   - MySQL via `mysql:8.4`
+   - Redis via `redis:7-alpine`
+   - Mailpit via `axllent/mailpit:latest`
+6. Updates `.env` to use `127.0.0.1` for any selected Docker service.
+7. Installs Composer and npm dependencies.
+8. Generates `APP_KEY`, runs migrations, and builds frontend assets.
+
+Common options:
+
+```powershell
+.\scripts\dev-setup.ps1 -SkipMigrations
+.\scripts\dev-setup.ps1 -SkipNpm
+```
+
+### Windows Defaults
+
+If you press Enter through all prompts, the app will use:
+
+```ini
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+CACHE_STORE=database
+QUEUE_CONNECTION=sync
+MAIL_MAILER=log
+```
+
+No Docker services are started by default.
+
+### Optional Docker Services on Windows
+
+If Docker Desktop is running, choose optional services during setup:
+
+| Prompt Choice | Container | Port | `.env` Host |
+|---|---|---|---|
+| `pgsql` | `koakademy-pgsql` | `5432` | `127.0.0.1` |
+| `mysql` | `koakademy-mysql` | `3306` | `127.0.0.1` |
+| Redis `yes` | `koakademy-redis` | `6379` | `127.0.0.1` |
+| Mailpit `yes` | `koakademy-mailpit` | `1025`, `8025` | `127.0.0.1` |
+
+Generated container commands are equivalent to:
+
+```powershell
+# PostgreSQL
+docker run -d --name koakademy-pgsql `
+  -p 5432:5432 `
+  -e POSTGRES_DB=koakademy `
+  -e POSTGRES_USER=koakademy `
+  -e POSTGRES_PASSWORD=koakademy `
+  -v koakademy-pgsql:/var/lib/postgresql/data `
+  postgres:17-alpine
+
+# Redis
+docker run -d --name koakademy-redis -p 6379:6379 -v koakademy-redis:/data redis:7-alpine
+
+# Mailpit
+docker run -d --name koakademy-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
+```
+
+### macOS with Herd
+
+```bash "Terminal"
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+composer install
+cp .env.example .env
+
+touch database/database.sqlite
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
+npm run dev
+```
+
+Herd will automatically serve the project at a `.test` domain when the project is inside one of Herd's configured directories.
+
+If you want PostgreSQL instead of SQLite on macOS, you can use Homebrew:
+
+```bash
+brew install postgresql@17
+brew services start postgresql@17
+createdb koakademy
+```
+
+Then update `.env`:
+
+```ini
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=koakademy
+DB_USERNAME=your_mac_username
+DB_PASSWORD=
+```
+
+---
+
+## Native / Manual
+
+Use this path when you do not want Docker and do not want Laravel Herd.
+
+### Minimum Requirements
+
+| Tool | Version |
+|---|---|
+| PHP | 8.4+ with SQLite extension |
+| Composer | 2.x |
+| Node.js | 22+ |
+| npm | bundled with Node |
+| Git | latest |
+
+### Universal SQLite Setup
+
+This works on macOS, Linux, and Windows as long as PHP has SQLite enabled:
+
+```bash "Terminal"
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+composer install
+cp .env.example .env
+
+touch database/database.sqlite
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+Visit `http://localhost:8000`.
+
+:::tip
+SQLite is the recommended default for local development. You can switch to PostgreSQL or MySQL later by updating `.env` and rerunning migrations.
+:::
+
+### Linux Native Script
+
+For Linux without Docker, use the native setup script:
+
+```bash
+./scripts/dev-setup-local.sh
+```
+
+Options:
+
+```bash
+./scripts/dev-setup-local.sh --skip-ssl
+./scripts/dev-setup-local.sh --skip-hosts
+./scripts/dev-setup-local.sh --skip-db
+./scripts/dev-setup-local.sh --force-db-reconfig
+```
+
+The script can install PHP, Composer, Bun/npm, PostgreSQL, mkcert, and Nginx depending on your distribution.
+
+---
+
+## Docker / Laravel Sail
+
+Use this path if you want a fully containerized development stack.
+
+```bash "Terminal"
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+composer install
+cp .env.example .env
+vendor/bin/sail up -d
+vendor/bin/sail npm install
+vendor/bin/sail artisan key:generate
+vendor/bin/sail artisan migrate
+vendor/bin/sail npm run dev
+```
+
+Sail uses service names inside Docker, so `.env` values should point to Compose services:
+
+```ini
+DB_CONNECTION=pgsql
+DB_HOST=pgsql
+DB_PORT=5432
+DB_DATABASE=koakademy
+DB_USERNAME=sail
+DB_PASSWORD=
+REDIS_HOST=redis
+MAIL_HOST=mailpit
+```
+
+:::caution
+Do not use `127.0.0.1` for services inside Sail containers. Use service names such as `pgsql`, `redis`, and `mailpit`.
+:::
+
+---
+
+## Quick PHP Server
+
+This is the fastest non-Docker evaluation path:
+
+```bash
+composer install --no-dev
+cp .env.example .env
+touch database/database.sqlite
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
+php artisan serve
+```
+
+This uses:
+
+```ini
+DB_CONNECTION=sqlite
+CACHE_STORE=database
+QUEUE_CONNECTION=sync
+MAIL_MAILER=log
+```
+
+---
+
+## XAMPP / WAMP
+
+For Windows users who prefer Apache and MySQL:
+
+1. Install XAMPP or WAMP with PHP 8.4.
+2. Clone the repository into your web root.
+3. Run:
+
+```powershell
+composer install
+npm install
+copy .env.example .env
+php artisan key:generate
+```
+
+4. Create a MySQL database named `koakademy`.
+5. Update `.env`:
+
+```ini
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=koakademy
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+6. Run:
+
+```powershell
+php artisan migrate
+npm run build
+```
+
+7. Point Apache to `public/`.
+
+---
+
+## Optional Services Without Compose
+
+If you are not using Sail but want optional local services, run them one by one:
+
+### PostgreSQL
+
+```bash
+docker run -d --name koakademy-pgsql \
+  -p 5432:5432 \
+  -e POSTGRES_DB=koakademy \
+  -e POSTGRES_USER=koakademy \
+  -e POSTGRES_PASSWORD=koakademy \
+  -v koakademy-pgsql:/var/lib/postgresql/data \
+  postgres:17-alpine
+```
+
+```ini
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=koakademy
+DB_USERNAME=koakademy
+DB_PASSWORD=koakademy
+```
+
+### MySQL
+
+```bash
+docker run -d --name koakademy-mysql \
+  -p 3306:3306 \
+  -e MYSQL_DATABASE=koakademy \
+  -e MYSQL_USER=koakademy \
+  -e MYSQL_PASSWORD=koakademy \
+  -e MYSQL_ROOT_PASSWORD=root \
+  -v koakademy-mysql:/var/lib/mysql \
+  mysql:8.4
+```
+
+```ini
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=koakademy
+DB_USERNAME=koakademy
+DB_PASSWORD=koakademy
+```
+
+### Redis
+
+```bash
+docker run -d --name koakademy-redis -p 6379:6379 -v koakademy-redis:/data redis:7-alpine
+```
+
+```ini
+REDIS_HOST=127.0.0.1
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+```
+
+### Mailpit
+
+```bash
+docker run -d --name koakademy-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
+```
+
+```ini
+MAIL_MAILER=smtp
+MAIL_HOST=127.0.0.1
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+```
+
+Mailpit UI: `http://localhost:8025`.
+
+---
+
+## Post-Install Steps
+
+Create your first admin user:
+
+```bash
+php artisan make:filament-user
+```
+
+Run verification:
+
+```bash
+php artisan test --compact
+npm run build
+```
+
+For Sail, prefix commands with `vendor/bin/sail`.

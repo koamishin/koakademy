@@ -1,7 +1,7 @@
 ---
 title: Student Verification API
 description: Check if a student exists in our system
-title-nav: Verification API
+titleNav: Verification API
 ---
 
 # Student Verification API
@@ -10,7 +10,7 @@ title-nav: Verification API
 
 This API lets you verify if a student exists in our system using their student ID and email. It's perfect for login systems or checking enrollment status.
 
-<!-- title-nav: When to Use This API? -->
+{/* title-nav: When to Use This API? */}
 
 ## When to Use This API?
 
@@ -19,7 +19,7 @@ This API lets you verify if a student exists in our system using their student I
 - Validating student credentials
 - Verifying student identity
 
-<!-- title-nav: Quick Example -->
+{/* title-nav: Quick Example */}
 
 ## Quick Example
 
@@ -41,7 +41,7 @@ const data = await response.json();
 console.log(data.data.exists); // true or false
 ```
 
-<!-- title-nav: API Details -->
+{/* title-nav: API Details */}
 
 ## API Details
 
@@ -52,7 +52,7 @@ console.log(data.data.exists); // true or false
 | **Auth Required**   | Yes                    |
 | **Response Format** | JSON                   |
 
-<!-- title-nav: Request -->
+{/* title-nav: Request */}
 
 ## Request
 
@@ -71,7 +71,7 @@ Authorization: Bearer YOUR_TOKEN_HERE
 | `student_id` | string | Yes      | Student's ID (e.g., "STU-2024-001") |
 | `email`      | string | Yes      | Student's email address             |
 
-<!-- title-nav: Response Examples -->
+{/* title-nav: Response Examples */}
 
 ## Response Examples
 
@@ -116,7 +116,7 @@ Authorization: Bearer YOUR_TOKEN_HERE
 }
 ```
 
-<!-- title-nav: Complete Code Examples -->
+{/* title-nav: Complete Code Examples */}
 
 ## Complete Code Examples
 
@@ -201,7 +201,7 @@ def verify_student(token, student_id, email):
 verify_student('your-token', 'STU-2024-001', 'john@example.com')
 ```
 
-<!-- title-nav: Common Use Cases -->
+{/* title-nav: Common Use Cases */}
 
 ## Common Use Cases
 
@@ -246,11 +246,15 @@ async function checkEnrollment(studentId, email) {
 }
 ```
 
-<Note>Both `student_id` and `email` must match exactly. If either one is wrong, the verification will fail.</Note>
+:::note
+Both `student_id` and `email` must match exactly. If either one is wrong, the verification will fail.
+:::
 
-<Warning>You need a valid authentication token to use this API. Contact your administrator to get one.</Warning>
+:::caution
+You need a valid authentication token to use this API. Contact your administrator to get one.
+:::
 
-<!-- title-nav: Error Codes -->
+{/* title-nav: Error Codes */}
 
 ## Error Codes
 
@@ -261,7 +265,7 @@ async function checkEnrollment(studentId, email) {
 | 404  | Not Found        | Student ID or email is wrong |
 | 422  | Validation Error | Missing required fields      |
 
-<!-- title-nav: Related APIs -->
+{/* title-nav: Related APIs */}
 
 ## Related APIs
 

@@ -1,3 +1,8 @@
+---
+title: Feature Toggles Restructure Design
+description: Design document for the feature toggles restructure architecture
+---
+
 # Feature Toggles Restructure Design
 
 **Session ID:** 2026-05-16-feature-toggles-restructure  

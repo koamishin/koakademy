@@ -1,7 +1,7 @@
 ---
 title: Student Management API
 description: Complete guide to managing student records
-title-nav: Student API
+titleNav: Student API
 ---
 
 # Student Management API
@@ -10,7 +10,7 @@ title-nav: Student API
 
 This API lets you list, create, update, and delete student records for KoAkademy integrations and internal tooling.
 
-<!-- title-nav: What Can This API Do? -->
+{/* title-nav: What Can This API Do? */}
 
 ## What Can This API Do?
 
@@ -20,7 +20,7 @@ This API lets you list, create, update, and delete student records for KoAkademy
 - ✏️ Update student information
 - 🗑️ Delete students
 
-<!-- title-nav: API Overview -->
+{/* title-nav: API Overview */}
 
 ## API Overview
 
@@ -30,7 +30,7 @@ This API lets you list, create, update, and delete student records for KoAkademy
 | **Auth Required** | Yes (Sanctum Token) |
 | **Format**        | JSON                |
 
-<!-- title-nav: Quick Start -->
+{/* title-nav: Quick Start */}
 
 ## Quick Start
 
@@ -57,7 +57,7 @@ const response = await api.get("/students");
 console.log(response.data.data);
 ```
 
-<!-- title-nav: Endpoints -->
+{/* title-nav: Endpoints */}
 
 ## Endpoints
 
@@ -76,7 +76,7 @@ const studentsPage2 = await api.get("/students?page=2");
 const manyStudents = await api.get("/students?per_page=50");
 ```
 
-### GET /api/students/{id}
+### GET /api/students/\{id}
 
 **Get details of a specific student**
 
@@ -108,7 +108,7 @@ const newStudent = await api.post("/students", {
 });
 ```
 
-### PUT /api/students/{id}
+### PUT /api/students/\{id}
 
 **Update a student**
 
@@ -121,7 +121,7 @@ const updated = await api.put("/students/1", {
 });
 ```
 
-### DELETE /api/students/{id}
+### DELETE /api/students/\{id}
 
 **Delete a student**
 
@@ -130,7 +130,7 @@ const updated = await api.put("/students/1", {
 await api.delete("/students/1");
 ```
 
-<!-- title-nav: Filtering & Sorting -->
+{/* title-nav: Filtering & Sorting */}
 
 ## Filtering & Sorting
 
@@ -167,7 +167,7 @@ const sortedDesc = await api.get("/students?sort=-first_name");
 const minimal = await api.get("/students?fields=id,first_name,last_name,email");
 ```
 
-<!-- title-nav: Response Format -->
+{/* title-nav: Response Format */}
 
 ## Response Format
 
@@ -214,7 +214,7 @@ const minimal = await api.get("/students?fields=id,first_name,last_name,email");
 }
 ```
 
-<!-- title-nav: Complete Examples -->
+{/* title-nav: Complete Examples */}
 
 ## Complete Examples
 
@@ -356,7 +356,7 @@ new_student = api.create({
 })
 ```
 
-<!-- title-nav: Common Student Statuses -->
+{/* title-nav: Common Student Statuses */}
 
 ## Common Student Statuses
 
@@ -368,7 +368,7 @@ new_student = api.create({
 | `dropped`   | Dropped out                  |
 | `graduate`  | Finished the program         |
 
-<!-- title-nav: Error Handling -->
+{/* title-nav: Error Handling */}
 
 ## Error Handling
 
@@ -399,9 +399,11 @@ try {
 | 404    | Student not found                  |
 | 422    | Validation error - check your data |
 
-<Note>Start with simple requests first. Get the list working before trying filters and sorting!</Note>
+:::note
+Start with simple requests first. Get the list working before trying filters and sorting!
+:::
 
-<!-- title-nav: Best Practices -->
+{/* title-nav: Best Practices */}
 
 ## Best Practices
 
@@ -410,7 +412,7 @@ try {
 3. **Handle errors** - Always catch errors in your code
 4. **Store tokens safely** - Never hardcode tokens in your code
 
-<!-- title-nav: Related APIs -->
+{/* title-nav: Related APIs */}
 
 ## Related APIs
 
