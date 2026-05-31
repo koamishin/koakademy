@@ -105,7 +105,7 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                         {/* Card Content */}
                         <div className="relative flex h-full min-h-[190px] flex-col justify-between p-4 sm:min-h-[220px] sm:p-6">
                             {/* Header: Chip & Organization */}
-                            <div className="mb-1 flex items-start justify-between sm:mb-2">
+                            <div className="mb-1 flex items-start justify-between gap-3 sm:mb-2">
                                 <div className="flex items-center gap-3">
                                     <div className="bg-primary/10 border-primary/20 flex h-9 w-9 items-center justify-center rounded-xl border sm:h-10 sm:w-10">
                                         <School className="text-primary h-4.5 w-4.5 sm:h-5 sm:w-5" />
@@ -117,11 +117,9 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                                         </span>
                                     </div>
                                 </div>
-                                {/* Decorative "Chip" */}
-                                <div className="relative h-7 w-10 overflow-hidden rounded-md border border-amber-300/50 bg-gradient-to-br from-amber-200 to-amber-400 opacity-90 shadow-sm sm:h-8 sm:w-11">
-                                    <div className="absolute inset-0 rounded-md border-[0.5px] border-black/10" />
-                                    <div className="absolute top-1/2 left-0 h-[0.5px] w-full bg-black/10" />
-                                    <div className="absolute top-0 left-1/2 h-full w-[0.5px] bg-black/10" />
+                                <div className="bg-primary text-primary-foreground group-hover:bg-primary/90 flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 shadow-sm transition-colors">
+                                    <span className="text-[11px] font-semibold whitespace-nowrap">Tap to Scan</span>
+                                    <Scan className="h-3.5 w-3.5" />
                                 </div>
                             </div>
 
@@ -165,20 +163,6 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                                 </div>
                             </div>
 
-                            {/* Bottom: Action Footer */}
-                            <div className="border-border/60 mt-auto flex items-center justify-end border-t pt-3 sm:justify-between sm:pt-4">
-                                <div className="hidden flex-col sm:flex">
-                                    <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">Status</span>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className={cn("h-2 w-2 animate-pulse rounded-full", isValid ? "bg-green-500" : "bg-red-500")} />
-                                        <span className="text-xs font-bold">{isValid ? "Active" : "Inactive"}</span>
-                                    </div>
-                                </div>
-                                <div className="bg-primary text-primary-foreground group-hover:bg-primary/90 flex items-center gap-2 rounded-full py-1.5 pr-2 pl-3 shadow-sm transition-colors">
-                                    <span className="text-xs font-semibold">Tap to Scan</span>
-                                    <Scan className="h-3.5 w-3.5" />
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </DialogTrigger>
