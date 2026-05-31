@@ -1,0 +1,289 @@
+---
+title: Docker
+description: Deploy KoAkademy with Docker and Docker Compose.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+KoAkademy provides pre-built Docker images for both **quick evaluation** and **production deployment**. You can run it in seconds with a single `docker run` command, or deploy a full production stack with Docker Compose.
+
+## Quick Run
+
+Evaluate KoAkademy instantly with our Docker Hub image:
+
+```bash "Terminal"
+docker run -d \
+  --name koakademy \
+  -p 8000:8000 \
+  -e APP_KEY=$(openssl rand -base64 32) \
+  docker.io/yukazakiri/koakademy:latest
+```
+
+Visit `http://localhost:8000`. The container runs FrankenPHP with Laravel Octane on port `8000`.
+
+:::tip
+Use `docker.io/yukazakiri/koakademy:dev-latest` for the latest development build.
+:::
+
+## Docker Compose
+
+For production or persistent deployments, use Docker Compose with PostgreSQL and Redis.
+
+### 1. Create a Compose File
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  app:
+    image: docker.io/yukazakiri/koakademy:latest
+    container_name: koakademy-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - pgsql
+      - redis
+    volumes:
+      - koakademy-storage:/var/www/html/storage
+
+  pgsql:
+    image: postgres:17-alpine
+    container_name: koakademy-pgsql
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: koakademy
+      POSTGRES_USER: koakademy
+      POSTGRES_PASSWORD: replace-with-strong-password
+    volumes:
+      - koakademy-pgsql:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: koakademy-redis
+    restart: unless-stopped
+    volumes:
+      - koakademy-redis:/data
+
+volumes:
+  koakademy-storage:
+  koakademy-pgsql:
+  koakademy-redis:
+```
+
+### 2. Create Your Environment File
+
+Create `.env` with at minimum:
+
+```bash
+APP_NAME="KoAkademy"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://koakademy.edu
+ADMIN_HOST=admin.koakademy.edu
+PORTAL_HOST=portal.koakademy.edu
+APP_KEY=base64:GENERATE_WITH_php_artisan_key:generate
+
+DB_CONNECTION=pgsql
+DB_HOST=pgsql
+DB_PORT=5432
+DB_DATABASE=koakademy
+DB_USERNAME=koakademy
+DB_PASSWORD=replace-with-strong-password
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=database
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+MAIL_MAILER=smtp
+MAIL_FROM_ADDRESS=noreply@koakademy.edu
+MAIL_FROM_NAME="${APP_NAME}"
+
+OCTANE_SERVER=frankenphp
+OCTANE_HOST=0.0.0.0
+OCTANE_PORT=8000
+```
+
+Generate an app key:
+
+```bash
+docker run --rm docker.io/yukazakiri/koakademy:latest php artisan key:generate --show
+```
+
+Copy the output into `APP_KEY=` in your `.env`.
+
+### 3. Start the Stack
+
+```bash
+docker compose up -d
+```
+
+### 4. Run Migrations
+
+```bash
+docker exec koakademy-app php artisan migrate --force
+```
+
+### 5. Create an Admin User
+
+```bash
+docker exec -it koakademy-app php artisan make:filament-user
+```
+
+Follow the prompts to create your first administrator.
+
+### 6. Verify Deployment
+
+```bash
+docker ps
+docker logs koakademy-app --tail=200
+docker exec koakademy-app php artisan octane:status
+docker exec koakademy-app php artisan about
+```
+
+## Production Compose with All Services
+
+For a full production deployment with Meilisearch, Horizon workers, and Pulse monitoring:
+
+```yaml
+services:
+  app:
+    image: docker.io/yukazakiri/koakademy:latest
+    container_name: koakademy-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - pgsql
+      - redis
+      - meilisearch
+    volumes:
+      - koakademy-storage:/var/www/html/storage
+
+  horizon:
+    image: docker.io/yukazakiri/koakademy:latest
+    container_name: koakademy-horizon
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - pgsql
+      - redis
+    command: php artisan horizon
+    volumes:
+      - koakademy-storage:/var/www/html/storage
+
+  pulse:
+    image: docker.io/yukazakiri/koakademy:latest
+    container_name: koakademy-pulse
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - pgsql
+      - redis
+    command: /bin/bash -c "php artisan pulse:check & php artisan pulse:work"
+    volumes:
+      - koakademy-storage:/var/www/html/storage
+
+  pgsql:
+    image: postgres:17-alpine
+    container_name: koakademy-pgsql
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: koakademy
+      POSTGRES_USER: koakademy
+      POSTGRES_PASSWORD: replace-with-strong-password
+    volumes:
+      - koakademy-pgsql:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: koakademy-redis
+    restart: unless-stopped
+    volumes:
+      - koakademy-redis:/data
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.42
+    container_name: koakademy-meilisearch
+    restart: unless-stopped
+    environment:
+      MEILI_NO_ANALYTICS: "false"
+    volumes:
+      - koakademy-meilisearch:/meili_data
+
+volumes:
+  koakademy-storage:
+  koakademy-pgsql:
+  koakademy-redis:
+  koakademy-meilisearch:
+```
+
+## Available Container Modes
+
+The KoAkademy image supports different container modes via the `CONTAINER_MODE` environment variable:
+
+| Mode | Use Case | Command |
+|---|---|---|
+| `http` (default) | Web server with Octane | `docker run ... docker.io/yukazakiri/koakademy:latest` |
+| `horizon` | Queue worker with Horizon | `docker run -e CONTAINER_MODE=horizon ...` |
+| `scheduler` | Cron scheduler | `docker run -e CONTAINER_MODE=scheduler ...` |
+| `worker` | General queue worker | `docker run -e CONTAINER_MODE=worker ...` |
+| `pulse` | Pulse monitoring | `docker run -e CONTAINER_MODE=pulse ...` |
+| `nightwatch` | Nightwatch monitoring | `docker run -e CONTAINER_MODE=nightwatch ...` |
+
+## Image Registries
+
+| Registry | Image |
+|---|---|
+| Docker Hub | `docker.io/yukazakiri/koakademy:latest` |
+| GitHub Container Registry | `ghcr.io/yukazakiri/koakademy:latest` |
+| Dev (latest unstable) | `docker.io/yukazakiri/koakademy:dev-latest` |
+
+## Rolling Updates
+
+To update to the latest image:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Then run migrations:
+
+```bash
+docker exec koakademy-app php artisan migrate --force
+docker exec koakademy-app php artisan optimize
+```
+
+## Backup & Rollback
+
+Back up before every deploy:
+
+```bash
+# Database
+docker exec koakademy-app pg_dump -U koakademy koakademy > backup.sql
+
+# Storage
+docker run --rm -v koakademy-storage:/data -v $(pwd):/backup alpine tar czf /backup/storage.tar.gz -C /data .
+```
+
+To roll back, switch to the previous image tag and redeploy:
+
+```bash
+docker compose down
+docker tag koakademy-app docker.io/yukazakiri/koakademy:previous-tag
+docker compose up -d
+```
+
+## Next Steps
+
+- [Configuration](/getting-started/configuration) — Full environment variable reference.
+- [Development](/development) — Set up a local contributor environment.

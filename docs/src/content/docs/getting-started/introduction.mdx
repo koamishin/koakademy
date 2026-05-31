@@ -1,0 +1,64 @@
+---
+title: Introduction
+description: What is KoAkademy and how to get started.
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+**KoAkademy** is an open-source learning management system (LMS) built for schools, universities, and training centers. It combines a powerful admin panel, a student portal, and a developer-friendly API — all in one modular Laravel application.
+
+<CardGrid stagger>
+	<Card title="Admin Panel" icon="setting">
+		Filament-based admin with role-based access, activity logs, and real-time monitoring via Laravel Pulse.
+	</Card>
+	<Card title="Student Portal" icon="open-book">
+		Inertia + React frontend with course enrollment, schedules, grades, and payment tracking.
+	</Card>
+	<Card title="REST API" icon="seti:json">
+		Token-authenticated API for integrations — student verification, enrollment data, and settings.
+	</Card>
+	<Card title="Modular" icon="layers">
+		Built with Laravel Modules. Add or remove features without touching core code.
+	</Card>
+</CardGrid>
+
+## Architecture Overview
+
+KoAkademy is a full-stack Laravel application with the following stack:
+
+| Layer | Technology |
+|---|---|
+| **Backend** | Laravel 12, PHP 8.4, FrankenPHP (Octane) |
+| **Frontend** | React 19, Inertia.js, Tailwind CSS v4, shadcn/ui |
+| **Admin** | Filament v4, Livewire v3 |
+| **Database** | PostgreSQL 17 (primary), SQLite (local), MySQL 8.4 |
+| **Cache/Queue** | Redis |
+| **Search** | Meilisearch |
+| **Queue Worker** | Laravel Horizon |
+| **Monitoring** | Laravel Pulse, Laravel Telescope |
+| **PDF** | Cloudflare Browser Rendering / DOMPDF |
+| **Mail** | Mailpit (dev), SMTP (production) |
+
+## Who Is This For?
+
+- **Schools & Universities** — Manage students, courses, enrollments, grades, and finances.
+- **Training Centers** — Track learner progress, issue certificates, and handle payments.
+- **Developers** — Extend via modules, integrate via API, or white-label the platform.
+
+## Quick Start Options
+
+Choose the path that fits you:
+
+| Path | Best For | Time |
+|---|---|---|
+| [Docker Run](/getting-started/docker/#quick-run) | Evaluating KoAkademy | 1 minute |
+| [Docker Compose](/getting-started/docker/#docker-compose) | Production or self-hosted | 5 minutes |
+| [Laravel Herd](/getting-started/installation/#laravel-herd) | macOS / Windows — zero-config | 5 minutes |
+| [Native Setup](/getting-started/installation/#native-manual) | Linux / full control | 15 minutes |
+| [Sail (Docker)](/getting-started/installation/#docker--laravel-sail) | Any OS — isolated dev | 10 minutes |
+| [Quick PHP Server](/getting-started/installation/#quick-php-server) | Just try it out | 2 minutes |
+| [XAMPP / WAMP](/getting-started/installation/#xampp--wamp) | Windows — traditional stack | 20 minutes |
+
+## License
+
+KoAkademy is open-source software licensed under the [AGPL-3.0-or-later](https://github.com/yukazakiri/koakademy/blob/main/LICENSE.md).
