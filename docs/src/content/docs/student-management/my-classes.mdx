@@ -1,0 +1,85 @@
+---
+title: My Classes
+description: View your curriculum checklist, current classes, grades, attendance, classmates, and submit assignments.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Go to **My Classes** from the sidebar or navigation menu. This page has two tabs.
+
+## Curriculum Checklist tab
+
+This shows every subject required for your course, organized by year and semester.
+
+Each subject is color-coded:
+
+| Color | Status | Meaning |
+|---|---|---|
+| 🟢 Green | **Completed** | You passed this subject |
+| 🔵 Blue | **Ongoing** | You're taking it now |
+| ⚪ Gray | **Pending** | You haven't taken it yet |
+| 🔴 Red | **Failed** | You need to retake it |
+
+A **progress bar** at the top shows what percentage of your total units you've earned.
+
+**How to use it**: Use this to plan which subjects you still need. If a subject shows "Failed," talk to your adviser about retaking it.
+
+## Current Classes tab
+
+This shows all the classes you're enrolled in this semester as cards.
+
+Each card shows:
+- Subject code and title
+- Section name
+- Faculty member's name
+- Schedule (days and times)
+- Room number
+
+**How to use it**: Click any card to open the full class detail page. Use the **room filter** at the top to find classes in a specific room.
+
+---
+
+## Class Detail Page
+
+When you click a class, you get a full page with five tabs.
+
+### Posts tab
+
+This is where your teacher posts announcements, assignments, and materials.
+
+- **Announcements**: Read-only messages from your teacher.
+- **Assignments**: Shows the due date and your submission status (Not Submitted / Submitted / Graded).
+
+#### How to submit an assignment
+
+1. Click on an assignment post.
+2. Write your answer in the text box.
+3. Attach files if needed (up to 50 MB each).
+4. Click **Submit**.
+
+<Aside type="caution">
+You can only submit once per assignment. Double-check your work before clicking Submit.
+</Aside>
+
+After submitting, the assignment shows your status and, once graded, your score.
+
+### Schedule tab
+
+Shows the day-by-day schedule for this class — day of the week, start time, end time, room, and any notes from your teacher.
+
+### Grades tab
+
+Shows your grades for this class:
+- **Prelim** — First grading period
+- **Midterm** — Second grading period
+- **Finals** — Final grading period
+- **Average** — Your overall grade
+
+### Attendance tab
+
+- **Stats bar** at the top shows how many times you were Present, Late, Absent, or Excused.
+- **History list** below shows every session with the date, your status, the topic covered, and any remarks.
+
+### People tab
+
+Shows all your classmates with their names and profile pictures.

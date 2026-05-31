@@ -1,0 +1,73 @@
+---
+title: Account Security
+description: Change your password, set up two-factor authentication, manage passkeys, and control your active sessions.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Go to **Profile → Security** tab to manage your account safety.
+
+## Changing your password
+
+1. Go to the **Security** tab.
+2. Click **Change Password**.
+3. Enter your **current password**.
+4. Enter and confirm your **new password**.
+5. Click **Save**.
+
+## Two-Factor Authentication (2FA)
+
+Two-factor authentication adds an extra layer of security. After enabling it, you'll need both your password and a code from an authenticator app on your phone to sign in.
+
+### Setting up 2FA
+
+1. Go to the **Security** tab.
+2. Click **Enable Two-Factor Authentication**.
+3. A QR code appears. Scan it with an authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.).
+4. Enter the 6-digit code from the app to confirm.
+5. **Save your recovery codes.** These are 8 one-time codes you can use if you lose access to your authenticator app. Write them down or store them somewhere safe — not on your phone.
+
+<Aside type="caution">
+If you lose both your authenticator app and your recovery codes, you will be locked out of your account. You'll need to contact your school's IT office for help.
+</Aside>
+
+### Managing 2FA
+
+Once 2FA is set up, you can:
+
+- **Disable 2FA**: Click **Disable** and enter your password to confirm.
+- **Regenerate recovery codes**: Click to get a new set of 8 codes. Old codes become invalid.
+- **Login challenges**: Toggle on to require 2FA every time you sign in. Toggle off to only require it periodically.
+- **Email authentication**: Toggle on to also receive login codes by email as an alternative to your authenticator app.
+
+## Managing browser sessions
+
+The **Browser Sessions** section shows all devices where your account is currently signed in.
+
+- Each session shows the device, browser, IP address, and last active time.
+- Your current session is marked with "This device."
+- If you see a session you don't recognize, or used a shared computer:
+
+1. Click **Log Out Other Browser Sessions**.
+2. Enter your password to confirm.
+3. All other sessions are signed out immediately.
+
+## Passkeys (passwordless login)
+
+Passkeys let you sign in without typing a password — using your fingerprint, face, or device PIN instead.
+
+### Setting up a passkey
+
+1. Go to **Security → Passkeys**.
+2. Click **Add Passkey**.
+3. Your browser will prompt you to verify your identity (Touch ID, Windows Hello, etc.).
+4. Give the passkey a name (e.g. "My MacBook" or "iPhone").
+5. The passkey is saved.
+
+### Using a passkey to sign in
+
+Next time you sign in, choose **Sign in with Passkey** instead of entering your password. Your device will prompt you for your fingerprint or face.
+
+### Removing a passkey
+
+If you lose a device or no longer want to use a passkey, click the **delete icon** next to it in the Passkeys list.

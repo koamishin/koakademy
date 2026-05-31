@@ -1,0 +1,91 @@
+---
+title: Taking Attendance
+description: Create attendance sessions, record student attendance, lock sessions, mark no-meeting days, and export attendance reports.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+---
+
+## Attendance Overview (All Classes)
+
+Click **Attendance** in the navigation menu to see attendance status across all your classes.
+
+Each class appears as a card showing:
+- Subject code, title, and section
+- Number of students
+- Room
+- Schedule summary
+- A link to **Manage Attendance** for that class
+
+Use this page to quickly see which classes have pending attendance sessions. Click any class to go directly to its attendance tab.
+
+---
+
+## Class Attendance Page
+
+Open a class and go to the **Attendance** tab. You will see:
+
+- A **calendar view** with color-coded dots on each class day:
+  - **Green** — Attendance recorded for that day
+  - **Orange/Red** — Attendance is missing for that day
+  - **Red with X** — Class was marked as "No Meeting"
+- A **list of attendance sessions** below the calendar
+
+---
+
+## Creating an Attendance Session
+
+1. In the **Attendance** tab, click a calendar day or **Create Session**.
+2. Select which **Schedule** this session is for (the day's class schedule).
+3. Verify the **Date** — it must match the schedule's day of the week.
+4. Set the **Start Time** and **End Time**.
+5. Optionally add a **Topic** (what was covered) and **Notes**.
+6. Click **Create**.
+
+---
+
+## Recording Student Attendance
+
+After creating a session, a list of all enrolled students appears:
+
+1. For each student, select their status:
+   - **Present** — They attended
+   - **Late** — They arrived late
+   - **Absent** — They did not attend
+   - **Excused** — Their absence is excused
+2. Add any **Remarks** (e.g., "Left early" or "Sick note provided").
+3. Click **Save Attendance**.
+
+---
+
+## Marking a Class as "No Meeting"
+
+If a class is cancelled (holiday, teacher unavailable, etc.):
+
+1. When creating or editing a session, check **No Meeting**.
+2. Enter a **Reason** (e.g., "National Holiday" or "Faculty Meeting").
+3. No individual student attendance records are created — the day is simply marked as cancelled.
+
+---
+
+## Locking and Editing Sessions
+
+### Locking a Session
+When you are sure the records are correct:
+1. Open the session.
+2. Click **Lock Session**.
+3. Once locked, no one can change the attendance records.
+
+### Editing Attendance
+- **Unlocked sessions** — Edit any student's status or remarks at any time.
+- **Locked sessions** — Unlock them first before making changes.
+
+---
+
+## Exporting Attendance
+
+1. In the **Attendance** tab, click **Export Attendance**.
+2. Choose your format:
+   - **CSV** — A spreadsheet with students as rows and sessions as columns, using codes: P (Present), L (Late), A (Absent), E (Excused)
+   - **PDF** — A formatted attendance report generated in the background. You will receive a notification when it's ready.

@@ -1,0 +1,85 @@
+---
+title: Managing Students
+description: Add students to your class, remove them, transfer between sections, create SHS students on the spot, and export your class roster.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The **Students** tab on your class detail page is where you manage who is enrolled in your class.
+
+---
+
+## Adding an Existing Student
+
+1. Open the class detail page.
+2. Go to the **Students** tab.
+3. Click **Add Student**.
+4. Search for a student by name, student ID, or LRN. Type at least 2 characters to see results.
+5. The search results show:
+   - **In This Class** — Already enrolled here (can't add again)
+   - **In Other Section** — Enrolled in another section of the same subject
+   - **Available** — Can be added to your class
+6. Click on the student to add them. They are enrolled immediately.
+
+---
+
+## Creating a New SHS Student (On the Spot)
+
+For Senior High School classes, you can create a brand-new student record directly from your class:
+
+1. Open the SHS class detail page.
+2. Go to the **Students** tab.
+3. Click **Create SHS Student**.
+4. Fill in the required information:
+   - **LRN** (Learner Reference Number, 12 digits)
+   - **Last Name**, **First Name**, **Middle Name**
+   - **Birth Date** and **Gender**
+   - **Contact** number
+   - **Strand** and **Grade Level** (11 or 12)
+5. Check **Enroll in This Class** to add them immediately.
+6. Click **Create**.
+
+The student is created in the system and enrolled in your class in one step.
+
+---
+
+## Removing a Student
+
+1. Open the class detail page.
+2. Go to the **Students** tab.
+3. Find the student you want to remove.
+4. Click the **Remove** (trash) icon next to their name.
+5. Confirm the removal.
+
+The student's enrollment is soft-deleted. They can be re-added later if needed.
+
+---
+
+## Transferring a Student to Another Section
+
+If a student needs to move to a different section of the same subject:
+
+1. Find the student in the roster.
+2. Click **Request Move**.
+3. Select the **Target Class** from the dropdown — shows other sections of the same subject with available slots.
+4. Click **Send Request**.
+
+The other section's teacher receives a notification. When they accept, the student is automatically moved to their class.
+
+### Accepting an Incoming Transfer
+
+If another teacher sends a student to your section:
+
+1. You will receive a notification.
+2. Click the notification or go to your class detail page.
+3. The student will be added to your roster when you accept the transfer.
+
+---
+
+## Exporting Your Student List
+
+1. Open the class detail page.
+2. Click **Export Student List**.
+3. Choose your format:
+   - **CSV** — Download immediately as a spreadsheet
+   - **PDF** — A formatted PDF will be generated in the background. You will receive a notification when it's ready.
