@@ -27,64 +27,78 @@ const iconMap: Record<string, React.ElementType> = {
 
 const colorSchemes = [
     {
-        bg: "bg-gradient-to-br from-rose-500/10 to-rose-600/5",
-        iconBg: "bg-gradient-to-br from-rose-500 to-rose-600",
-        border: "border-rose-500/20",
-        accent: "text-rose-600",
-        ring: "stroke-rose-500",
+        accentBg: "bg-rose-500",
+        accentSoft: "bg-rose-500/10",
+        accentText: "text-rose-500",
+        border: "border-rose-500/30",
     },
     {
-        bg: "bg-gradient-to-br from-amber-500/10 to-amber-600/5",
-        iconBg: "bg-gradient-to-br from-amber-500 to-amber-600",
-        border: "border-amber-500/20",
-        accent: "text-amber-600",
-        ring: "stroke-amber-500",
+        accentBg: "bg-amber-500",
+        accentSoft: "bg-amber-500/10",
+        accentText: "text-amber-500",
+        border: "border-amber-500/30",
     },
     {
-        bg: "bg-gradient-to-br from-emerald-500/10 to-emerald-600/5",
-        iconBg: "bg-gradient-to-br from-emerald-500 to-emerald-600",
-        border: "border-emerald-500/20",
-        accent: "text-emerald-600",
-        ring: "stroke-emerald-500",
+        accentBg: "bg-emerald-500",
+        accentSoft: "bg-emerald-500/10",
+        accentText: "text-emerald-500",
+        border: "border-emerald-500/30",
     },
     {
-        bg: "bg-gradient-to-br from-sky-500/10 to-sky-600/5",
-        iconBg: "bg-gradient-to-br from-sky-500 to-sky-600",
-        border: "border-sky-500/20",
-        accent: "text-sky-600",
-        ring: "stroke-sky-500",
+        accentBg: "bg-sky-500",
+        accentSoft: "bg-sky-500/10",
+        accentText: "text-sky-500",
+        border: "border-sky-500/30",
     },
 ];
 
-function AnimatedRing({ progress, color, delay = 0 }: { progress: number; color: string; delay?: number }) {
-    const radius = 40;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
-
+function CornerAccent({ accentBg, accentSoft, delay = 0 }: { accentBg: string; accentSoft: string; delay?: number }) {
     return (
-        <motion.svg
-            width="100"
-            height="100"
-            viewBox="0 0 100 100"
-            className="absolute -top-3 -right-3 opacity-30"
-            initial={{ rotate: -90 }}
-            animate={{ rotate: -90 }}
-        >
-            <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="6" stroke="currentColor" className="text-border/30" />
-            <motion.circle
-                cx="50"
-                cy="50"
-                r={radius}
-                fill="none"
-                strokeWidth="6"
-                strokeLinecap="round"
-                className={color}
-                initial={{ strokeDashoffset: circumference }}
-                animate={{ strokeDashoffset }}
-                transition={{ duration: 1.5, delay, ease: "easeOut" }}
-                style={{ strokeDasharray: circumference }}
+        <div className="pointer-events-none absolute right-6 bottom-12 h-12 w-16 overflow-hidden opacity-25 transition-opacity duration-300 group-hover:opacity-40">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay, ease: "easeOut" }}
+                className={cn("absolute right-0 top-0 h-10 w-10 rounded-lg", accentSoft)}
             />
-        </motion.svg>
+            {[0, 1, 2].map((line) => (
+                <motion.span
+                    key={line}
+                    initial={{ opacity: 0, x: 18 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.45, delay: delay + line * 0.08, ease: "easeOut" }}
+                    className={cn("absolute right-0 h-1.5 rounded-full", accentBg)}
+                    style={{
+                        top: `${8 + line * 11}px`,
+                        width: `${42 - line * 9}px`,
+                    }}
+                />
+            ))}
+            <motion.span
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 34 }}
+                transition={{ duration: 0.5, delay: delay + 0.18, ease: "easeOut" }}
+                className={cn("absolute top-1 right-13 w-1 rounded-full", accentBg)}
+            />
+        </div>
+    );
+}
+
+function ProgressFill({ progress, accentBg, delay = 0 }: { progress: number; accentBg: string; delay?: number }) {
+    return (
+        <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 1, delay, ease: "easeOut" }}
+            className={cn("h-full rounded-full", accentBg)}
+        >
+            <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.35 }}
+                transition={{ duration: 0.4, delay: delay + 0.4 }}
+                className="block h-full w-full rounded-full bg-white"
+            />
+        </motion.div>
     );
 }
 
@@ -109,31 +123,33 @@ export function StatsGrid({ stats = [] }: StatsGridProps) {
                     >
                         <Card
                             className={cn(
-                                "relative overflow-hidden border-2 transition-all duration-300",
-                                scheme.bg,
+                                "group relative overflow-hidden rounded-lg border bg-card/80 shadow-sm transition-all duration-300",
                                 scheme.border,
-                                "hover:shadow-primary/5 hover:shadow-lg",
+                                "hover:border-primary/30 hover:bg-card hover:shadow-lg hover:shadow-black/5",
                             )}
                         >
-                            <CardContent className="p-5">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-3">
+                            <div className={cn("absolute inset-x-0 top-0 h-1", scheme.accentBg)} />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
+
+                            <CardContent className="relative p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex min-w-0 items-start gap-3">
                                         <motion.div
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}
                                             transition={{ type: "spring", stiffness: 200, damping: 15, delay: index * 0.1 + 0.2 }}
-                                            className={cn("flex h-11 w-11 items-center justify-center rounded-xl shadow-lg", scheme.iconBg)}
+                                            className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-lg", scheme.accentSoft)}
                                         >
-                                            <IconComponent className="h-5 w-5 text-white" />
+                                            <IconComponent className={cn("h-5 w-5", scheme.accentText)} />
                                         </motion.div>
 
-                                        <div className="space-y-0.5">
-                                            <p className="text-muted-foreground text-xs font-medium">{stat.label}</p>
+                                        <div className="min-w-0 space-y-1">
+                                            <p className="text-muted-foreground truncate text-xs font-semibold tracking-wide uppercase">{stat.label}</p>
                                             <motion.p
                                                 initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 transition={{ delay: index * 0.1 + 0.3 }}
-                                                className="text-foreground text-2xl font-bold"
+                                                className="text-foreground text-3xl leading-none font-bold tracking-tight"
                                             >
                                                 {stat.value}
                                             </motion.p>
@@ -146,7 +162,7 @@ export function StatsGrid({ stats = [] }: StatsGridProps) {
                                             animate={{ opacity: 1, scale: 1 }}
                                             transition={{ delay: index * 0.1 + 0.4 }}
                                             className={cn(
-                                                "flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                                "relative z-10 flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold",
                                                 stat.trendDirection === "up" && "bg-emerald-500/15 text-emerald-600",
                                                 stat.trendDirection === "down" && "bg-rose-500/15 text-rose-600",
                                                 stat.trendDirection === "neutral" && "bg-slate-500/15 text-slate-600",
@@ -160,19 +176,14 @@ export function StatsGrid({ stats = [] }: StatsGridProps) {
                                     )}
                                 </div>
 
-                                <div className="mt-3 flex items-center gap-2">
-                                    <div className="bg-border/30 h-1.5 flex-1 overflow-hidden rounded-full">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${progress}%` }}
-                                            transition={{ duration: 1, delay: index * 0.1 + 0.5, ease: "easeOut" }}
-                                            className={cn("h-full rounded-full", scheme.iconBg)}
-                                        />
+                                <div className="mt-6 flex items-center gap-3">
+                                    <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                                        <ProgressFill progress={progress} accentBg={scheme.accentBg} delay={index * 0.1 + 0.5} />
                                     </div>
-                                    <span className="text-muted-foreground text-[10px] font-medium">{progress}%</span>
+                                    <span className="text-muted-foreground min-w-8 text-right text-[11px] font-medium tabular-nums">{progress}%</span>
                                 </div>
 
-                                <AnimatedRing progress={progress} color={scheme.ring} delay={index * 0.1} />
+                                <CornerAccent accentBg={scheme.accentBg} accentSoft={scheme.accentSoft} delay={index * 0.1} />
                             </CardContent>
                         </Card>
                     </motion.div>
