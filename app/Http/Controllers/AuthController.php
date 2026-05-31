@@ -98,6 +98,20 @@ final class AuthController extends Controller
 
         abort_unless($user instanceof User, 404);
 
+        // If it's a faculty user, set faculty_id_number and record_id
+        if ($user->role?->isFaculty()) {
+            $faculty = \App\Models\Faculty::query()
+                ->where('email', $email)
+                ->first();
+
+            if ($faculty) {
+                $user->update([
+                    'faculty_id_number' => $faculty->faculty_id_number,
+                    'record_id' => $faculty->id,
+                ]);
+            }
+        }
+
         Auth::login($user);
         $request->session()->regenerate();
 
