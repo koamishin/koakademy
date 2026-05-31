@@ -30,7 +30,7 @@ interface OnboardingContextValue {
     openOnboarding: () => void;
     closeOnboarding: () => void;
     goToStep: (index: number) => void;
-    nextStep: () => void;
+    nextStep: (maxSteps?: number) => void;
     previousStep: () => void;
     completeStep: (stepId: string) => void;
     toggleChecklistItem: (itemId: string) => void;
@@ -53,7 +53,7 @@ interface OnboardingProviderProps {
     userId?: string | number | null;
     children: React.ReactNode;
     checklist: OnboardingChecklistItem[];
-    totalSteps: number;
+    totalSteps?: number; // Optional, defaults to 100 to allow dynamic steps
     enabled?: boolean;
 }
 
@@ -62,7 +62,7 @@ export function OnboardingProvider({
     userId,
     children,
     checklist,
-    totalSteps,
+    totalSteps = 100,
     enabled = true,
 }: OnboardingProviderProps) {
     const [isOpen, setIsOpen] = useState(false);
@@ -173,14 +173,14 @@ export function OnboardingProvider({
         [progress, persistProgress]
     );
 
-    const nextStep = useCallback(() => {
+    const nextStep = useCallback((maxSteps?: number) => {
         setCurrentStepIndex((prev) => {
-            const next = Math.min(prev + 1, totalSteps - 1);
+            const next = Math.min(prev + 1, (maxSteps ?? 100) - 1);
             const updated = { ...progress, currentStepIndex: next };
             persistProgress(updated);
             return next;
         });
-    }, [totalSteps, progress, persistProgress]);
+    }, [progress, persistProgress]);
 
     const previousStep = useCallback(() => {
         setCurrentStepIndex((prev) => {

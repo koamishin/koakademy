@@ -575,9 +575,9 @@ export function OnboardingExperience({ enabled = true, features, onDismiss, clas
             return;
         }
         setDirection(1);
-        nextStep();
+        nextStep(steps.length); // Pass actual steps.length as maxSteps
         trackEvent("step_advanced", { step: currentStepIndex + 1 });
-    }, [isLastStep, step, completeStep, nextStep, trackEvent, dismissOnboarding, currentStepIndex]);
+    }, [isLastStep, step, completeStep, nextStep, trackEvent, dismissOnboarding, currentStepIndex, steps.length]);
 
     const handlePrevious = useCallback(() => {
         setDirection(-1);
