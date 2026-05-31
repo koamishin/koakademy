@@ -1,14 +1,14 @@
 {
-  "version": "1.0.0-dev.0.2",
-  "image": "ghcr.io/koamishin/koakademy:v1.0.0-dev.0.2",
-  "commit": "f96091296d32f34a07053082454473a057aab679",
+  "version": "1.0.0-dev.0.3",
+  "image": "ghcr.io/koamishin/koakademy:v1.0.0-dev.0.3",
+  "commit": "f3bd3bb39acb03bc931da3d37fc6b5d17050903b",
   "branch": "master",
-  "timestamp": "2026-05-31T11:51:11Z",
-  "build_url": "https://github.com/koamishin/koakademy/actions/runs/26711716063",
+  "timestamp": "2026-05-31T12:47:22Z",
+  "build_url": "https://github.com/koamishin/koakademy/actions/runs/26712910871",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.0.0-dev.0.2 - Merge branch 'master' of https://github.com/koamishin/koakademy",
-    "previous": "1.0.0-dev.0.1"
+    "current": "Version 1.0.0-dev.0.3 - Merge branch 'master' of https://github.com/koamishin/koakademy",
+    "previous": "1.0.0-dev.0.2"
   },
   "metadata": {
     "author": "SorenOutis",
