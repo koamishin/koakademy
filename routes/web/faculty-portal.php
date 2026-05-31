@@ -239,6 +239,44 @@ Route::middleware(['auth', 'faculty.verified', 'faculty.only', 'ensure.feature']
             ]);
         })->name('grades');
 
+        // Resources
+        Route::get('/resources', function () {
+            $user = Auth::user();
+
+            if (! $user) {
+                abort(403);
+            }
+
+            return Inertia::render('faculty/resources/index', [
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar_url ?? null,
+                    'role' => $user->role?->getLabel() ?? 'User',
+                ],
+                'flash' => session('flash'),
+            ]);
+        })->name('resources');
+
+        // Faculty Forms
+        Route::get('/forms', function () {
+            $user = Auth::user();
+
+            if (! $user) {
+                abort(403);
+            }
+
+            return Inertia::render('faculty/forms/index', [
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar_url ?? null,
+                    'role' => $user->role?->getLabel() ?? 'User',
+                ],
+                'flash' => session('flash'),
+            ]);
+        })->name('forms');
+
         // Classes
         Route::get('/classes', [ClassesController::class, 'index'])->name('classes.index');
         Route::get('/classes/strand-subjects', [ClassesController::class, 'getStrandSubjects'])->name('classes.strand-subjects');
