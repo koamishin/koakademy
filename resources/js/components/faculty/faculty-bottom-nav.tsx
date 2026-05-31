@@ -11,9 +11,9 @@ import {
     IconSchool,
     IconSpeakerphone,
 } from "@tabler/icons-react";
-import { type FacultyPortalClass } from "@/components/faculty/faculty-navigation";
+import { getFacultyPortalNavigation, type FacultyPortalClass } from "@/components/faculty/faculty-navigation";
 import { motion } from "framer-motion";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 interface FacultyBottomNavPageProps {
     auth?: {
@@ -30,9 +30,9 @@ interface FacultyBottomNavPageProps {
  * Left pair: Action Center, Classes · Center: Home · Right pair: Schedule, News
  */
 const MOBILE_NAV_ORDER = [
-    { id: "action-center", label: "Tasks", icon: IconChecklist, url: "/faculty/action-center" },
+    { id: "action-center", label: "Actions", icon: IconChecklist, url: "/faculty/action-center" },
     { id: "classes", label: "Classes", icon: IconSchool, url: "/faculty/classes" },
-    { id: "dashboard", label: "Home", icon: IconHome, url: "/faculty/dashboard", center: true },
+    { id: "dashboard", label: "Home", icon: IconHome, url: "/faculty/dashboard" },
     { id: "schedule", label: "Schedule", icon: IconCalendar, url: "/faculty/schedule" },
     { id: "announcements", label: "News", icon: IconSpeakerphone, url: "/faculty/announcements" },
 ] as const;
@@ -42,11 +42,20 @@ export function FacultyBottomNav() {
     const [searchOpen, setSearchOpen] = useState(false);
     const resolvedUser = props.auth?.user;
     const enabledRoutes = props.featureFlags?.enabledRoutes ?? {};
+    const facultyClasses = props.facultyClasses ?? [];
 
-    // Disabled-state lookup from feature flags
-    const disabledMap: Record<string, boolean> = {
-        "action-center": enabledRoutes["action-center"] === false || !enabledRoutes["action-center"],
-    };
+    const canonicalNav = useMemo(() => getFacultyPortalNavigation(enabledRoutes, facultyClasses), [enabledRoutes, facultyClasses]);
+    const disabledMap = useMemo(() => {
+        const map: Record<string, { disabled: boolean; tooltip?: string }> = {};
+
+        canonicalNav.forEach((item) => {
+            if (item.id) {
+                map[item.id] = { disabled: !!item.disabled, tooltip: item.disabledTooltip };
+            }
+        });
+
+        return map;
+    }, [canonicalNav]);
 
     const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
 
@@ -98,105 +107,55 @@ export function FacultyBottomNav() {
 
                 {/* ── Bottom bar ── */}
                 <div
-                    className="safe-area-inset-bottom border-border/50 bg-background/98 border-t shadow-[0_-10px_40px_rgba(0,0,0,0.15)] backdrop-blur-xl"
+                    className="border-border/50 bg-background/90 border-t shadow-[0_-8px_28px_rgba(0,0,0,0.12)] backdrop-blur-2xl backdrop-saturate-150"
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
                 >
-                    {/* Swipe-up grab handle */}
-                    {resolvedUser ? (
-                        <div className="pointer-events-none flex select-none items-center justify-center pt-2">
-                            <span className="bg-muted-foreground/25 block h-1 w-10 rounded-full" />
-                        </div>
-                    ) : null}
-
-                    <div className="mx-auto flex max-w-md items-end justify-around px-2 pb-3">
+                    <div
+                        className="mx-auto grid max-w-md grid-cols-5 items-center gap-1 px-2 pt-1.5"
+                        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}
+                    >
                         {MOBILE_NAV_ORDER.map((item) => {
                             const active = isActive(item.url);
-                            const disabled = disabledMap[item.id] ?? false;
+                            const disabledInfo = disabledMap[item.id];
+                            const disabled = disabledInfo?.disabled ?? false;
                             const Icon = item.icon;
-                            const isCenter = "center" in item && item.center;
-
-                            if (isCenter) {
-                                return (
-                                    <Link key={item.id} href={item.url} className="group relative -mt-8 flex flex-col items-center" aria-label="Home">
-                                        {/* Outer glow ring */}
-                                        <motion.span
-                                            animate={active ? { scale: 1.2, opacity: 0.3 } : { scale: 1, opacity: 0 }}
-                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                                            className="absolute -inset-3 rounded-full bg-primary/40 blur-xl"
-                                        />
-
-                                        {/* Button Circle */}
-                                        <motion.div
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.92 }}
-                                            className={cn(
-                                                "relative flex h-14 w-14 items-center justify-center rounded-2xl border-2 transition-all duration-300 overflow-hidden",
-                                                active
-                                                    ? "border-primary bg-primary text-primary-foreground shadow-[0_10px_30px_-8px_rgba(var(--primary),0.6)]"
-                                                    : "border-border/70 bg-background text-foreground/70 shadow-xl",
-                                            )}
-                                        >
-                                            {/* Inner gradient for active state */}
-                                            {active && (
-                                                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
-                                            )}
-                                            <Icon className="relative size-7" stroke={2.3} />
-                                        </motion.div>
-
-                                        <span
-                                            className={cn(
-                                                "mt-1.5 text-[11px] font-bold tracking-tight transition-all duration-200",
-                                                active ? "text-primary scale-105" : "text-foreground/60",
-                                            )}
-                                        >
-                                            {item.label}
-                                        </span>
-                                    </Link>
-                                );
-                            }
 
                             return (
                                 <Link
                                     key={item.id}
                                     href={disabled ? "#" : item.url}
                                     className={cn(
-                                        "relative flex w-16 flex-col items-center justify-end rounded-2xl px-1 pt-2 pb-1 transition-all duration-200",
-                                        active && "bg-primary/8",
+                                        "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-colors duration-200",
+                                        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                                         disabled && "pointer-events-none opacity-40",
                                     )}
                                     aria-disabled={disabled}
-                                    title={item.label}
+                                    title={disabled ? disabledInfo?.tooltip : item.label}
                                 >
+                                    {active && (
+                                        <motion.span
+                                            layoutId="faculty-bottom-nav-active"
+                                            className="bg-primary/10 absolute inset-x-1 inset-y-0 rounded-2xl"
+                                            transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                        />
+                                    )}
                                     <motion.div
-                                        whileHover={{ scale: 1.1 }}
+                                        animate={{ scale: active ? 1.06 : 1, y: active ? -1 : 0 }}
                                         whileTap={{ scale: 0.95 }}
-                                        className={cn(
-                                            "flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200",
-                                            active ? "bg-primary/10 text-primary" : "text-foreground/60",
-                                        )}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                        className="relative z-10 flex h-7 w-7 items-center justify-center"
                                     >
-                                        <Icon className="size-[24px]" stroke={active ? 2.3 : 1.8} />
+                                        <Icon className="size-5" stroke={active ? 2.3 : 1.7} />
                                     </motion.div>
                                     <span
                                         className={cn(
-                                            "mt-1 max-w-full truncate text-[11px] leading-tight font-semibold transition-colors",
-                                            active ? "text-primary" : "text-foreground/60",
+                                            "relative z-10 max-w-full truncate text-[10px] leading-none font-semibold transition-colors",
+                                            active ? "text-primary" : "text-muted-foreground/75",
                                         )}
                                     >
                                         {item.label}
                                     </span>
-
-                                    {/* Dot sits in a fixed-height slot so it never shifts siblings */}
-                                    <div className="flex h-2.5 items-center justify-center">
-                                        {active && (
-                                            <motion.div
-                                                layoutId="faculty-bottom-nav-dot"
-                                                className="bg-primary h-1.5 w-4 rounded-full"
-                                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                            />
-                                        )}
-                                    </div>
                                 </Link>
                             );
                         })}
