@@ -277,6 +277,73 @@ Route::middleware(['auth', 'faculty.verified', 'faculty.only', 'ensure.feature']
             ]);
         })->name('forms');
 
+        $renderToolkitPage = function (string $title, string $summary, array $highlights, string $accent) {
+            $user = Auth::user();
+
+            if (! $user) {
+                abort(403);
+            }
+
+            return Inertia::render('faculty/toolkit/show', [
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar_url ?? null,
+                    'role' => $user->role?->getLabel() ?? 'User',
+                ],
+                'toolkit' => [
+                    'title' => $title,
+                    'summary' => $summary,
+                    'highlights' => $highlights,
+                    'accent' => $accent,
+                ],
+                'flash' => session('flash'),
+            ]);
+        };
+
+        // Faculty Toolkit
+        Route::get('/at-risk-alerts', fn () => $renderToolkitPage(
+            'At-Risk Alerts',
+            'Monitor students who may need extra support before small issues become larger academic problems.',
+            ['Early warning signals', 'Actionable outreach', 'Student support notes'],
+            'rose',
+        ))->name('at-risk-alerts');
+
+        Route::get('/assessments', fn () => $renderToolkitPage(
+            'Assessments',
+            'Organize quizzes, rubrics, and grading queues from one faculty workspace.',
+            ['Quizzes and rubrics', 'Grading queue overview', 'Assessment templates'],
+            'emerald',
+        ))->name('assessments');
+
+        Route::get('/inbox', fn () => $renderToolkitPage(
+            'Inbox',
+            'Keep student communication and reusable response templates close to your teaching workflow.',
+            ['Messaging workflows', 'Reusable templates', 'Class communication'],
+            'sky',
+        ))->name('inbox');
+
+        Route::get('/office-hours', fn () => $renderToolkitPage(
+            'Office Hours',
+            'Plan office hours and prepare student appointment booking tools.',
+            ['Booking preferences', 'Appointment visibility', 'Consultation schedule'],
+            'indigo',
+        ))->name('office-hours');
+
+        Route::get('/requests', fn () => $renderToolkitPage(
+            'Requests & Approvals',
+            'Handle excusals, make-up requests, and approval tracking in one workflow.',
+            ['Excusals and make-up requests', 'Approval tracking', 'Request history'],
+            'amber',
+        ))->name('requests');
+
+        Route::get('/insights', fn () => $renderToolkitPage(
+            'Insights',
+            'Review class analytics, progress summaries, and performance trends at a glance.',
+            ['Class analytics', 'Progress trends', 'Performance summaries'],
+            'violet',
+        ))->name('insights');
+
         // Classes
         Route::get('/classes', [ClassesController::class, 'index'])->name('classes.index');
         Route::get('/classes/strand-subjects', [ClassesController::class, 'getStrandSubjects'])->name('classes.strand-subjects');
