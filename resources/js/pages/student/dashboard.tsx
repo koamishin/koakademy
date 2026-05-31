@@ -156,7 +156,14 @@ function getShortName(name: string): string {
         return name.split(",")[1]?.trim() || name;
     }
 
-    return name.split(" ")[0] || name;
+    const prefixes = ["Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "Rev.", "Fr.", "Sr.", "St."];
+    const parts = name.split(" ");
+    
+    if (parts.length > 1 && prefixes.includes(parts[0])) {
+        return parts[1];
+    }
+    
+    return parts[0] || name;
 }
 
 function formatMoney(value: number, currency: string): string {

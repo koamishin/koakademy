@@ -5,18 +5,42 @@ import { TodaySchedule } from "@/components/dashboard/today-schedule";
 import { DigitalIdCard, type IdCardData } from "@/components/digital-id-card";
 import FacultyLayout from "@/components/faculty/faculty-layout";
 import { OnboardingChecklistWidget } from "@/components/onboarding-checklist";
-import { OnboardingProvider } from "@/components/onboarding-context";
+import { OnboardingProvider, type OnboardingChecklistItem } from "@/components/onboarding-context";
 import { OnboardingTour, type TourStep } from "@/components/onboarding-tour";
 import type { OnboardingFeatureData } from "@/components/onboarding-experience";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { cn } from "@/lib/utils";
 import { User } from "@/types/user";
 import { Head, Link, router, usePage } from "@inertiajs/react";
-import { IconArrowRight, IconCalendar, IconCalendarEvent, IconMapPin, IconSchool, IconUsers } from "@tabler/icons-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import {
+    ArrowRight,
+    Bell,
+    BookOpen,
+    Calendar,
+    CheckCircle2,
+    Clock,
+    CreditCard,
+    Eye,
+    EyeOff,
+    GraduationCap,
+    HelpCircle,
+    LayoutGrid,
+    MapPin,
+    Sparkles,
+    TrendingUp,
+    Trophy,
+    UserRound,
+    Users,
+    type LucideIcon,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 
 interface AttendanceChartData {
     date: string;
@@ -105,94 +129,54 @@ interface DashboardProps {
     } | null;
 }
 
-const classColors = [
-    "bg-blue-500",
-    "bg-emerald-500",
-    "bg-amber-500",
-    "bg-rose-500",
-    "bg-violet-500",
-    "bg-cyan-500",
-];
+const classAccents = ["bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500", "bg-cyan-500"];
+const dashboardCardClass =
+    "border-border/60 bg-card/75 rounded-lg shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-card hover:shadow-md";
+const dashboardPanelClass = "border-border/60 bg-card/75 rounded-lg shadow-sm";
 
-function PeriodBadge({ semester, schoolYear }: { semester: string; schoolYear: string }) {
-    const label = semester === "summer" ? "Summer" : `Semester ${semester}`;
+function getSemesterLabel(semester: string): string {
+    if (semester === "1") {
+        return "1st Semester";
+    }
 
-    return (
-        <Badge variant="outline" className="bg-background/80 rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm">
-            <IconCalendarEvent className="mr-1.5 h-3 w-3 text-primary" />
-            {label} &bull; {schoolYear}
-        </Badge>
-    );
+    if (semester === "2") {
+        return "2nd Semester";
+    }
+
+    return "Summer";
 }
 
-function ClassListCard({ classItem, index }: { classItem: DashboardClass; index: number }) {
-    const color = classColors[index % classColors.length];
-    const isShs = (classItem.classification ?? "").toLowerCase() === "shs";
+function getShortName(name: string): string {
+    if (name.includes(",")) {
+        return name.split(",")[1]?.trim() || name;
+    }
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.35 }}
-        >
-            <Card className="border-border/60 hover:border-primary/20 group overflow-hidden border transition-all duration-300 hover:shadow-md">
-                <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-start gap-3.5">
-                        <div className={`mt-0.5 h-10 w-1.5 shrink-0 rounded-full ${color}`} />
-                        <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="text-foreground text-sm font-semibold leading-tight">{classItem.subject_title}</h4>
-                                <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium">
-                                    {classItem.subject_code}
-                                </Badge>
-                                {isShs && (
-                                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
-                                        SHS
-                                    </Badge>
-                                )}
-                            </div>
-                            <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                                <span className="flex items-center gap-1">
-                                    <IconSchool className="h-3 w-3" />
-                                    Section {classItem.section}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <IconMapPin className="h-3 w-3" />
-                                    {classItem.room}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                    <IconUsers className="h-3 w-3" />
-                                    {classItem.students_count} students
-                                </span>
-                            </div>
-                            <p className="text-muted-foreground/70 text-[10px]">
-                                {classItem.semester === "summer" ? "Summer" : `Semester ${classItem.semester}`} &bull; {classItem.school_year}
-                            </p>
-                        </div>
-                    </div>
+    const prefixes = ["Dr.", "Mr.", "Mrs.", "Ms.", "Prof.", "Rev.", "Fr.", "Sr.", "St."];
+    const parts = name.split(" ");
+    
+    if (parts.length > 1 && prefixes.includes(parts[0])) {
+        return parts[1];
+    }
+    
+    return parts[0] || name;
+}
 
-                    <div className="flex items-center gap-2 sm:pl-4">
-                        <Button asChild size="sm" variant="outline" className="rounded-lg">
-                            <Link href={`/faculty/classes/${classItem.id}?view=attendance`} prefetch>
-                                <IconCalendar className="mr-1.5 h-3.5 w-3.5" />
-                                Attendance
-                            </Link>
-                        </Button>
-                        <Button asChild size="sm" className="rounded-lg">
-                            <Link href={`/faculty/classes/${classItem.id}`}>
-                                Open
-                                <IconArrowRight className="ml-1 h-3.5 w-3.5" />
-                            </Link>
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        </motion.div>
-    );
+function getGreeting(): string {
+    const hour = new Date().getHours();
+
+    if (hour < 12) {
+        return "Good morning";
+    }
+
+    if (hour < 17) {
+        return "Good afternoon";
+    }
+
+    return "Good evening";
 }
 
 // Faculty onboarding checklist items
-const facultyChecklist = [
+const facultyChecklist: OnboardingChecklistItem[] = [
     {
         id: "profile-complete",
         label: "Complete your profile",
@@ -267,6 +251,273 @@ const facultyTourSteps: TourStep[] = [
     },
 ];
 
+function ClassListCard({ classItem, index }: { classItem: DashboardClass; index: number }) {
+    const accent = classAccents[index % classAccents.length];
+    const isShs = (classItem.classification ?? "").toLowerCase() === "shs";
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.35 }}
+        >
+            <Card className={`${dashboardCardClass} group overflow-hidden hover:-translate-y-0.5`}>
+                <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_230px] md:items-center">
+                    <div className="flex gap-3">
+                        <div className={`${accent} mt-1 h-12 w-1 shrink-0 rounded-full transition-all duration-200 group-hover:h-14`} />
+                        <div className="min-w-0 space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="font-mono text-[11px]">
+                                    {classItem.subject_code}
+                                </Badge>
+                                <span className="text-muted-foreground text-xs">Section {classItem.section}</span>
+                                {isShs && (
+                                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-medium">
+                                        SHS
+                                    </Badge>
+                                )}
+                            </div>
+                            <h3 className="text-foreground text-base leading-tight font-semibold">{classItem.subject_title}</h3>
+                            <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                <span className="flex items-center gap-1.5">
+                                    <Users className="h-3.5 w-3.5" />
+                                    {classItem.students_count} students
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {classItem.room}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:pl-4">
+                        <Button asChild size="sm" variant="outline" className="rounded-lg">
+                            <Link href={`/faculty/classes/${classItem.id}?view=attendance`} prefetch>
+                                <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                                Attendance
+                            </Link>
+                        </Button>
+                        <Button asChild size="sm" className="rounded-lg">
+                            <Link href={`/faculty/classes/${classItem.id}`}>
+                                Open
+                                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                            </Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </motion.div>
+    );
+}
+
+function MobileQuickActions() {
+    const actions = [
+        { label: "Profile", href: "/faculty/profile", icon: UserRound, color: "bg-blue-500" },
+        { label: "Classes", href: "/faculty/classes", icon: BookOpen, color: "bg-emerald-500" },
+        { label: "Schedule", href: "/faculty/schedule", icon: Calendar, color: "bg-amber-500" },
+        { label: "Help", href: "/faculty/help", icon: HelpCircle, color: "bg-violet-500" },
+    ];
+
+    return (
+        <section className="md:hidden px-1">
+            <div className="grid grid-cols-4 gap-4">
+                {actions.map((action) => {
+                    const Icon = action.icon;
+
+                    return (
+                        <Link key={action.href} href={action.href} className="group flex min-w-0 flex-col items-center gap-2">
+                            <div
+                                className={cn(
+                                    "flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition-all duration-200 group-active:scale-90",
+                                    "bg-card border-border/40 border group-hover:border-primary/40 group-hover:bg-primary/5",
+                                )}
+                            >
+                                <Icon className="text-primary h-6 w-6" strokeWidth={1.5} />
+                            </div>
+                            <span className="text-foreground/70 group-hover:text-foreground max-w-full truncate text-[11px] font-bold tracking-tight transition-colors">
+                                {action.label}
+                            </span>
+                        </Link>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
+
+function MobileMetricCard({
+    icon: Icon,
+    label,
+    value,
+    detail,
+    tone,
+    privateValue = false,
+}: {
+    icon: typeof Trophy;
+    label: string;
+    value: string | number;
+    detail: string;
+    tone: string;
+    privateValue?: boolean;
+}) {
+    const [revealed, setRevealed] = useState(!privateValue);
+    const iconTone = tone.split(" ").find((className) => className.startsWith("text-")) ?? "text-primary";
+    const bgTone = tone.split(" ").find((className) => className.startsWith("bg-")) ?? "bg-primary/10";
+
+    return (
+        <motion.div
+            whileHover={{ y: -2 }}
+            className="group"
+        >
+            <Card className="border-border/30 bg-card/80 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-border/60">
+                {/* Gradient background accent */}
+                <div className={cn("absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-20 blur-xl transition-all duration-300 group-hover:opacity-30", bgTone)} />
+                
+                <CardContent className="relative p-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                                <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase">{label}</p>
+                                {privateValue && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setRevealed((current) => !current)}
+                                        className="text-muted-foreground/60 hover:text-foreground transition-colors"
+                                        aria-label={revealed ? "Hide balance" : "Show balance"}
+                                    >
+                                        {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                    </button>
+                                )}
+                            </div>
+                            <motion.p
+                                key={revealed ? "revealed" : "hidden"}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.2 }}
+                                className="text-foreground mt-1 truncate text-lg font-bold tracking-tight leading-none"
+                            >
+                                {revealed ? value : "••••••"}
+                            </motion.p>
+                        </div>
+                        <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                            className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm", bgTone)}
+                        >
+                            <Icon className={cn("h-5 w-5", iconTone)} strokeWidth={2.2} />
+                        </motion.div>
+                    </div>
+                    <p className="text-foreground/50 mt-2 line-clamp-1 text-[11px] font-medium">{detail}</p>
+                </CardContent>
+            </Card>
+        </motion.div>
+    );
+}
+
+function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, currentSchoolYear, user }: { greeting: string; faculty_data: DashboardProps['faculty_data']; currentSemester: string; currentSchoolYear: string; user: User }) {
+    const totalStudents = faculty_data.upcoming_classes.reduce((sum, c) => sum + c.students_count, 0);
+    const hasClasses = faculty_data.upcoming_classes.length > 0;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="mx-auto flex w-full max-w-md flex-col md:hidden"
+        >
+            <div className="bg-primary/10 relative h-[140px] w-full overflow-hidden px-4 pt-5">
+                <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
+
+                <div className="relative flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1 pr-2">
+                        <p className="text-foreground/60 text-[10px] font-bold tracking-wider uppercase truncate">
+                            {getSemesterLabel(currentSemester)} • {currentSchoolYear}
+                        </p>
+                        <h1 className="text-foreground mt-0.5 text-xl font-bold tracking-tight leading-tight">
+                            {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(user.name)}</span>
+                        </h1>
+                    </div>
+                </div>
+            </div>
+
+            <div className="relative z-20 -mt-12 space-y-3 px-3.5 pb-24">
+                {/* Quick Stats */}
+                <section className="grid grid-cols-2 gap-3">
+                    <MobileMetricCard
+                        icon={BookOpen}
+                        label="Classes"
+                        value={faculty_data.upcoming_classes.length}
+                        detail="Teaching this semester"
+                        tone="bg-blue-500/10 text-blue-500"
+                    />
+                    <MobileMetricCard
+                        icon={Users}
+                        label="Students"
+                        value={totalStudents}
+                        detail="Total enrolled"
+                        tone="bg-emerald-500/10 text-emerald-500"
+                    />
+                    <MobileMetricCard
+                        icon={Calendar}
+                        label="Today"
+                        value={faculty_data.today_schedule.entries.length}
+                        detail="Classes scheduled"
+                        tone="bg-amber-500/10 text-amber-500"
+                    />
+                    <MobileMetricCard
+                        icon={Bell}
+                        label="Announcements"
+                        value={faculty_data.announcements.length}
+                        detail="Total notices"
+                        tone="bg-violet-500/10 text-violet-500"
+                    />
+                </section>
+
+                {/* Quick Actions */}
+                <MobileQuickActions />
+
+                {/* Today's Schedule */}
+                <section>
+                    <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
+                        <CardContent className="relative grid gap-4 p-4 pr-10 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
+                            <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
+                            <div className="min-w-0">
+                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Today's Schedule</p>
+                                {faculty_data.today_schedule.entries.length > 0 ? (
+                                    <div className="mt-2 space-y-2">
+                                        <h2 className="text-foreground truncate text-lg leading-tight font-semibold md:text-xl">
+                                            {faculty_data.today_schedule.entries[0].subject_title}
+                                        </h2>
+                                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                            <span className="flex items-center gap-1.5">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                {faculty_data.today_schedule.entries[0].start_time} - {faculty_data.today_schedule.entries[0].end_time}
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <MapPin className="h-3.5 w-3.5" />
+                                                {faculty_data.today_schedule.entries[0].room}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-muted-foreground mt-2 text-sm">No classes scheduled today. Enjoy your free time!</p>
+                                )}
+                            </div>
+                            {faculty_data.today_schedule.entries.length > 0 && (
+                                <Badge variant="outline" className="border-border/60 bg-background/60 hidden rounded-full px-3 py-1 md:inline-flex">
+                                    {faculty_data.today_schedule.entries[0].subject_code}
+                                </Badge>
+                            )}
+                        </CardContent>
+                    </Card>
+                </section>
+            </div>
+        </motion.div>
+    );
+}
+
 function DashboardContent({ user, is_new_user, faculty_data, id_card, current_semester, current_school_year }: DashboardProps) {
     const { props } = usePage<{
         onboarding?: {
@@ -315,35 +566,82 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
     }));
 
     const hasClasses = faculty_data.upcoming_classes.length > 0;
+    const greeting = getGreeting();
+    const totalStudents = faculty_data.upcoming_classes.reduce((sum, c) => sum + c.students_count, 0);
+    const urgentAnnouncements = faculty_data.announcements.filter(a => a.type === "important" || a.type === "warning").length;
 
     return (
         <>
             <Head title="Faculty Dashboard" />
             {onboardingEnabled && <OnboardingTour steps={facultyTourSteps} />}
 
-            <main className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+            {/* Mobile Dashboard */}
+            <MobileFacultyDashboard
+                greeting={greeting}
+                faculty_data={faculty_data}
+                currentSemester={current_semester}
+                currentSchoolYear={current_school_year}
+                user={user}
+            />
+
+            {/* Desktop Dashboard */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="mx-auto hidden w-full max-w-7xl flex-col gap-4 p-4 pb-16 md:flex md:gap-6 md:p-6"
+            >
                 {/* Header */}
-                <section data-tour="welcome-header" className="flex flex-col gap-4 rounded-2xl border bg-gradient-to-r from-sky-50 to-blue-50 p-5 md:flex-row md:items-center md:justify-between md:p-6 dark:from-sky-950/20 dark:to-blue-950/20">
-                    <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <h1 className="text-2xl font-bold tracking-tight">Welcome back, {user.name.split(" ")[0]}</h1>
-                            <PeriodBadge semester={current_semester} schoolYear={current_school_year} />
-                        </div>
-                        <p className="text-muted-foreground text-sm">
-                            {faculty_data.today_schedule.entries.length > 0
-                                ? `You have ${faculty_data.today_schedule.entries.length} class${faculty_data.today_schedule.entries.length > 1 ? "es" : ""} scheduled today.`
-                                : "No classes scheduled for today. Enjoy your free time!"}
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button asChild>
-                            <Link href="/faculty/classes">My Classes</Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                            <Link href="/faculty/schedule">Schedule</Link>
-                        </Button>
-                    </div>
+                <section data-tour="welcome-header">
+                    <Card className={`${dashboardPanelClass} relative overflow-hidden`}>
+                        {/* Decorative Glass Elements */}
+                        <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
+                        <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
+
+                        <CardContent className="relative z-10 p-2.5 sm:p-5 md:p-6">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                                <div className="max-w-2xl space-y-2 sm:space-y-4">
+                                    <Badge
+                                        variant="outline"
+                                        className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs"
+                                    >
+                                        <Sparkles className="text-primary mr-1 h-2.5 w-2.5 sm:mr-1.5 sm:h-3 sm:w-3" />
+                                        {getSemesterLabel(current_semester)} • {current_school_year}
+                                    </Badge>
+                                    <div>
+                                        <h1 className="text-foreground text-[1.35rem] leading-[1.15] font-bold tracking-tight sm:text-3xl md:text-4xl">
+                                            {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(user.name)}</span>
+                                        </h1>
+                                        <p className="text-muted-foreground hidden max-w-xl text-sm leading-relaxed sm:block sm:text-base">
+                                            Your teaching schedule, classes, and announcements are grouped here for the current semester.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 md:min-w-[300px] md:gap-3">
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
+                                            Today's Classes
+                                        </p>
+                                        <p className="text-foreground mt-0.5 truncate text-[11px] font-bold sm:mt-1 sm:text-sm">
+                                            {faculty_data.today_schedule.entries.length}
+                                        </p>
+                                    </div>
+                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
+                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
+                                            Total Students
+                                        </p>
+                                        <p className="text-foreground mt-0.5 truncate font-mono text-[11px] font-bold sm:mt-1 sm:text-sm">
+                                            {totalStudents}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </section>
+
+                {/* Mobile Quick Actions (already hidden on desktop) */}
+                <MobileQuickActions />
 
                 {/* Onboarding Checklist Widget */}
                 {onboardingEnabled && (
@@ -355,6 +653,42 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
                     <StatsGrid stats={faculty_data.stats} />
                 </div>
 
+                {/* Today's Schedule Banner */}
+                <section>
+                    <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
+                        <CardContent className="relative grid gap-4 p-4 pr-10 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
+                            <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
+                            <div className="min-w-0">
+                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Next Class</p>
+                                {faculty_data.today_schedule.entries.length > 0 ? (
+                                    <div className="mt-2 space-y-2">
+                                        <h2 className="text-foreground truncate text-lg leading-tight font-semibold md:text-xl">
+                                            {faculty_data.today_schedule.entries[0].subject_title}
+                                        </h2>
+                                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                            <span className="flex items-center gap-1.5">
+                                                <Clock className="h-3.5 w-3.5" />
+                                                {faculty_data.today_schedule.entries[0].start_time} - {faculty_data.today_schedule.entries[0].end_time}
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <MapPin className="h-3.5 w-3.5" />
+                                                {faculty_data.today_schedule.entries[0].room}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-muted-foreground mt-2 text-sm">No classes scheduled today. Enjoy your free time!</p>
+                                )}
+                            </div>
+                            {faculty_data.today_schedule.entries.length > 0 && (
+                                <Badge variant="outline" className="border-border/60 bg-background/60 hidden rounded-full px-3 py-1 md:inline-flex">
+                                    {faculty_data.today_schedule.entries[0].subject_code}
+                                </Badge>
+                            )}
+                        </CardContent>
+                    </Card>
+                </section>
+
                 <div className="grid gap-6 lg:grid-cols-12">
                     {/* Main Column */}
                     <div className="flex flex-col gap-6 lg:col-span-8">
@@ -365,18 +699,19 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
 
                         {/* My Classes */}
                         <div data-tour="my-classes" className="space-y-4">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-end justify-between gap-3">
                                 <div>
-                                    <h3 className="text-foreground text-lg font-semibold">My Classes</h3>
-                                    <p className="text-muted-foreground text-xs">
-                                        {hasClasses
-                                            ? `${faculty_data.upcoming_classes.length} active class${faculty_data.upcoming_classes.length > 1 ? "es" : ""} this period`
-                                            : "No classes assigned for the selected period"}
-                                    </p>
+                                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Your Classes</p>
+                                    <h3 className="mt-1 text-lg font-semibold">Current Semester</h3>
                                 </div>
-                                <Button asChild size="sm" variant="outline">
-                                    <Link href="/faculty/classes">View All</Link>
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="secondary" className="rounded-full">
+                                        {faculty_data.upcoming_classes.length} classes
+                                    </Badge>
+                                    <Button asChild size="sm" variant="outline">
+                                        <Link href="/faculty/classes">View All</Link>
+                                    </Button>
+                                </div>
                             </div>
 
                             {hasClasses ? (
@@ -386,19 +721,14 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
                                     ))}
                                 </div>
                             ) : (
-                                <Card className="border-border/60 border">
-                                    <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center">
-                                        <div className="bg-muted/50 rounded-full p-3">
-                                            <IconSchool className="text-muted-foreground h-6 w-6" />
-                                        </div>
-                                        <div>
-                                            <p className="text-foreground text-sm font-medium">No classes found</p>
-                                            <p className="text-muted-foreground mt-1 max-w-xs text-xs">
-                                                You don&apos;t have any classes assigned for{" "}
-                                                {current_semester === "summer" ? "Summer" : `Semester ${current_semester}`}, {current_school_year}.
-                                            </p>
-                                        </div>
-                                        <Button asChild variant="outline" size="sm">
+                                <Card className={`${dashboardPanelClass} border-dashed`}>
+                                    <CardContent className="flex flex-col items-center justify-center p-10 text-center">
+                                        <BookOpen className="text-muted-foreground h-9 w-9" />
+                                        <h3 className="mt-3 font-semibold">No classes assigned</h3>
+                                        <p className="text-muted-foreground mt-1 text-sm">
+                                            Once assigned, your classes will appear here.
+                                        </p>
+                                        <Button asChild variant="outline" size="sm" className="mt-3">
                                             <Link href="/faculty/classes">Manage Classes</Link>
                                         </Button>
                                     </CardContent>
@@ -439,7 +769,7 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
                         <AnnouncementsWidget announcements={mappedAnnouncements} />
                     </div>
                 </div>
-            </main>
+            </motion.div>
         </>
     );
 }
