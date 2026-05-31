@@ -28,6 +28,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 $HostsFile = "C:\Windows\System32\drivers\etc\hosts"
+$HerdBinPath = Join-Path $env:USERPROFILE ".config\herd\bin"
 
 # Colors (PowerShell uses different escape sequences)
 function Write-Success
@@ -86,14 +87,24 @@ if (-not $composerCommand)
 Write-Success "Composer is installed: $(composer --version | Select-Object -First 1)"
 
 # Check Herd
+if (Test-Path $HerdBinPath)
+{
+    if (-not ($env:PATH -split ';' | Where-Object { $_ -eq $HerdBinPath }))
+    {
+        $env:PATH = "$HerdBinPath;$env:PATH"
+    }
+}
+
 $herdCommand = Get-Command herd -ErrorAction SilentlyContinue
 if (-not $herdCommand)
 {
     Write-Error "Laravel Herd is not installed or not in PATH"
+    Write-Host "Expected Herd bin path: $HerdBinPath"
     Write-Host "Please install Laravel Herd from: https://herd.laravel.com/"
     exit 1
 }
 Write-Success "Laravel Herd is installed"
+Write-Info "Using Herd from: $($herdCommand.Source)"
 
 # Check Node.js
 $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
@@ -160,15 +171,6 @@ if (-not (Test-Path $EnvFile))
     Write-Success ".env file already exists"
 }
 
-# Generate APP_KEY if not set
-$EnvContent = Get-Content $EnvFile -Raw
-if ($EnvContent -match 'APP_KEY=\s*$')
-{
-    Write-Info "Generating APP_KEY..."
-    Set-Location $ProjectRoot
-    php artisan key:generate
-}
-
 # Step 3: Install Composer dependencies
 Write-Section "Composer Dependencies"
 
@@ -186,6 +188,36 @@ if ($composerProcess.ExitCode -eq 0)
 {
     Write-Error "Failed to install Composer dependencies"
     exit 1
+}
+
+# Generate APP_KEY via Artisan if not set
+$EnvContent = Get-Content $EnvFile -Raw
+$AppKeyLine = ($EnvContent -split "`r?`n") | Where-Object { $_ -match '^APP_KEY=' } | Select-Object -First 1
+$HasAppKey = $false
+if ($AppKeyLine)
+{
+    $AppKeyValue = ($AppKeyLine -replace '^APP_KEY=', '').Trim()
+    $HasAppKey = -not [string]::IsNullOrWhiteSpace($AppKeyValue)
+}
+
+if (-not $HasAppKey)
+{
+    Write-Info "Generating APP_KEY using Artisan..."
+    Set-Location $ProjectRoot
+    $keyGenerateOutput = php artisan key:generate --force 2>&1
+
+    if ($LASTEXITCODE -eq 0)
+    {
+        Write-Success "APP_KEY generated successfully"
+    } else
+    {
+        Write-Error "Failed to generate APP_KEY"
+        Write-Host $keyGenerateOutput
+        exit 1
+    }
+} else
+{
+    Write-Success "APP_KEY already exists"
 }
 
 # Step 4: Install npm dependencies
@@ -218,8 +250,8 @@ if (-not $SkipNpm)
     Write-Info "Skipping npm install (-SkipNpm flag set)"
 }
 
-# Step 5: Configure Herd proxy
-Write-Section "Herd Proxy Configuration"
+# Step 5: Configure Herd domains
+Write-Section "Herd Domain Configuration"
 
 # Get domains from .env
 $EnvContent = Get-Content $EnvFile -Raw
@@ -238,17 +270,66 @@ $MailpitHost = if ($EnvContent -match 'MAILPIT_HOST=(.*)')
 } else
 { "mailpit.local.test"
 }
-$Domains = @($PortalHost, $AdminHost, $MailpitHost)
+$Domains = @($PortalHost, $AdminHost, $MailpitHost) |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+    Select-Object -Unique
 
-Write-Info "Configuring Herd proxy for the following domains:"
+Write-Info "Configuring Herd domains from .env:"
 foreach ($domain in $Domains)
 {
     Write-Host "  - $domain" -ForegroundColor Cyan
 }
 
-# Herd automatically serves *.test domains
-# The project will be available at the domains configured in .env
-Write-Info "Herd will automatically serve *.test domains"
+Set-Location $ProjectRoot
+
+# Link project root to primary domain and additional domains as aliases
+$LinkedCount = 0
+$LinkExisting = 0
+$ExistingLinksOutput = herd links 2>&1
+
+foreach ($domain in $Domains)
+{
+    try
+    {
+        if ($ExistingLinksOutput -match [Regex]::Escape($domain))
+        {
+            Write-Info "Domain already linked: $domain"
+            $LinkExisting++
+            continue
+        }
+
+        $linkOutput = herd link $domain 2>&1
+
+        if ($LASTEXITCODE -eq 0)
+        {
+            Write-Success "Linked domain to project: $domain"
+            $LinkedCount++
+            $ExistingLinksOutput = "$ExistingLinksOutput`n$linkOutput"
+        } elseif ($linkOutput -match "already" -or $linkOutput -match "exists" -or $linkOutput -match "linked")
+        {
+            Write-Info "Domain already linked: $domain"
+            $LinkExisting++
+        } else
+        {
+            Write-Warn "Could not link domain: $domain"
+            Write-Host $linkOutput
+        }
+    } catch
+    {
+        Write-Warn "Error linking ${domain}: $_"
+    }
+}
+
+if ($LinkedCount -gt 0)
+{
+    Write-Success "Linked $LinkedCount domain(s)"
+}
+if ($LinkExisting -gt 0)
+{
+    Write-Success "$LinkExisting domain(s) were already linked"
+}
+
 Write-Success "Project directory: $ProjectRoot"
 
 # Step 6: Secure domains with HTTPS
@@ -257,18 +338,27 @@ Write-Section "SSL Certificate Setup"
 Write-Info "Securing domains with Herd SSL certificates..."
 $SecuredCount = 0
 $AlreadySecured = 0
+$SecuredSitesOutput = herd secured 2>&1
 
 foreach ($domain in $Domains)
 {
     try
     {
+        if ($SecuredSitesOutput -match [Regex]::Escape($domain))
+        {
+            Write-Info "Already secured: $domain"
+            $AlreadySecured++
+            continue
+        }
+
         $secureOutput = herd secure $domain 2>&1
 
         if ($LASTEXITCODE -eq 0)
         {
             Write-Success "Secured: $domain"
             $SecuredCount++
-        } elseif ($secureOutput -match "already secured")
+            $SecuredSitesOutput = "$SecuredSitesOutput`n$secureOutput"
+        } elseif ($secureOutput -match "already secured" -or $secureOutput -match "already")
         {
             Write-Info "Already secured: $domain"
             $AlreadySecured++

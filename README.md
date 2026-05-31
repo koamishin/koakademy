@@ -12,13 +12,15 @@
 <br />
 <div align="center">
   <a href="https://github.com/yukazakiri/koakademy">
-    <img src="https://raw.githubusercontent.com/koamishin/KoamiStarterKit/main/public/koamishin-logo.svg" alt="KoAkademy Logo" width="96" height="96" />
+    <img src="public/logo.png" alt="KoAkademy Logo" width="96" height="96" />
   </a>
 
   <h3 align="center">KoAkademy</h3>
 
   <p align="center">
-    Academic management platform built on Laravel 12, Filament, Inertia + React, and Tailwind CSS.
+    KoAkademy is an academic management platform that keeps student records, enrollment, billing, schedules, and school administration together in one application.
+    <br />
+    Built for schools, staff, and developers, it combines a polished web experience with a modern backend stack.
     <br />
     <a href="GETTING_STARTED.md"><strong>Explore the docs »</strong></a>
     <br />
@@ -60,15 +62,22 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![KoAkademy][product-screenshot]](https://portal.koakademy.edu)
+![KoAkademy][product-screenshot]
+KoAkademy is an academic management system made to simplify school operations for administrators, teachers, and students.
+It brings admissions, tuition, schedules, reporting, and school settings into one place so teams can work without switching tools.
 
-KoAkademy is a Laravel-based academic platform for student lifecycle workflows (enrollment, billing/tuition, schedules, and administrative operations).
-It uses Inertia + React for the UI and Filament for admin tooling, with settings-driven branding (logo/favicon/Open Graph) and PWA support.
+The platform is built with Laravel 12, Inertia + React, Filament, and Tailwind CSS, giving developers a modern codebase and users a fast, intuitive interface.
 
-Here's why:
-* Academic workflows shouldn’t sprawl across multiple tools.
-* Branding and metadata should be configurable without code changes.
-* Local development should be predictable and containerized.
+### Key Features
+
+* **Student Management** — Enrollment, records, and lifecycle tracking in one dashboard.
+* **Financial Management** — Billing, tuition payments, fee structures, and financial reporting.
+* **Schedule Management** — Class schedules, timetables, and room assignments.
+* **Admin Dashboard** — Comprehensive staff tooling for school operations and configuration.
+* **Student Portal** — Self-service access to grades, schedules, billing, and school information.
+* **Customizable Branding** — Logo, favicon, colors, and metadata configurable without code.
+* **Extensible Architecture** — Built on modern Laravel with reusable components and modules.
+* **Progressive Web App** — Works offline-first with install-to-home-screen support.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -542,7 +551,7 @@ Distributed under the GNU Affero General Public License v3.0 or later. See [`LIC
 [license-shield]: https://img.shields.io/github/license/yukazakiri/koakademy.svg?style=for-the-badge
 [license-url]: https://github.com/yukazakiri/koakademy/blob/master/LICENSE.md
 
-[product-screenshot]: https://raw.githubusercontent.com/koamishin/KoamiStarterKit/main/public/koamishin-logo.svg
+[product-screenshot]: /public/images/image.png
 
 [Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
 [Laravel-url]: https://laravel.com

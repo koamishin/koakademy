@@ -13,6 +13,8 @@ use App\Http\Controllers\FacultyGlobalSearchController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StudentInfoController;
 use App\Http\Controllers\UserSettingController;
+use App\Models\Faculty;
+use App\Services\GeneralSettingsService;
 use App\Support\FacultyPortalData;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Auth;
@@ -45,10 +47,10 @@ Route::middleware(['auth', 'faculty.verified', 'faculty.only', 'ensure.feature']
 
             // Generate ID card data
             $idCardService = app(App\Services\DigitalIdCardService::class);
-            $faculty = App\Models\Faculty::where('email', $user->email)->first();
+            $faculty = Faculty::where('email', $user->email)->first();
             $idCardData = $faculty ? $idCardService->generateFacultyIdCard($faculty) : null;
 
-            $settingsService = app(App\Services\GeneralSettingsService::class);
+            $settingsService = app(GeneralSettingsService::class);
 
             return Inertia::render('faculty/dashboard', [
                 'user' => [
@@ -86,6 +88,156 @@ Route::middleware(['auth', 'faculty.verified', 'faculty.only', 'ensure.feature']
                 'flash' => session('flash'),
             ]);
         })->name('schedule');
+
+        // Attendance
+        Route::get('/attendance', function () {
+            $user = Auth::user();
+
+            if (! $user) {
+                abort(403);
+            }
+
+            $faculty = Faculty::query()->where('email', $user->email)->first();
+
+            if (! $faculty) {
+                abort(403);
+            }
+
+            $settingsService = app(GeneralSettingsService::class);
+            $currentSemester = $settingsService->getCurrentSemester();
+            $currentSchoolYear = $settingsService->getCurrentSchoolYearString();
+
+            $classes = $faculty->classes()
+                ->currentAcademicPeriod()
+                ->with(['subject', 'SubjectByCodeFallback', 'ShsSubject', 'Room', 'schedules.room'])
+                ->withCount('class_enrollments')
+                ->orderBy('subject_code')
+                ->orderBy('section')
+                ->get()
+                ->map(function ($class): array {
+                    $primarySubject = $class->classification === 'shs'
+                        ? $class->ShsSubject
+                        : ($class->subject ?: $class->SubjectByCodeFallback);
+
+                    if (! $primarySubject) {
+                        $primarySubject = $class->subjects->first();
+                    }
+
+                    $scheduleSummary = $class->schedules
+                        ->sortBy(fn ($schedule) => $schedule->start_time?->format('H:i') ?? '00:00')
+                        ->map(fn ($schedule): string => sprintf(
+                            '%s %s-%s',
+                            ucfirst(mb_substr((string) $schedule->day_of_week, 0, 3)),
+                            $schedule->start_time?->format('H:i') ?? 'TBA',
+                            $schedule->end_time?->format('H:i') ?? 'TBA',
+                        ))
+                        ->values()
+                        ->all();
+
+                    return [
+                        'id' => $class->id,
+                        'subject_code' => $primarySubject?->code ?? $class->subject_code ?? 'N/A',
+                        'subject_title' => $primarySubject?->title ?? 'N/A',
+                        'section' => $class->section ?? 'N/A',
+                        'classification' => $class->classification ?? 'college',
+                        'students_count' => $class->class_enrollments_count ?? 0,
+                        'room' => $class->Room?->name ?? 'TBA',
+                        'schedule_summary' => $scheduleSummary,
+                        'manage_attendance_url' => sprintf('/faculty/classes/%s?tab=attendance', $class->id),
+                    ];
+                })
+                ->values();
+
+            return Inertia::render('faculty/attendance/index', [
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar_url ?? null,
+                    'role' => $user->role?->getLabel() ?? 'User',
+                ],
+                'faculty_data' => [
+                    'classes' => $classes,
+                ],
+                'current_semester' => (string) $currentSemester,
+                'current_school_year' => $currentSchoolYear,
+                'flash' => session('flash'),
+            ]);
+        })->name('attendance');
+
+        // Grades
+        Route::get('/grades', function () {
+            $user = Auth::user();
+
+            if (! $user) {
+                abort(403);
+            }
+
+            $faculty = Faculty::query()->where('email', $user->email)->first();
+
+            if (! $faculty) {
+                abort(403);
+            }
+
+            $settingsService = app(GeneralSettingsService::class);
+            $currentSemester = $settingsService->getCurrentSemester();
+            $currentSchoolYear = $settingsService->getCurrentSchoolYearString();
+
+            $classes = $faculty->classes()
+                ->currentAcademicPeriod()
+                ->with(['subject', 'SubjectByCodeFallback', 'ShsSubject', 'Room', 'schedules.room'])
+                ->withCount('class_enrollments')
+                ->orderBy('subject_code')
+                ->orderBy('section')
+                ->get()
+                ->map(function ($class): array {
+                    $primarySubject = $class->classification === 'shs'
+                        ? $class->ShsSubject
+                        : ($class->subject ?: $class->SubjectByCodeFallback);
+
+                    if (! $primarySubject) {
+                        $primarySubject = $class->subjects->first();
+                    }
+
+                    $scheduleSummary = $class->schedules
+                        ->sortBy(fn ($schedule) => $schedule->start_time?->format('H:i') ?? '00:00')
+                        ->map(fn ($schedule): string => sprintf(
+                            '%s %s-%s',
+                            ucfirst(mb_substr((string) $schedule->day_of_week, 0, 3)),
+                            $schedule->start_time?->format('H:i') ?? 'TBA',
+                            $schedule->end_time?->format('H:i') ?? 'TBA',
+                        ))
+                        ->values()
+                        ->all();
+
+                    return [
+                        'id' => $class->id,
+                        'subject_code' => $primarySubject?->code ?? $class->subject_code ?? 'N/A',
+                        'subject_title' => $primarySubject?->title ?? 'N/A',
+                        'section' => $class->section ?? 'N/A',
+                        'classification' => $class->classification ?? 'college',
+                        'students_count' => $class->class_enrollments_count ?? 0,
+                        'room' => $class->Room?->name ?? 'TBA',
+                        'schedule_summary' => $scheduleSummary,
+                        'manage_grades_url' => sprintf('/faculty/classes/%s?tab=grades', $class->id),
+                    ];
+                })
+                ->values();
+
+            return Inertia::render('faculty/grades/index', [
+                'user' => [
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar_url ?? null,
+                    'role' => $user->role?->getLabel() ?? 'User',
+                ],
+                'faculty_data' => [
+                    'classes' => $classes,
+                ],
+                'current_semester' => (string) $currentSemester,
+                'current_school_year' => $currentSchoolYear,
+                'flash' => session('flash'),
+            ]);
+        })->name('grades');
 
         // Classes
         Route::get('/classes', [ClassesController::class, 'index'])->name('classes.index');

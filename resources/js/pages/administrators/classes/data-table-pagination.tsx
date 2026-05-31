@@ -6,13 +6,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface DataTablePaginationProps<TData> {
     table: Table<TData>;
+    pagination?: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        next_page_url: string | null;
+        prev_page_url: string | null;
+        from: number;
+        to: number;
+    };
 }
 
-export function DataTablePagination<TData>({ table }: DataTablePaginationProps<TData>) {
+export function DataTablePagination<TData>({ table, pagination }: DataTablePaginationProps<TData>) {
     return (
         <div className="flex items-center justify-between px-2">
             <div className="text-muted-foreground flex-1 text-sm">
-                {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                {pagination ? (
+                    <>
+                        Showing {pagination.from} to {pagination.to} of {pagination.total} row(s)
+                    </>
+                ) : (
+                    <>
+                        {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                    </>
+                )}
             </div>
             <div className="flex items-center space-x-6 lg:space-x-8">
                 <div className="flex items-center space-x-2">

@@ -6,6 +6,7 @@ namespace App\Features\Toggles;
 
 use App\Features\Concerns\ResolvesFeatureToggle;
 use App\Features\Contracts\FeatureToggle;
+use App\Models\User;
 
 final class StudentDeveloperMode implements FeatureToggle
 {
@@ -73,5 +74,10 @@ final class StudentDeveloperMode implements FeatureToggle
     public function category(): string
     {
         return 'Student';
+    }
+
+    public function resolve(User $scope): bool
+    {
+        return false;
     }
 }

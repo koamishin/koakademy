@@ -29,6 +29,7 @@ return [
         'onboarding-student-grades-preview',
         'onboarding-student-attendance-tracker',
         'onboarding-student-developer-mode',
+        'onboarding-admin-developer-mode',
     ],
     'experimental_features_roles' => [
         'onboarding-faculty-toolkit' => ['faculty'],
@@ -55,5 +56,6 @@ return [
         'onboarding-student-grades-preview' => ['student', 'shs_student', 'graduate_student'],
         'onboarding-student-attendance-tracker' => ['student', 'shs_student', 'graduate_student'],
         'onboarding-student-developer-mode' => ['student', 'shs_student', 'graduate_student'],
+        'onboarding-admin-developer-mode' => ['admin'],
     ],
 ];

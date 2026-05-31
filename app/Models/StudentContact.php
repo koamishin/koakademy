@@ -29,11 +29,14 @@ final class StudentContact extends Model
     protected $fillable = [
         'personal_contact',
         'facebook',
+        'facebook_contact',
         'twitter',
         'instagram',
         'linkedin',
         'emergency_contact_name',
         'emergency_contact_phone',
+        'emergency_contact_address',
         'emergency_contact_relationship',
+        'student_id',
     ];
 }

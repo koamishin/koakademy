@@ -18,7 +18,7 @@ import { router } from "@inertiajs/react";
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableViewOptions } from "./data-table-view-options";
 
-declare let route: any;
+declare let route: (name: string, params?: Record<string, unknown> | string | number) => string;
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -33,7 +33,7 @@ interface DataTableProps<TData, TValue> {
         from: number;
         to: number;
     };
-    filters?: Record<string, any>;
+    filters?: Record<string, unknown>;
     routeName?: string;
 }
 
@@ -149,7 +149,7 @@ export function DataTable<TData, TValue>({
                                             return;
                                         }
 
-                                        const classRow = row.original as any;
+                                        const classRow = row.original as { id?: number };
                                         if (classRow?.id) {
                                             router.visit(route("administrators.classes.show", { class: classRow.id }));
                                         }
@@ -171,7 +171,7 @@ export function DataTable<TData, TValue>({
                     </TableBody>
                 </Table>
             </div>
-            <DataTablePagination table={table} />
+            <DataTablePagination table={table} pagination={pagination} />
         </div>
     );
 }

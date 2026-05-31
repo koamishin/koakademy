@@ -30,12 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
             '127.0.0.1',
             'portal\.koakademy\.test',
             'admin\.koakademy\.test',
-            'portal\.dccp\.test',
-            'admin\.dccp\.test',
-            'admin\.dccp\.edu\.ph',
-            'portal\.dccp\.edu\.ph',
-            'portal\.dccp\.com',
-            'admin\.dccp\.com',
         ]);
 
         $middleware->web(append: [
@@ -67,11 +61,38 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (Throwable $e, $request) {
             if ($request->is('classes/*/posts') || $request->is('api/*')) {
+                $statusCode = 500;
+                $code = 'SERVER_ERROR';
+
+                if ($e instanceof Illuminate\Auth\AuthenticationException) {
+                    $statusCode = 401;
+                    $code = 'UNAUTHENTICATED';
+                } elseif ($e instanceof Illuminate\Validation\ValidationException) {
+                    $statusCode = 422;
+                    $code = 'VALIDATION_ERROR';
+
+                    return response()->json([
+                        'error' => true,
+                        'message' => $e->getMessage(),
+                        'errors' => $e->errors(),
+                        'code' => $code,
+                    ], $statusCode);
+                } elseif ($e instanceof Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
+                    $statusCode = $e->getStatusCode();
+                    $code = $statusCode === 403 ? 'FORBIDDEN' : ($statusCode === 404 ? 'NOT_FOUND' : 'HTTP_ERROR');
+                } elseif ($e instanceof Spatie\Permission\Exceptions\UnauthorizedException) {
+                    $statusCode = 403;
+                    $code = 'FORBIDDEN';
+                } elseif ($e instanceof Illuminate\Http\Exceptions\PostTooLargeException) {
+                    $statusCode = 413;
+                    $code = 'POST_TOO_LARGE';
+                }
+
                 return response()->json([
                     'error' => true,
                     'message' => $e->getMessage(),
-                    'code' => $e instanceof Illuminate\Http\Exceptions\PostTooLargeException ? 'POST_TOO_LARGE' : 'SERVER_ERROR',
-                ], $e instanceof Illuminate\Http\Exceptions\PostTooLargeException ? 413 : 500);
+                    'code' => $code,
+                ], $statusCode);
             }
         });
         Integration::handles($exceptions);

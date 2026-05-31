@@ -1458,15 +1458,17 @@ final class AdministratorEnrollmentManagementController extends Controller
             return response()->json([]);
         }
 
+        $like = '%'.mb_strtolower($search).'%';
+
         $students = Student::query()
             ->with('Course')
-            ->where(function ($query) use ($search): void {
-                $query->where('id', 'like', "%{$search}%")
-                    ->orWhere('first_name', 'ilike', "%{$search}%")
-                    ->orWhere('last_name', 'ilike', "%{$search}%")
-                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) ILIKE ?", ["%{$search}%"])
-                    ->orWhereHas('Course', function ($q) use ($search): void {
-                        $q->where('code', 'ilike', "%{$search}%");
+            ->where(function ($query) use ($like): void {
+                $query->where('id', 'like', $like)
+                    ->orWhereRaw('LOWER(first_name) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(last_name) LIKE ?', [$like])
+                    ->orWhereRaw("LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?", [$like])
+                    ->orWhereHas('Course', function ($q) use ($like): void {
+                        $q->whereRaw('LOWER(code) LIKE ?', [$like]);
                     });
             })
             ->limit(50)
@@ -1550,9 +1552,10 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->where('course_id', $courseId);
 
         if ($search) {
-            $subjectsQuery->where(function ($query) use ($search): void {
-                $query->where('code', 'ilike', "%{$search}%")
-                    ->orWhere('title', 'ilike', "%{$search}%");
+            $like = '%'.mb_strtolower($search).'%';
+            $subjectsQuery->where(function ($query) use ($like): void {
+                $query->whereRaw('LOWER(code) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(title) LIKE ?', [$like]);
             });
         }
 
@@ -2073,9 +2076,10 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->with(['subject:id,code,title,units,lecture,laboratory', 'class:id,subject_id,section,subject_code']);
 
         if (is_string($search) && mb_strlen($search) >= 1) {
-            $query->whereHas('subject', function ($q) use ($search): void {
-                $q->where('code', 'ilike', "%{$search}%")
-                    ->orWhere('title', 'ilike', "%{$search}%");
+            $like = '%'.mb_strtolower($search).'%';
+            $query->whereHas('subject', function ($q) use ($like): void {
+                $q->whereRaw('LOWER(code) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(title) LIKE ?', [$like]);
             });
         }
 

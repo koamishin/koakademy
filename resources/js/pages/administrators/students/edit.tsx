@@ -1,50 +1,89 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 import { Head, Link, router, useForm } from "@inertiajs/react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Activity, ArrowLeft, BookOpen, Check, Contact, LayoutGrid, Plus, Save, School, Sparkles, Trash2, User as UserIcon } from "lucide-react";
+import {
+    ArrowLeft,
+    Banknote,
+    BookOpen,
+    Briefcase,
+    Calendar,
+    Check,
+    GraduationCap,
+    Hash,
+    LayoutGrid,
+    Loader2,
+    Mail,
+    MapPin,
+    Phone,
+    Plus,
+    RefreshCw,
+    Save,
+    School,
+    Trash2,
+    User as UserIcon,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-declare let route: any;
+declare const route: (name: string, params?: unknown) => string;
+
+interface Option {
+    value: string | number;
+    label: string;
+    is_active?: boolean;
+}
 
 interface Student {
     id: number;
-    student_type: string;
-    student_id: string;
+    student_type: string | null;
+    student_id: string | number | null;
     lrn: string | null;
     first_name: string;
     last_name: string;
     middle_name: string | null;
+    suffix: string | null;
     gender: string;
-    birth_date: string;
-    age: number;
+    birth_date: string | null;
+    age: number | null;
     email: string | null;
+    phone: string | null;
     course_id: number | null;
-    academic_year: number;
+    academic_year: number | null;
     shs_strand_id: number | null;
     remarks: string | null;
-    created_at: string;
-
-    // Statistical Data
+    civil_status: string | null;
+    nationality: string | null;
+    religion: string | null;
     ethnicity: string | null;
     city_of_origin: string | null;
     province_of_origin: string | null;
     region_of_origin: string | null;
     is_indigenous_person: boolean;
     indigenous_group: string | null;
+    is_pwd: boolean;
+    pwd_type: string | null;
+    is_solo_parent: boolean;
+    is_senior_citizen: boolean;
+    is_magna_carta: boolean;
+    is_underprivileged: boolean;
+    is_first_generation: boolean;
+    income_bracket_mode: string | null;
+    use_same_parent_income: boolean | null;
+    family_income_bracket: string | null;
+    father_income_bracket: string | null;
+    mother_income_bracket: string | null;
     status: string | null;
     withdrawal_date: string | null;
     withdrawal_reason: string | null;
@@ -57,26 +96,131 @@ interface Student {
     job_position: string | null;
     employment_date: string | null;
     employed_by_institution: boolean;
-
-    // Relationships
     Course: { code: string; title: string } | null;
     shsStrand: { strand_name: string } | null;
-    studentContactsInfo: any;
-    studentParentInfo: any;
-    studentEducationInfo: any;
-    personalInfo: any;
+    contacts: Record<string, unknown> | null;
+    studentContactsInfo: Record<string, unknown> | null;
+    studentParentInfo: Record<string, unknown> | null;
+    studentEducationInfo: Record<string, unknown> | null;
+    personalInfo: Record<string, unknown> | null;
 }
 
-interface Option {
-    value: string | number;
-    label: string;
+interface EditStudentForm {
+    student_type: string;
+    student_id: string;
+    lrn: string;
+    status: string;
+    first_name: string;
+    last_name: string;
+    middle_name: string;
+    suffix: string;
+    gender: string;
+    birth_date: string;
+    age: string;
+    email: string;
+    phone: string;
+    civil_status: string;
+    nationality: string;
+    citizenship: string;
+    religion: string;
+    course_id: string;
+    shs_strand_id: string;
+    academic_year: string;
+    remarks: string;
+    personal_contact: string;
+    emergency_contact_name: string;
+    emergency_contact_phone: string;
+    emergency_contact_address: string;
+    emergency_contact_relationship: string;
+    facebook_contact: string;
+    twitter: string;
+    instagram: string;
+    linkedin: string;
+    fathers_name: string;
+    father_occupation: string;
+    father_contact: string;
+    father_email: string;
+    mothers_name: string;
+    mother_occupation: string;
+    mother_contact: string;
+    mother_email: string;
+    guardian_name: string;
+    guardian_relationship: string;
+    guardian_contact: string;
+    guardian_email: string;
+    family_address: string;
+    current_address: string;
+    permanent_address: string;
+    birthplace: string;
+    elementary_school: string;
+    elementary_graduate_year: string;
+    elementary_school_address: string;
+    junior_high_school_name: string;
+    junior_high_graduation_year: string;
+    junior_high_school_address: string;
+    senior_high_name: string;
+    senior_high_graduate_year: string;
+    senior_high_address: string;
+    college_school: string;
+    college_course: string;
+    college_year_graduated: string;
+    vocational_school: string;
+    vocational_course: string;
+    vocational_year_graduated: string;
+    ethnicity: string;
+    region_of_origin: string;
+    province_of_origin: string;
+    city_of_origin: string;
+    is_indigenous_person: boolean;
+    indigenous_group: string;
+    is_pwd: boolean;
+    pwd_type: string;
+    is_solo_parent: boolean;
+    is_senior_citizen: boolean;
+    is_magna_carta: boolean;
+    is_underprivileged: boolean;
+    is_first_generation: boolean;
+    income_bracket_mode: string;
+    use_same_parent_income: boolean;
+    family_income_bracket: string;
+    father_income_bracket: string;
+    mother_income_bracket: string;
+    scholarship_type: string;
+    scholarship_details: string;
+    employment_status: string;
+    employer_name: string;
+    job_position: string;
+    employment_date: string;
+    employed_by_institution: boolean;
+    withdrawal_date: string;
+    withdrawal_reason: string;
+    attrition_category: string;
+    dropout_date: string;
+    weight: string;
+    height: string;
 }
 
-interface Subject {
+interface CurrentEnrollment {
     id: number;
-    code: string;
-    title: string;
-    units: number;
+    subject: {
+        code: string;
+        title: string;
+        units: number;
+    };
+}
+
+interface CurrentClass {
+    id: number;
+    class?: {
+        subject?: {
+            code?: string;
+            title?: string;
+        };
+        section?: string | null;
+        faculty?: {
+            full_name?: string | null;
+        };
+    };
 }
 
 interface EditStudentProps {
@@ -93,153 +237,333 @@ interface EditStudentProps {
         regions: Option[];
         subjects: Option[];
     };
-    current_enrollments: any[];
-    current_classes: any[];
+    current_enrollments: CurrentEnrollment[];
+    current_classes: CurrentClass[];
 }
 
-const SECTIONS = [
-    { id: "basic", label: "Basic Info", icon: UserIcon },
-    { id: "personal", label: "Personal & Contact", icon: Contact },
-    { id: "education", label: "Education History", icon: School },
-    { id: "statistical", label: "Statistical Data", icon: Activity },
-    { id: "enrollment", label: "Enrollment & Classes", icon: BookOpen },
+const CIVIL_STATUS_OPTIONS = [
+    { value: "single", label: "Single" },
+    { value: "married", label: "Married" },
+    { value: "widowed", label: "Widowed" },
+    { value: "separated", label: "Separated" },
+    { value: "annulled", label: "Annulled" },
 ];
 
+const NATIONALITY_OPTIONS = [
+    { value: "filipino", label: "Filipino" },
+    { value: "american", label: "American" },
+    { value: "chinese", label: "Chinese" },
+    { value: "indian", label: "Indian" },
+    { value: "korean", label: "Korean" },
+    { value: "japanese", label: "Japanese" },
+    { value: "other", label: "Other" },
+];
+
+function requiredLabel(label: string) {
+    return (
+        <>
+            {label} <span className="text-destructive">*</span>
+        </>
+    );
+}
+
+function asString(value: unknown): string {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value);
+}
+
+function dateValue(value: string | null): string {
+    return value ? value.split("T")[0] : "";
+}
+
+function relationValue(relation: Record<string, unknown> | null, ...keys: string[]): string {
+    if (!relation) {
+        return "";
+    }
+
+    for (const key of keys) {
+        const value = relation[key];
+
+        if (value !== null && value !== undefined && value !== "") {
+            return String(value);
+        }
+    }
+
+    return "";
+}
+
+function nestedValue(source: Record<string, unknown> | null, path: string): string {
+    if (!source) {
+        return "";
+    }
+
+    const value = path.split(".").reduce<unknown>((current, segment) => {
+        if (!current || typeof current !== "object") {
+            return undefined;
+        }
+
+        return (current as Record<string, unknown>)[segment];
+    }, source);
+
+    if (value === null || value === undefined || value === "") {
+        return "";
+    }
+
+    return String(value);
+}
+
 export default function AdministratorStudentEdit({ user, student, options, current_enrollments = [], current_classes = [] }: EditStudentProps) {
-    const [activeSection, setActiveSection] = useState("basic");
     const [addSubjectOpen, setAddSubjectOpen] = useState(false);
     const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
     const [isGeneratingId, setIsGeneratingId] = useState(false);
 
-    const { data, setData, put, processing, errors } = useForm({
-        // Basic Info
+    const { data, setData, put, processing, errors } = useForm<EditStudentForm>({
         student_type: student.student_type || "college",
-        student_id: student.student_id || "",
+        student_id: asString(student.student_id),
         lrn: student.lrn || "",
+        status: student.status || "enrolled",
         first_name: student.first_name || "",
         last_name: student.last_name || "",
         middle_name: student.middle_name || "",
+        suffix: student.suffix || "",
         gender: student.gender || "male",
-        birth_date: student.birth_date ? student.birth_date.split("T")[0] : "",
-        age: student.age || 0,
+        birth_date: dateValue(student.birth_date),
+        age: asString(student.age),
         email: student.email || "",
+        phone: student.phone || "",
+        civil_status: student.civil_status || relationValue(student.personalInfo, "civil_status") || "single",
+        nationality: student.nationality || relationValue(student.personalInfo, "citizenship") || "filipino",
+        citizenship: student.nationality || relationValue(student.personalInfo, "citizenship") || "filipino",
+        religion: student.religion || relationValue(student.personalInfo, "religion"),
         course_id: student.course_id ? student.course_id.toString() : "",
         academic_year: student.academic_year ? student.academic_year.toString() : "1",
         shs_strand_id: student.shs_strand_id ? student.shs_strand_id.toString() : "",
         remarks: student.remarks || "",
-
-        // Guardian Contact
-        personal_contact: student.studentContactsInfo?.personal_contact || "",
-        emergency_contact_name: student.studentContactsInfo?.emergency_contact_name || "",
-        emergency_contact_phone: student.studentContactsInfo?.emergency_contact_phone || "",
-        emergency_contact_address: student.studentContactsInfo?.emergency_contact_address || "",
-
-        // Parent Info
-        fathers_name: student.studentParentInfo?.fathers_name || "",
-        mothers_name: student.studentParentInfo?.mothers_name || "",
-
-        // Education Info
-        elementary_school: student.studentEducationInfo?.elementary_school || "",
-        elementary_graduate_year: student.studentEducationInfo?.elementary_graduate_year || "",
-        elementary_school_address: student.studentEducationInfo?.elementary_school_address || "",
-        junior_high_school_name: student.studentEducationInfo?.junior_high_school_name || "",
-        junior_high_graduation_year: student.studentEducationInfo?.junior_high_graduation_year || "",
-        junior_high_school_address: student.studentEducationInfo?.junior_high_school_address || "",
-        senior_high_name: student.studentEducationInfo?.senior_high_name || "",
-        senior_high_graduate_year: student.studentEducationInfo?.senior_high_graduate_year || "",
-        senior_high_address: student.studentEducationInfo?.senior_high_address || "",
-
-        // Address & Personal Info
-        current_address: student.personalInfo?.current_adress || "",
-        permanent_address: student.personalInfo?.permanent_address || "",
-        birthplace: student.personalInfo?.birthplace || "",
-        civil_status: student.personalInfo?.civil_status || "",
-        citizenship: student.personalInfo?.citizenship || "",
-        religion: student.personalInfo?.religion || "",
-        weight: student.personalInfo?.weight || "",
-        height: student.personalInfo?.height || "",
-
-        // Statistical Data
+        personal_contact:
+            relationValue(student.studentContactsInfo, "personal_contact") ||
+            nestedValue(student.contacts, "personal_contact") ||
+            student.phone ||
+            "",
+        emergency_contact_name:
+            relationValue(student.studentContactsInfo, "emergency_contact_name") ||
+            nestedValue(student.contacts, "emergency_contact_name") ||
+            nestedValue(student.contacts, "parents.guardian_name"),
+        emergency_contact_phone:
+            relationValue(student.studentContactsInfo, "emergency_contact_phone") ||
+            nestedValue(student.contacts, "emergency_contact_phone") ||
+            nestedValue(student.contacts, "parents.guardian_contact"),
+        emergency_contact_address:
+            relationValue(student.studentContactsInfo, "emergency_contact_address") ||
+            nestedValue(student.contacts, "emergency_contact_address") ||
+            nestedValue(student.contacts, "parents.family_address"),
+        emergency_contact_relationship:
+            relationValue(student.studentContactsInfo, "emergency_contact_relationship") ||
+            nestedValue(student.contacts, "emergency_contact_relationship") ||
+            nestedValue(student.contacts, "parents.guardian_relationship"),
+        facebook_contact: relationValue(student.studentContactsInfo, "facebook_contact", "facebook") || nestedValue(student.contacts, "facebook"),
+        twitter: relationValue(student.studentContactsInfo, "twitter") || nestedValue(student.contacts, "twitter"),
+        instagram: relationValue(student.studentContactsInfo, "instagram") || nestedValue(student.contacts, "instagram"),
+        linkedin: relationValue(student.studentContactsInfo, "linkedin") || nestedValue(student.contacts, "linkedin"),
+        fathers_name: relationValue(student.studentParentInfo, "fathers_name", "father_name"),
+        father_occupation:
+            relationValue(student.studentParentInfo, "father_occupation") || nestedValue(student.contacts, "parents.father_occupation"),
+        father_contact: relationValue(student.studentParentInfo, "father_contact") || nestedValue(student.contacts, "parents.father_contact"),
+        father_email: relationValue(student.studentParentInfo, "father_email") || nestedValue(student.contacts, "parents.father_email"),
+        mothers_name: relationValue(student.studentParentInfo, "mothers_name", "mother_name"),
+        mother_occupation:
+            relationValue(student.studentParentInfo, "mother_occupation") || nestedValue(student.contacts, "parents.mother_occupation"),
+        mother_contact: relationValue(student.studentParentInfo, "mother_contact") || nestedValue(student.contacts, "parents.mother_contact"),
+        mother_email: relationValue(student.studentParentInfo, "mother_email") || nestedValue(student.contacts, "parents.mother_email"),
+        guardian_name: relationValue(student.studentParentInfo, "guardian_name") || nestedValue(student.contacts, "parents.guardian_name"),
+        guardian_relationship:
+            relationValue(student.studentParentInfo, "guardian_relationship") || nestedValue(student.contacts, "parents.guardian_relationship"),
+        guardian_contact: relationValue(student.studentParentInfo, "guardian_contact") || nestedValue(student.contacts, "parents.guardian_contact"),
+        guardian_email: relationValue(student.studentParentInfo, "guardian_email") || nestedValue(student.contacts, "parents.guardian_email"),
+        family_address: relationValue(student.studentParentInfo, "family_address") || nestedValue(student.contacts, "parents.family_address"),
+        elementary_school: relationValue(student.studentEducationInfo, "elementary_school"),
+        elementary_graduate_year:
+            relationValue(student.studentEducationInfo, "elementary_graduate_year", "elementary_year_graduated") ||
+            nestedValue(student.contacts, "education.elementary_year_graduated"),
+        elementary_school_address: relationValue(student.studentEducationInfo, "elementary_school_address"),
+        junior_high_school_name:
+            relationValue(student.studentEducationInfo, "junior_high_school_name", "high_school") ||
+            nestedValue(student.contacts, "education.high_school"),
+        junior_high_graduation_year:
+            relationValue(student.studentEducationInfo, "junior_high_graduation_year", "high_school_year_graduated") ||
+            nestedValue(student.contacts, "education.high_school_year_graduated"),
+        junior_high_school_address: relationValue(student.studentEducationInfo, "junior_high_school_address"),
+        senior_high_name:
+            relationValue(student.studentEducationInfo, "senior_high_name", "senior_high_school") ||
+            nestedValue(student.contacts, "education.senior_high_school"),
+        senior_high_graduate_year:
+            relationValue(student.studentEducationInfo, "senior_high_graduate_year", "senior_high_year_graduated") ||
+            nestedValue(student.contacts, "education.senior_high_year_graduated"),
+        senior_high_address: relationValue(student.studentEducationInfo, "senior_high_address"),
+        college_school: relationValue(student.studentEducationInfo, "college_school") || nestedValue(student.contacts, "education.college_school"),
+        college_course: relationValue(student.studentEducationInfo, "college_course") || nestedValue(student.contacts, "education.college_course"),
+        college_year_graduated:
+            relationValue(student.studentEducationInfo, "college_year_graduated") ||
+            nestedValue(student.contacts, "education.college_year_graduated"),
+        vocational_school:
+            relationValue(student.studentEducationInfo, "vocational_school") || nestedValue(student.contacts, "education.vocational_school"),
+        vocational_course:
+            relationValue(student.studentEducationInfo, "vocational_course") || nestedValue(student.contacts, "education.vocational_course"),
+        vocational_year_graduated:
+            relationValue(student.studentEducationInfo, "vocational_year_graduated") ||
+            nestedValue(student.contacts, "education.vocational_year_graduated"),
+        current_address: relationValue(student.personalInfo, "current_adress"),
+        permanent_address: relationValue(student.personalInfo, "permanent_address"),
+        birthplace: relationValue(student.personalInfo, "birthplace", "place_of_birth"),
         ethnicity: student.ethnicity || "",
         city_of_origin: student.city_of_origin || "",
         province_of_origin: student.province_of_origin || "",
         region_of_origin: student.region_of_origin || "",
         is_indigenous_person: student.is_indigenous_person || false,
         indigenous_group: student.indigenous_group || "",
-        status: student.status || "enrolled",
-        withdrawal_date: student.withdrawal_date ? student.withdrawal_date.split("T")[0] : "",
+        is_pwd: Boolean(student.is_pwd),
+        pwd_type: student.pwd_type || "",
+        is_solo_parent: Boolean(student.is_solo_parent),
+        is_senior_citizen: Boolean(student.is_senior_citizen),
+        is_magna_carta: Boolean(student.is_magna_carta),
+        is_underprivileged: Boolean(student.is_underprivileged),
+        is_first_generation: Boolean(student.is_first_generation),
+        income_bracket_mode: student.income_bracket_mode || "annual",
+        use_same_parent_income: student.use_same_parent_income ?? true,
+        family_income_bracket: student.family_income_bracket || "",
+        father_income_bracket: student.father_income_bracket || "",
+        mother_income_bracket: student.mother_income_bracket || "",
+        withdrawal_date: dateValue(student.withdrawal_date),
         withdrawal_reason: student.withdrawal_reason || "",
         attrition_category: student.attrition_category || "",
-        dropout_date: student.dropout_date ? student.dropout_date.split("T")[0] : "",
+        dropout_date: dateValue(student.dropout_date),
         scholarship_type: student.scholarship_type || "none",
         scholarship_details: student.scholarship_details || "",
         employment_status: student.employment_status || "not_applicable",
         employer_name: student.employer_name || "",
         job_position: student.job_position || "",
-        employment_date: student.employment_date ? student.employment_date.split("T")[0] : "",
+        employment_date: dateValue(student.employment_date),
         employed_by_institution: student.employed_by_institution || false,
+        weight: relationValue(student.personalInfo, "weight"),
+        height: relationValue(student.personalInfo, "height"),
     });
 
-    // Auto-calculate age
+    const isSHS = data.student_type === "shs";
+    const isGraduated = data.status === "graduated";
+    const isWithdrawn = data.status === "withdrawn" || data.status === "dropped";
+    const showEmployment =
+        isGraduated &&
+        data.employment_status !== "not_applicable" &&
+        data.employment_status !== "unemployed" &&
+        data.employment_status !== "further_study";
+
+    const fieldError = (field: keyof EditStudentForm) => (errors[field] ? <p className="text-destructive text-sm">{errors[field]}</p> : null);
+
+    const yearLevelOptions = isSHS
+        ? [
+              { value: "11", label: "Grade 11" },
+              { value: "12", label: "Grade 12" },
+          ]
+        : [
+              { value: "1", label: "1st Year" },
+              { value: "2", label: "2nd Year" },
+              { value: "3", label: "3rd Year" },
+              { value: "4", label: "4th Year" },
+              { value: "5", label: "Graduate" },
+          ];
+
     useEffect(() => {
-        if (data.birth_date) {
-            const age = new Date().getFullYear() - new Date(data.birth_date).getFullYear();
-            setData("age", age);
+        if (!data.birth_date) {
+            setData("age", "");
+            return;
         }
+
+        const birthDate = new Date(data.birth_date);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDifference = today.getMonth() - birthDate.getMonth();
+
+        if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        setData("age", age.toString());
     }, [data.birth_date]);
 
+    useEffect(() => {
+        if (isSHS) {
+            setData("course_id", "");
+
+            if (data.academic_year !== "11" && data.academic_year !== "12") {
+                setData("academic_year", "11");
+            }
+
+            return;
+        }
+
+        setData("shs_strand_id", "");
+
+        if (data.academic_year === "11" || data.academic_year === "12") {
+            setData("academic_year", "1");
+        }
+    }, [data.student_type]);
+
     const handleGenerateId = async () => {
-        if (!data.student_type) return;
+        if (!data.student_type || isSHS) {
+            return;
+        }
 
         setIsGeneratingId(true);
+
         try {
-            // @ts-ignore
-            const url = route("administrators.students.generate-id", { type: data.student_type });
-            const response = await fetch(url);
+            const response = await fetch(route("administrators.students.generate-id", { type: data.student_type }));
+
             if (response.ok) {
-                const result = await response.json();
+                const result = (await response.json()) as { id?: number };
+
                 if (result.id) {
                     setData("student_id", result.id.toString());
                 }
             }
-        } catch (error) {
-            console.error("Failed to generate ID", error);
         } finally {
             setIsGeneratingId(false);
         }
     };
 
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const submit = (event: React.FormEvent) => {
+        event.preventDefault();
+
         put(route("administrators.students.update", student.id), {
             onSuccess: () => {
                 toast.success("Student updated successfully");
             },
-            onError: (errors) => {
+            onError: (formErrors) => {
                 toast.error("Failed to update student", {
-                    description: Object.values(errors)[0] || "Please check the form for errors",
+                    description: Object.values(formErrors)[0] || "Please check the form for errors.",
                 });
             },
         });
     };
 
     const handleAddSubject = () => {
-        if (!selectedSubject) return;
+        if (!selectedSubject) {
+            return;
+        }
 
         router.post(
             route("administrators.students.subjects.add", student.id),
-            {
-                subject_id: selectedSubject,
-            },
+            { subject_id: selectedSubject },
             {
                 onSuccess: () => {
                     setAddSubjectOpen(false);
                     setSelectedSubject(null);
                     toast.success("Subject added successfully");
                 },
-                onError: (errors) => {
+                onError: (formErrors) => {
                     toast.error("Failed to add subject", {
-                        description: Object.values(errors)[0] || "Please check for errors",
+                        description: Object.values(formErrors)[0] || "Please check for errors.",
                     });
                 },
             },
@@ -247,646 +571,1142 @@ export default function AdministratorStudentEdit({ user, student, options, curre
     };
 
     const handleRemoveSubject = (id: number) => {
-        if (confirm("Are you sure you want to remove this subject?")) {
+        if (confirm("Remove this subject from the student's current load?")) {
             router.delete(route("administrators.students.subjects.remove", [student.id, id]));
         }
     };
 
-    const isSHS = data.student_type === "shs";
-
-    const getYearLevelOptions = () => {
-        if (isSHS) {
-            return [
-                { value: "11", label: "Grade 11" },
-                { value: "12", label: "Grade 12" },
-            ];
-        }
-        return [
-            { value: "1", label: "1st Year" },
-            { value: "2", label: "2nd Year" },
-            { value: "3", label: "3rd Year" },
-            { value: "4", label: "4th Year" },
-            { value: "5", label: "Graduate" },
-        ];
-    };
-
     return (
         <AdminLayout user={user} title="Edit Student">
-            <Head title={`Edit Student • ${student.first_name} ${student.last_name}`} />
+            <Head title={`Edit Student - ${student.first_name} ${student.last_name}`} />
 
-            <div className="flex h-[calc(100vh-4rem)] flex-col gap-6">
-                {/* Header */}
-                <div className="flex shrink-0 items-start justify-between border-b pb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-primary/10 text-primary flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold">
-                            {student.first_name[0]}
-                            {student.last_name[0]}
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold tracking-tight">
-                                {data.first_name} {data.last_name}
-                            </h2>
-                            <div className="text-muted-foreground mt-1 flex items-center gap-2">
-                                <Badge variant="outline" className="font-mono">
-                                    {isSHS ? data.lrn : data.student_id}
-                                </Badge>
-                                <span>•</span>
-                                <span className="capitalize">{data.student_type.replace("_", " ")}</span>
-                                <span>•</span>
-                                <Badge variant={data.status === "enrolled" ? "default" : "secondary"} className="capitalize">
-                                    {data.status.replace("_", " ")}
-                                </Badge>
-                            </div>
+            <form onSubmit={submit} className="mx-auto max-w-6xl space-y-6 pb-10">
+                <div className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold tracking-tight">
+                            {data.first_name} {data.last_name}
+                        </h1>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                            <Badge variant="outline" className="font-mono">
+                                {isSHS ? data.lrn || "No LRN" : data.student_id || "No ID"}
+                            </Badge>
+                            <Badge variant="secondary">
+                                {options.types.find((type) => type.value === data.student_type)?.label ?? data.student_type}
+                            </Badge>
+                            <Badge variant={data.status === "enrolled" ? "default" : "secondary"} className="capitalize">
+                                {data.status.replace("_", " ")}
+                            </Badge>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button asChild variant="ghost">
+                        <Button asChild variant="outline">
                             <Link href={route("administrators.students.show", student.id)}>
-                                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Profile
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Profile
                             </Link>
                         </Button>
-                        <Button onClick={submit} disabled={processing} className="min-w-[140px]">
-                            <Save className="mr-2 h-4 w-4" />
-                            {processing ? "Saving..." : "Save Changes"}
+                        <Button type="submit" disabled={processing}>
+                            {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            {processing ? "Saving..." : "Save"}
                         </Button>
                     </div>
                 </div>
 
-                {/* Content Area */}
-                <div className="flex flex-1 gap-8 overflow-hidden">
-                    {/* Sidebar Navigation */}
-                    <nav className="flex w-64 shrink-0 flex-col gap-1 overflow-y-auto pr-2">
-                        {SECTIONS.map((section) => (
-                            <button
-                                key={section.id}
-                                onClick={() => setActiveSection(section.id)}
-                                className={cn(
-                                    "flex items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-medium transition-colors",
-                                    activeSection === section.id
-                                        ? "bg-primary text-primary-foreground shadow-sm"
-                                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <UserIcon className="text-primary h-5 w-5" />
+                            Student Record
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-5 lg:grid-cols-[1.4fr_1fr_1fr]">
+                        <div className="space-y-2">
+                            <Label>{requiredLabel("Student Type")}</Label>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+                                {options.types.map((type) => (
+                                    <button
+                                        key={type.value}
+                                        type="button"
+                                        onClick={() => setData("student_type", type.value.toString())}
+                                        className={cn(
+                                            "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
+                                            data.student_type === type.value
+                                                ? "bg-primary text-primary-foreground border-primary"
+                                                : "bg-background hover:bg-muted",
+                                        )}
+                                    >
+                                        {type.label}
+                                    </button>
+                                ))}
+                            </div>
+                            {fieldError("student_type")}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="status">{requiredLabel("Status")}</Label>
+                            <Select value={data.status} onValueChange={(value) => setData("status", value)}>
+                                <SelectTrigger id="status">
+                                    <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {options.statuses.map((status) => (
+                                        <SelectItem key={status.value} value={status.value.toString()}>
+                                            {status.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {fieldError("status")}
+                        </div>
+
+                        {!isSHS ? (
+                            <div className="space-y-2">
+                                <Label htmlFor="student_id" className="flex items-center gap-1.5">
+                                    <Hash className="h-3.5 w-3.5" />
+                                    {requiredLabel("Student ID")}
+                                </Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="student_id"
+                                        value={data.student_id}
+                                        onChange={(event) => setData("student_id", event.target.value)}
+                                        placeholder="6-digit ID"
+                                        className="font-mono"
+                                    />
+                                    <Button type="button" variant="outline" size="icon" onClick={handleGenerateId} disabled={isGeneratingId}>
+                                        <RefreshCw className={cn("h-4 w-4", isGeneratingId && "animate-spin")} />
+                                    </Button>
+                                </div>
+                                {fieldError("student_id")}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <Label htmlFor="lrn" className="flex items-center gap-1.5">
+                                    <Hash className="h-3.5 w-3.5" />
+                                    {requiredLabel("LRN")}
+                                </Label>
+                                <Input
+                                    id="lrn"
+                                    value={data.lrn}
+                                    onChange={(event) => setData("lrn", event.target.value)}
+                                    placeholder="Learner Reference Number"
+                                    className="font-mono"
+                                />
+                                {fieldError("lrn")}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+                    <div className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <GraduationCap className="text-primary h-5 w-5" />
+                                    Required Information
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid gap-5 md:grid-cols-2">
+                                <div className="grid gap-4 md:col-span-2 md:grid-cols-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="first_name">{requiredLabel("First Name")}</Label>
+                                        <Input
+                                            id="first_name"
+                                            value={data.first_name}
+                                            onChange={(event) => setData("first_name", event.target.value)}
+                                        />
+                                        {fieldError("first_name")}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="middle_name">Middle Name</Label>
+                                        <Input
+                                            id="middle_name"
+                                            value={data.middle_name}
+                                            onChange={(event) => setData("middle_name", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="last_name">{requiredLabel("Last Name")}</Label>
+                                        <Input id="last_name" value={data.last_name} onChange={(event) => setData("last_name", event.target.value)} />
+                                        {fieldError("last_name")}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="suffix">Suffix</Label>
+                                        <Input id="suffix" value={data.suffix} onChange={(event) => setData("suffix", event.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="gender">{requiredLabel("Gender")}</Label>
+                                    <Select value={data.gender} onValueChange={(value) => setData("gender", value)}>
+                                        <SelectTrigger id="gender">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="male">Male</SelectItem>
+                                            <SelectItem value="female">Female</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {fieldError("gender")}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="birth_date" className="flex items-center gap-1.5">
+                                        <Calendar className="h-3.5 w-3.5" />
+                                        {requiredLabel("Birth Date")}
+                                    </Label>
+                                    <Input
+                                        id="birth_date"
+                                        type="date"
+                                        value={data.birth_date}
+                                        onChange={(event) => setData("birth_date", event.target.value)}
+                                        max={new Date().toISOString().split("T")[0]}
+                                    />
+                                    {fieldError("birth_date")}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="age">Age</Label>
+                                    <Input id="age" value={data.age} readOnly className="bg-muted" />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="email" className="flex items-center gap-1.5">
+                                        <Mail className="h-3.5 w-3.5" />
+                                        Email
+                                    </Label>
+                                    <Input id="email" type="email" value={data.email} onChange={(event) => setData("email", event.target.value)} />
+                                    {fieldError("email")}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="phone" className="flex items-center gap-1.5">
+                                        <Phone className="h-3.5 w-3.5" />
+                                        Phone
+                                    </Label>
+                                    <Input id="phone" value={data.phone} onChange={(event) => setData("phone", event.target.value)} />
+                                </div>
+
+                                {!isSHS ? (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="course_id" className="flex items-center gap-1.5">
+                                            <BookOpen className="h-3.5 w-3.5" />
+                                            {requiredLabel("Course")}
+                                        </Label>
+                                        <Select value={data.course_id} onValueChange={(value) => setData("course_id", value)}>
+                                            <SelectTrigger id="course_id">
+                                                <SelectValue placeholder="Select course" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {options.courses.map((course) => (
+                                                    <SelectItem
+                                                        key={course.value}
+                                                        value={course.value.toString()}
+                                                        disabled={course.is_active === false && course.value.toString() !== data.course_id}
+                                                    >
+                                                        {course.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {fieldError("course_id")}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="shs_strand_id" className="flex items-center gap-1.5">
+                                            <BookOpen className="h-3.5 w-3.5" />
+                                            {requiredLabel("SHS Strand")}
+                                        </Label>
+                                        <Select value={data.shs_strand_id} onValueChange={(value) => setData("shs_strand_id", value)}>
+                                            <SelectTrigger id="shs_strand_id">
+                                                <SelectValue placeholder="Select strand" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {options.shs_strands.map((strand) => (
+                                                    <SelectItem key={strand.value} value={strand.value.toString()}>
+                                                        {strand.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {fieldError("shs_strand_id")}
+                                    </div>
                                 )}
-                            >
-                                <section.icon className="h-4 w-4" />
-                                {section.label}
-                            </button>
-                        ))}
-                    </nav>
 
-                    {/* Main Form */}
-                    <div className="flex-1 overflow-y-auto pr-6 pb-20">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeSection}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
-                                className="space-y-6"
-                            >
-                                {activeSection === "basic" && (
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Basic Information</CardTitle>
-                                            <CardDescription>Core identity and academic details</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="academic_year">{requiredLabel(isSHS ? "Grade Level" : "Year Level")}</Label>
+                                    <Select value={data.academic_year} onValueChange={(value) => setData("academic_year", value)}>
+                                        <SelectTrigger id="academic_year">
+                                            <SelectValue placeholder="Select level" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {yearLevelOptions.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {fieldError("academic_year")}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <School className="text-primary h-5 w-5" />
+                                    Family, Personal, and Education
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid gap-5 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="fathers_name">Father's Name</Label>
+                                    <Input
+                                        id="fathers_name"
+                                        value={data.fathers_name}
+                                        onChange={(event) => setData("fathers_name", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="father_occupation">Father Occupation</Label>
+                                    <Input
+                                        id="father_occupation"
+                                        value={data.father_occupation}
+                                        onChange={(event) => setData("father_occupation", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="father_contact">Father Contact</Label>
+                                    <Input
+                                        id="father_contact"
+                                        value={data.father_contact}
+                                        onChange={(event) => setData("father_contact", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="father_email">Father Email</Label>
+                                    <Input
+                                        id="father_email"
+                                        type="email"
+                                        value={data.father_email}
+                                        onChange={(event) => setData("father_email", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mothers_name">Mother's Name</Label>
+                                    <Input
+                                        id="mothers_name"
+                                        value={data.mothers_name}
+                                        onChange={(event) => setData("mothers_name", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mother_occupation">Mother Occupation</Label>
+                                    <Input
+                                        id="mother_occupation"
+                                        value={data.mother_occupation}
+                                        onChange={(event) => setData("mother_occupation", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mother_contact">Mother Contact</Label>
+                                    <Input
+                                        id="mother_contact"
+                                        value={data.mother_contact}
+                                        onChange={(event) => setData("mother_contact", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mother_email">Mother Email</Label>
+                                    <Input
+                                        id="mother_email"
+                                        type="email"
+                                        value={data.mother_email}
+                                        onChange={(event) => setData("mother_email", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_name">Guardian Name</Label>
+                                    <Input
+                                        id="guardian_name"
+                                        value={data.guardian_name}
+                                        onChange={(event) => setData("guardian_name", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_relationship">Guardian Relationship</Label>
+                                    <Input
+                                        id="guardian_relationship"
+                                        value={data.guardian_relationship}
+                                        onChange={(event) => setData("guardian_relationship", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_contact">Guardian Contact</Label>
+                                    <Input
+                                        id="guardian_contact"
+                                        value={data.guardian_contact}
+                                        onChange={(event) => setData("guardian_contact", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="guardian_email">Guardian Email</Label>
+                                    <Input
+                                        id="guardian_email"
+                                        type="email"
+                                        value={data.guardian_email}
+                                        onChange={(event) => setData("guardian_email", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="family_address">Family Address</Label>
+                                    <Textarea
+                                        id="family_address"
+                                        value={data.family_address}
+                                        onChange={(event) => setData("family_address", event.target.value)}
+                                        rows={2}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="birthplace">Birthplace</Label>
+                                    <Input id="birthplace" value={data.birthplace} onChange={(event) => setData("birthplace", event.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="civil_status">Civil Status</Label>
+                                    <Select value={data.civil_status} onValueChange={(value) => setData("civil_status", value)}>
+                                        <SelectTrigger id="civil_status">
+                                            <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {CIVIL_STATUS_OPTIONS.map((status) => (
+                                                <SelectItem key={status.value} value={status.value}>
+                                                    {status.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="nationality">Nationality</Label>
+                                    <Select
+                                        value={data.nationality}
+                                        onValueChange={(value) => {
+                                            setData("nationality", value);
+                                            setData("citizenship", value);
+                                        }}
+                                    >
+                                        <SelectTrigger id="nationality">
+                                            <SelectValue placeholder="Select nationality" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {NATIONALITY_OPTIONS.map((nationality) => (
+                                                <SelectItem key={nationality.value} value={nationality.value}>
+                                                    {nationality.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="citizenship">Citizenship</Label>
+                                    <Input
+                                        id="citizenship"
+                                        value={data.citizenship}
+                                        onChange={(event) => setData("citizenship", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="religion">Religion</Label>
+                                    <Input id="religion" value={data.religion} onChange={(event) => setData("religion", event.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="height">Height</Label>
+                                    <Input id="height" value={data.height} onChange={(event) => setData("height", event.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="weight">Weight</Label>
+                                    <Input id="weight" value={data.weight} onChange={(event) => setData("weight", event.target.value)} />
+                                </div>
+
+                                <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-3">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="elementary_school">Elementary School</Label>
+                                        <Input
+                                            id="elementary_school"
+                                            value={data.elementary_school}
+                                            onChange={(event) => setData("elementary_school", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="elementary_graduate_year">Elementary Year</Label>
+                                        <Input
+                                            id="elementary_graduate_year"
+                                            value={data.elementary_graduate_year}
+                                            onChange={(event) => setData("elementary_graduate_year", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="elementary_school_address">Elementary Address</Label>
+                                        <Input
+                                            id="elementary_school_address"
+                                            value={data.elementary_school_address}
+                                            onChange={(event) => setData("elementary_school_address", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="junior_high_school_name">Junior High School</Label>
+                                        <Input
+                                            id="junior_high_school_name"
+                                            value={data.junior_high_school_name}
+                                            onChange={(event) => setData("junior_high_school_name", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="junior_high_graduation_year">Junior High Year</Label>
+                                        <Input
+                                            id="junior_high_graduation_year"
+                                            value={data.junior_high_graduation_year}
+                                            onChange={(event) => setData("junior_high_graduation_year", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="junior_high_school_address">Junior High Address</Label>
+                                        <Input
+                                            id="junior_high_school_address"
+                                            value={data.junior_high_school_address}
+                                            onChange={(event) => setData("junior_high_school_address", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="senior_high_name">Senior High School</Label>
+                                        <Input
+                                            id="senior_high_name"
+                                            value={data.senior_high_name}
+                                            onChange={(event) => setData("senior_high_name", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="senior_high_graduate_year">Senior High Year</Label>
+                                        <Input
+                                            id="senior_high_graduate_year"
+                                            value={data.senior_high_graduate_year}
+                                            onChange={(event) => setData("senior_high_graduate_year", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="senior_high_address">Senior High Address</Label>
+                                        <Input
+                                            id="senior_high_address"
+                                            value={data.senior_high_address}
+                                            onChange={(event) => setData("senior_high_address", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="college_school">College School (if transferee)</Label>
+                                        <Input
+                                            id="college_school"
+                                            value={data.college_school}
+                                            onChange={(event) => setData("college_school", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="college_course">College Course</Label>
+                                        <Input
+                                            id="college_course"
+                                            value={data.college_course}
+                                            onChange={(event) => setData("college_course", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="college_year_graduated">College Year Graduated</Label>
+                                        <Input
+                                            id="college_year_graduated"
+                                            value={data.college_year_graduated}
+                                            onChange={(event) => setData("college_year_graduated", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vocational_school">Vocational School</Label>
+                                        <Input
+                                            id="vocational_school"
+                                            value={data.vocational_school}
+                                            onChange={(event) => setData("vocational_school", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vocational_course">Vocational Course</Label>
+                                        <Input
+                                            id="vocational_course"
+                                            value={data.vocational_course}
+                                            onChange={(event) => setData("vocational_course", event.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="vocational_year_graduated">Vocational Year Graduated</Label>
+                                        <Input
+                                            id="vocational_year_graduated"
+                                            value={data.vocational_year_graduated}
+                                            onChange={(event) => setData("vocational_year_graduated", event.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <Banknote className="text-primary h-5 w-5" />
+                                    Reporting Details
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid gap-5 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="region_of_origin">Region of Origin</Label>
+                                    <Select value={data.region_of_origin} onValueChange={(value) => setData("region_of_origin", value)}>
+                                        <SelectTrigger id="region_of_origin">
+                                            <SelectValue placeholder="Select region" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {options.regions.map((region) => (
+                                                <SelectItem key={region.value} value={region.value.toString()}>
+                                                    {region.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="ethnicity">Ethnicity</Label>
+                                    <Input id="ethnicity" value={data.ethnicity} onChange={(event) => setData("ethnicity", event.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="province_of_origin">Province of Origin</Label>
+                                    <Input
+                                        id="province_of_origin"
+                                        value={data.province_of_origin}
+                                        onChange={(event) => setData("province_of_origin", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="city_of_origin">City of Origin</Label>
+                                    <Input
+                                        id="city_of_origin"
+                                        value={data.city_of_origin}
+                                        onChange={(event) => setData("city_of_origin", event.target.value)}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-3 rounded-md border p-3 md:col-span-2">
+                                    <Checkbox
+                                        id="is_indigenous_person"
+                                        checked={data.is_indigenous_person}
+                                        onCheckedChange={(checked) => setData("is_indigenous_person", checked === true)}
+                                    />
+                                    <Label htmlFor="is_indigenous_person" className="cursor-pointer">
+                                        Indigenous Person
+                                    </Label>
+                                </div>
+                                {data.is_indigenous_person && (
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor="indigenous_group">Indigenous Group</Label>
+                                        <Input
+                                            id="indigenous_group"
+                                            value={data.indigenous_group}
+                                            onChange={(event) => setData("indigenous_group", event.target.value)}
+                                        />
+                                    </div>
+                                )}
+                                <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_pwd"
+                                            checked={data.is_pwd}
+                                            onCheckedChange={(checked) => setData("is_pwd", checked === true)}
+                                        />
+                                        <Label htmlFor="is_pwd" className="cursor-pointer">
+                                            PWD
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_solo_parent"
+                                            checked={data.is_solo_parent}
+                                            onCheckedChange={(checked) => setData("is_solo_parent", checked === true)}
+                                        />
+                                        <Label htmlFor="is_solo_parent" className="cursor-pointer">
+                                            Solo Parent
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_senior_citizen"
+                                            checked={data.is_senior_citizen}
+                                            onCheckedChange={(checked) => setData("is_senior_citizen", checked === true)}
+                                        />
+                                        <Label htmlFor="is_senior_citizen" className="cursor-pointer">
+                                            Senior Citizen
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_magna_carta"
+                                            checked={data.is_magna_carta}
+                                            onCheckedChange={(checked) => setData("is_magna_carta", checked === true)}
+                                        />
+                                        <Label htmlFor="is_magna_carta" className="cursor-pointer">
+                                            Magna Carta
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_underprivileged"
+                                            checked={data.is_underprivileged}
+                                            onCheckedChange={(checked) => setData("is_underprivileged", checked === true)}
+                                        />
+                                        <Label htmlFor="is_underprivileged" className="cursor-pointer">
+                                            Underprivileged
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="is_first_generation"
+                                            checked={data.is_first_generation}
+                                            onCheckedChange={(checked) => setData("is_first_generation", checked === true)}
+                                        />
+                                        <Label htmlFor="is_first_generation" className="cursor-pointer">
+                                            First Generation
+                                        </Label>
+                                    </div>
+                                </div>
+                                {data.is_pwd && (
+                                    <div className="space-y-2 md:col-span-2">
+                                        <Label htmlFor="pwd_type">PWD Type</Label>
+                                        <Input id="pwd_type" value={data.pwd_type} onChange={(event) => setData("pwd_type", event.target.value)} />
+                                    </div>
+                                )}
+                                <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="income_bracket_mode">Income Bracket Mode</Label>
+                                        <Input
+                                            id="income_bracket_mode"
+                                            value={data.income_bracket_mode}
+                                            onChange={(event) => setData("income_bracket_mode", event.target.value)}
+                                            placeholder="annual"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2 rounded-md border p-3">
+                                        <Checkbox
+                                            id="use_same_parent_income"
+                                            checked={data.use_same_parent_income}
+                                            onCheckedChange={(checked) => setData("use_same_parent_income", checked === true)}
+                                        />
+                                        <Label htmlFor="use_same_parent_income" className="cursor-pointer">
+                                            Use Same Parent Income Bracket
+                                        </Label>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="family_income_bracket">Family Income Bracket</Label>
+                                        <Input
+                                            id="family_income_bracket"
+                                            value={data.family_income_bracket}
+                                            onChange={(event) => setData("family_income_bracket", event.target.value)}
+                                        />
+                                    </div>
+                                    {!data.use_same_parent_income && (
+                                        <>
                                             <div className="space-y-2">
-                                                <Label>Student Type</Label>
-                                                <Select value={data.student_type} onValueChange={(val) => setData("student_type", val)}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {options.types.map((opt) => (
-                                                            <SelectItem key={opt.value} value={opt.value.toString()}>
-                                                                {opt.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
+                                                <Label htmlFor="father_income_bracket">Father Income Bracket</Label>
+                                                <Input
+                                                    id="father_income_bracket"
+                                                    value={data.father_income_bracket}
+                                                    onChange={(event) => setData("father_income_bracket", event.target.value)}
+                                                />
                                             </div>
-
                                             <div className="space-y-2">
-                                                <Label>{isSHS ? "LRN" : "Student ID"}</Label>
-                                                <div className="flex gap-2">
+                                                <Label htmlFor="mother_income_bracket">Mother Income Bracket</Label>
+                                                <Input
+                                                    id="mother_income_bracket"
+                                                    value={data.mother_income_bracket}
+                                                    onChange={(event) => setData("mother_income_bracket", event.target.value)}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="scholarship_type">Scholarship</Label>
+                                    <Select value={data.scholarship_type} onValueChange={(value) => setData("scholarship_type", value)}>
+                                        <SelectTrigger id="scholarship_type">
+                                            <SelectValue placeholder="Select scholarship" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {options.scholarship_types.map((type) => (
+                                                <SelectItem key={type.value} value={type.value.toString()}>
+                                                    {type.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {data.scholarship_type !== "none" && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="scholarship_details">Scholarship Details</Label>
+                                        <Textarea
+                                            id="scholarship_details"
+                                            value={data.scholarship_details}
+                                            onChange={(event) => setData("scholarship_details", event.target.value)}
+                                            rows={2}
+                                        />
+                                    </div>
+                                )}
+
+                                {isGraduated && (
+                                    <div className="grid gap-5 border-t pt-5 md:col-span-2 md:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="employment_status" className="flex items-center gap-1.5">
+                                                <Briefcase className="h-3.5 w-3.5" />
+                                                Employment Status
+                                            </Label>
+                                            <Select value={data.employment_status} onValueChange={(value) => setData("employment_status", value)}>
+                                                <SelectTrigger id="employment_status">
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {options.employment_statuses.map((status) => (
+                                                        <SelectItem key={status.value} value={status.value.toString()}>
+                                                            {status.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        {showEmployment && (
+                                            <>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="employer_name">Employer</Label>
                                                     <Input
-                                                        value={isSHS ? data.lrn : data.student_id}
-                                                        onChange={(e) =>
-                                                            isSHS ? setData("lrn", e.target.value) : setData("student_id", e.target.value)
-                                                        }
-                                                        placeholder={isSHS ? "Learner Reference Number" : "Student ID"}
+                                                        id="employer_name"
+                                                        value={data.employer_name}
+                                                        onChange={(event) => setData("employer_name", event.target.value)}
                                                     />
-                                                    {!isSHS && (
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            size="icon"
-                                                            onClick={handleGenerateId}
-                                                            disabled={isGeneratingId}
-                                                            title="Generate Next Available ID"
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="job_position">Position</Label>
+                                                    <Input
+                                                        id="job_position"
+                                                        value={data.job_position}
+                                                        onChange={(event) => setData("job_position", event.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="employment_date">Employment Date</Label>
+                                                    <Input
+                                                        id="employment_date"
+                                                        type="date"
+                                                        value={data.employment_date}
+                                                        onChange={(event) => setData("employment_date", event.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center gap-3 rounded-md border p-3">
+                                                    <Checkbox
+                                                        id="employed_by_institution"
+                                                        checked={data.employed_by_institution}
+                                                        onCheckedChange={(checked) => setData("employed_by_institution", checked === true)}
+                                                    />
+                                                    <Label htmlFor="employed_by_institution" className="cursor-pointer">
+                                                        Employed by this institution
+                                                    </Label>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+
+                                {isWithdrawn && (
+                                    <div className="grid gap-5 border-t pt-5 md:col-span-2 md:grid-cols-2">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="attrition_category">Attrition Category</Label>
+                                            <Select value={data.attrition_category} onValueChange={(value) => setData("attrition_category", value)}>
+                                                <SelectTrigger id="attrition_category">
+                                                    <SelectValue placeholder="Select category" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {options.attrition_categories.map((category) => (
+                                                        <SelectItem key={category.value} value={category.value.toString()}>
+                                                            {category.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="withdrawal_date">Withdrawal Date</Label>
+                                            <Input
+                                                id="withdrawal_date"
+                                                type="date"
+                                                value={data.withdrawal_date}
+                                                onChange={(event) => setData("withdrawal_date", event.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="dropout_date">Dropout Date</Label>
+                                            <Input
+                                                id="dropout_date"
+                                                type="date"
+                                                value={data.dropout_date}
+                                                onChange={(event) => setData("dropout_date", event.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2 md:col-span-2">
+                                            <Label htmlFor="withdrawal_reason">Withdrawal Reason</Label>
+                                            <Textarea
+                                                id="withdrawal_reason"
+                                                value={data.withdrawal_reason}
+                                                onChange={(event) => setData("withdrawal_reason", event.target.value)}
+                                                rows={3}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="remarks">Remarks</Label>
+                                    <Textarea
+                                        id="remarks"
+                                        value={data.remarks}
+                                        onChange={(event) => setData("remarks", event.target.value)}
+                                        rows={3}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <Phone className="text-primary h-5 w-5" />
+                                    Contact and Address
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-5">
+                                <div className="space-y-2">
+                                    <Label htmlFor="personal_contact">Student Contact</Label>
+                                    <Input
+                                        id="personal_contact"
+                                        value={data.personal_contact}
+                                        onChange={(event) => setData("personal_contact", event.target.value)}
+                                    />
+                                </div>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="facebook_contact">Facebook</Label>
+                                        <Input
+                                            id="facebook_contact"
+                                            value={data.facebook_contact}
+                                            onChange={(event) => setData("facebook_contact", event.target.value)}
+                                            placeholder="facebook.com/username"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="instagram">Instagram</Label>
+                                        <Input
+                                            id="instagram"
+                                            value={data.instagram}
+                                            onChange={(event) => setData("instagram", event.target.value)}
+                                            placeholder="@username"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="twitter">Twitter/X</Label>
+                                        <Input
+                                            id="twitter"
+                                            value={data.twitter}
+                                            onChange={(event) => setData("twitter", event.target.value)}
+                                            placeholder="@username"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="linkedin">LinkedIn</Label>
+                                        <Input
+                                            id="linkedin"
+                                            value={data.linkedin}
+                                            onChange={(event) => setData("linkedin", event.target.value)}
+                                            placeholder="linkedin.com/in/username"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="emergency_contact_name">Guardian Name</Label>
+                                    <Input
+                                        id="emergency_contact_name"
+                                        value={data.emergency_contact_name}
+                                        onChange={(event) => setData("emergency_contact_name", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="emergency_contact_phone">Guardian Phone</Label>
+                                    <Input
+                                        id="emergency_contact_phone"
+                                        value={data.emergency_contact_phone}
+                                        onChange={(event) => setData("emergency_contact_phone", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="emergency_contact_relationship">Guardian Relationship</Label>
+                                    <Input
+                                        id="emergency_contact_relationship"
+                                        value={data.emergency_contact_relationship}
+                                        onChange={(event) => setData("emergency_contact_relationship", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="emergency_contact_address">Guardian Address</Label>
+                                    <Textarea
+                                        id="emergency_contact_address"
+                                        value={data.emergency_contact_address}
+                                        onChange={(event) => setData("emergency_contact_address", event.target.value)}
+                                        rows={2}
+                                    />
+                                </div>
+                                <div className="space-y-2 border-t pt-5">
+                                    <Label htmlFor="current_address" className="flex items-center gap-1.5">
+                                        <MapPin className="h-3.5 w-3.5" />
+                                        Current Address
+                                    </Label>
+                                    <Textarea
+                                        id="current_address"
+                                        value={data.current_address}
+                                        onChange={(event) => setData("current_address", event.target.value)}
+                                        rows={3}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="permanent_address">Permanent Address</Label>
+                                    <Textarea
+                                        id="permanent_address"
+                                        value={data.permanent_address}
+                                        onChange={(event) => setData("permanent_address", event.target.value)}
+                                        rows={3}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between gap-3">
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <BookOpen className="text-primary h-5 w-5" />
+                                    Current Subjects
+                                </CardTitle>
+                                <Dialog open={addSubjectOpen} onOpenChange={setAddSubjectOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button type="button" size="sm" variant="outline">
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-md overflow-hidden p-0">
+                                        <DialogHeader className="px-4 pt-4 pb-2">
+                                            <DialogTitle>Add Subject</DialogTitle>
+                                            <DialogDescription>Search for a subject to add to this student's current load.</DialogDescription>
+                                        </DialogHeader>
+                                        <Command className="border-t">
+                                            <CommandInput placeholder="Search subjects..." />
+                                            <CommandList>
+                                                <CommandEmpty>No subject found.</CommandEmpty>
+                                                <CommandGroup heading="Available Subjects">
+                                                    {options.subjects.map((subject) => (
+                                                        <CommandItem
+                                                            key={subject.value}
+                                                            onSelect={() => setSelectedSubject(subject.value.toString())}
+                                                            className="flex items-center justify-between"
                                                         >
-                                                            <Sparkles className={`h-4 w-4 ${isGeneratingId ? "animate-spin" : ""}`} />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                                {isSHS
-                                                    ? errors.lrn && <p className="text-destructive text-sm">{errors.lrn}</p>
-                                                    : errors.student_id && <p className="text-destructive text-sm">{errors.student_id}</p>}
-                                                {!isSHS && !data.student_id && (
-                                                    <p className="text-muted-foreground text-xs">Leave empty to use the system ID ({student.id})</p>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>First Name</Label>
-                                                <Input value={data.first_name} onChange={(e) => setData("first_name", e.target.value)} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Last Name</Label>
-                                                <Input value={data.last_name} onChange={(e) => setData("last_name", e.target.value)} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Middle Name</Label>
-                                                <Input value={data.middle_name} onChange={(e) => setData("middle_name", e.target.value)} />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>Gender</Label>
-                                                <Select value={data.gender} onValueChange={(val) => setData("gender", val)}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="male">Male</SelectItem>
-                                                        <SelectItem value="female">Female</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>Birth Date</Label>
-                                                <Input type="date" value={data.birth_date} onChange={(e) => setData("birth_date", e.target.value)} />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label>Age</Label>
-                                                <Input value={data.age} readOnly className="bg-muted" />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>Email</Label>
-                                                <Input type="email" value={data.email} onChange={(e) => setData("email", e.target.value)} />
-                                            </div>
-
-                                            {!isSHS ? (
-                                                <div className="space-y-2">
-                                                    <Label>Course</Label>
-                                                    <Select value={data.course_id} onValueChange={(val) => setData("course_id", val)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.courses.map((opt) => (
-                                                                <SelectItem key={opt.value} value={opt.value.toString()}>
-                                                                    {opt.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    <Label>Strand</Label>
-                                                    <Select value={data.shs_strand_id} onValueChange={(val) => setData("shs_strand_id", val)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.shs_strands.map((opt) => (
-                                                                <SelectItem key={opt.value} value={opt.value.toString()}>
-                                                                    {opt.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            )}
-
-                                            <div className="space-y-2">
-                                                <Label>{isSHS ? "Grade Level" : "Year Level"}</Label>
-                                                <Select value={data.academic_year} onValueChange={(val) => setData("academic_year", val)}>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {getYearLevelOptions().map((option) => (
-                                                            <SelectItem key={option.value} value={option.value}>
-                                                                {option.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {activeSection === "personal" && (
-                                    <div className="grid gap-6">
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Contact Information</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="grid gap-6 md:grid-cols-2">
-                                                <div className="space-y-2">
-                                                    <Label>Personal Contact</Label>
-                                                    <Input
-                                                        value={data.personal_contact}
-                                                        onChange={(e) => setData("personal_contact", e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Current Address</Label>
-                                                    <Textarea
-                                                        value={data.current_address}
-                                                        onChange={(e) => setData("current_address", e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Permanent Address</Label>
-                                                    <Textarea
-                                                        value={data.permanent_address}
-                                                        onChange={(e) => setData("permanent_address", e.target.value)}
-                                                    />
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Guardian Information</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="grid gap-6 md:grid-cols-2">
-                                                <div className="space-y-2">
-                                                    <Label>Guardian Name</Label>
-                                                    <Input
-                                                        value={data.emergency_contact_name}
-                                                        onChange={(e) => setData("emergency_contact_name", e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Guardian Phone</Label>
-                                                    <Input
-                                                        value={data.emergency_contact_phone}
-                                                        onChange={(e) => setData("emergency_contact_phone", e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="space-y-2 md:col-span-2">
-                                                    <Label>Guardian Address</Label>
-                                                    <Input
-                                                        value={data.emergency_contact_address}
-                                                        onChange={(e) => setData("emergency_contact_address", e.target.value)}
-                                                    />
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Parent Information</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="grid gap-6 md:grid-cols-2">
-                                                <div className="space-y-2">
-                                                    <Label>Father's Name</Label>
-                                                    <Input value={data.fathers_name} onChange={(e) => setData("fathers_name", e.target.value)} />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Mother's Name</Label>
-                                                    <Input value={data.mothers_name} onChange={(e) => setData("mothers_name", e.target.value)} />
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                                            <span>{subject.label}</span>
+                                                            {selectedSubject === subject.value.toString() && <Check className="h-4 w-4" />}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                        <DialogFooter className="bg-muted/50 p-4">
+                                            <Button type="button" onClick={handleAddSubject} disabled={!selectedSubject}>
+                                                Add Subject
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {current_enrollments.length === 0 ? (
+                                    <div className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
+                                        No subjects enrolled for the current period.
                                     </div>
+                                ) : (
+                                    current_enrollments.map((enrollment) => (
+                                        <div key={enrollment.id} className="flex items-start justify-between gap-3 rounded-md border p-3">
+                                            <div className="min-w-0">
+                                                <p className="font-medium">{enrollment.subject.code}</p>
+                                                <p className="text-muted-foreground truncate text-sm">{enrollment.subject.title}</p>
+                                                <p className="text-muted-foreground text-xs">{enrollment.subject.units} units</p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-destructive hover:text-destructive"
+                                                onClick={() => handleRemoveSubject(enrollment.id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))
                                 )}
+                            </CardContent>
+                        </Card>
 
-                                {activeSection === "education" && (
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Educational Background</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-8">
-                                            <div className="space-y-4">
-                                                <h4 className="flex items-center gap-2 font-medium">
-                                                    <School className="h-4 w-4" /> Elementary
-                                                </h4>
-                                                <div className="grid gap-4 md:grid-cols-2">
-                                                    <div className="space-y-2">
-                                                        <Label>School Name</Label>
-                                                        <Input
-                                                            value={data.elementary_school}
-                                                            onChange={(e) => setData("elementary_school", e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Year Graduated</Label>
-                                                        <Input
-                                                            value={data.elementary_graduate_year}
-                                                            onChange={(e) => setData("elementary_graduate_year", e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label>Address</Label>
-                                                        <Input
-                                                            value={data.elementary_school_address}
-                                                            onChange={(e) => setData("elementary_school_address", e.target.value)}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <Separator />
-                                            <div className="space-y-4">
-                                                <h4 className="flex items-center gap-2 font-medium">
-                                                    <School className="h-4 w-4" /> Junior High
-                                                </h4>
-                                                <div className="grid gap-4 md:grid-cols-2">
-                                                    <div className="space-y-2">
-                                                        <Label>School Name</Label>
-                                                        <Input
-                                                            value={data.junior_high_school_name}
-                                                            onChange={(e) => setData("junior_high_school_name", e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Year Graduated</Label>
-                                                        <Input
-                                                            value={data.junior_high_graduation_year}
-                                                            onChange={(e) => setData("junior_high_graduation_year", e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label>Address</Label>
-                                                        <Input
-                                                            value={data.junior_high_school_address}
-                                                            onChange={(e) => setData("junior_high_school_address", e.target.value)}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <Separator />
-                                            <div className="space-y-4">
-                                                <h4 className="flex items-center gap-2 font-medium">
-                                                    <School className="h-4 w-4" /> Senior High
-                                                </h4>
-                                                <div className="grid gap-4 md:grid-cols-2">
-                                                    <div className="space-y-2">
-                                                        <Label>School Name</Label>
-                                                        <Input
-                                                            value={data.senior_high_name}
-                                                            onChange={(e) => setData("senior_high_name", e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Year Graduated</Label>
-                                                        <Input
-                                                            value={data.senior_high_graduate_year}
-                                                            onChange={(e) => setData("senior_high_graduate_year", e.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2 md:col-span-2">
-                                                        <Label>Address</Label>
-                                                        <Input
-                                                            value={data.senior_high_address}
-                                                            onChange={(e) => setData("senior_high_address", e.target.value)}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {activeSection === "statistical" && (
-                                    <div className="grid gap-6">
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Demographics</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="grid gap-6 md:grid-cols-2">
-                                                <div className="space-y-2">
-                                                    <Label>Region</Label>
-                                                    <Select value={data.region_of_origin} onValueChange={(val) => setData("region_of_origin", val)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.regions.map((r) => (
-                                                                <SelectItem key={r.value} value={r.value.toString()}>
-                                                                    {r.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Ethnicity</Label>
-                                                    <Input value={data.ethnicity} onChange={(e) => setData("ethnicity", e.target.value)} />
-                                                </div>
-                                                <div className="flex items-center gap-4 rounded-lg border p-4 md:col-span-2">
-                                                    <Switch
-                                                        checked={data.is_indigenous_person}
-                                                        onCheckedChange={(c) => setData("is_indigenous_person", c)}
-                                                    />
-                                                    <div className="flex-1">
-                                                        <Label>Indigenous Person</Label>
-                                                        <p className="text-muted-foreground text-sm">
-                                                            Is the student a member of an indigenous group?
-                                                        </p>
-                                                    </div>
-                                                    {data.is_indigenous_person && (
-                                                        <Input
-                                                            placeholder="Group Name"
-                                                            className="w-64"
-                                                            value={data.indigenous_group}
-                                                            onChange={(e) => setData("indigenous_group", e.target.value)}
-                                                        />
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Scholarship & Employment</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="grid gap-6 md:grid-cols-2">
-                                                <div className="space-y-2">
-                                                    <Label>Scholarship</Label>
-                                                    <Select value={data.scholarship_type} onValueChange={(val) => setData("scholarship_type", val)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.scholarship_types.map((s) => (
-                                                                <SelectItem key={s.value} value={s.value.toString()}>
-                                                                    {s.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Employment Status</Label>
-                                                    <Select value={data.employment_status} onValueChange={(val) => setData("employment_status", val)}>
-                                                        <SelectTrigger>
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.employment_statuses.map((s) => (
-                                                                <SelectItem key={s.value} value={s.value.toString()}>
-                                                                    {s.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <LayoutGrid className="text-primary h-5 w-5" />
+                                    Current Classes
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {current_classes.length === 0 ? (
+                                    <div className="text-muted-foreground rounded-md border border-dashed p-6 text-center text-sm">
+                                        No classes scheduled for the current period.
                                     </div>
-                                )}
-
-                                {activeSection === "enrollment" && (
-                                    <div className="space-y-6">
-                                        {/* Enrolled Subjects */}
-                                        <Card>
-                                            <CardHeader className="flex flex-row items-center justify-between">
-                                                <div>
-                                                    <CardTitle>Enrolled Subjects</CardTitle>
-                                                    <CardDescription>Subjects for the current semester</CardDescription>
+                                ) : (
+                                    current_classes.map((classEnrollment) => (
+                                        <div key={classEnrollment.id} className="rounded-md border p-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="font-medium">{classEnrollment.class?.subject?.code || "N/A"}</p>
+                                                    <p className="text-muted-foreground truncate text-sm">
+                                                        {classEnrollment.class?.subject?.title || "No subject assigned"}
+                                                    </p>
                                                 </div>
-                                                <Dialog open={addSubjectOpen} onOpenChange={setAddSubjectOpen}>
-                                                    <DialogTrigger asChild>
-                                                        <Button size="sm" className="gap-2">
-                                                            <Plus className="h-4 w-4" /> Add Subject
-                                                        </Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="max-w-md overflow-hidden p-0">
-                                                        <DialogHeader className="px-4 pt-4 pb-2">
-                                                            <DialogTitle>Add Subject</DialogTitle>
-                                                            <DialogDescription>Search for a subject to add to the student's load.</DialogDescription>
-                                                        </DialogHeader>
-                                                        <Command className="border-t">
-                                                            <CommandInput placeholder="Search subjects..." />
-                                                            <CommandList>
-                                                                <CommandEmpty>No subject found.</CommandEmpty>
-                                                                <CommandGroup heading="Available Subjects">
-                                                                    {options.subjects.map((subject) => (
-                                                                        <CommandItem
-                                                                            key={subject.value}
-                                                                            onSelect={() => {
-                                                                                setSelectedSubject(subject.value.toString());
-                                                                            }}
-                                                                            className="flex items-center justify-between"
-                                                                        >
-                                                                            <span>{subject.label}</span>
-                                                                            {selectedSubject === subject.value.toString() && (
-                                                                                <Check className="h-4 w-4" />
-                                                                            )}
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                        <DialogFooter className="bg-muted/50 p-4">
-                                                            <Button onClick={handleAddSubject} disabled={!selectedSubject}>
-                                                                Add Selected Subject
-                                                            </Button>
-                                                        </DialogFooter>
-                                                    </DialogContent>
-                                                </Dialog>
-                                            </CardHeader>
-                                            <CardContent>
-                                                {current_enrollments.length === 0 ? (
-                                                    <div className="text-muted-foreground rounded-lg border-2 border-dashed py-12 text-center">
-                                                        <BookOpen className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                                                        <p>No subjects enrolled for this semester.</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-4">
-                                                        {current_enrollments.map((enrollment) => (
-                                                            <div
-                                                                key={enrollment.id}
-                                                                className="bg-card hover:bg-accent/5 flex items-center justify-between rounded-lg border p-4 transition-colors"
-                                                            >
-                                                                <div className="flex items-start gap-3">
-                                                                    <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded text-xs font-bold">
-                                                                        {enrollment.subject.code.substring(0, 3)}
-                                                                    </div>
-                                                                    <div>
-                                                                        <h4 className="font-semibold">{enrollment.subject.code}</h4>
-                                                                        <p className="text-muted-foreground text-sm">{enrollment.subject.title}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center gap-4">
-                                                                    <Badge variant="outline">{enrollment.subject.units} Units</Badge>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                                        onClick={() => handleRemoveSubject(enrollment.id)}
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-
-                                        {/* Current Classes */}
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle>Current Classes</CardTitle>
-                                                <CardDescription>Scheduled classes for this semester</CardDescription>
-                                            </CardHeader>
-                                            <CardContent>
-                                                {current_classes.length === 0 ? (
-                                                    <div className="text-muted-foreground rounded-lg border-2 border-dashed py-12 text-center">
-                                                        <LayoutGrid className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                                                        <p>No classes scheduled.</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="grid gap-4 md:grid-cols-2">
-                                                        {current_classes.map((classEnrollment) => (
-                                                            <div key={classEnrollment.id} className="bg-card space-y-3 rounded-lg border p-4">
-                                                                <div className="flex items-start justify-between">
-                                                                    <div>
-                                                                        <h4 className="font-bold">{classEnrollment.class?.subject?.code || "N/A"}</h4>
-                                                                        <p className="text-muted-foreground max-w-[200px] truncate text-sm">
-                                                                            {classEnrollment.class?.subject?.title || "No subject assigned"}
-                                                                        </p>
-                                                                    </div>
-                                                                    <Badge>{classEnrollment.class?.section || "N/A"}</Badge>
-                                                                </div>
-                                                                <Separator />
-                                                                <div className="space-y-1 text-sm">
-                                                                    <div className="text-muted-foreground flex items-center gap-2">
-                                                                        <UserIcon className="h-3 w-3" />
-                                                                        <span>{classEnrollment.class?.faculty?.full_name || "TBA"}</span>
-                                                                    </div>
-                                                                    {/* Schedule display would go here */}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </div>
+                                                <Badge variant="outline">{classEnrollment.class?.section || "N/A"}</Badge>
+                                            </div>
+                                            <Separator className="my-3" />
+                                            <p className="text-muted-foreground text-sm">{classEnrollment.class?.faculty?.full_name || "TBA"}</p>
+                                        </div>
+                                    ))
                                 )}
-                            </motion.div>
-                        </AnimatePresence>
+                            </CardContent>
+                        </Card>
+
+                        <Button type="submit" disabled={processing} className="w-full lg:hidden">
+                            {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            {processing ? "Saving..." : "Save Student"}
+                        </Button>
                     </div>
                 </div>
-            </div>
+            </form>
         </AdminLayout>
     );
 }

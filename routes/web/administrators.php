@@ -14,6 +14,7 @@ use App\Http\Controllers\AdministratorSchedulingAnalyticsController;
 use App\Http\Controllers\AdministratorStudentDocumentController;
 use App\Http\Controllers\AdministratorStudentManagementController;
 use App\Http\Controllers\AdministratorUserManagementController;
+use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\UserSettingController;
 use App\Models\User;
 use App\Support\AdministratorPortalData;
@@ -117,6 +118,13 @@ Route::middleware(['auth', 'administrators.only'])
         Route::delete('/settings/passkeys/{id}', [App\Http\Controllers\PasskeyController::class, 'destroy'])->name('settings.passkeys.destroy');
         Route::get('/settings/passkeys', [App\Http\Controllers\PasskeyController::class, 'index'])->name('settings.passkeys.index');
 
+        Route::get('/settings/api-keys', [ApiKeyController::class, 'index'])->name('settings.api-keys.index');
+        Route::post('/settings/api-keys', [ApiKeyController::class, 'store'])->name('settings.api-keys.store');
+        Route::delete('/settings/api-keys/{id}', [ApiKeyController::class, 'destroy'])->name('settings.api-keys.destroy');
+        Route::get('/settings/api-keys/developer-mode', [ApiKeyController::class, 'checkDeveloperMode'])->name('settings.api-keys.developer-mode');
+
+        Route::post('/settings/experimental-features', [App\Http\Controllers\ProfileController::class, 'toggleExperimentalFeatures'])->name('settings.experimental-features');
+
         Route::get('/enrollments', [AdministratorEnrollmentManagementController::class, 'index'])->name('enrollments.index');
         Route::get('/enrollments/applicants', [AdministratorEnrollmentManagementController::class, 'applicants'])->name('enrollments.applicants');
         Route::get('/enrollments/create', [AdministratorEnrollmentManagementController::class, 'create'])->name('enrollments.create');
@@ -203,6 +211,7 @@ Route::middleware(['auth', 'administrators.only'])
         Route::post('/students/bulk/email', [AdministratorStudentManagementController::class, 'bulkSendEmail'])->name('students.bulk-email');
         Route::delete('/students/bulk', [AdministratorStudentManagementController::class, 'bulkDestroy'])->name('students.bulk-destroy');
         Route::get('/students/documents', [AdministratorStudentDocumentController::class, 'listAll'])->name('students.documents.list');
+        Route::get('/students/field-values', [AdministratorStudentManagementController::class, 'fieldValues'])->name('students.field-values');
         Route::get('/students/{student}', [AdministratorStudentManagementController::class, 'show'])->name('students.show');
         Route::get('/students/{student}/tuition/soa', [AdministratorStudentManagementController::class, 'printSoa'])->name('students.tuition.soa');
         Route::get('/students/{student}/documents', [AdministratorStudentDocumentController::class, 'index'])->name('students.documents.index');
