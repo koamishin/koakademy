@@ -103,22 +103,22 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                         <div className="bg-primary/5 pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
                         {/* Card Content */}
-                        <div className="relative flex h-full min-h-[220px] flex-col justify-between p-6">
+                        <div className="relative flex h-full min-h-[190px] flex-col justify-between p-4 sm:min-h-[220px] sm:p-6">
                             {/* Header: Chip & Organization */}
-                            <div className="mb-2 flex items-start justify-between">
+                            <div className="mb-1 flex items-start justify-between sm:mb-2">
                                 <div className="flex items-center gap-3">
-                                    <div className="bg-primary/10 border-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border">
-                                        <School className="text-primary h-5 w-5" />
+                                    <div className="bg-primary/10 border-primary/20 flex h-9 w-9 items-center justify-center rounded-xl border sm:h-10 sm:w-10">
+                                        <School className="text-primary h-4.5 w-4.5 sm:h-5 sm:w-5" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-lg leading-none font-bold tracking-tight">{orgShortName}</span>
+                                        <span className="text-base leading-none font-bold tracking-tight sm:text-lg">{orgShortName}</span>
                                         <span className="text-muted-foreground mt-0.5 text-[10px] font-medium tracking-widest uppercase">
                                             Official ID
                                         </span>
                                     </div>
                                 </div>
                                 {/* Decorative "Chip" */}
-                                <div className="relative h-8 w-11 overflow-hidden rounded-md border border-amber-300/50 bg-gradient-to-br from-amber-200 to-amber-400 opacity-90 shadow-sm">
+                                <div className="relative h-7 w-10 overflow-hidden rounded-md border border-amber-300/50 bg-gradient-to-br from-amber-200 to-amber-400 opacity-90 shadow-sm sm:h-8 sm:w-11">
                                     <div className="absolute inset-0 rounded-md border-[0.5px] border-black/10" />
                                     <div className="absolute top-1/2 left-0 h-[0.5px] w-full bg-black/10" />
                                     <div className="absolute top-0 left-1/2 h-full w-[0.5px] bg-black/10" />
@@ -126,20 +126,20 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                             </div>
 
                             {/* Middle: Identity Info */}
-                            <div className="my-4 flex items-center gap-5">
+                            <div className="my-3 flex items-center gap-4 sm:my-4 sm:gap-5">
                                 <div className="relative shrink-0">
-                                    <div className="border-background ring-primary/10 bg-muted h-20 w-20 overflow-hidden rounded-2xl border-2 shadow-md ring-2">
+                                    <div className="border-background ring-primary/10 bg-muted h-16 w-16 overflow-hidden rounded-2xl border-2 shadow-md ring-2 sm:h-20 sm:w-20">
                                         {photoUrl ? (
                                             <img src={photoUrl} alt={cardData.name} className="h-full w-full object-cover" />
                                         ) : (
                                             <div className="flex h-full w-full items-center justify-center">
-                                                <User className="text-muted-foreground h-8 w-8" />
+                                                <User className="text-muted-foreground h-7 w-7 sm:h-8 sm:w-8" />
                                             </div>
                                         )}
                                     </div>
                                     <div
                                         className={cn(
-                                            "border-card absolute -right-1.5 -bottom-1.5 flex h-7 w-7 items-center justify-center rounded-full border-[2.5px] shadow-md",
+                                            "border-card absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full border-[2.5px] shadow-md sm:-right-1.5 sm:-bottom-1.5 sm:h-7 sm:w-7",
                                             isValid ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground",
                                         )}
                                     >
@@ -147,7 +147,7 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                                     </div>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h2 className="truncate text-xl leading-tight font-bold tracking-tight">{cardData.name}</h2>
+                                    <h2 className="truncate text-lg leading-tight font-bold tracking-tight sm:text-xl">{cardData.name}</h2>
                                     <p className="text-muted-foreground mb-2 truncate text-sm font-medium">
                                         {isStudent ? cardData.course : cardData.department}
                                     </p>
@@ -166,8 +166,8 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                             </div>
 
                             {/* Bottom: Action Footer */}
-                            <div className="border-border/60 mt-auto flex items-center justify-between border-t pt-4">
-                                <div className="flex flex-col">
+                            <div className="border-border/60 mt-auto flex items-center justify-end border-t pt-3 sm:justify-between sm:pt-4">
+                                <div className="hidden flex-col sm:flex">
                                     <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">Status</span>
                                     <div className="flex items-center gap-1.5">
                                         <span className={cn("h-2 w-2 animate-pulse rounded-full", isValid ? "bg-green-500" : "bg-red-500")} />

@@ -313,7 +313,7 @@ function ClassListCard({ classItem, index }: { classItem: DashboardClass; index:
 
 function MobileQuickActions() {
     const actions = [
-        { label: "Grades & Reports", href: "/faculty/grades", icon: TrendingUp, color: "bg-blue-500" },
+        { label: "Grades", href: "/faculty/grades", icon: TrendingUp, color: "bg-blue-500" },
         { label: "Classes", href: "/faculty/classes", icon: BookOpen, color: "bg-emerald-500" },
         { label: "Schedule", href: "/faculty/schedule", icon: Calendar, color: "bg-amber-500" },
         { label: "Attendance", href: "/faculty/attendance", icon: CheckCircle2, color: "bg-violet-500" },
