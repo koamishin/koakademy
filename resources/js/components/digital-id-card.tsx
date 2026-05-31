@@ -184,62 +184,69 @@ function CompactSmartCard({ cardData, photoUrl, qrCode, isValid, onRefresh, isRe
                 </DialogTrigger>
 
                 {/* Full Screen Overlay */}
-                <DialogContent className="bg-background/95 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 m-0 flex h-full w-full max-w-full flex-col items-center justify-center border-0 p-0 backdrop-blur-xl">
+                <DialogContent 
+                    showCloseButton={false} // Disable default close button since we add our own
+                    className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-background/95 backdrop-blur-xl border-0 max-w-[450px] sm:max-w-[400px] w-[95%] sm:w-[90%] rounded-2xl p-0"
+                >
                     <DialogTitle className="sr-only">Full Screen ID</DialogTitle>
 
                     {/* Close Button */}
-                    <DialogClose className="bg-muted text-muted-foreground hover:bg-muted/80 absolute top-6 right-6 rounded-full p-2 transition-colors">
-                        <X className="h-6 w-6" />
+                    <DialogClose className="bg-muted text-muted-foreground hover:bg-muted/80 absolute top-2 right-2 sm:top-3 sm:right-3 rounded-full p-1 sm:p-1.5 transition-colors z-50">
+                        <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </DialogClose>
 
                     <motion.div
                         initial={{ scale: 0.95, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: "spring", duration: 0.5 }}
-                        className="flex w-full max-w-lg flex-col items-center gap-8 px-6"
+                        className="flex w-full flex-col items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 sm:py-6"
                     >
                         {/* Header Info */}
-                        <div className="space-y-2 text-center">
-                            <div className="border-background ring-border mx-auto mb-4 h-20 w-20 overflow-hidden rounded-full border-4 shadow-lg ring-2">
+                        <div className="space-y-1 sm:space-y-1.5 text-center">
+                            <div className="border-background ring-border mx-auto mb-1.5 sm:mb-2 h-10 sm:h-12 w-10 sm:w-12 overflow-hidden rounded-full border-2 shadow-md ring-1">
                                 {photoUrl ? (
                                     <img src={photoUrl} alt={cardData.name} className="h-full w-full object-cover" />
                                 ) : (
                                     <div className="bg-muted flex h-full w-full items-center justify-center">
-                                        <User className="text-muted-foreground h-10 w-10" />
+                                        <User className="text-muted-foreground h-5 w-5 sm:h-6 sm:w-6" />
                                     </div>
                                 )}
                             </div>
-                            <h2 className="text-foreground text-3xl font-bold tracking-tight">{cardData.name}</h2>
-                            <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 h-9 px-4 py-1 text-lg">
+                            <h2 className="text-foreground text-lg sm:text-xl font-bold tracking-tight">{cardData.name}</h2>
+                            <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 h-5.5 sm:h-6 px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs">
                                 {isStudent ? "Student Pass" : "Faculty Pass"}
                             </Badge>
                         </div>
 
                         {/* High Contrast QR Container */}
-                        <div className="relative flex aspect-square w-full max-w-[min(85vw,500px)] items-center justify-center rounded-[2rem] bg-white p-6 shadow-2xl ring-1 ring-black/5">
-                            <img src={qrCode} alt="Access QR Code" className="h-full w-full scale-110 object-contain mix-blend-multiply" />
+                        <div className="relative flex aspect-square w-full max-w-[240px] sm:max-w-[280px] items-center justify-center rounded-lg sm:rounded-xl bg-white p-2.5 sm:p-3 shadow-lg ring-1 ring-black/5">
+                            <img 
+                                src={qrCode} 
+                                alt="Access QR Code" 
+                                className="h-full w-full object-contain"
+                            />
                             {/* Corner Accents */}
-                            <div className="absolute top-5 left-5 h-12 w-12 rounded-tl-xl border-t-[5px] border-l-[5px] border-black opacity-10" />
-                            <div className="absolute top-5 right-5 h-12 w-12 rounded-tr-xl border-t-[5px] border-r-[5px] border-black opacity-10" />
-                            <div className="absolute bottom-5 left-5 h-12 w-12 rounded-bl-xl border-b-[5px] border-l-[5px] border-black opacity-10" />
-                            <div className="absolute right-5 bottom-5 h-12 w-12 rounded-br-xl border-r-[5px] border-b-[5px] border-black opacity-10" />
+                            <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 h-5 sm:h-6 w-5 sm:w-6 rounded-t-md border-t-[2px] border-l-[2px] border-black opacity-10" />
+                            <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 h-5 sm:h-6 w-5 sm:w-6 rounded-tr-md border-t-[2px] border-r-[2px] border-black opacity-10" />
+                            <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 h-5 sm:h-6 w-5 sm:w-6 rounded-bl-md border-b-[2px] border-l-[2px] border-black opacity-10" />
+                            <div className="absolute right-1.5 bottom-1.5 sm:right-2 sm:bottom-2 h-5 sm:h-6 w-5 sm:w-6 rounded-br-md border-r-[2px] border-b-[2px] border-black opacity-10" />
                         </div>
 
                         {/* ID Number Display */}
-                        <div className="flex flex-col items-center gap-1">
-                            <p className="text-muted-foreground text-[10px] font-bold tracking-[0.2em] uppercase">ID Number</p>
-                            <p className="text-foreground font-mono text-5xl font-black tracking-widest">{cardData.id}</p>
+                        <div className="flex flex-col items-center gap-0.5">
+                            <p className="text-muted-foreground text-[8px] sm:text-[9px] font-bold tracking-[0.2em] uppercase">ID Number</p>
+                            <p className="text-foreground font-mono text-xl sm:text-2xl font-black tracking-widest">{cardData.id}</p>
                         </div>
 
                         {/* Actions */}
                         {onRefresh && (
                             <Button
-                                size="lg"
-                                className="h-12 w-full max-w-xs rounded-full px-8 font-medium shadow-md"
+                                size="sm"
+                                className="h-8 sm:h-9 w-full max-w-xs rounded-full px-4 sm:px-5 font-medium shadow-sm text-xs sm:text-sm"
                                 onClick={onRefresh}
                                 disabled={isRefreshing}
                             >
-                                <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
+                                <RefreshCw className={cn("mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5", isRefreshing && "animate-spin")} />
                                 Refresh Code
                             </Button>
                         )}
