@@ -11,9 +11,6 @@ import type { OnboardingFeatureData } from "@/components/onboarding-experience";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { cn } from "@/lib/utils";
 import { User } from "@/types/user";
@@ -26,21 +23,15 @@ import {
     Calendar,
     CheckCircle2,
     Clock,
-    CreditCard,
     Eye,
     EyeOff,
-    GraduationCap,
-    HelpCircle,
-    LayoutGrid,
     MapPin,
     Sparkles,
     TrendingUp,
     Trophy,
-    UserRound,
     Users,
-    type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 interface AttendanceChartData {
     date: string;
@@ -415,6 +406,102 @@ function MobileMetricCard({
     );
 }
 
+function TeacherFocusGrid({
+    facultyData,
+    totalStudents,
+    urgentAnnouncements,
+}: {
+    facultyData: DashboardProps["faculty_data"];
+    totalStudents: number;
+    urgentAnnouncements: number;
+}) {
+    const nextClass = facultyData.today_schedule.entries[0];
+
+    return (
+        <section className="grid gap-4 lg:grid-cols-3">
+            <Card className={`${dashboardCardClass} group overflow-hidden`}>
+                <CardContent className="flex h-full flex-col gap-4 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                            <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Next Class</p>
+                            {nextClass ? (
+                                <div className="mt-2 space-y-1">
+                                    <h2 className="text-foreground truncate text-lg font-semibold">{nextClass.subject_title}</h2>
+                                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                            <Clock className="size-3.5" />
+                                            {nextClass.start_time} - {nextClass.end_time}
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <MapPin className="size-3.5" />
+                                            {nextClass.room}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground mt-2 text-sm">No classes scheduled today.</p>
+                            )}
+                        </div>
+                        <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+                            <Calendar className="size-5" />
+                        </div>
+                    </div>
+                    <div className="mt-auto flex items-center gap-2">
+                        {nextClass?.class_id ? (
+                            <Button asChild size="sm" className="rounded-lg">
+                                <Link href={`/faculty/classes/${nextClass.class_id}`}>Open Class</Link>
+                            </Button>
+                        ) : null}
+                        <Button asChild size="sm" variant="outline" className="rounded-lg">
+                            <Link href="/faculty/schedule">View Schedule</Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className={`${dashboardCardClass} group overflow-hidden`}>
+                <CardContent className="flex h-full flex-col gap-4 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Needs Attention</p>
+                            <h2 className="text-foreground mt-2 text-lg font-semibold">
+                                {urgentAnnouncements > 0 ? `${urgentAnnouncements} announcement${urgentAnnouncements === 1 ? "" : "s"}` : "All caught up"}
+                            </h2>
+                            <p className="text-muted-foreground mt-1 text-sm">Review tasks, posts, and class activity in one place.</p>
+                        </div>
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+                            <Bell className="size-5" />
+                        </div>
+                    </div>
+                    <Button asChild size="sm" variant="outline" className="mt-auto w-fit rounded-lg">
+                        <Link href="/faculty/action-center">Open Action Center</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <Card className={`${dashboardCardClass} group overflow-hidden`}>
+                <CardContent className="flex h-full flex-col gap-4 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">My Classes</p>
+                            <h2 className="text-foreground mt-2 text-lg font-semibold">
+                                {facultyData.upcoming_classes.length} classes
+                            </h2>
+                            <p className="text-muted-foreground mt-1 text-sm">{totalStudents} students this semester.</p>
+                        </div>
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+                            <BookOpen className="size-5" />
+                        </div>
+                    </div>
+                    <Button asChild size="sm" variant="outline" className="mt-auto w-fit rounded-lg">
+                        <Link href="/faculty/classes">Open Classes</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </section>
+    );
+}
+
 function MobileFacultyDashboard({ greeting, faculty_data, currentSemester, currentSchoolYear, user, id_card, qrCode, refreshCode, isRefreshing }: { greeting: string; faculty_data: DashboardProps['faculty_data']; currentSemester: string; currentSchoolYear: string; user: User; id_card: DashboardProps['id_card']; qrCode: string; refreshCode: () => void; isRefreshing: boolean }) {
     const totalStudents = faculty_data.upcoming_classes.reduce((sum, c) => sum + c.students_count, 0);
     const hasClasses = faculty_data.upcoming_classes.length > 0;
@@ -688,42 +775,32 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
                         <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                         <div className="bg-primary/10 absolute -bottom-12 -left-12 h-48 w-48 rounded-full blur-2xl" />
 
-                        <CardContent className="relative z-10 p-2.5 sm:p-5 md:p-6">
-                            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                                <div className="max-w-2xl space-y-2 sm:space-y-4">
+                        <CardContent className="relative z-10 p-5 md:p-6">
+                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                <div className="max-w-2xl space-y-3">
                                     <Badge
                                         variant="outline"
-                                        className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs"
+                                        className="border-border/60 bg-background/60 w-fit rounded-full px-3 py-1 text-xs"
                                     >
-                                        <Sparkles className="text-primary mr-1 h-2.5 w-2.5 sm:mr-1.5 sm:h-3 sm:w-3" />
+                                        <Sparkles className="text-primary mr-1.5 h-3 w-3" />
                                         {getSemesterLabel(current_semester)} • {current_school_year}
                                     </Badge>
                                     <div>
-                                        <h1 className="text-foreground text-[1.35rem] leading-[1.15] font-bold tracking-tight sm:text-3xl md:text-4xl">
+                                        <h1 className="text-foreground text-3xl leading-tight font-bold tracking-tight">
                                             {greeting}, <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">{getShortName(user.name)}</span>
                                         </h1>
-                                        <p className="text-muted-foreground hidden max-w-xl text-sm leading-relaxed sm:block sm:text-base">
-                                            Your teaching schedule, classes, and announcements are grouped here for the current semester.
+                                        <p className="text-muted-foreground mt-1 max-w-xl text-sm leading-relaxed">
+                                            Start with today, then jump into classes, attendance, or grading.
                                         </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 md:min-w-[300px] md:gap-3">
-                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
-                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
-                                            Today's Classes
-                                        </p>
-                                        <p className="text-foreground mt-0.5 truncate text-[11px] font-bold sm:mt-1 sm:text-sm">
-                                            {faculty_data.today_schedule.entries.length}
-                                        </p>
-                                    </div>
-                                    <div className="border-border/60 bg-background/40 hover:bg-background/60 group/info rounded-lg border p-2 transition-colors sm:rounded-xl sm:p-4">
-                                        <p className="text-muted-foreground group-hover/info:text-primary text-[9px] font-bold tracking-wider uppercase transition-colors sm:text-[11px]">
-                                            Total Students
-                                        </p>
-                                        <p className="text-foreground mt-0.5 truncate font-mono text-[11px] font-bold sm:mt-1 sm:text-sm">
-                                            {totalStudents}
-                                        </p>
-                                    </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Button asChild size="sm" className="rounded-lg">
+                                        <Link href="/faculty/action-center">Review Today</Link>
+                                    </Button>
+                                    <Button asChild size="sm" variant="outline" className="rounded-lg">
+                                        <Link href="/faculty/classes">My Classes</Link>
+                                    </Button>
                                 </div>
                             </div>
                         </CardContent>
@@ -738,46 +815,12 @@ function DashboardContent({ user, is_new_user, faculty_data, id_card, current_se
                     <OnboardingChecklistWidget />
                 )}
 
+                <TeacherFocusGrid facultyData={faculty_data} totalStudents={totalStudents} urgentAnnouncements={urgentAnnouncements} />
+
                 {/* Stats */}
                 <div data-tour="stats-grid">
                     <StatsGrid stats={faculty_data.stats} />
                 </div>
-
-                {/* Today's Schedule Banner */}
-                <section>
-                    <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
-                        <CardContent className="relative grid gap-4 p-4 pr-10 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
-                            <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
-                            <div className="min-w-0">
-                                <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Next Class</p>
-                                {faculty_data.today_schedule.entries.length > 0 ? (
-                                    <div className="mt-2 space-y-2">
-                                        <h2 className="text-foreground truncate text-lg leading-tight font-semibold md:text-xl">
-                                            {faculty_data.today_schedule.entries[0].subject_title}
-                                        </h2>
-                                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                                            <span className="flex items-center gap-1.5">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                {faculty_data.today_schedule.entries[0].start_time} - {faculty_data.today_schedule.entries[0].end_time}
-                                            </span>
-                                            <span className="flex items-center gap-1.5">
-                                                <MapPin className="h-3.5 w-3.5" />
-                                                {faculty_data.today_schedule.entries[0].room}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-muted-foreground mt-2 text-sm">No classes scheduled today. Enjoy your free time!</p>
-                                )}
-                            </div>
-                            {faculty_data.today_schedule.entries.length > 0 && (
-                                <Badge variant="outline" className="border-border/60 bg-background/60 hidden rounded-full px-3 py-1 md:inline-flex">
-                                    {faculty_data.today_schedule.entries[0].subject_code}
-                                </Badge>
-                            )}
-                        </CardContent>
-                    </Card>
-                </section>
 
                 <div className="grid gap-6 lg:grid-cols-12">
                     {/* Main Column */}

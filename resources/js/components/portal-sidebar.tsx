@@ -367,7 +367,7 @@ export function PortalSidebar({ user, ...props }: React.ComponentProps<typeof Si
                 <NotificationsPopover baseUrl={getNotificationsUrl()} />
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={mainRoutes} showQuickActions={isFaculty} />
+                <NavMain items={mainRoutes} showQuickActions={false} />
                 {(isStudent || isFaculty) && pageProps.settings ? <SidebarSemesterSelector settings={pageProps.settings} /> : null}
                 <NavSecondary items={secondaryRoutes} className="mt-auto" />
             </SidebarContent>
