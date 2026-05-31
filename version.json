@@ -1,18 +1,18 @@
 {
-  "version": "1.6.0-dev.0.9",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.9",
-  "commit": "150fb1933ae222d77858913a4f7aac6567f10c83",
+  "version": "1.0.0-dev.0.1",
+  "image": "ghcr.io/koamishin/koakademy:v1.0.0-dev.0.1",
+  "commit": "3bbf7ca57520fc4b20d0222bc7bf4c447136fb24",
   "branch": "master",
-  "timestamp": "2026-05-31T05:21:16Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26704081393",
+  "timestamp": "2026-05-31T10:54:19Z",
+  "build_url": "https://github.com/koamishin/koakademy/actions/runs/26710499044",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.9 - Merge pull request #92 from koamishin/master",
-    "previous": "1.6.0-dev.0.8"
+    "current": "Version 1.0.0-dev.0.1 - Merge branch 'yukazakiri:master' into master",
+    "previous": "1.6.0-dev.0.9"
   },
   "metadata": {
     "author": "yukazakiri",
     "workflow": "Auto Pre-release and Docker Tag",
-    "repository": "yukazakiri/koakademy"
+    "repository": "koamishin/koakademy"
   }
 }
