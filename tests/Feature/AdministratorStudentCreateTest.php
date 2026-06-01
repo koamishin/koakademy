@@ -27,6 +27,10 @@ it('displays active and inactive courses correctly on student create page', func
         'is_active' => false,
     ]);
 
+    Student::factory()->create(['religion' => 'Roman Catholic']);
+    Student::factory()->create(['religion' => "Baha'i Faith"]);
+    Student::factory()->create(['religion' => '   ']);
+
     actingAs($user)
         ->get(portalUrlForAdministrators('/administrators/students/create'))
         ->assertOk()
@@ -38,6 +42,10 @@ it('displays active and inactive courses correctly on student create page', func
             ->where('options.courses.1.value', $inactiveCourse->id)
             ->where('options.courses.1.is_active', false)
             ->where('options.courses.1.label', 'INACTIVE - Inactive Course (Inactive)')
+            ->has('options.religions', 2)
+            ->where('options.religions.0.value', "Baha'i Faith")
+            ->where('options.religions.0.label', "Baha'i Faith")
+            ->where('options.religions.1.value', 'Roman Catholic')
         );
 });
 

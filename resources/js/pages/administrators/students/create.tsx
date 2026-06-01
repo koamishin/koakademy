@@ -51,6 +51,7 @@ interface CreateStudentProps {
         attrition_categories: Option[];
         courses: Option[];
         shs_strands: Option[];
+        religions: Option[];
         regions: Option[];
     };
 }
@@ -165,19 +166,6 @@ const NATIONALITY_OPTIONS = [
     { value: "indian", label: "Indian" },
     { value: "korean", label: "Korean" },
     { value: "japanese", label: "Japanese" },
-    { value: "other", label: "Other" },
-];
-
-const RELIGION_OPTIONS = [
-    { value: "roman_catholic", label: "Roman Catholic" },
-    { value: "islam", label: "Islam" },
-    { value: "iglesia_ni_cristo", label: "Iglesia ni Cristo" },
-    { value: "protestant", label: "Protestant" },
-    { value: "seventh_day_adventist", label: "Seventh-day Adventist" },
-    { value: "aglipayan", label: "Aglipayan" },
-    { value: "buddhist", label: "Buddhist" },
-    { value: "jehovahs_witnesses", label: "Jehovah's Witnesses" },
-    { value: "hindu", label: "Hindu" },
     { value: "other", label: "Other" },
 ];
 
@@ -883,11 +871,15 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                             <SelectValue placeholder="Select religion" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {RELIGION_OPTIONS.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
+                                            {options.religions.length > 0 ? (
+                                                options.religions.map((option) => (
+                                                    <SelectItem key={option.value} value={String(option.value)}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))
+                                            ) : (
+                                                <div className="px-2 py-1.5 text-sm text-muted-foreground">No religions from existing students yet.</div>
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>

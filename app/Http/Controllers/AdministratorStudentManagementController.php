@@ -2305,6 +2305,21 @@ final class AdministratorStudentManagementController extends Controller
                 ->values()
                 ->all(),
             'shs_strands' => ShsStrand::all(['id', 'strand_name'])->map(fn ($s): array => ['value' => $s->id, 'label' => $s->strand_name])->all(),
+            'religions' => Student::query()
+                ->whereNotNull('religion')
+                ->where('religion', '!=', '')
+                ->distinct()
+                ->orderBy('religion')
+                ->pluck('religion')
+                ->map(fn (string $religion): string => mb_trim($religion))
+                ->filter()
+                ->unique()
+                ->values()
+                ->map(fn (string $religion): array => [
+                    'value' => $religion,
+                    'label' => $religion,
+                ])
+                ->all(),
             'regions' => $this->getPhilippineRegions(),
             'subjects' => Subject::all(['id', 'code', 'title', 'units'])->map(fn ($s): array => ['value' => $s->id, 'label' => "{$s->code} - {$s->title} ({$s->units} units)"])->all(),
         ];
