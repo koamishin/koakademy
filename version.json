@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.11",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.11",
-  "commit": "758bbcee134286124782a9eb2a1fe50e996241f5",
+  "version": "1.6.0-dev.0.12",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.12",
+  "commit": "c3157791b3b6655f77859982fb1a3fd2cebd5ede",
   "branch": "master",
-  "timestamp": "2026-05-31T13:53:31Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26714392426",
+  "timestamp": "2026-06-01T02:33:31Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26732001248",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.11 - Merge pull request #96 from koamishin/master",
-    "previous": "1.6.0-dev.0.10"
+    "current": "Version 1.6.0-dev.0.12 - Improve assessment email attachment handling",
+    "previous": "1.6.0-dev.0.11"
   },
   "metadata": {
     "author": "yukazakiri",
