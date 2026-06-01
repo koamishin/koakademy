@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.12",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.12",
-  "commit": "c3157791b3b6655f77859982fb1a3fd2cebd5ede",
+  "version": "1.6.0-dev.0.13",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.13",
+  "commit": "b2d3eb71b86a9a1b6cd8150794d956a0af151cbf",
   "branch": "master",
-  "timestamp": "2026-06-01T02:33:31Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26732001248",
+  "timestamp": "2026-06-01T03:08:57Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26732923622",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.12 - Improve assessment email attachment handling",
-    "previous": "1.6.0-dev.0.11"
+    "current": "Version 1.6.0-dev.0.13 - Fix assessment resend attachments",
+    "previous": "1.6.0-dev.0.12"
   },
   "metadata": {
     "author": "yukazakiri",
