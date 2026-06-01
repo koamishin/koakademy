@@ -12,7 +12,7 @@ return [
     'driver' => env('LARAVEL_PDF_DRIVER', match (env('APP_ENV', 'production')) {
         'local', 'development', 'testing' => env('LARAVEL_PDF_LOCAL_DRIVER', 'dompdf'),
         'staging' => env('LARAVEL_PDF_STAGING_DRIVER', 'dompdf'),
-        default => env('LARAVEL_PDF_PRODUCTION_DRIVER', 'cloudflare'),
+        default => env('LARAVEL_PDF_PRODUCTION_DRIVER', 'gotenberg'),
     }),
 
     /*
@@ -21,7 +21,7 @@ return [
     'strategy' => [
         'profiles' => [
             'production' => [
-                'primary' => env('LARAVEL_PDF_PRODUCTION_DRIVER', 'cloudflare'),
+                'primary' => env('LARAVEL_PDF_PRODUCTION_DRIVER', 'gotenberg'),
                 'fallback' => array_values(array_filter(array_map(
                     static fn (string $driver): string => mb_trim($driver),
                     explode(',', env('LARAVEL_PDF_PRODUCTION_FALLBACK', 'dompdf')),
