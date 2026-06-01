@@ -18,7 +18,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Storage;
@@ -46,9 +45,6 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     ) {
         $this->jobId = $jobId ?? uniqid('assessment_', true);
 
-        // Set queue name
-        $this->onQueue('assessments');
-
         Log::info('SendAssessmentNotificationJob created', [
             'enrollment_id' => $this->studentEnrollment->id,
             'job_id' => $this->jobId,
@@ -74,16 +70,17 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                 );
             }
 
-            // Ensure PDF is generated and available (best effort for resend flow)
-            $pdfAvailable = $this->ensurePdfIsAvailable();
+            // Ensure PDF is generated and available for the resend flow.
+            $assessmentPath = $this->ensurePdfIsAvailable();
 
-            // Send the notification
+            // Send the notification with the exact assessment path so the
+            // attachment resolver does not need to guess which PDF to use.
             NotificationFacade::route(
                 'mail',
                 $this->studentEnrollment->student->email
-            )->notify(new MigrateToStudent($this->studentEnrollment));
+            )->notifyNow(new MigrateToStudent($this->studentEnrollment, $assessmentPath));
 
-            if (! $pdfAvailable) {
+            if ($assessmentPath === null) {
                 Log::warning('Assessment email sent without pre-validated PDF attachment.', [
                     'job_id' => $this->jobId,
                     'enrollment_id' => $this->studentEnrollment->id,
@@ -240,7 +237,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     /**
      * Ensure PDF is available, generate if needed
      */
-    private function ensurePdfIsAvailable(): bool
+    private function ensurePdfIsAvailable(): ?string
     {
         // Reuse latest assessment resource if available in configured storage
         $existingResource = $this->studentEnrollment
@@ -262,7 +259,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                         'path' => $relativePath,
                     ]);
 
-                    return true;
+                    return $relativePath;
                 }
             } catch (Exception $exception) {
                 Log::warning('Could not verify existing assessment resource in storage.', [
@@ -281,10 +278,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
         ]);
 
         try {
-            // Generate PDF synchronously
-            $this->generatePdfSynchronously();
-
-            return true;
+            return $this->generatePdfSynchronously();
         } catch (Exception $exception) {
             Log::warning('Assessment PDF regeneration failed during resend. Continuing without guaranteed attachment.', [
                 'job_id' => $this->jobId,
@@ -292,14 +286,14 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                 'error' => $exception->getMessage(),
             ]);
 
-            return false;
+            return null;
         }
     }
 
     /**
      * Generate PDF synchronously
      */
-    private function generatePdfSynchronously(): void
+    private function generatePdfSynchronously(): string
     {
         $generalSettingsService = new GeneralSettingsService;
 
@@ -447,7 +441,10 @@ final class SendAssessmentNotificationJob implements ShouldQueue
         Log::info('PDF generated and saved successfully', [
             'job_id' => $this->jobId,
             'path' => $assessmentPath,
+            'storage_path' => $relativePath,
             'size' => $storage->size($relativePath),
         ]);
+
+        return $relativePath;
     }
 }

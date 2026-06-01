@@ -196,6 +196,8 @@ interface PageProps {
             allowed_roles: string[];
             is_core: boolean;
             key: string;
+            action_type?: "standard" | "department_verification" | "cashier_verification";
+            is_completion?: boolean;
         } | null;
     };
 }
@@ -220,7 +222,8 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
     const pendingStatus = enrollment_pipeline.pending_status;
     const departmentStep = enrollment_pipeline.steps.find((step) => step.action_type === "department_verification") ?? null;
     const cashierStep = enrollment_pipeline.steps.find((step) => step.action_type === "cashier_verification") ?? null;
-    const completionStep = enrollment_pipeline.steps.find((step) => step.is_completion) ?? enrollment_pipeline.steps[enrollment_pipeline.steps.length - 1];
+    const completionStep =
+        enrollment_pipeline.steps.find((step) => step.is_completion) ?? enrollment_pipeline.steps[enrollment_pipeline.steps.length - 1];
     const departmentVerifiedStatus = departmentStep?.status ?? enrollment_pipeline.department_verified_status;
     const cashierVerifiedStatus = cashierStep?.status ?? enrollment_pipeline.cashier_verified_status;
     const completionStatus = completionStep?.status ?? enrollment_pipeline.cashier_verified_status;

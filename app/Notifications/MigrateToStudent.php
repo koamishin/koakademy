@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\GeneralSetting;
+use App\Models\StudentEnrollment;
 use App\Services\PdfGenerationService;
 use App\Settings\SiteSettings;
+use App\Support\ResourceStorageLocator;
 use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,10 +23,17 @@ final class MigrateToStudent extends Notification implements ShouldQueue
 
     private ?string $generatedPdfPath = null;
 
+    public StudentEnrollment $record;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct(public $record) {}
+    public function __construct(StudentEnrollment $record, ?string $assessmentPath = null)
+    {
+        $this->record = $record->withoutRelations();
+        $this->generatedPdfPath = $assessmentPath;
+        $this->afterCommit();
+    }
 
     /**
      * Get the notification's delivery channels.
@@ -42,18 +50,20 @@ final class MigrateToStudent extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $this->record = $this->freshEnrollmentRecord();
+
         $assessmentPath = null;
         $pdfGenerationError = null;
 
         try {
-            // Attempt to generate PDF and get the local path
-            if (
-                $this->generatedPdfPath &&
-                file_exists($this->generatedPdfPath)
-            ) {
+            // Attempt to use the provided/generated PDF path first. This may be
+            // an absolute local path or a storage-relative path such as
+            // "assessments/file.pdf".
+            if (! in_array($this->generatedPdfPath, [null, '', '0'], true)) {
                 $assessmentPath = $this->generatedPdfPath;
-                Log::info('Using cached PDF path for email attachment.', [
+                Log::info('Using provided PDF path for email attachment.', [
                     'path' => $assessmentPath,
+                    'exists_as_local_file' => file_exists($assessmentPath),
                 ]);
             } else {
                 $pdfContents = $this->generatePdf();
@@ -116,76 +126,18 @@ final class MigrateToStudent extends Notification implements ShouldQueue
                 'logoUrl' => $logoUrl,
             ]);
 
-        // Check if file exists in the correct storage location
-        $fileExistsForAttachment = false;
-        $attachmentPath = null;
-
-        if ($assessmentPath) {
-            // If file exists locally (absolute path), use it directly
-            if (file_exists($assessmentPath)) {
-                $attachmentPath = $assessmentPath;
-                $fileExistsForAttachment = true;
-                Log::info('Using local PDF file for attachment', [
-                    'path' => $assessmentPath,
-                ]);
-            } else {
-                // Try to find file in configured storage disk
-                $storageDisk = config('filesystems.default');
-                $storage = Storage::disk($storageDisk);
-                $fileName = basename((string) $assessmentPath);
-                $relativePath = 'assessments/'.$fileName;
-
-                try {
-                    // Check if file exists in storage disk
-                    if ($storage->exists($relativePath)) {
-                        // Create temporary file for attachment
-                        $tempPath = tempnam(sys_get_temp_dir(), 'email_pdf_');
-                        $fileContents = $storage->get($relativePath);
-                        if ($fileContents) {
-                            file_put_contents($tempPath, $fileContents);
-                            $attachmentPath = $tempPath;
-                            $fileExistsForAttachment = true;
-
-                            Log::info('Successfully prepared PDF for email attachment from storage', [
-                                'storage_path' => $relativePath,
-                                'temp_path' => $attachmentPath,
-                                'disk' => $storageDisk,
-                            ]);
-                        }
-                    } elseif ($storage->exists($fileName)) {
-                        // Fallback check in root
-                        $tempPath = tempnam(sys_get_temp_dir(), 'email_pdf_');
-                        $fileContents = $storage->get($fileName);
-                        if ($fileContents) {
-                            file_put_contents($tempPath, $fileContents);
-                            $attachmentPath = $tempPath;
-                            $fileExistsForAttachment = true;
-                            Log::info('Successfully prepared PDF for email attachment from storage root', [
-                                'storage_path' => $fileName,
-                                'temp_path' => $attachmentPath,
-                                'disk' => $storageDisk,
-                            ]);
-                        }
-                    }
-                } catch (Exception $e) {
-                    Log::error('Error preparing PDF attachment from storage', [
-                        'error' => $e->getMessage(),
-                        'path' => $assessmentPath,
-                    ]);
-                }
-            }
-        }
-
         $pdfAttached = false;
+        $attachment = $this->resolveAssessmentAttachment($assessmentPath);
 
-        if ($fileExistsForAttachment && $attachmentPath) {
-            $mailMessage->attach($attachmentPath, [
-                'as' => sprintf('Assessment_Form_%s.pdf', $this->record->id),
+        if ($attachment !== null) {
+            $mailMessage->attachData($attachment['contents'], $attachment['name'], [
                 'mime' => 'application/pdf',
             ]);
             $pdfAttached = true;
-            Log::info('Successfully attached PDF to email.', [
-                'path' => $attachmentPath,
+            Log::info('Successfully attached PDF data to email.', [
+                'path' => $assessmentPath,
+                'disk' => $attachment['disk'],
+                'size' => strlen($attachment['contents']),
             ]);
         } else {
             Log::warning(
@@ -216,6 +168,8 @@ final class MigrateToStudent extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
+        $this->record = $this->freshEnrollmentRecord();
+
         $assessmentPath = $this->generatedPdfPath;
         if (in_array($assessmentPath, [null, '', '0'], true)) {
             $assessmentPath = $this->record
@@ -236,6 +190,8 @@ final class MigrateToStudent extends Notification implements ShouldQueue
      */
     public function toDatabase(object $notifiable): array
     {
+        $this->record = $this->freshEnrollmentRecord();
+
         if (in_array($this->generatedPdfPath, [null, '', '0'], true)) {
             try {
                 $pdfContents = $this->generatePdf();
@@ -254,7 +210,7 @@ final class MigrateToStudent extends Notification implements ShouldQueue
         }
 
         $resource = null;
-        if ($this->generatedPdfPath && file_exists($this->generatedPdfPath)) {
+        if (! in_array($this->generatedPdfPath, [null, '', '0'], true)) {
             $fileName = basename($this->generatedPdfPath);
             $resource = $this->record
                 ->resources()
@@ -314,6 +270,78 @@ final class MigrateToStudent extends Notification implements ShouldQueue
         }
 
         return $notificationData;
+    }
+
+    /**
+     * @return array{contents: string, name: string, disk: string}|null
+     */
+    private function resolveAssessmentAttachment(?string $assessmentPath): ?array
+    {
+        if (in_array($assessmentPath, [null, '', '0'], true)) {
+            return null;
+        }
+
+        if (file_exists($assessmentPath)) {
+            $contents = file_get_contents($assessmentPath);
+
+            if ($contents !== false && $contents !== '') {
+                return [
+                    'contents' => $contents,
+                    'name' => sprintf('Assessment_Form_%s.pdf', $this->record->id),
+                    'disk' => 'local-path',
+                ];
+            }
+        }
+
+        $storageDisk = (string) config('filesystems.default');
+        $storage = Storage::disk($storageDisk);
+        $storagePaths = array_values(array_unique(array_filter([
+            $assessmentPath,
+            ResourceStorageLocator::normalizeStorageKey($assessmentPath),
+            'assessments/'.basename($assessmentPath),
+            basename($assessmentPath),
+        ])));
+
+        foreach ($storagePaths as $storagePath) {
+            try {
+                if (! $storage->exists($storagePath)) {
+                    continue;
+                }
+
+                $contents = $storage->get($storagePath);
+
+                if ($contents === '') {
+                    Log::warning('Assessment PDF in storage is empty.', [
+                        'disk' => $storageDisk,
+                        'path' => $storagePath,
+                    ]);
+
+                    continue;
+                }
+
+                return [
+                    'contents' => $contents,
+                    'name' => sprintf('Assessment_Form_%s.pdf', $this->record->id),
+                    'disk' => $storageDisk,
+                ];
+            } catch (Exception $exception) {
+                Log::error('Error reading assessment PDF for email attachment.', [
+                    'disk' => $storageDisk,
+                    'path' => $storagePath,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return null;
+    }
+
+    private function freshEnrollmentRecord(): StudentEnrollment
+    {
+        return StudentEnrollment::query()
+            ->withoutGlobalScopes()
+            ->with(['student', 'SubjectsEnrolled', 'studentTuition'])
+            ->find($this->record->getKey()) ?? $this->record;
     }
 
     private function generatePdf(): array

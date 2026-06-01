@@ -504,23 +504,7 @@ final class EnrollmentService
                 }
             }
 
-            // Send Notifications
-            // TODO: Uncomment InvoiceTransact when library issue is resolved
-            // if ($enrollmentRecord->student?->email) {
-            //     NotificationFacade::route('mail', $enrollmentRecord->student->email)
-            //         ->notify(new InvoiceTransact($transaction, $enrollmentRecord->student));
-            // }
-            if ($studentEnrollment->student?->email) {
-                NotificationFacade::route(
-                    'mail',
-                    $studentEnrollment->student->email
-                )->notify(new MigrateToStudent($studentEnrollment));
-            } else {
-                Log::warning(
-                    'Student email not found for MigrateToStudent notification.',
-                    ['enrollment_id' => $studentEnrollment->id]
-                );
-            }
+            $studentEmail = $studentEnrollment->student?->email;
 
             $pipeline = app(EnrollmentPipelineService::class);
 
@@ -567,6 +551,25 @@ final class EnrollmentService
                 ->send(); // Also send regular notification
 
             DB::commit();
+
+            try {
+                if ($studentEmail) {
+                    NotificationFacade::route(
+                        'mail',
+                        $studentEmail
+                    )->notify(new MigrateToStudent($studentEnrollment));
+                } else {
+                    Log::warning(
+                        'Student email not found for MigrateToStudent notification.',
+                        ['enrollment_id' => $studentEnrollment->id]
+                    );
+                }
+            } catch (Exception $exception) {
+                Log::error('Enrollment completed, but confirmation email failed to queue.', [
+                    'enrollment_id' => $studentEnrollment->id,
+                    'exception' => $exception,
+                ]);
+            }
 
             return true;
         } catch (Exception $exception) {
