@@ -21,11 +21,11 @@ final class MigrateToStudent extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public StudentEnrollment $record;
+
     private ?string $generatedPdfPath = null;
 
     private bool $requiresAttachment = false;
-
-    public StudentEnrollment $record;
 
     /**
      * Create a new notification instance.
@@ -140,7 +140,7 @@ final class MigrateToStudent extends Notification implements ShouldQueue
             Log::info('Successfully attached PDF data to email.', [
                 'path' => $assessmentPath,
                 'disk' => $attachment['disk'],
-                'size' => strlen($attachment['contents']),
+                'size' => mb_strlen($attachment['contents']),
             ]);
         } else {
             Log::warning(

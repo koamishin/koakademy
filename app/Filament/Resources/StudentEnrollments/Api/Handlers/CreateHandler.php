@@ -129,9 +129,9 @@ final class CreateHandler extends Handlers
                 $overallTuition += $additionalFeesTotal;
             }
 
-            // Calculate balance
+            // Downpayment is an expected cashier collection amount until a payment transaction is verified.
             $downpayment = $request->input('downpayment', 0);
-            $totalBalance = $overallTuition - $downpayment;
+            $totalBalance = $overallTuition;
 
             // Create StudentTuition record
             $model->studentTuition()->create([

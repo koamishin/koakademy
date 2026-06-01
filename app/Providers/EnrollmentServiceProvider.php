@@ -496,7 +496,7 @@ final class EnrollmentServiceProvider extends ServiceProvider
         $tuitionData = [
             'student_id' => $studentEnrollment->student_id ?? $get('student_id'), // Ensure student_id is set
             'total_tuition' => $discountedTuition,
-            'total_balance' => $overallTotal - $downPayment,
+            'total_balance' => $overallTotal,
             'total_lectures' => $discountedLecture,
             'total_laboratory' => $totalLaboratory,
             'total_miscelaneous_fees' => $miscellaneousFee,

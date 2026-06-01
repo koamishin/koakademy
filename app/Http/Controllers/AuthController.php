@@ -100,7 +100,7 @@ final class AuthController extends Controller
 
         // If it's a faculty user, set faculty_id_number and record_id
         if ($user->role?->isFaculty()) {
-            $faculty = \App\Models\Faculty::query()
+            $faculty = Faculty::query()
                 ->where('email', $email)
                 ->first();
 

@@ -36,7 +36,7 @@ final class CreateStudentEnrollment extends CreateRecord
             'total_miscelaneous_fees' => $data['miscellaneous'] ?? 3500,
             'overall_tuition' => $data['overall_total'] ?? 0,
             'downpayment' => $data['downpayment'] ?? 0,
-            'total_balance' => $data['total_balance'] ?? 0,
+            'total_balance' => $data['overall_total'] ?? ($data['total_balance'] ?? 0),
         ];
 
         // Store tuition data temporarily so we can create it after enrollment is created

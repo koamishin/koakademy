@@ -1090,10 +1090,10 @@ final class AdministratorStudentManagementController extends Controller
         }
 
         [$table, $column] = $allowedFields[$field];
-        $like = '%' . mb_strtolower($search) . '%';
+        $like = '%'.mb_strtolower($search).'%';
 
         $results = DB::table($table)
-            ->whereRaw('LOWER(' . $column . ') LIKE ?', [$like])
+            ->whereRaw('LOWER('.$column.') LIKE ?', [$like])
             ->whereNotNull($column)
             ->where($column, '!=', '')
             ->distinct()

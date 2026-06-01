@@ -979,9 +979,6 @@ final class AdministratorEnrollmentManagementController extends Controller
 
         try {
             DB::transaction(function () use ($enrollment, $transaction, $validated): void {
-                // Calculate old total amount
-                $oldAmount = $transaction->raw_total_amount;
-
                 // Update settlements
                 $settlements = $transaction->settlements;
                 if (is_string($settlements)) {
@@ -1005,18 +1002,16 @@ final class AdministratorEnrollmentManagementController extends Controller
                     'invoicenumber' => $validated['invoicenumber'],
                 ]);
 
-                // Recalculate difference
-                $newAmount = $transaction->raw_total_amount;
-                $diff = $newAmount - $oldAmount;
-
-                // Update StudentTuition
+                // Keep tuition balance aligned with verified tuition payments.
+                // Non-tuition settlement categories should not reduce tuition balance.
                 $tuition = $enrollment->studentTuition;
                 if ($tuition) {
-                    $tuition->total_balance -= $diff;
+                    $tuition->refresh();
+                    $totalPaid = $tuition->total_paid;
+                    $tuition->total_balance = max(0, (float) $tuition->overall_tuition - $totalPaid);
 
-                    // Update downpayment if description matches
                     if (str_contains(mb_strtolower($transaction->description), 'downpayment')) {
-                        $tuition->downpayment += $diff;
+                        $tuition->downpayment = $totalPaid;
                     }
 
                     $tuition->save();

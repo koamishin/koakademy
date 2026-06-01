@@ -181,8 +181,8 @@ final class EnrollmentService
                 $overallTotal = $discountedTuition + $miscellaneousFee + $additionalFeesTotal;
             }
 
-            $downPayment = (float) ($formData['downpayment'] ?? 0); // Ensure float
-            $balance = $overallTotal - $downPayment;
+            $downPayment = (float) ($formData['downpayment'] ?? 0); // Expected cashier downpayment, not yet paid.
+            $balance = $overallTotal;
 
             // Create StudentTuition record
             return StudentTuition::query()->create([
@@ -367,9 +367,7 @@ final class EnrollmentService
                 $separateTransactions[] = $separateTransaction;
             }
 
-            // Calculate the total downpayment (main transaction + separate fees)
-            $mainTransactionAmount = array_sum($settlements);
-            $totalDownpayment = $mainTransactionAmount + $totalSeparateFeesAmount;
+            $tuitionPayment = (float) ($settlements['tuition_fee'] ?? 0);
 
             // Create Transaction
             $transaction = Transaction::query()->create([
@@ -415,14 +413,14 @@ final class EnrollmentService
 
             // Update Student Tuition
             if ($studentEnrollment->studentTuition) {
-                // Update the student tuition with the total downpayment (main + separate fees)
-                $currentBalance = $studentEnrollment->studentTuition->total_balance ?? 0;
-                $newBalance = max(0, $currentBalance - $totalDownpayment);
+                $tuition = $studentEnrollment->studentTuition->refresh();
+                $totalPaid = $tuition->total_paid;
+                $newBalance = max(0, (float) $tuition->overall_tuition - $totalPaid);
 
-                $studentEnrollment->studentTuition->update([
-                    'status' => 'Downpayment',
+                $tuition->update([
+                    'status' => $newBalance <= 0 ? 'Paid' : 'Downpayment',
                     'total_balance' => $newBalance,
-                    'downpayment' => $totalDownpayment, // Store the total downpayment
+                    'downpayment' => $totalPaid > 0 ? $totalPaid : $tuitionPayment,
                     'semester' => $generalSettings?->semester,
                     'school_year' => $generalSettings?->getSchoolYearString(),
                     'academic_year' => $studentEnrollment->academic_year,
