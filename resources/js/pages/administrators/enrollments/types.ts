@@ -6,6 +6,7 @@ export type ApplicantRow = {
     id: number;
     student_id: number | null;
     name: string;
+    email: string | null;
     student_type: string | null;
     course: string | null;
     department: string | null;

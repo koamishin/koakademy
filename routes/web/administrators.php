@@ -140,6 +140,7 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/enrollments/api/department-by-year-level', [AdministratorEnrollmentManagementController::class, 'departmentByYearLevel'])->name('enrollments.api.department-by-year-level');
 
         Route::patch('/enrollments/{student}', [AdministratorEnrollmentManagementController::class, 'update'])->whereNumber('student')->name('enrollments.scholarship.update');
+        Route::post('/enrollments/applicants/{student}/notify-approval', [AdministratorEnrollmentManagementController::class, 'notifyApplicantApproval'])->whereNumber('student')->name('enrollments.applicants.notify-approval');
         Route::get('/enrollments/{enrollment}', [AdministratorEnrollmentManagementController::class, 'show'])->whereNumber('enrollment')->name('enrollments.show');
 
         // Enrollment Actions

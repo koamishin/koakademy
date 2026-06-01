@@ -13,13 +13,15 @@ import {
 import { cn } from "@/lib/utils";
 import { Link } from "@inertiajs/react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, ArrowUpDown, Award, Copy, Eye, MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-react";
+import { AlertTriangle, ArrowUpDown, Award, Copy, Eye, Loader2, MailCheck, MoreHorizontal, Pencil, Trash2, UserPlus } from "lucide-react";
 import type { ApplicantRow } from "./types";
 
 declare let route: any;
 
 type ApplicantActions = {
     onManageScholarship?: (applicant: ApplicantRow) => void;
+    onNotifyApproval?: (applicant: ApplicantRow) => void;
+    notifyingApplicantId?: number | null;
     onDelete?: (applicant: ApplicantRow) => void;
     onForceDelete?: (applicant: ApplicantRow) => void;
 };
@@ -156,6 +158,7 @@ export const createApplicantColumns = (actions?: ApplicantActions): ColumnDef<Ap
         id: "actions",
         cell: ({ row }) => {
             const applicant = row.original;
+            const isNotifying = actions?.notifyingApplicantId === applicant.id;
             return (
                 <div className="flex items-center justify-end gap-2">
                     {!applicant.is_trashed && (
@@ -198,15 +201,27 @@ export const createApplicantColumns = (actions?: ApplicantActions): ColumnDef<Ap
                                 </Link>
                             </DropdownMenuItem>
                             {!applicant.is_trashed && (
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        actions?.onManageScholarship?.(applicant);
-                                    }}
-                                >
-                                    <Award className="mr-2 h-4 w-4" />
-                                    Manage Scholarship
-                                </DropdownMenuItem>
+                                <>
+                                    <DropdownMenuItem
+                                        disabled={isNotifying}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            actions?.onNotifyApproval?.(applicant);
+                                        }}
+                                    >
+                                        {isNotifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MailCheck className="mr-2 h-4 w-4" />}
+                                        Notify Approval
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            actions?.onManageScholarship?.(applicant);
+                                        }}
+                                    >
+                                        <Award className="mr-2 h-4 w-4" />
+                                        Manage Scholarship
+                                    </DropdownMenuItem>
+                                </>
                             )}
                             <DropdownMenuSeparator />
                             {applicant.is_trashed ? (

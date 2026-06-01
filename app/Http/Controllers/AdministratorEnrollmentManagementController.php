@@ -19,6 +19,7 @@ use App\Models\Subject;
 use App\Models\SubjectEnrollment;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Notifications\ApplicantApprovedForRequirements;
 use App\Services\EnrollmentPipelineService;
 use App\Services\EnrollmentService;
 use App\Services\GeneralSettingsService;
@@ -417,6 +418,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                 'id' => $student->id,
                 'student_id' => $student->student_id,
                 'name' => $student->full_name,
+                'email' => $student->email,
                 'student_type' => is_object($student->student_type) ? $student->student_type->value : $student->student_type,
                 'course' => $student->Course?->code,
                 'department' => $student->Course?->department?->code,
@@ -440,6 +442,36 @@ final class AdministratorEnrollmentManagementController extends Controller
                 'per_page' => request('per_page', 10),
             ],
             'flash' => session('flash'),
+        ]);
+    }
+
+    public function notifyApplicantApproval(Student $student): RedirectResponse
+    {
+        $user = Auth::user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        if ($student->status !== StudentStatus::Applicant) {
+            return back()->with('flash', ['error' => 'Only applicant records can be notified.']);
+        }
+
+        if ($student->trashed()) {
+            return back()->with('flash', ['error' => 'Deleted applicant records cannot be notified.']);
+        }
+
+        if (empty($student->email)) {
+            return back()->with('flash', ['error' => 'This applicant does not have an email address.']);
+        }
+
+        $student->loadMissing('Course.department');
+        $student->notify(new ApplicantApprovedForRequirements(
+            senderName: $user->name,
+            senderRole: $user->role?->getLabel() ?? 'Administrator'
+        ));
+
+        return back()->with('flash', [
+            'success' => sprintf('Approval email queued for %s.', $student->full_name),
         ]);
     }
 

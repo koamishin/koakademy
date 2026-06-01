@@ -20,6 +20,7 @@ export default function AdministratorEnrollmentApplicants({ user, applicants, fi
     const [forceDeleteApplicant, setForceDeleteApplicant] = useState<ApplicantRow | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [notifyingApplicantId, setNotifyingApplicantId] = useState<number | null>(null);
 
     const safeApplicants = Array.isArray(applicants?.data) ? applicants.data : [];
     const applicantsPagination = {
@@ -94,6 +95,31 @@ export default function AdministratorEnrollmentApplicants({ user, applicants, fi
         );
     };
 
+    const handleNotifyApproval = (applicant: ApplicantRow) => {
+        if (!applicant.email) {
+            toast.error("This applicant does not have an email address.");
+            return;
+        }
+
+        setNotifyingApplicantId(applicant.id);
+        router.post(
+            route("administrators.enrollments.applicants.notify-approval", { student: applicant.id }),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(`Approval email queued for ${applicant.name}.`);
+                },
+                onError: () => {
+                    toast.error("Failed to queue approval email.");
+                },
+                onFinish: () => {
+                    setNotifyingApplicantId(null);
+                },
+            },
+        );
+    };
+
     const handleDeleteApplicant = () => {
         if (!deleteApplicant) return;
 
@@ -161,6 +187,8 @@ export default function AdministratorEnrollmentApplicants({ user, applicants, fi
                     isSearching={isSearching}
                     onSearchChange={handleApplicantSearchChange}
                     onManageScholarship={handleManageClick}
+                    onNotifyApproval={handleNotifyApproval}
+                    notifyingApplicantId={notifyingApplicantId}
                     onDeleteApplicant={setDeleteApplicant}
                     onForceDeleteApplicant={setForceDeleteApplicant}
                 />

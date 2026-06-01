@@ -13,6 +13,8 @@ type ApplicantsCardProps = {
     isSearching: boolean;
     onSearchChange: (value: string) => void;
     onManageScholarship: (applicant: ApplicantRow) => void;
+    onNotifyApproval: (applicant: ApplicantRow) => void;
+    notifyingApplicantId: number | null;
     onDeleteApplicant: (applicant: ApplicantRow) => void;
     onForceDeleteApplicant: (applicant: ApplicantRow) => void;
 };
@@ -25,11 +27,15 @@ export function ApplicantsCard({
     isSearching,
     onSearchChange,
     onManageScholarship,
+    onNotifyApproval,
+    notifyingApplicantId,
     onDeleteApplicant,
     onForceDeleteApplicant,
 }: ApplicantsCardProps) {
     const columns = createApplicantColumns({
         onManageScholarship,
+        onNotifyApproval,
+        notifyingApplicantId,
         onDelete: onDeleteApplicant,
         onForceDelete: onForceDeleteApplicant,
     });
