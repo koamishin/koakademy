@@ -23,15 +23,18 @@ final class MigrateToStudent extends Notification implements ShouldQueue
 
     private ?string $generatedPdfPath = null;
 
+    private bool $requiresAttachment = false;
+
     public StudentEnrollment $record;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(StudentEnrollment $record, ?string $assessmentPath = null)
+    public function __construct(StudentEnrollment $record, ?string $assessmentPath = null, bool $requiresAttachment = false)
     {
         $this->record = $record->withoutRelations();
         $this->generatedPdfPath = $assessmentPath;
+        $this->requiresAttachment = $requiresAttachment;
         $this->afterCommit();
     }
 
@@ -145,11 +148,20 @@ final class MigrateToStudent extends Notification implements ShouldQueue
                 [
                     'path_expected' => $assessmentPath,
                     'generation_error' => $pdfGenerationError,
+                    'requires_attachment' => $this->requiresAttachment,
                 ]
             );
 
             if (! in_array($pdfGenerationError, [null, '', '0'], true)) {
                 Log::error('PDF Generation Error Details: '.$pdfGenerationError);
+            }
+
+            if ($this->requiresAttachment) {
+                throw new Exception(sprintf(
+                    'Assessment PDF could not be attached from path [%s]. %s',
+                    $assessmentPath ?? 'null',
+                    $pdfGenerationError ? 'Generation error: '.$pdfGenerationError : ''
+                ));
             }
         }
 

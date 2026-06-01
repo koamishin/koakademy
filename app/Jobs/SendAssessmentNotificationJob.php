@@ -30,7 +30,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public int $timeout = 300; // 5 minutes timeout
+    public int $timeout = 1800; // 30 minutes timeout for PDF generation
 
     public int $tries = 3;
 
@@ -44,11 +44,15 @@ final class SendAssessmentNotificationJob implements ShouldQueue
         ?string $jobId = null
     ) {
         $this->jobId = $jobId ?? uniqid('assessment_', true);
+        $this->onConnection((string) config('queue.assessment_notification_connection', config('queue.default')));
+        $this->onQueue((string) config('queue.assessment_notification_queue', 'default'));
 
         Log::info('SendAssessmentNotificationJob created', [
             'enrollment_id' => $this->studentEnrollment->id,
             'job_id' => $this->jobId,
             'student_email' => $this->studentEnrollment->student?->email,
+            'connection' => $this->connection,
+            'queue' => $this->queue,
         ]);
     }
 
@@ -78,14 +82,17 @@ final class SendAssessmentNotificationJob implements ShouldQueue
             NotificationFacade::route(
                 'mail',
                 $this->studentEnrollment->student->email
-            )->notifyNow(new MigrateToStudent($this->studentEnrollment, $assessmentPath));
+            )->notifyNow(new MigrateToStudent(
+                $this->studentEnrollment,
+                $assessmentPath,
+                requiresAttachment: true
+            ));
 
-            if ($assessmentPath === null) {
-                Log::warning('Assessment email sent without pre-validated PDF attachment.', [
-                    'job_id' => $this->jobId,
-                    'enrollment_id' => $this->studentEnrollment->id,
-                ]);
-            }
+            Log::info('Assessment email sent with pre-validated PDF attachment path.', [
+                'job_id' => $this->jobId,
+                'enrollment_id' => $this->studentEnrollment->id,
+                'assessment_path' => $assessmentPath,
+            ]);
 
             // Send database notification to super admins using Filament notifications
             try {
@@ -280,13 +287,14 @@ final class SendAssessmentNotificationJob implements ShouldQueue
         try {
             return $this->generatePdfSynchronously();
         } catch (Exception $exception) {
-            Log::warning('Assessment PDF regeneration failed during resend. Continuing without guaranteed attachment.', [
+            Log::error('Assessment PDF regeneration failed during resend.', [
                 'job_id' => $this->jobId,
                 'enrollment_id' => $this->studentEnrollment->id,
                 'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
             ]);
 
-            return null;
+            throw $exception;
         }
     }
 

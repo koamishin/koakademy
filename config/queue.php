@@ -17,6 +17,16 @@ return [
 
     'default' => env('QUEUE_CONNECTION', 'database'),
 
+    'assessment_notification_connection' => env(
+        'ASSESSMENT_NOTIFICATION_CONNECTION',
+        PHP_OS_FAMILY === 'Windows' ? env('QUEUE_CONNECTION', 'database') : 'redis-pdf'
+    ),
+
+    'assessment_notification_queue' => env(
+        'ASSESSMENT_NOTIFICATION_QUEUE',
+        PHP_OS_FAMILY === 'Windows' ? 'default' : 'pdf-generation'
+    ),
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections
