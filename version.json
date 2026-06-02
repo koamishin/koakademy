@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.16",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.16",
-  "commit": "a2b848613ce6321047055e51f052101193f5b79c",
+  "version": "1.6.0-dev.0.17",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.17",
+  "commit": "b1b415614138220620d8b94073dcd84928d54b39",
   "branch": "master",
-  "timestamp": "2026-06-02T01:36:50Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26792802355",
+  "timestamp": "2026-06-02T03:52:57Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26797146687",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.16 - Refactor enrollment billing balance sync",
-    "previous": "1.6.0-dev.0.15"
+    "current": "Version 1.6.0-dev.0.17 - Improve scroll behavior in class UI",
+    "previous": "1.6.0-dev.0.16"
   },
   "metadata": {
     "author": "yukazakiri",
