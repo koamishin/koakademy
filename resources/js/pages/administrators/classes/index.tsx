@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect as SearchableMultiSelect } from "@/components/ui/multi-select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -1612,7 +1613,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     }
                 }}
             >
-                <DialogContent className="bg-background/95 supports-[backdrop-filter]:bg-background/60 flex max-h-[95vh] w-full flex-col gap-0 overflow-hidden p-0 backdrop-blur sm:max-w-3xl md:max-w-5xl lg:max-w-[90vw] xl:max-w-[1400px]">
+                <DialogContent className="bg-background/95 supports-[backdrop-filter]:bg-background/60 flex h-[95vh] w-full flex-col gap-0 overflow-hidden p-0 backdrop-blur sm:max-w-3xl md:max-w-5xl lg:max-w-[90vw] xl:max-w-[1400px]">
                     <DialogHeader className="bg-muted/20 border-b p-6 pb-4">
                         <DialogTitle className="text-xl font-bold">Create class</DialogTitle>
                         <DialogDescription>Build a class record, assign schedules, and configure settings.</DialogDescription>
@@ -1649,365 +1650,373 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             </TabsList>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 pt-6">
-                            {createFirstError ? (
-                                <div className="border-destructive/40 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
-                                    {createFirstError}
-                                </div>
-                            ) : null}
-                            <TabsContent value="details" className="m-0 space-y-6 outline-none">
-                                <div className="space-y-4">
-                                    <Card className="border-border/60 shadow-sm">
-                                        <CardHeader className="bg-muted/20 border-b pb-4">
-                                            <CardTitle className="text-base font-semibold">Class basics</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4 pt-6">
-                                            <div className="grid gap-4 sm:grid-cols-2">
-                                                <div className="space-y-3 sm:col-span-2">
-                                                    <Label>Program type</Label>
-                                                    <div className="grid gap-3 sm:grid-cols-2">
-                                                        <VisualRadioButton
-                                                            title="College"
-                                                            checked={createForm.data.classification === "college"}
-                                                            onSelect={() => {
-                                                                createForm.setData("classification", "college");
-                                                                createForm.setData("course_codes", []);
-                                                                createForm.setData("subject_ids", []);
-                                                                createForm.setData("subject_code", "");
-                                                                createForm.setData("shs_track_id", null);
-                                                                createForm.setData("shs_strand_id", null);
-                                                                createForm.setData("subject_code_shs", "");
-                                                                setCollegeSubjectOptions([]);
-                                                                setShsStrandOptions([]);
-                                                                setShsSubjectOptions([]);
-                                                                setSubjectCodeTouched(false);
-                                                            }}
-                                                        />
-                                                        <VisualRadioButton
-                                                            title="Senior High School"
-                                                            checked={createForm.data.classification === "shs"}
-                                                            onSelect={() => {
-                                                                createForm.setData("classification", "shs");
-                                                                createForm.setData("course_codes", []);
-                                                                createForm.setData("subject_ids", []);
-                                                                createForm.setData("subject_code", "");
-                                                                createForm.setData("shs_track_id", null);
-                                                                createForm.setData("shs_strand_id", null);
-                                                                createForm.setData("subject_code_shs", "");
-                                                                setCollegeSubjectOptions([]);
-                                                                setShsStrandOptions([]);
-                                                                setShsSubjectOptions([]);
-                                                                setSubjectCodeTouched(false);
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {createForm.data.classification === "college" ? (
-                                                    <>
-                                                        <div className="space-y-2">
-                                                            <Label>Courses</Label>
-                                                            <SearchableMultiSelect
-                                                                placeholder="Search and select courses..."
-                                                                searchPlaceholder="Search courses..."
-                                                                emptyText="No courses found."
-                                                                options={options.courses.map((course) => ({
-                                                                    value: String(course.id),
-                                                                    label: course.label,
-                                                                    searchText: course.label,
-                                                                }))}
-                                                                selected={createForm.data.course_codes.map(String)}
-                                                                onChange={(values) => {
-                                                                    const next = values.map(Number);
-                                                                    createForm.setData("course_codes", next);
-                                                                    void loadCollegeSubjects(next, "create");
-                                                                }}
-                                                            />
-                                                            {createForm.errors.course_codes ? (
-                                                                <p className="text-destructive text-xs">{createForm.errors.course_codes}</p>
-                                                            ) : null}
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <Label>Subjects</Label>
-                                                            <SearchableMultiSelect
-                                                                placeholder={
-                                                                    createForm.data.course_codes.length
-                                                                        ? "Search and select subjects..."
-                                                                        : "Select courses first"
-                                                                }
-                                                                searchPlaceholder="Search subjects..."
-                                                                emptyText="No subjects found."
-                                                                options={collegeSubjectOptions.map((subject) => ({
-                                                                    value: String(subject.id),
-                                                                    label: subject.label,
-                                                                    description: subject.title,
-                                                                    searchText: `${subject.code} ${subject.title} ${subject.label}`,
-                                                                }))}
-                                                                selected={createForm.data.subject_ids.map(String)}
-                                                                disabled={createForm.data.course_codes.length === 0 || collegeSubjectsLoading}
-                                                                onChange={(values) => {
-                                                                    const subjectIds = values.map(Number);
-                                                                    createForm.setData("subject_ids", subjectIds);
-                                                                    if (!subjectCodeTouched) {
-                                                                        const computed = buildSubjectCodeFromSubjectOptions(
-                                                                            values,
-                                                                            collegeSubjectOptions,
-                                                                        );
-                                                                        createForm.setData("subject_code", computed);
-                                                                    }
-                                                                }}
-                                                            />
-                                                            {createForm.errors.subject_ids ? (
-                                                                <p className="text-destructive text-xs">{createForm.errors.subject_ids}</p>
-                                                            ) : null}
-                                                        </div>
-
-                                                        <div className="space-y-2 sm:col-span-2">
-                                                            <Label>Class code or name</Label>
-                                                            <Input
-                                                                value={createForm.data.subject_code}
-                                                                placeholder="Auto-generated from subjects..."
-                                                                onChange={(e) => {
-                                                                    setSubjectCodeTouched(true);
-                                                                    createForm.setData("subject_code", e.target.value);
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div className="space-y-2">
-                                                            <Label>SHS track</Label>
-                                                            <Select
-                                                                value={createForm.data.shs_track_id ? String(createForm.data.shs_track_id) : ""}
-                                                                onValueChange={(val) => {
-                                                                    const trackId = Number(val);
-                                                                    createForm.setData("shs_track_id", trackId);
+                        <ScrollArea className="h-full min-h-0 flex-1">
+                            <div className="p-6 pt-6">
+                                {createFirstError ? (
+                                    <div className="border-destructive/40 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
+                                        {createFirstError}
+                                    </div>
+                                ) : null}
+                                <TabsContent value="details" className="m-0 space-y-6 outline-none">
+                                    <div className="space-y-4">
+                                        <Card className="border-border/60 shadow-sm">
+                                            <CardHeader className="bg-muted/20 border-b pb-4">
+                                                <CardTitle className="text-base font-semibold">Class basics</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4 pt-6">
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="space-y-3 sm:col-span-2">
+                                                        <Label>Program type</Label>
+                                                        <div className="grid gap-3 sm:grid-cols-2">
+                                                            <VisualRadioButton
+                                                                title="College"
+                                                                checked={createForm.data.classification === "college"}
+                                                                onSelect={() => {
+                                                                    createForm.setData("classification", "college");
+                                                                    createForm.setData("course_codes", []);
+                                                                    createForm.setData("subject_ids", []);
+                                                                    createForm.setData("subject_code", "");
+                                                                    createForm.setData("shs_track_id", null);
                                                                     createForm.setData("shs_strand_id", null);
                                                                     createForm.setData("subject_code_shs", "");
-                                                                    void loadShsStrands(trackId, "create");
+                                                                    setCollegeSubjectOptions([]);
+                                                                    setShsStrandOptions([]);
+                                                                    setShsSubjectOptions([]);
+                                                                    setSubjectCodeTouched(false);
                                                                 }}
-                                                            >
-                                                                <SelectTrigger className="w-full">
-                                                                    <SelectValue placeholder={shsStrandsLoading ? "Loading..." : "Select track"} />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {options.shs_tracks.map((track) => (
-                                                                        <SelectItem key={track.id} value={String(track.id)}>
-                                                                            {track.label}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <Label>SHS strand</Label>
-                                                            <Select
-                                                                value={createForm.data.shs_strand_id ? String(createForm.data.shs_strand_id) : ""}
-                                                                onValueChange={(val) => {
-                                                                    const strandId = Number(val);
-                                                                    createForm.setData("shs_strand_id", strandId);
+                                                            />
+                                                            <VisualRadioButton
+                                                                title="Senior High School"
+                                                                checked={createForm.data.classification === "shs"}
+                                                                onSelect={() => {
+                                                                    createForm.setData("classification", "shs");
+                                                                    createForm.setData("course_codes", []);
+                                                                    createForm.setData("subject_ids", []);
+                                                                    createForm.setData("subject_code", "");
+                                                                    createForm.setData("shs_track_id", null);
+                                                                    createForm.setData("shs_strand_id", null);
                                                                     createForm.setData("subject_code_shs", "");
-                                                                    void loadShsSubjects(strandId);
+                                                                    setCollegeSubjectOptions([]);
+                                                                    setShsStrandOptions([]);
+                                                                    setShsSubjectOptions([]);
+                                                                    setSubjectCodeTouched(false);
                                                                 }}
-                                                                disabled={!createForm.data.shs_track_id || shsStrandsLoading}
-                                                            >
-                                                                <SelectTrigger className="w-full">
-                                                                    <SelectValue placeholder={shsStrandsLoading ? "Loading..." : "Select strand"} />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {shsStrandOptions.map((strand) => (
-                                                                        <SelectItem key={strand.id} value={String(strand.id)}>
-                                                                            {strand.label}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
+                                                            />
                                                         </div>
+                                                    </div>
 
-                                                        <div className="space-y-2 sm:col-span-2">
-                                                            <Label>SHS subject</Label>
-                                                            <Select
-                                                                value={createForm.data.subject_code_shs}
-                                                                onValueChange={(val) => createForm.setData("subject_code_shs", val)}
-                                                                disabled={!createForm.data.shs_strand_id || shsSubjectsLoading}
-                                                            >
-                                                                <SelectTrigger className="w-full">
-                                                                    <SelectValue placeholder={shsSubjectsLoading ? "Loading..." : "Select subject"} />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {shsSubjectOptions.map((subject) => (
-                                                                        <SelectItem key={subject.code} value={subject.code}>
-                                                                            {subject.label}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
+                                                    {createForm.data.classification === "college" ? (
+                                                        <>
+                                                            <div className="space-y-2">
+                                                                <Label>Courses</Label>
+                                                                <SearchableMultiSelect
+                                                                    placeholder="Search and select courses..."
+                                                                    searchPlaceholder="Search courses..."
+                                                                    emptyText="No courses found."
+                                                                    options={options.courses.map((course) => ({
+                                                                        value: String(course.id),
+                                                                        label: course.label,
+                                                                        searchText: course.label,
+                                                                    }))}
+                                                                    selected={createForm.data.course_codes.map(String)}
+                                                                    onChange={(values) => {
+                                                                        const next = values.map(Number);
+                                                                        createForm.setData("course_codes", next);
+                                                                        void loadCollegeSubjects(next, "create");
+                                                                    }}
+                                                                />
+                                                                {createForm.errors.course_codes ? (
+                                                                    <p className="text-destructive text-xs">{createForm.errors.course_codes}</p>
+                                                                ) : null}
+                                                            </div>
 
-                                                        <div className="space-y-2">
-                                                            <Label>Grade level</Label>
-                                                            <Select
-                                                                value={createForm.data.grade_level}
-                                                                onValueChange={(val) => createForm.setData("grade_level", val)}
-                                                            >
-                                                                <SelectTrigger className="w-full">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {options.grade_levels.map((grade) => (
-                                                                        <SelectItem key={grade.value} value={grade.value}>
-                                                                            {grade.label}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                                            <div className="space-y-2">
+                                                                <Label>Subjects</Label>
+                                                                <SearchableMultiSelect
+                                                                    placeholder={
+                                                                        createForm.data.course_codes.length
+                                                                            ? "Search and select subjects..."
+                                                                            : "Select courses first"
+                                                                    }
+                                                                    searchPlaceholder="Search subjects..."
+                                                                    emptyText="No subjects found."
+                                                                    options={collegeSubjectOptions.map((subject) => ({
+                                                                        value: String(subject.id),
+                                                                        label: subject.label,
+                                                                        description: subject.title,
+                                                                        searchText: `${subject.code} ${subject.title} ${subject.label}`,
+                                                                    }))}
+                                                                    selected={createForm.data.subject_ids.map(String)}
+                                                                    disabled={createForm.data.course_codes.length === 0 || collegeSubjectsLoading}
+                                                                    onChange={(values) => {
+                                                                        const subjectIds = values.map(Number);
+                                                                        createForm.setData("subject_ids", subjectIds);
+                                                                        if (!subjectCodeTouched) {
+                                                                            const computed = buildSubjectCodeFromSubjectOptions(
+                                                                                values,
+                                                                                collegeSubjectOptions,
+                                                                            );
+                                                                            createForm.setData("subject_code", computed);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                {createForm.errors.subject_ids ? (
+                                                                    <p className="text-destructive text-xs">{createForm.errors.subject_ids}</p>
+                                                                ) : null}
+                                                            </div>
 
-                                    <Card className="border-border/60 h-fit shadow-sm">
-                                        <CardHeader className="bg-muted/20 border-b pb-4">
-                                            <CardTitle className="text-base font-semibold">Teaching details</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4 pt-6">
-                                            <div className="grid gap-4 sm:grid-cols-2">
-                                                <div className="space-y-2 sm:col-span-2">
-                                                    <Label>Faculty</Label>
-                                                    <Select
-                                                        value={createForm.data.faculty_id ? String(createForm.data.faculty_id) : ""}
-                                                        onValueChange={(val) => createForm.setData("faculty_id", val)}
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder="Select faculty" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.faculties.map((faculty) => (
-                                                                <SelectItem key={faculty.id} value={String(faculty.id)}>
-                                                                    {faculty.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                            <div className="space-y-2 sm:col-span-2">
+                                                                <Label>Class code or name</Label>
+                                                                <Input
+                                                                    value={createForm.data.subject_code}
+                                                                    placeholder="Auto-generated from subjects..."
+                                                                    onChange={(e) => {
+                                                                        setSubjectCodeTouched(true);
+                                                                        createForm.setData("subject_code", e.target.value);
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="space-y-2">
+                                                                <Label>SHS track</Label>
+                                                                <Select
+                                                                    value={createForm.data.shs_track_id ? String(createForm.data.shs_track_id) : ""}
+                                                                    onValueChange={(val) => {
+                                                                        const trackId = Number(val);
+                                                                        createForm.setData("shs_track_id", trackId);
+                                                                        createForm.setData("shs_strand_id", null);
+                                                                        createForm.setData("subject_code_shs", "");
+                                                                        void loadShsStrands(trackId, "create");
+                                                                    }}
+                                                                >
+                                                                    <SelectTrigger className="w-full">
+                                                                        <SelectValue
+                                                                            placeholder={shsStrandsLoading ? "Loading..." : "Select track"}
+                                                                        />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {options.shs_tracks.map((track) => (
+                                                                            <SelectItem key={track.id} value={String(track.id)}>
+                                                                                {track.label}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                <Label>SHS strand</Label>
+                                                                <Select
+                                                                    value={createForm.data.shs_strand_id ? String(createForm.data.shs_strand_id) : ""}
+                                                                    onValueChange={(val) => {
+                                                                        const strandId = Number(val);
+                                                                        createForm.setData("shs_strand_id", strandId);
+                                                                        createForm.setData("subject_code_shs", "");
+                                                                        void loadShsSubjects(strandId);
+                                                                    }}
+                                                                    disabled={!createForm.data.shs_track_id || shsStrandsLoading}
+                                                                >
+                                                                    <SelectTrigger className="w-full">
+                                                                        <SelectValue
+                                                                            placeholder={shsStrandsLoading ? "Loading..." : "Select strand"}
+                                                                        />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {shsStrandOptions.map((strand) => (
+                                                                            <SelectItem key={strand.id} value={String(strand.id)}>
+                                                                                {strand.label}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+
+                                                            <div className="space-y-2 sm:col-span-2">
+                                                                <Label>SHS subject</Label>
+                                                                <Select
+                                                                    value={createForm.data.subject_code_shs}
+                                                                    onValueChange={(val) => createForm.setData("subject_code_shs", val)}
+                                                                    disabled={!createForm.data.shs_strand_id || shsSubjectsLoading}
+                                                                >
+                                                                    <SelectTrigger className="w-full">
+                                                                        <SelectValue
+                                                                            placeholder={shsSubjectsLoading ? "Loading..." : "Select subject"}
+                                                                        />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {shsSubjectOptions.map((subject) => (
+                                                                            <SelectItem key={subject.code} value={subject.code}>
+                                                                                {subject.label}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                <Label>Grade level</Label>
+                                                                <Select
+                                                                    value={createForm.data.grade_level}
+                                                                    onValueChange={(val) => createForm.setData("grade_level", val)}
+                                                                >
+                                                                    <SelectTrigger className="w-full">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {options.grade_levels.map((grade) => (
+                                                                            <SelectItem key={grade.value} value={grade.value}>
+                                                                                {grade.label}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
+                                            </CardContent>
+                                        </Card>
 
-                                                {createForm.data.classification === "college" ? (
+                                        <Card className="border-border/60 h-fit shadow-sm">
+                                            <CardHeader className="bg-muted/20 border-b pb-4">
+                                                <CardTitle className="text-base font-semibold">Teaching details</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4 pt-6">
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <div className="space-y-2 sm:col-span-2">
+                                                        <Label>Faculty</Label>
+                                                        <Select
+                                                            value={createForm.data.faculty_id ? String(createForm.data.faculty_id) : ""}
+                                                            onValueChange={(val) => createForm.setData("faculty_id", val)}
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Select faculty" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {options.faculties.map((faculty) => (
+                                                                    <SelectItem key={faculty.id} value={String(faculty.id)}>
+                                                                        {faculty.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    {createForm.data.classification === "college" ? (
+                                                        <div className="space-y-3 sm:col-span-2">
+                                                            <Label>Year level</Label>
+                                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                                                {[1, 2, 3, 4].map((year) => (
+                                                                    <VisualRadioButton
+                                                                        key={year}
+                                                                        title={`${year} Year`}
+                                                                        checked={createForm.data.academic_year === year}
+                                                                        onSelect={() => createForm.setData("academic_year", year)}
+                                                                        className="min-h-0 px-3 py-3"
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ) : null}
+
                                                     <div className="space-y-3 sm:col-span-2">
-                                                        <Label>Year level</Label>
-                                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                                            {[1, 2, 3, 4].map((year) => (
+                                                        <Label>Semester</Label>
+                                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                                            {options.semesters.map((sem) => (
                                                                 <VisualRadioButton
-                                                                    key={year}
-                                                                    title={`${year} Year`}
-                                                                    checked={createForm.data.academic_year === year}
-                                                                    onSelect={() => createForm.setData("academic_year", year)}
+                                                                    key={sem.value}
+                                                                    title={sem.label}
                                                                     className="min-h-0 px-3 py-3"
+                                                                    checked={createForm.data.semester === sem.value}
+                                                                    onSelect={() => createForm.setData("semester", sem.value)}
                                                                 />
                                                             ))}
                                                         </div>
                                                     </div>
-                                                ) : null}
 
-                                                <div className="space-y-3 sm:col-span-2">
-                                                    <Label>Semester</Label>
-                                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                                        {options.semesters.map((sem) => (
-                                                            <VisualRadioButton
-                                                                key={sem.value}
-                                                                title={sem.label}
-                                                                className="min-h-0 px-3 py-3"
-                                                                checked={createForm.data.semester === sem.value}
-                                                                onSelect={() => createForm.setData("semester", sem.value)}
-                                                            />
-                                                        ))}
+                                                    <div className="space-y-2">
+                                                        <Label>School year</Label>
+                                                        <Input
+                                                            value={createForm.data.school_year}
+                                                            onChange={(e) => createForm.setData("school_year", e.target.value)}
+                                                            placeholder="e.g., 2023 - 2024"
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label>Section</Label>
+                                                        <Select
+                                                            value={createForm.data.section}
+                                                            onValueChange={(val) => createForm.setData("section", val)}
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {options.sections.map((sec) => (
+                                                                    <SelectItem key={sec.value} value={sec.value}>
+                                                                        {sec.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label>Room</Label>
+                                                        <Select
+                                                            value={String(createForm.data.room_id)}
+                                                            onValueChange={(val) => createForm.setData("room_id", Number(val))}
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Room" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {options.rooms.map((room) => (
+                                                                    <SelectItem key={room.id} value={String(room.id)}>
+                                                                        {room.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label>Class size limit</Label>
+                                                        <Input
+                                                            type="number"
+                                                            value={String(createForm.data.maximum_slots)}
+                                                            min={1}
+                                                            onChange={(e) => createForm.setData("maximum_slots", Number(e.target.value))}
+                                                        />
                                                     </div>
                                                 </div>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                </TabsContent>
 
-                                                <div className="space-y-2">
-                                                    <Label>School year</Label>
-                                                    <Input
-                                                        value={createForm.data.school_year}
-                                                        onChange={(e) => createForm.setData("school_year", e.target.value)}
-                                                        placeholder="e.g., 2023 - 2024"
-                                                    />
-                                                </div>
+                                <TabsContent value="schedule" className="m-0 flex h-full min-h-[500px] flex-col outline-none">
+                                    <SchedulePlanner
+                                        schedules={createForm.data.schedules}
+                                        setSchedules={(nextSchedules) => createForm.setData("schedules", nextSchedules)}
+                                        rooms={options.rooms}
+                                        dayOptions={options.day_of_week}
+                                        defaultRoomId={options.rooms[0]?.id ?? 0}
+                                        classRoomId={createForm.data.room_id}
+                                    />
+                                </TabsContent>
 
-                                                <div className="space-y-2">
-                                                    <Label>Section</Label>
-                                                    <Select
-                                                        value={createForm.data.section}
-                                                        onValueChange={(val) => createForm.setData("section", val)}
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.sections.map((sec) => (
-                                                                <SelectItem key={sec.value} value={sec.value}>
-                                                                    {sec.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <Label>Room</Label>
-                                                    <Select
-                                                        value={String(createForm.data.room_id)}
-                                                        onValueChange={(val) => createForm.setData("room_id", Number(val))}
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder="Room" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {options.rooms.map((room) => (
-                                                                <SelectItem key={room.id} value={String(room.id)}>
-                                                                    {room.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <Label>Class size limit</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={String(createForm.data.maximum_slots)}
-                                                        min={1}
-                                                        onChange={(e) => createForm.setData("maximum_slots", Number(e.target.value))}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            </TabsContent>
-
-                            <TabsContent value="schedule" className="m-0 flex h-full min-h-[500px] flex-col outline-none">
-                                <SchedulePlanner
-                                    schedules={createForm.data.schedules}
-                                    setSchedules={(nextSchedules) => createForm.setData("schedules", nextSchedules)}
-                                    rooms={options.rooms}
-                                    dayOptions={options.day_of_week}
-                                    defaultRoomId={options.rooms[0]?.id ?? 0}
-                                    classRoomId={createForm.data.room_id}
-                                />
-                            </TabsContent>
-
-                            <TabsContent value="settings" className="space-y-4">
-                                {settingsEditor({
-                                    settings: createForm.data.settings,
-                                    setSettings: (nextSettings) => createForm.setData("settings", nextSettings),
-                                })}
-                            </TabsContent>
-                        </div>
+                                <TabsContent value="settings" className="space-y-4">
+                                    {settingsEditor({
+                                        settings: createForm.data.settings,
+                                        setSettings: (nextSettings) => createForm.setData("settings", nextSettings),
+                                    })}
+                                </TabsContent>
+                            </div>
+                        </ScrollArea>
                     </Tabs>
 
                     <DialogFooter className="bg-muted/10 border-t p-6">
@@ -2050,7 +2059,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     }
                 }}
             >
-                <DialogContent className="bg-background/95 supports-[backdrop-filter]:bg-background/60 flex max-h-[95vh] w-full flex-col gap-0 overflow-hidden p-0 backdrop-blur sm:max-w-3xl md:max-w-5xl lg:max-w-[90vw] xl:max-w-[1400px]">
+                <DialogContent className="bg-background/95 supports-[backdrop-filter]:bg-background/60 flex h-[95vh] w-full flex-col gap-0 overflow-hidden p-0 backdrop-blur sm:max-w-3xl md:max-w-5xl lg:max-w-[90vw] xl:max-w-[1400px]">
                     <DialogHeader className="bg-muted/20 border-b p-6 pb-4">
                         <DialogTitle className="text-xl font-bold">Edit class</DialogTitle>
                         <DialogDescription>Update the class record and schedule.</DialogDescription>
@@ -2092,367 +2101,369 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                 </TabsList>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 pt-6">
-                                {editFirstError ? (
-                                    <div className="border-destructive/40 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
-                                        {editFirstError}
-                                    </div>
-                                ) : null}
-                                <TabsContent value="details" className="m-0 space-y-6 outline-none">
-                                    <div className="space-y-4">
-                                        <Card className="border-border/60 shadow-sm">
-                                            <CardHeader className="bg-muted/20 border-b pb-4">
-                                                <CardTitle className="text-base font-semibold">Class basics</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4 pt-6">
-                                                <div className="grid gap-4 sm:grid-cols-2">
-                                                    <div className="space-y-3 sm:col-span-2">
-                                                        <Label>Program type</Label>
-                                                        <div className="grid gap-3 sm:grid-cols-2">
-                                                            <VisualRadioButton
-                                                                title="College"
-                                                                checked={editForm.data.classification === "college"}
-                                                                onSelect={() => {
-                                                                    editForm.setData("classification", "college");
-                                                                    editForm.setData("course_codes", []);
-                                                                    editForm.setData("subject_ids", []);
-                                                                    editForm.setData("subject_code", "");
-                                                                    editForm.setData("shs_track_id", null);
-                                                                    editForm.setData("shs_strand_id", null);
-                                                                    editForm.setData("subject_code_shs", "");
-                                                                    setCollegeSubjectOptions([]);
-                                                                    setShsStrandOptions([]);
-                                                                    setShsSubjectOptions([]);
-                                                                    setSubjectCodeTouched(false);
-                                                                }}
-                                                            />
-                                                            <VisualRadioButton
-                                                                title="Senior High School"
-                                                                checked={editForm.data.classification === "shs"}
-                                                                onSelect={() => {
-                                                                    editForm.setData("classification", "shs");
-                                                                    editForm.setData("course_codes", []);
-                                                                    editForm.setData("subject_ids", []);
-                                                                    editForm.setData("subject_code", "");
-                                                                    editForm.setData("shs_track_id", null);
-                                                                    editForm.setData("shs_strand_id", null);
-                                                                    editForm.setData("subject_code_shs", "");
-                                                                    setCollegeSubjectOptions([]);
-                                                                    setShsStrandOptions([]);
-                                                                    setShsSubjectOptions([]);
-                                                                    setSubjectCodeTouched(false);
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {editForm.data.classification === "college" ? (
-                                                        <>
-                                                            <div className="space-y-2">
-                                                                <Label>Courses</Label>
-                                                                <SearchableMultiSelect
-                                                                    placeholder="Search and select courses..."
-                                                                    searchPlaceholder="Search courses..."
-                                                                    emptyText="No courses found."
-                                                                    options={options.courses.map((course) => ({
-                                                                        value: String(course.id),
-                                                                        label: course.label,
-                                                                        searchText: course.label,
-                                                                    }))}
-                                                                    selected={editForm.data.course_codes.map(String)}
-                                                                    onChange={(values) => {
-                                                                        const next = values.map(Number);
-                                                                        editForm.setData("course_codes", next);
-                                                                        void loadCollegeSubjects(next, "edit");
-                                                                    }}
-                                                                />
-                                                                {editForm.errors.course_codes ? (
-                                                                    <p className="text-destructive text-xs">{editForm.errors.course_codes}</p>
-                                                                ) : null}
-                                                            </div>
-
-                                                            <div className="space-y-2">
-                                                                <Label>Subjects</Label>
-                                                                <SearchableMultiSelect
-                                                                    placeholder={
-                                                                        editForm.data.course_codes.length
-                                                                            ? "Search and select subjects..."
-                                                                            : "Select courses first"
-                                                                    }
-                                                                    searchPlaceholder="Search subjects..."
-                                                                    emptyText="No subjects found."
-                                                                    options={collegeSubjectOptions.map((subject) => ({
-                                                                        value: String(subject.id),
-                                                                        label: subject.label,
-                                                                        description: subject.title,
-                                                                        searchText: `${subject.code} ${subject.title} ${subject.label}`,
-                                                                    }))}
-                                                                    selected={editForm.data.subject_ids.map(String)}
-                                                                    disabled={editForm.data.course_codes.length === 0 || collegeSubjectsLoading}
-                                                                    onChange={(values) => {
-                                                                        const subjectIds = values.map(Number);
-                                                                        editForm.setData("subject_ids", subjectIds);
-                                                                        if (!subjectCodeTouched) {
-                                                                            const computed = buildSubjectCodeFromSubjectOptions(
-                                                                                values,
-                                                                                collegeSubjectOptions,
-                                                                            );
-                                                                            editForm.setData("subject_code", computed);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                {editForm.errors.subject_ids ? (
-                                                                    <p className="text-destructive text-xs">{editForm.errors.subject_ids}</p>
-                                                                ) : null}
-                                                            </div>
-
-                                                            <div className="space-y-2 sm:col-span-2">
-                                                                <Label>Class code or name</Label>
-                                                                <Input
-                                                                    value={editForm.data.subject_code}
-                                                                    placeholder="Auto-generated from subjects..."
-                                                                    onChange={(e) => {
-                                                                        setSubjectCodeTouched(true);
-                                                                        editForm.setData("subject_code", e.target.value);
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <div className="space-y-2">
-                                                                <Label>SHS track</Label>
-                                                                <Select
-                                                                    value={editForm.data.shs_track_id ? String(editForm.data.shs_track_id) : ""}
-                                                                    onValueChange={(val) => {
-                                                                        const trackId = Number(val);
-                                                                        editForm.setData("shs_track_id", trackId);
+                            <ScrollArea className="h-full min-h-0 flex-1">
+                                <div className="p-6 pt-6">
+                                    {editFirstError ? (
+                                        <div className="border-destructive/40 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
+                                            {editFirstError}
+                                        </div>
+                                    ) : null}
+                                    <TabsContent value="details" className="m-0 space-y-6 outline-none">
+                                        <div className="space-y-4">
+                                            <Card className="border-border/60 shadow-sm">
+                                                <CardHeader className="bg-muted/20 border-b pb-4">
+                                                    <CardTitle className="text-base font-semibold">Class basics</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4 pt-6">
+                                                    <div className="grid gap-4 sm:grid-cols-2">
+                                                        <div className="space-y-3 sm:col-span-2">
+                                                            <Label>Program type</Label>
+                                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                                <VisualRadioButton
+                                                                    title="College"
+                                                                    checked={editForm.data.classification === "college"}
+                                                                    onSelect={() => {
+                                                                        editForm.setData("classification", "college");
+                                                                        editForm.setData("course_codes", []);
+                                                                        editForm.setData("subject_ids", []);
+                                                                        editForm.setData("subject_code", "");
+                                                                        editForm.setData("shs_track_id", null);
                                                                         editForm.setData("shs_strand_id", null);
                                                                         editForm.setData("subject_code_shs", "");
-                                                                        void loadShsStrands(trackId, "edit");
+                                                                        setCollegeSubjectOptions([]);
+                                                                        setShsStrandOptions([]);
+                                                                        setShsSubjectOptions([]);
+                                                                        setSubjectCodeTouched(false);
                                                                     }}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue placeholder="Select track" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {options.shs_tracks.map((track) => (
-                                                                            <SelectItem key={track.id} value={String(track.id)}>
-                                                                                {track.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-
-                                                            <div className="space-y-2">
-                                                                <Label>SHS strand</Label>
-                                                                <Select
-                                                                    value={editForm.data.shs_strand_id ? String(editForm.data.shs_strand_id) : ""}
-                                                                    onValueChange={(val) => {
-                                                                        const strandId = Number(val);
-                                                                        editForm.setData("shs_strand_id", strandId);
+                                                                />
+                                                                <VisualRadioButton
+                                                                    title="Senior High School"
+                                                                    checked={editForm.data.classification === "shs"}
+                                                                    onSelect={() => {
+                                                                        editForm.setData("classification", "shs");
+                                                                        editForm.setData("course_codes", []);
+                                                                        editForm.setData("subject_ids", []);
+                                                                        editForm.setData("subject_code", "");
+                                                                        editForm.setData("shs_track_id", null);
+                                                                        editForm.setData("shs_strand_id", null);
                                                                         editForm.setData("subject_code_shs", "");
-                                                                        void loadShsSubjects(strandId);
+                                                                        setCollegeSubjectOptions([]);
+                                                                        setShsStrandOptions([]);
+                                                                        setShsSubjectOptions([]);
+                                                                        setSubjectCodeTouched(false);
                                                                     }}
-                                                                    disabled={!editForm.data.shs_track_id || shsStrandsLoading}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue placeholder="Select strand" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {shsStrandOptions.map((strand) => (
-                                                                            <SelectItem key={strand.id} value={String(strand.id)}>
-                                                                                {strand.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                />
                                                             </div>
+                                                        </div>
 
-                                                            <div className="space-y-2 sm:col-span-2">
-                                                                <Label>SHS subject</Label>
-                                                                <Select
-                                                                    value={editForm.data.subject_code_shs}
-                                                                    onValueChange={(val) => editForm.setData("subject_code_shs", val)}
-                                                                    disabled={!editForm.data.shs_strand_id || shsSubjectsLoading}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue placeholder="Select subject" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {shsSubjectOptions.map((subject) => (
-                                                                            <SelectItem key={subject.code} value={subject.code}>
-                                                                                {subject.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
+                                                        {editForm.data.classification === "college" ? (
+                                                            <>
+                                                                <div className="space-y-2">
+                                                                    <Label>Courses</Label>
+                                                                    <SearchableMultiSelect
+                                                                        placeholder="Search and select courses..."
+                                                                        searchPlaceholder="Search courses..."
+                                                                        emptyText="No courses found."
+                                                                        options={options.courses.map((course) => ({
+                                                                            value: String(course.id),
+                                                                            label: course.label,
+                                                                            searchText: course.label,
+                                                                        }))}
+                                                                        selected={editForm.data.course_codes.map(String)}
+                                                                        onChange={(values) => {
+                                                                            const next = values.map(Number);
+                                                                            editForm.setData("course_codes", next);
+                                                                            void loadCollegeSubjects(next, "edit");
+                                                                        }}
+                                                                    />
+                                                                    {editForm.errors.course_codes ? (
+                                                                        <p className="text-destructive text-xs">{editForm.errors.course_codes}</p>
+                                                                    ) : null}
+                                                                </div>
 
-                                                            <div className="space-y-2">
-                                                                <Label>Grade level</Label>
-                                                                <Select
-                                                                    value={editForm.data.grade_level || "Grade 11"}
-                                                                    onValueChange={(val) => editForm.setData("grade_level", val)}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {options.grade_levels.map((grade) => (
-                                                                            <SelectItem key={grade.value} value={grade.value}>
-                                                                                {grade.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                                                <div className="space-y-2">
+                                                                    <Label>Subjects</Label>
+                                                                    <SearchableMultiSelect
+                                                                        placeholder={
+                                                                            editForm.data.course_codes.length
+                                                                                ? "Search and select subjects..."
+                                                                                : "Select courses first"
+                                                                        }
+                                                                        searchPlaceholder="Search subjects..."
+                                                                        emptyText="No subjects found."
+                                                                        options={collegeSubjectOptions.map((subject) => ({
+                                                                            value: String(subject.id),
+                                                                            label: subject.label,
+                                                                            description: subject.title,
+                                                                            searchText: `${subject.code} ${subject.title} ${subject.label}`,
+                                                                        }))}
+                                                                        selected={editForm.data.subject_ids.map(String)}
+                                                                        disabled={editForm.data.course_codes.length === 0 || collegeSubjectsLoading}
+                                                                        onChange={(values) => {
+                                                                            const subjectIds = values.map(Number);
+                                                                            editForm.setData("subject_ids", subjectIds);
+                                                                            if (!subjectCodeTouched) {
+                                                                                const computed = buildSubjectCodeFromSubjectOptions(
+                                                                                    values,
+                                                                                    collegeSubjectOptions,
+                                                                                );
+                                                                                editForm.setData("subject_code", computed);
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    {editForm.errors.subject_ids ? (
+                                                                        <p className="text-destructive text-xs">{editForm.errors.subject_ids}</p>
+                                                                    ) : null}
+                                                                </div>
 
-                                        <Card className="border-border/60 h-fit shadow-sm">
-                                            <CardHeader className="bg-muted/20 border-b pb-4">
-                                                <CardTitle className="text-base font-semibold">Teaching details</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4 pt-6">
-                                                <div className="grid gap-4 sm:grid-cols-2">
-                                                    <div className="space-y-2 sm:col-span-2">
-                                                        <Label>Faculty</Label>
-                                                        <Select
-                                                            value={editForm.data.faculty_id ? String(editForm.data.faculty_id) : ""}
-                                                            onValueChange={(val) => editForm.setData("faculty_id", val)}
-                                                        >
-                                                            <SelectTrigger className="w-full">
-                                                                <SelectValue placeholder="Select faculty" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {options.faculties.map((faculty) => (
-                                                                    <SelectItem key={faculty.id} value={String(faculty.id)}>
-                                                                        {faculty.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                                <div className="space-y-2 sm:col-span-2">
+                                                                    <Label>Class code or name</Label>
+                                                                    <Input
+                                                                        value={editForm.data.subject_code}
+                                                                        placeholder="Auto-generated from subjects..."
+                                                                        onChange={(e) => {
+                                                                            setSubjectCodeTouched(true);
+                                                                            editForm.setData("subject_code", e.target.value);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div className="space-y-2">
+                                                                    <Label>SHS track</Label>
+                                                                    <Select
+                                                                        value={editForm.data.shs_track_id ? String(editForm.data.shs_track_id) : ""}
+                                                                        onValueChange={(val) => {
+                                                                            const trackId = Number(val);
+                                                                            editForm.setData("shs_track_id", trackId);
+                                                                            editForm.setData("shs_strand_id", null);
+                                                                            editForm.setData("subject_code_shs", "");
+                                                                            void loadShsStrands(trackId, "edit");
+                                                                        }}
+                                                                    >
+                                                                        <SelectTrigger className="w-full">
+                                                                            <SelectValue placeholder="Select track" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {options.shs_tracks.map((track) => (
+                                                                                <SelectItem key={track.id} value={String(track.id)}>
+                                                                                    {track.label}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <Label>SHS strand</Label>
+                                                                    <Select
+                                                                        value={editForm.data.shs_strand_id ? String(editForm.data.shs_strand_id) : ""}
+                                                                        onValueChange={(val) => {
+                                                                            const strandId = Number(val);
+                                                                            editForm.setData("shs_strand_id", strandId);
+                                                                            editForm.setData("subject_code_shs", "");
+                                                                            void loadShsSubjects(strandId);
+                                                                        }}
+                                                                        disabled={!editForm.data.shs_track_id || shsStrandsLoading}
+                                                                    >
+                                                                        <SelectTrigger className="w-full">
+                                                                            <SelectValue placeholder="Select strand" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {shsStrandOptions.map((strand) => (
+                                                                                <SelectItem key={strand.id} value={String(strand.id)}>
+                                                                                    {strand.label}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+
+                                                                <div className="space-y-2 sm:col-span-2">
+                                                                    <Label>SHS subject</Label>
+                                                                    <Select
+                                                                        value={editForm.data.subject_code_shs}
+                                                                        onValueChange={(val) => editForm.setData("subject_code_shs", val)}
+                                                                        disabled={!editForm.data.shs_strand_id || shsSubjectsLoading}
+                                                                    >
+                                                                        <SelectTrigger className="w-full">
+                                                                            <SelectValue placeholder="Select subject" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {shsSubjectOptions.map((subject) => (
+                                                                                <SelectItem key={subject.code} value={subject.code}>
+                                                                                    {subject.label}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <Label>Grade level</Label>
+                                                                    <Select
+                                                                        value={editForm.data.grade_level || "Grade 11"}
+                                                                        onValueChange={(val) => editForm.setData("grade_level", val)}
+                                                                    >
+                                                                        <SelectTrigger className="w-full">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {options.grade_levels.map((grade) => (
+                                                                                <SelectItem key={grade.value} value={grade.value}>
+                                                                                    {grade.label}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
+                                                </CardContent>
+                                            </Card>
 
-                                                    {editForm.data.classification === "college" ? (
+                                            <Card className="border-border/60 h-fit shadow-sm">
+                                                <CardHeader className="bg-muted/20 border-b pb-4">
+                                                    <CardTitle className="text-base font-semibold">Teaching details</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4 pt-6">
+                                                    <div className="grid gap-4 sm:grid-cols-2">
+                                                        <div className="space-y-2 sm:col-span-2">
+                                                            <Label>Faculty</Label>
+                                                            <Select
+                                                                value={editForm.data.faculty_id ? String(editForm.data.faculty_id) : ""}
+                                                                onValueChange={(val) => editForm.setData("faculty_id", val)}
+                                                            >
+                                                                <SelectTrigger className="w-full">
+                                                                    <SelectValue placeholder="Select faculty" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {options.faculties.map((faculty) => (
+                                                                        <SelectItem key={faculty.id} value={String(faculty.id)}>
+                                                                            {faculty.label}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        {editForm.data.classification === "college" ? (
+                                                            <div className="space-y-3 sm:col-span-2">
+                                                                <Label>Year level</Label>
+                                                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                                                    {[1, 2, 3, 4].map((year) => (
+                                                                        <VisualRadioButton
+                                                                            key={year}
+                                                                            title={`${year} Year`}
+                                                                            checked={editForm.data.academic_year === year}
+                                                                            onSelect={() => editForm.setData("academic_year", year)}
+                                                                            className="min-h-0 px-3 py-3"
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+
                                                         <div className="space-y-3 sm:col-span-2">
-                                                            <Label>Year level</Label>
-                                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                                                {[1, 2, 3, 4].map((year) => (
+                                                            <Label>Semester</Label>
+                                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                                                {options.semesters.map((sem) => (
                                                                     <VisualRadioButton
-                                                                        key={year}
-                                                                        title={`${year} Year`}
-                                                                        checked={editForm.data.academic_year === year}
-                                                                        onSelect={() => editForm.setData("academic_year", year)}
+                                                                        key={sem.value}
+                                                                        title={sem.label}
                                                                         className="min-h-0 px-3 py-3"
+                                                                        checked={editForm.data.semester === sem.value}
+                                                                        onSelect={() => editForm.setData("semester", sem.value)}
                                                                     />
                                                                 ))}
                                                             </div>
                                                         </div>
-                                                    ) : null}
 
-                                                    <div className="space-y-3 sm:col-span-2">
-                                                        <Label>Semester</Label>
-                                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                                            {options.semesters.map((sem) => (
-                                                                <VisualRadioButton
-                                                                    key={sem.value}
-                                                                    title={sem.label}
-                                                                    className="min-h-0 px-3 py-3"
-                                                                    checked={editForm.data.semester === sem.value}
-                                                                    onSelect={() => editForm.setData("semester", sem.value)}
-                                                                />
-                                                            ))}
+                                                        <div className="space-y-2">
+                                                            <Label>School year</Label>
+                                                            <Input
+                                                                value={editForm.data.school_year}
+                                                                onChange={(e) => editForm.setData("school_year", e.target.value)}
+                                                                placeholder="e.g., 2023 - 2024"
+                                                            />
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <Label>Section</Label>
+                                                            <Select
+                                                                value={editForm.data.section}
+                                                                onValueChange={(val) => editForm.setData("section", val)}
+                                                            >
+                                                                <SelectTrigger className="w-full">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {options.sections.map((sec) => (
+                                                                        <SelectItem key={sec.value} value={sec.value}>
+                                                                            {sec.label}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <Label>Room</Label>
+                                                            <Select
+                                                                value={String(editForm.data.room_id)}
+                                                                onValueChange={(val) => editForm.setData("room_id", Number(val))}
+                                                            >
+                                                                <SelectTrigger className="w-full">
+                                                                    <SelectValue placeholder="Room" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {options.rooms.map((room) => (
+                                                                        <SelectItem key={room.id} value={String(room.id)}>
+                                                                            {room.label}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <Label>Class size limit</Label>
+                                                            <Input
+                                                                type="number"
+                                                                value={String(editForm.data.maximum_slots)}
+                                                                min={1}
+                                                                onChange={(e) => editForm.setData("maximum_slots", Number(e.target.value))}
+                                                            />
                                                         </div>
                                                     </div>
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    </TabsContent>
 
-                                                    <div className="space-y-2">
-                                                        <Label>School year</Label>
-                                                        <Input
-                                                            value={editForm.data.school_year}
-                                                            onChange={(e) => editForm.setData("school_year", e.target.value)}
-                                                            placeholder="e.g., 2023 - 2024"
-                                                        />
-                                                    </div>
+                                    <TabsContent value="schedule" className="m-0 flex h-full min-h-[500px] flex-col outline-none">
+                                        <SchedulePlanner
+                                            schedules={editForm.data.schedules}
+                                            setSchedules={(nextSchedules) => editForm.setData("schedules", nextSchedules)}
+                                            rooms={options.rooms}
+                                            dayOptions={options.day_of_week}
+                                            defaultRoomId={options.rooms[0]?.id ?? 0}
+                                            classRoomId={editForm.data.room_id}
+                                        />
+                                    </TabsContent>
 
-                                                    <div className="space-y-2">
-                                                        <Label>Section</Label>
-                                                        <Select
-                                                            value={editForm.data.section}
-                                                            onValueChange={(val) => editForm.setData("section", val)}
-                                                        >
-                                                            <SelectTrigger className="w-full">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {options.sections.map((sec) => (
-                                                                    <SelectItem key={sec.value} value={sec.value}>
-                                                                        {sec.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label>Room</Label>
-                                                        <Select
-                                                            value={String(editForm.data.room_id)}
-                                                            onValueChange={(val) => editForm.setData("room_id", Number(val))}
-                                                        >
-                                                            <SelectTrigger className="w-full">
-                                                                <SelectValue placeholder="Room" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {options.rooms.map((room) => (
-                                                                    <SelectItem key={room.id} value={String(room.id)}>
-                                                                        {room.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label>Class size limit</Label>
-                                                        <Input
-                                                            type="number"
-                                                            value={String(editForm.data.maximum_slots)}
-                                                            min={1}
-                                                            onChange={(e) => editForm.setData("maximum_slots", Number(e.target.value))}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="schedule" className="m-0 flex h-full min-h-[500px] flex-col outline-none">
-                                    <SchedulePlanner
-                                        schedules={editForm.data.schedules}
-                                        setSchedules={(nextSchedules) => editForm.setData("schedules", nextSchedules)}
-                                        rooms={options.rooms}
-                                        dayOptions={options.day_of_week}
-                                        defaultRoomId={options.rooms[0]?.id ?? 0}
-                                        classRoomId={editForm.data.room_id}
-                                    />
-                                </TabsContent>
-
-                                <TabsContent value="settings" className="space-y-4">
-                                    {settingsEditor({
-                                        settings: editForm.data.settings,
-                                        setSettings: (nextSettings) => editForm.setData("settings", nextSettings),
-                                        removeBannerImage: editForm.data.remove_banner_image,
-                                        setRemoveBannerImage: (value) => editForm.setData("remove_banner_image", value),
-                                    })}
-                                </TabsContent>
-                            </div>
+                                    <TabsContent value="settings" className="space-y-4">
+                                        {settingsEditor({
+                                            settings: editForm.data.settings,
+                                            setSettings: (nextSettings) => editForm.setData("settings", nextSettings),
+                                            removeBannerImage: editForm.data.remove_banner_image,
+                                            setRemoveBannerImage: (value) => editForm.setData("remove_banner_image", value),
+                                        })}
+                                    </TabsContent>
+                                </div>
+                            </ScrollArea>
                         </Tabs>
                     )}
 

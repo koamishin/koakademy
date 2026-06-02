@@ -10,6 +10,7 @@ import {
     ContextMenuSubTrigger,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     DndContext,
     type DragEndEvent,
@@ -650,7 +651,9 @@ export function ClassScheduleVisualizer({
     const canEdit = Boolean(onScheduleChange);
 
     return (
-        <div className={`bg-card/50 relative flex h-full min-h-[500px] w-full flex-col overflow-hidden rounded-lg border shadow-sm backdrop-blur-sm ${className}`}>
+        <div
+            className={`bg-card/50 relative flex h-full min-h-[500px] w-full flex-col overflow-hidden rounded-lg border shadow-sm backdrop-blur-sm ${className}`}
+        >
             <div className="bg-muted/40 sticky top-0 z-10 grid min-w-[760px] grid-cols-[64px_repeat(7,minmax(96px,1fr))] border-b">
                 <div className="border-border/50 border-r p-2" />
                 {DAYS.map((day) => (
@@ -671,7 +674,7 @@ export function ClassScheduleVisualizer({
                 onDragCancel={clearInteractionState}
                 onDragEnd={handleDragEnd}
             >
-                <div className="relative min-h-[400px] flex-1 overflow-auto">
+                <ScrollArea className="min-h-[400px] flex-1">
                     <div className="relative min-w-[760px]" style={{ height: `${GRID_HEIGHT}px` }}>
                         <div className="absolute inset-0 grid grid-cols-[64px_repeat(7,minmax(96px,1fr))]">
                             <div className="border-border/50 bg-muted/10 border-r">
@@ -716,7 +719,8 @@ export function ClassScheduleVisualizer({
                                             }}
                                         >
                                             <div className="bg-primary text-primary-foreground z-10 rounded px-2 py-0.5 text-[10px] font-bold whitespace-nowrap shadow-md">
-                                                {schedule.day_of_week.substring(0, 3)} {formatTimeOnly(schedule.start_time)} - {formatTimeOnly(schedule.end_time)}
+                                                {schedule.day_of_week.substring(0, 3)} {formatTimeOnly(schedule.start_time)} -{" "}
+                                                {formatTimeOnly(schedule.end_time)}
                                             </div>
                                         </div>
                                     );
@@ -756,7 +760,7 @@ export function ClassScheduleVisualizer({
                             )}
                         </div>
                     </div>
-                </div>
+                </ScrollArea>
             </DndContext>
         </div>
     );

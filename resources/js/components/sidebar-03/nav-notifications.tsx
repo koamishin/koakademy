@@ -286,7 +286,7 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
             <DropdownMenuContent
                 side="right"
                 align="start"
-                className="my-2 flex max-h-[min(var(--available-height),24rem)] w-80 flex-col overflow-hidden p-0"
+                className="my-2 flex max-h-[min(var(--available-height),24rem)] w-80 flex-col overflow-hidden! p-0"
             >
                 <DropdownMenuLabel className="flex items-center justify-between">
                     <span>Notifications</span>
@@ -311,7 +311,7 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
                         <p className="text-muted-foreground/70 text-xs">You're all caught up!</p>
                     </div>
                 ) : (
-                    <ScrollArea className="max-h-[300px] min-h-0 flex-1">
+                    <ScrollArea className="h-[300px] max-h-[calc(var(--available-height)-3.5rem)] min-h-0 flex-1">
                         <div className="p-1">
                             {notifications.map((notification) => (
                                 <DropdownMenuItem
