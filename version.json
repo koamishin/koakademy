@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.15",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.15",
-  "commit": "e072522b667430a044d8686f4b3e164b46901936",
+  "version": "1.6.0-dev.0.16",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.16",
+  "commit": "a2b848613ce6321047055e51f052101193f5b79c",
   "branch": "master",
-  "timestamp": "2026-06-02T00:16:34Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26790046086",
+  "timestamp": "2026-06-02T01:36:50Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26792802355",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.15 - Derive Religion Options From Students",
-    "previous": "1.6.0-dev.0.14"
+    "current": "Version 1.6.0-dev.0.16 - Refactor enrollment billing balance sync",
+    "previous": "1.6.0-dev.0.15"
   },
   "metadata": {
     "author": "yukazakiri",
