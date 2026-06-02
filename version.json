@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.17",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.17",
-  "commit": "b1b415614138220620d8b94073dcd84928d54b39",
+  "version": "1.6.0-dev.0.18",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.18",
+  "commit": "890b90b743111d6932d407b43e4d27f3a49e386a",
   "branch": "master",
-  "timestamp": "2026-06-02T03:52:57Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26797146687",
+  "timestamp": "2026-06-02T04:00:01Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26797369299",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.17 - Improve scroll behavior in class UI",
-    "previous": "1.6.0-dev.0.16"
+    "current": "Version 1.6.0-dev.0.18 - Add server-side student table sorting",
+    "previous": "1.6.0-dev.0.17"
   },
   "metadata": {
     "author": "yukazakiri",
