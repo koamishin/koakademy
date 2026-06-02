@@ -99,6 +99,10 @@ final class EnrollmentService
                 ->keyBy('id');
 
             foreach ($subjectsEnrolled as $subjectEnrolled) {
+                if (! empty($subjectEnrolled['exclude_from_tuition'])) {
+                    continue;
+                }
+
                 if (! empty($subjectEnrolled['subject_id'])) {
                     $subjectModel = $subjects->get($subjectEnrolled['subject_id']);
                     if (! $subjectModel || ! $subjectModel->course) {

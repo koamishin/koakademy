@@ -519,6 +519,91 @@ it('removes class enrollment when subject is removed from enrollment', function 
     expect(App\Models\ClassEnrollment::query()->where('student_id', $student->id)->where('class_id', $class2->id)->exists())->toBeFalse();
 });
 
+it('excludes selected subjects from tuition calculations', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    GeneralSetting::factory()->create([
+        'school_starting_date' => '2026-06-01',
+        'school_ending_date' => '2027-03-31',
+        'semester' => 1,
+    ]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $course = Course::factory()->create([
+        'lec_per_unit' => 100,
+        'lab_per_unit' => 200,
+        'miscelaneous' => 3500,
+    ]);
+
+    $student = Student::factory()->create([
+        'id' => fake()->numberBetween(900000, 999999),
+        'course_id' => $course->id,
+        'academic_year' => 1,
+    ]);
+
+    $billableSubject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'GE-1',
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+
+    $excludedSubject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'CS-1',
+        'lecture' => 3,
+        'laboratory' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->post(portalUrlForAdministrators('/administrators/enrollments'), [
+            'student_id' => (string) $student->id,
+            'semester' => 1,
+            'academic_year' => 1,
+            'subjects' => [
+                [
+                    'subject_id' => $billableSubject->id,
+                    'class_id' => null,
+                    'is_modular' => false,
+                    'exclude_from_tuition' => false,
+                    'lecture_fee' => 300,
+                    'laboratory_fee' => 0,
+                    'enrolled_lecture_units' => 3,
+                    'enrolled_laboratory_units' => 0,
+                ],
+                [
+                    'subject_id' => $excludedSubject->id,
+                    'class_id' => null,
+                    'is_modular' => false,
+                    'exclude_from_tuition' => true,
+                    'lecture_fee' => 400,
+                    'laboratory_fee' => 200,
+                    'enrolled_lecture_units' => 3,
+                    'enrolled_laboratory_units' => 1,
+                ],
+            ],
+            'discount' => 0,
+            'downpayment' => 0,
+            'additional_fees' => [
+                [
+                    'fee_name' => 'Library',
+                    'amount' => 500,
+                ],
+            ],
+        ])
+        ->assertRedirect();
+
+    $enrollment = StudentEnrollment::query()
+        ->where('student_id', $student->id)
+        ->firstOrFail();
+
+    expect($enrollment->subjectsEnrolled()->where('subject_id', $excludedSubject->id)->first()?->exclude_from_tuition)->toBeTrue()
+        ->and($enrollment->studentTuition()->first()?->total_lectures)->toBe(300.0)
+        ->and($enrollment->studentTuition()->first()?->total_laboratory)->toBe(0.0)
+        ->and($enrollment->studentTuition()->first()?->overall_tuition)->toBe(4300.0);
+});
+
 it('creates class enrollments when storing an enrollment with assigned classes', function (): void {
     config(['activitylog.enabled' => false]);
 

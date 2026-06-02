@@ -99,6 +99,7 @@ interface SubjectEnrollment {
     subject_title: string;
     class_id: number | null;
     is_modular: boolean;
+    exclude_from_tuition: boolean;
     lecture_units: number;
     laboratory_units: number;
     lecture_fee: number;
@@ -122,6 +123,7 @@ interface EnrollmentSubject {
     subject_title: string;
     class_id: number | null;
     is_modular: boolean;
+    exclude_from_tuition: boolean;
     lecture_units: number;
     laboratory_units: number;
     lecture_fee: number;
@@ -241,6 +243,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                   subject_title: subject.subject_title,
                   class_id: subject.class_id,
                   is_modular: subject.is_modular,
+                  exclude_from_tuition: subject.exclude_from_tuition,
                   lecture_units: Number(subject.lecture_units) || 0,
                   laboratory_units: Number(subject.laboratory_units) || 0,
                   lecture_fee: Number(subject.lecture_fee) || 0,
@@ -431,6 +434,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             subject_title: subject.title,
             class_id: null,
             is_modular: false,
+            exclude_from_tuition: false,
             lecture_units: subject.lecture,
             laboratory_units: subject.laboratory,
             lecture_fee: fees.lecture_fee,
@@ -481,9 +485,11 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
 
     // Calculate totals
     const totals = useMemo(() => {
-        const totalLectures = subjectsEnrolled.reduce((sum, s) => sum + Number(s.lecture_fee || 0), 0);
-        const totalLaboratory = subjectsEnrolled.reduce((sum, s) => sum + Number(s.laboratory_fee || 0), 0);
-        const modularCount = subjectsEnrolled.filter((s) => s.is_modular).length;
+        const billableSubjects = subjectsEnrolled.filter((s) => !s.exclude_from_tuition);
+        const totalLectures = billableSubjects.reduce((sum, s) => sum + Number(s.lecture_fee || 0), 0);
+        const totalLaboratory = billableSubjects.reduce((sum, s) => sum + Number(s.laboratory_fee || 0), 0);
+        const modularCount = billableSubjects.filter((s) => s.is_modular).length;
+        const excludedSubjectsCount = subjectsEnrolled.length - billableSubjects.length;
         const totalModularFee = modularCount * MODULAR_FEE_PER_SUBJECT;
 
         const discountPercent = parseInt(discount) || 0;
@@ -511,6 +517,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             totalLaboratory,
             totalModularFee,
             modularCount,
+            excludedSubjectsCount,
             totalTuition,
             miscellaneous,
             totalAdditionalFees,
@@ -546,6 +553,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             subject_id: s.subject_id,
             class_id: s.class_id,
             is_modular: s.is_modular,
+            exclude_from_tuition: s.exclude_from_tuition,
             lecture_fee: s.lecture_fee,
             laboratory_fee: s.laboratory_fee,
             enrolled_lecture_units: s.lecture_units,
@@ -909,7 +917,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                 </CardHeader>
                                 <CardContent>
                                     <div className="overflow-x-auto rounded-md border">
-                                        <Table className="min-w-[960px]">
+                                        <Table className="min-w-[1120px]">
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Subject</TableHead>
@@ -919,6 +927,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                     <TableHead className="text-right">Lab Fee</TableHead>
                                                     <TableHead className="min-w-[200px]">Section</TableHead>
                                                     <TableHead className="min-w-[130px]">Modular</TableHead>
+                                                    <TableHead className="min-w-[170px]">Tuition</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -934,6 +943,11 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                                             Modular
                                                                         </Badge>
                                                                     )}
+                                                                    {subject.exclude_from_tuition && (
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            No tuition
+                                                                        </Badge>
+                                                                    )}
                                                                 </div>
                                                                 <div className="text-muted-foreground text-xs">{subject.subject_title}</div>
                                                             </div>
@@ -941,10 +955,10 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                         <TableCell className="text-right">{subject.lecture_units}</TableCell>
                                                         <TableCell className="text-right">{subject.laboratory_units}</TableCell>
                                                         <TableCell className="text-right">
-                                                            {formatCurrency(Number(subject.lecture_fee || 0))}
+                                                            {subject.exclude_from_tuition ? "—" : formatCurrency(Number(subject.lecture_fee || 0))}
                                                         </TableCell>
                                                         <TableCell className="text-right">
-                                                            {formatCurrency(Number(subject.laboratory_fee || 0))}
+                                                            {subject.exclude_from_tuition ? "—" : formatCurrency(Number(subject.laboratory_fee || 0))}
                                                         </TableCell>
                                                         <TableCell>
                                                             {subject.loading_sections ? (
@@ -992,6 +1006,20 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                                 />
                                                                 <Label htmlFor={`modular-${subject.id}`} className="cursor-pointer text-xs">
                                                                     Modular
+                                                                </Label>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Switch
+                                                                    id={`exclude-tuition-${subject.id}`}
+                                                                    checked={subject.exclude_from_tuition}
+                                                                    onCheckedChange={(checked) =>
+                                                                        updateSubject(subject.subject_id, { exclude_from_tuition: checked })
+                                                                    }
+                                                                />
+                                                                <Label htmlFor={`exclude-tuition-${subject.id}`} className="cursor-pointer text-xs">
+                                                                    Exclude fees
                                                                 </Label>
                                                             </div>
                                                         </TableCell>
@@ -1271,6 +1299,12 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                             <div className="flex justify-between">
                                                 <span className="text-muted-foreground">Modular ({totals.modularCount})</span>
                                                 <span>{formatCurrency(totals.totalModularFee)}</span>
+                                            </div>
+                                        )}
+                                        {totals.excludedSubjectsCount > 0 && (
+                                            <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                                                <span>Excluded subjects</span>
+                                                <span>{totals.excludedSubjectsCount}</span>
                                             </div>
                                         )}
                                         <div className="flex justify-between">

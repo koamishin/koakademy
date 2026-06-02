@@ -1145,6 +1145,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                     'subject_title' => $subjectEnrollment->subject?->title ?? '',
                     'class_id' => $subjectEnrollment->class_id,
                     'is_modular' => (bool) $subjectEnrollment->is_modular,
+                    'exclude_from_tuition' => (bool) $subjectEnrollment->exclude_from_tuition,
                     'lecture_units' => $subjectEnrollment->enrolled_lecture_units ?? ($subjectEnrollment->subject?->lecture ?? 0),
                     'laboratory_units' => $subjectEnrollment->enrolled_laboratory_units ?? ($subjectEnrollment->subject?->laboratory ?? 0),
                     'lecture_fee' => $subjectEnrollment->lecture_fee ?? 0,
@@ -1176,6 +1177,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             'subjects.*.subject_id' => ['required', 'exists:subject,id'],
             'subjects.*.class_id' => ['nullable', 'exists:classes,id'],
             'subjects.*.is_modular' => ['boolean'],
+            'subjects.*.exclude_from_tuition' => ['boolean'],
             'subjects.*.lecture_fee' => ['required', 'numeric', 'min:0'],
             'subjects.*.laboratory_fee' => ['required', 'numeric', 'min:0'],
             'subjects.*.enrolled_lecture_units' => ['required', 'integer', 'min:0'],
@@ -1199,7 +1201,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                     'downpayment' => $validated['downpayment'] ?? 0,
                 ]);
 
-                /** @var Collection<int, array{subject_id: int|string, class_id?: int|string|null, is_modular?: bool, lecture_fee: int|float|string, laboratory_fee: int|float|string, enrolled_lecture_units: int|string, enrolled_laboratory_units: int|string}> $incomingSubjects */
+                /** @var Collection<int, array{subject_id: int|string, class_id?: int|string|null, is_modular?: bool, exclude_from_tuition?: bool, lecture_fee: int|float|string, laboratory_fee: int|float|string, enrolled_lecture_units: int|string, enrolled_laboratory_units: int|string}> $incomingSubjects */
                 $incomingSubjects = collect($validated['subjects']);
                 /** @var Collection<int|string, SubjectEnrollment> $existingSubjects */
                 $existingSubjects = $enrollment->subjectsEnrolled()->get()->keyBy('subject_id');
@@ -1210,6 +1212,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                     $payload = [
                         'class_id' => $incomingClassId,
                         'is_modular' => $subjectData['is_modular'] ?? false,
+                        'exclude_from_tuition' => $subjectData['exclude_from_tuition'] ?? false,
                         'lecture_fee' => $subjectData['lecture_fee'],
                         'laboratory_fee' => $subjectData['laboratory_fee'],
                         'enrolled_lecture_units' => $subjectData['enrolled_lecture_units'],
@@ -1366,6 +1369,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             'subjects.*.subject_id' => ['required', 'exists:subject,id'],
             'subjects.*.class_id' => ['nullable', 'exists:classes,id'],
             'subjects.*.is_modular' => ['boolean'],
+            'subjects.*.exclude_from_tuition' => ['boolean'],
             'subjects.*.lecture_fee' => ['required', 'numeric', 'min:0'],
             'subjects.*.laboratory_fee' => ['required', 'numeric', 'min:0'],
             'subjects.*.enrolled_lecture_units' => ['required', 'integer', 'min:0'],
@@ -1413,6 +1417,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                         'class_id' => $classId,
                         'student_id' => $student->id,
                         'is_modular' => $subjectData['is_modular'] ?? false,
+                        'exclude_from_tuition' => $subjectData['exclude_from_tuition'] ?? false,
                         'lecture_fee' => $subjectData['lecture_fee'],
                         'laboratory_fee' => $subjectData['laboratory_fee'],
                         'enrolled_lecture_units' => $subjectData['enrolled_lecture_units'],
@@ -2656,6 +2661,10 @@ final class AdministratorEnrollmentManagementController extends Controller
                 continue;
             }
 
+            if ((bool) ($subjectData['exclude_from_tuition'] ?? false)) {
+                continue;
+            }
+
             $isModular = (bool) ($subjectData['is_modular'] ?? false);
             $isNSTP = str_contains(mb_strtoupper((string) $subject->code), 'NSTP');
             $totalUnits = ($subject->lecture ?? 0) + ($subject->laboratory ?? 0);
@@ -2719,6 +2728,7 @@ final class AdministratorEnrollmentManagementController extends Controller
         $subjects = $enrollment->subjectsEnrolled->map(function ($se): array {
             $subject = $se->subject;
             $isModular = $se->is_modular ?? false;
+            $excludeFromTuition = (bool) $se->exclude_from_tuition;
             $isNSTP = str_contains(mb_strtoupper($subject->code ?? ''), 'NSTP');
             $hasLab = ($subject->laboratory ?? 0) !== 0;
 
@@ -2737,11 +2747,17 @@ final class AdministratorEnrollmentManagementController extends Controller
                 $laboratoryFee /= 2;
             }
 
+            if ($excludeFromTuition) {
+                $lectureFee = 0;
+                $laboratoryFee = 0;
+            }
+
             return [
                 'code' => $subject->code,
                 'title' => $subject->title,
                 'units' => $subject->units ?? 0,
                 'is_modular' => $isModular,
+                'exclude_from_tuition' => $excludeFromTuition,
                 'lecture_fee' => $lectureFee,
                 'laboratory_fee' => $laboratoryFee,
                 'class_id' => $se->class_id,
@@ -2778,7 +2794,10 @@ final class AdministratorEnrollmentManagementController extends Controller
         $totalUnits = $subjects->sum('units');
         $totalLecture = $subjects->sum('lecture_fee');
         $totalLaboratory = $subjects->sum('laboratory_fee');
-        $totalModularSubjects = $subjects->where('is_modular', true)->count();
+        $totalModularSubjects = $subjects
+            ->where('is_modular', true)
+            ->where('exclude_from_tuition', false)
+            ->count();
         $totalModularFee = $totalModularSubjects * 2400;
 
         // Additional fees
