@@ -241,6 +241,7 @@ Route::middleware(['auth', 'administrators.only'])
 
         // Classes Management
         Route::get('/classes', [AdministratorClassManagementController::class, 'index'])->name('classes.index');
+        Route::get('/classes/create', [AdministratorClassManagementController::class, 'create'])->name('classes.create');
         Route::post('/classes', [AdministratorClassManagementController::class, 'store'])->name('classes.store');
         Route::patch('/classes/{class}', [AdministratorClassManagementController::class, 'update'])->name('classes.update');
         Route::delete('/classes/{class}', [AdministratorClassManagementController::class, 'destroy'])->name('classes.destroy');

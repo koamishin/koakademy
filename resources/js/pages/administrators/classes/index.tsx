@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect as SearchableMultiSelect } from "@/components/ui/multi-select";
@@ -20,27 +19,26 @@ import { Head, Link, router, useForm } from "@inertiajs/react";
 import {
     BookOpen,
     CalendarIcon,
-    Copy as CopyIcon,
     Layers,
-    LayoutGrid,
-    List,
     ListTodo,
     MapPin,
-    MoreHorizontal,
     Palette,
     Pencil,
     Plus,
-    Search,
     Settings2,
     SlidersHorizontal,
     Trash2,
-    Users,
-    X,
 } from "lucide-react";
 import * as React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { route } from "ziggy-js";
 import { ClassRow, getColumns } from "./columns";
+import { ClassActiveFilters, type ActiveFilterBadge } from "./components/class-active-filters";
+import { ClassCard } from "./components/class-card";
+import { ClassFiltersSheet } from "./components/class-filters-sheet";
+import { ClassStats } from "./components/class-stats";
+import { ClassToolbar } from "./components/class-toolbar";
+import { DeleteClassDialog } from "./components/delete-class-dialog";
 import { DataTable } from "./data-table";
 
 type SelectOption = { value: string; label: string };
@@ -184,169 +182,6 @@ interface ClassesIndexProps {
         semester: string;
         school_year: string;
     };
-}
-
-function ClassCard({
-    classRow,
-    onManage,
-    onCopy,
-    onEdit,
-    onDelete,
-}: {
-    classRow: ClassRow;
-    onManage: (id: number) => void;
-    onCopy: (id: number) => void;
-    onEdit: (id: number) => void;
-    onDelete: (row: ClassRow) => void;
-}) {
-    const atCapacity = classRow.maximum_slots > 0 && classRow.students_count >= classRow.maximum_slots;
-    const percentage = classRow.maximum_slots > 0 ? Math.round((classRow.students_count / classRow.maximum_slots) * 100) : 0;
-    const barColor = atCapacity ? "bg-destructive" : percentage >= 75 ? "bg-amber-500" : "bg-primary";
-    const borderColor = classRow.classification === "shs" ? "border-l-amber-500" : "border-l-blue-500";
-    const capacityDot = atCapacity ? "bg-destructive" : percentage >= 75 ? "bg-amber-500" : "bg-emerald-500";
-    const capacityLabel = atCapacity ? "Full" : "Open";
-    const slotsLeft = Math.max(classRow.maximum_slots - classRow.students_count, 0);
-
-    return (
-        <Card className={`hover:border-primary/40 border-l-4 shadow-sm ${borderColor} transition-colors`}>
-            <CardContent className="space-y-3 p-4">
-                <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                        <button type="button" onClick={() => onEdit(classRow.id)} className="text-left" title="Click to edit">
-                            <span className="text-foreground hover:text-primary line-clamp-1 block font-semibold transition-colors">
-                                {classRow.record_title}
-                            </span>
-                            <span className="text-muted-foreground line-clamp-1 block text-sm" title={classRow.subject_title}>
-                                {classRow.subject_title}
-                            </span>
-                        </button>
-                    </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground h-8 w-8 shrink-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => onEdit(classRow.id)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit class
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onManage(classRow.id)}>
-                                <Settings2 className="mr-2 h-4 w-4" /> Manage details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href={route("administrators.classes.show", { class: classRow.id })}>
-                                    <BookOpen className="mr-2 h-4 w-4" /> Open class page
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onCopy(classRow.id)}>
-                                <CopyIcon className="mr-2 h-4 w-4" /> Duplicate class
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => onDelete(classRow)} className="text-destructive focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete class
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge
-                        variant="outline"
-                        className={`text-[10px] ${classRow.classification === "shs" ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300" : "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-300"}`}
-                    >
-                        {classRow.classification === "shs" ? "SHS" : "College"}
-                    </Badge>
-                    <Badge variant="secondary" className="text-[10px]">
-                        {classRow.subject_code}
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px]">
-                        Sec {classRow.section}
-                    </Badge>
-                    {classRow.classification === "shs" && classRow.shs_track ? (
-                        <Badge variant="outline" className="text-[10px]">
-                            {classRow.shs_strand ? `${classRow.shs_track} – ${classRow.shs_strand}` : classRow.shs_track}
-                        </Badge>
-                    ) : null}
-                    {classRow.course_abbreviations?.map((code) => (
-                        <Badge key={code} variant="outline" className="text-[10px]">
-                            {code}
-                        </Badge>
-                    ))}
-                </div>
-
-                <div className="text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                    <span className="flex items-center gap-1.5 truncate" title={classRow.faculty || "Not assigned"}>
-                        <Users className="h-3 w-3 shrink-0" />
-                        {classRow.faculty || "Not assigned"}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                        <CalendarIcon className="h-3 w-3 shrink-0" />
-                        {classRow.school_year} · Sem {classRow.semester}
-                    </span>
-                </div>
-
-                <div className="space-y-1.5 border-t pt-3">
-                    <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${capacityDot}`} />
-                            <span className="font-medium">{capacityLabel}</span>
-                            {!atCapacity && <span className="text-muted-foreground">· {slotsLeft} slots</span>}
-                        </div>
-                        <span className={`tabular-nums ${atCapacity ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                            {classRow.students_count}/{classRow.maximum_slots} ({percentage}%)
-                        </span>
-                    </div>
-                    <div className="bg-secondary h-2 w-full overflow-hidden rounded-full">
-                        <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${Math.min(percentage, 100)}%` }} />
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 border-t pt-3">
-                    <Button type="button" size="sm" variant="default" className="flex-1" onClick={() => onEdit(classRow.id)}>
-                        <Pencil className="mr-1 h-3 w-3" />
-                        Edit
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => onManage(classRow.id)} title="Manage">
-                        <Settings2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => onCopy(classRow.id)} title="Duplicate">
-                        <CopyIcon className="h-3.5 w-3.5" />
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
-
-function StatsOverview({ totalClasses, totalStudents }: { totalClasses: number; totalStudents: number }) {
-    const averageStudents = totalClasses > 0 ? Math.round(totalStudents / totalClasses) : 0;
-
-    return (
-        <div className="grid grid-cols-3 gap-3">
-            <div className="bg-card rounded-lg border-l-4 border-l-blue-500 p-3 shadow-sm">
-                <div className="flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-blue-500" />
-                    <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">Classes</span>
-                </div>
-                <div className="mt-1 text-2xl font-bold tabular-nums">{totalClasses}</div>
-            </div>
-            <div className="bg-card rounded-lg border-l-4 border-l-emerald-500 p-3 shadow-sm">
-                <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-emerald-500" />
-                    <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">Students</span>
-                </div>
-                <div className="mt-1 text-2xl font-bold tabular-nums">{totalStudents.toLocaleString()}</div>
-            </div>
-            <div className="bg-card rounded-lg border-l-4 border-l-amber-500 p-3 shadow-sm">
-                <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-amber-500" />
-                    <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">Avg Size</span>
-                </div>
-                <div className="mt-1 text-2xl font-bold tabular-nums">{averageStudents}</div>
-            </div>
-        </div>
-    );
 }
 
 function normalizeSemester(semester: string | number): string {
@@ -534,12 +369,10 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     const [isSearchLoading, setIsSearchLoading] = React.useState(false);
     const [isSelectedClassLoading, setIsSelectedClassLoading] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
-    const [isCreateOpen, setIsCreateOpen] = React.useState(false);
     const [isEditOpen, setIsEditOpen] = React.useState(false);
     const [isCopyOpen, setIsCopyOpen] = React.useState(false);
     const [isManageOpen, setIsManageOpen] = React.useState(false);
     const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
-    const [createActiveTab, setCreateActiveTab] = React.useState<ClassDialogTab>("details");
     const [editActiveTab, setEditActiveTab] = React.useState<ClassDialogTab>("details");
     const [copySourceId, setCopySourceId] = React.useState<number | null>(null);
     const [copySection, setCopySection] = React.useState("A");
@@ -693,41 +526,6 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
         [openManage, openEdit, setIsCopyOpen],
     );
 
-    const createForm = useForm({
-        classification: "college" as "college" | "shs",
-        course_codes: [] as number[],
-        subject_ids: [] as number[],
-        subject_code: "",
-        academic_year: 1,
-
-        shs_track_id: null as number | null,
-        shs_strand_id: null as number | null,
-        subject_code_shs: "",
-        grade_level: "Grade 11",
-
-        faculty_id: null as string | null,
-        semester: defaults.semester,
-        school_year: defaults.school_year,
-        section: "A",
-        room_id: options.rooms[0]?.id ?? 0,
-        maximum_slots: 40,
-
-        schedules: [createDefaultSchedule(options.rooms[0]?.id ?? 0)] as ClassSchedule[],
-
-        settings: {
-            background_color: "#ffffff",
-            accent_color: "#3b82f6",
-            theme: "default",
-            enable_announcements: true,
-            enable_grade_visibility: true,
-            enable_attendance_tracking: false,
-            allow_late_submissions: false,
-            enable_discussion_board: false,
-            custom: {} as Record<string, string>,
-            banner_image: null as File | null,
-        },
-    });
-
     const editForm = useForm({
         classification: "college" as "college" | "shs",
         course_codes: [] as number[],
@@ -810,24 +608,17 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
         });
 
         setSubjectCodeTouched(false);
-        void loadCollegeSubjects(selected_class.course_ids ?? [], "edit");
-        void loadShsStrands(selected_class.shs_track?.id ?? null, "edit");
+        void loadCollegeSubjects(selected_class.course_ids ?? []);
+        void loadShsStrands(selected_class.shs_track?.id ?? null);
         void loadShsSubjects(selected_class.shs_strand?.id ?? null);
     }, [isEditOpen, selected_class]);
 
-    const createFirstError = getFirstFormError(createForm.errors);
     const editFirstError = getFirstFormError(editForm.errors);
 
-    const loadCollegeSubjects = async (courseIds: number[], target: "create" | "edit") => {
+    const loadCollegeSubjects = async (courseIds: number[]) => {
         if (courseIds.length === 0) {
             setCollegeSubjectOptions([]);
-            if (target === "create") {
-                createForm.setData("subject_ids", []);
-                if (!subjectCodeTouched) {
-                    createForm.setData("subject_code", "");
-                }
-            }
-            if (target === "edit") {
+            {
                 editForm.setData("subject_ids", []);
                 if (!subjectCodeTouched) {
                     editForm.setData("subject_code", "");
@@ -852,22 +643,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
             const availableSubjectIds = new Set(data.data.map((subject) => subject.id));
 
-            if (target === "create" && !subjectCodeTouched) {
-                const validSubjectIds = createForm.data.subject_ids.filter((id) => availableSubjectIds.has(id));
-
-                if (validSubjectIds.length !== createForm.data.subject_ids.length) {
-                    createForm.setData("subject_ids", validSubjectIds);
-                }
-
-                const computed = buildSubjectCodeFromSubjectOptions(validSubjectIds.map(String), data.data);
-                if (computed) {
-                    createForm.setData("subject_code", computed);
-                } else {
-                    createForm.setData("subject_code", "");
-                }
-            }
-
-            if (target === "edit" && !subjectCodeTouched) {
+            if (!subjectCodeTouched) {
                 const validSubjectIds = editForm.data.subject_ids.filter((id) => availableSubjectIds.has(id));
 
                 if (validSubjectIds.length !== editForm.data.subject_ids.length) {
@@ -886,11 +662,10 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
         }
     };
 
-    const loadShsStrands = async (trackId: number | null, target: "create" | "edit") => {
+    const loadShsStrands = async (trackId: number | null) => {
         if (!trackId) {
             setShsStrandOptions([]);
-            if (target === "create") createForm.setData("shs_strand_id", null);
-            if (target === "edit") editForm.setData("shs_strand_id", null);
+            editForm.setData("shs_strand_id", null);
             return;
         }
 
@@ -1136,11 +911,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 const facultyLabelById = new Map(options.faculties.map((faculty) => [faculty.id, faculty.label]));
                 const semesterLabelByValue = new Map(options.semesters.map((semester) => [semester.value, semester.label]));
 
-                const activeFilterBadges: Array<{
-                    key: string;
-                    label: string;
-                    onClear: () => void;
-                }> = [];
+                const activeFilterBadges: ActiveFilterBadge[] = [];
 
                 const classification = filters.classification ?? "all";
                 if (classification !== "all") {
@@ -1244,93 +1015,31 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                         </Badge>
                                     ) : null}
                                 </Button>
-                                <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                                    <Plus className="mr-1.5 h-4 w-4" />
-                                    <span className="hidden sm:inline">New class</span>
-                                    <span className="sm:hidden">New</span>
+                                <Button asChild size="sm">
+                                    <Link href={route("administrators.classes.create")}>
+                                        <Plus className="mr-1.5 h-4 w-4" />
+                                        <span className="hidden sm:inline">New class</span>
+                                        <span className="sm:hidden">New</span>
+                                    </Link>
                                 </Button>
                             </div>
                         </div>
 
-                        <StatsOverview totalClasses={filteredStatsTotalClasses} totalStudents={filteredStatsTotalStudents} />
+                        <ClassStats totalClasses={filteredStatsTotalClasses} totalStudents={filteredStatsTotalStudents} />
+                        <ClassToolbar
+                            search={search}
+                            onSearchChange={(value) => {
+                                setSearch(value);
+                                handleSearch(value);
+                            }}
+                            isSearchLoading={isSearchLoading}
+                            classification={filters.classification ?? "all"}
+                            onClassificationChange={(value) => handleFilterChange("classification", value === "all" ? null : value)}
+                            viewMode={viewMode}
+                            onViewModeChange={setViewMode}
+                        />
 
-                        <div className="bg-card flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="relative max-w-sm flex-1">
-                                <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
-                                <Input
-                                    placeholder="Search classes..."
-                                    className="h-9 pl-8"
-                                    value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        handleSearch(e.target.value);
-                                    }}
-                                />
-                                {isSearchLoading ? (
-                                    <span className="text-muted-foreground absolute top-2.5 right-2.5 text-xs">Searching…</span>
-                                ) : null}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <Tabs
-                                    value={filters.classification ?? "all"}
-                                    onValueChange={(val) => handleFilterChange("classification", val === "all" ? null : val)}
-                                    className="w-auto"
-                                >
-                                    <TabsList>
-                                        <TabsTrigger value="all">All</TabsTrigger>
-                                        <TabsTrigger value="college">College</TabsTrigger>
-                                        <TabsTrigger value="shs">SHS</TabsTrigger>
-                                    </TabsList>
-                                </Tabs>
-
-                                <div className="bg-border mx-1 h-6 w-px" />
-
-                                <div className="flex items-center rounded-md border p-0.5">
-                                    <Button
-                                        variant={viewMode === "grid" ? "secondary" : "ghost"}
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() => setViewMode("grid")}
-                                        title="Grid view"
-                                    >
-                                        <LayoutGrid className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant={viewMode === "list" ? "secondary" : "ghost"}
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() => setViewMode("list")}
-                                        title="List view"
-                                    >
-                                        <List className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {hasActiveFilters ? (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-muted-foreground text-sm">Active filters:</span>
-                                {activeFilterBadges.map((badge) => (
-                                    <Badge key={badge.key} variant="secondary" className="flex items-center gap-1">
-                                        <span>{badge.label}</span>
-                                        <button
-                                            type="button"
-                                            className="hover:bg-muted ml-1 inline-flex items-center rounded-sm p-0.5"
-                                            onClick={badge.onClear}
-                                            aria-label={`Remove ${badge.label}`}
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    </Badge>
-                                ))}
-
-                                <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
-                                    Clear all
-                                </Button>
-                            </div>
-                        ) : null}
+                        <ClassActiveFilters activeFilterBadges={activeFilterBadges} onClearAll={clearAll} />
 
                         {visibleClasses.length === 0 ? (
                             <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center">
@@ -1397,166 +1106,15 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             </>
                         )}
 
-                        <Sheet open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-                            <SheetContent side="right" className="w-full sm:max-w-lg">
-                                <SheetHeader>
-                                    <SheetTitle>Filters</SheetTitle>
-                                    <SheetDescription>Refine the class list.</SheetDescription>
-                                </SheetHeader>
-
-                                <div className="flex flex-1 flex-col gap-4 overflow-auto px-4">
-                                    <div className="grid gap-3 sm:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label>Course</Label>
-                                            <Select
-                                                value={filters.course_id ? String(filters.course_id) : "all"}
-                                                onValueChange={(val) => handleFilterChange("course_id", val === "all" ? null : Number(val))}
-                                                disabled={filters.classification === "shs"}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Course" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All courses</SelectItem>
-                                                    {options.courses.map((course) => (
-                                                        <SelectItem key={course.id} value={String(course.id)}>
-                                                            {course.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Faculty</Label>
-                                            <Select
-                                                value={filters.faculty_id ? String(filters.faculty_id) : "all"}
-                                                onValueChange={(val) => handleFilterChange("faculty_id", val === "all" ? null : Number(val))}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Faculty" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All faculty</SelectItem>
-                                                    {options.faculties.map((faculty) => (
-                                                        <SelectItem key={faculty.id} value={String(faculty.id)}>
-                                                            {faculty.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Room</Label>
-                                            <Select
-                                                value={filters.room_id ? String(filters.room_id) : "all"}
-                                                onValueChange={(val) => handleFilterChange("room_id", val === "all" ? null : Number(val))}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Room" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All rooms</SelectItem>
-                                                    {options.rooms.map((room) => (
-                                                        <SelectItem key={room.id} value={String(room.id)}>
-                                                            {room.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Semester</Label>
-                                            <Select
-                                                value={filters.semester ?? "all"}
-                                                onValueChange={(val) => handleFilterChange("semester", val === "all" ? null : val)}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Semester" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All semesters</SelectItem>
-                                                    {options.semesters.map((semester) => (
-                                                        <SelectItem key={semester.value} value={semester.value}>
-                                                            {semester.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>College year</Label>
-                                            <Select
-                                                value={filters.academic_year ? String(filters.academic_year) : "all"}
-                                                onValueChange={(val) => handleFilterChange("academic_year", val === "all" ? null : Number(val))}
-                                                disabled={filters.classification === "shs"}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Year" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All college years</SelectItem>
-                                                    {[1, 2, 3, 4].map((year) => (
-                                                        <SelectItem key={year} value={String(year)}>
-                                                            {year} year
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>SHS grade</Label>
-                                            <Select
-                                                value={filters.grade_level ?? "all"}
-                                                onValueChange={(val) => handleFilterChange("grade_level", val === "all" ? null : val)}
-                                                disabled={filters.classification === "college"}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Grade" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All SHS grades</SelectItem>
-                                                    {options.grade_levels.map((grade) => (
-                                                        <SelectItem key={grade.value} value={grade.value}>
-                                                            {grade.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid gap-3 rounded-lg border p-4">
-                                        <div className="text-foreground text-sm font-medium">Enrollment</div>
-                                        <label className="flex items-center justify-between gap-3 text-sm">
-                                            <span className="text-muted-foreground">Has available slots</span>
-                                            <Checkbox
-                                                checked={Boolean(filters.available_slots)}
-                                                onCheckedChange={(checked) => handleFilterChange("available_slots", checked ? true : null)}
-                                            />
-                                        </label>
-                                        <label className="flex items-center justify-between gap-3 text-sm">
-                                            <span className="text-muted-foreground">Fully enrolled only</span>
-                                            <Checkbox
-                                                checked={filters.fully_enrolled === true}
-                                                onCheckedChange={(checked) => handleFilterChange("fully_enrolled", checked ? true : null)}
-                                            />
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <SheetFooter>
-                                    <Button variant="outline" onClick={clearAll} disabled={!hasActiveFilters && search === ""}>
-                                        Clear
-                                    </Button>
-                                    <Button onClick={() => setIsFiltersOpen(false)}>Done</Button>
-                                </SheetFooter>
-                            </SheetContent>
-                        </Sheet>
+                        <ClassFiltersSheet
+                            open={isFiltersOpen}
+                            onOpenChange={setIsFiltersOpen}
+                            filters={{ ...filters, search }}
+                            handleFilterChange={handleFilterChange}
+                            options={options}
+                            hasActiveFilters={hasActiveFilters}
+                            clearAll={clearAll}
+                        />
                     </div>
                 );
             })()}
@@ -1599,449 +1157,6 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             }}
                         >
                             Copy
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog
-                open={isCreateOpen}
-                onOpenChange={(open) => {
-                    setIsCreateOpen(open);
-                    if (open) {
-                        setCreateActiveTab("details");
-                    }
-                }}
-            >
-                <DialogContent className="bg-background/95 supports-[backdrop-filter]:bg-background/60 flex h-[95vh] w-full flex-col gap-0 overflow-hidden p-0 backdrop-blur sm:max-w-3xl md:max-w-5xl lg:max-w-[90vw] xl:max-w-[1400px]">
-                    <DialogHeader className="bg-muted/20 border-b p-6 pb-4">
-                        <DialogTitle className="text-xl font-bold">Create class</DialogTitle>
-                        <DialogDescription>Build a class record, assign schedules, and configure settings.</DialogDescription>
-                    </DialogHeader>
-
-                    <Tabs
-                        value={createActiveTab}
-                        onValueChange={(value) => setCreateActiveTab(value as ClassDialogTab)}
-                        className="flex flex-1 flex-col overflow-hidden"
-                    >
-                        <div className="px-6 pt-4">
-                            <TabsList className="h-12 w-full justify-start gap-6 rounded-none border-b bg-transparent p-0">
-                                <TabsTrigger
-                                    value="details"
-                                    className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                                >
-                                    <ListTodo className="mr-2 h-4 w-4" />
-                                    Details
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value="schedule"
-                                    className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    Schedule
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value="settings"
-                                    className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                                >
-                                    <Settings2 className="mr-2 h-4 w-4" />
-                                    Settings
-                                </TabsTrigger>
-                            </TabsList>
-                        </div>
-
-                        <ScrollArea className="h-full min-h-0 flex-1">
-                            <div className="p-6 pt-6">
-                                {createFirstError ? (
-                                    <div className="border-destructive/40 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
-                                        {createFirstError}
-                                    </div>
-                                ) : null}
-                                <TabsContent value="details" className="m-0 space-y-6 outline-none">
-                                    <div className="space-y-4">
-                                        <Card className="border-border/60 shadow-sm">
-                                            <CardHeader className="bg-muted/20 border-b pb-4">
-                                                <CardTitle className="text-base font-semibold">Class basics</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4 pt-6">
-                                                <div className="grid gap-4 sm:grid-cols-2">
-                                                    <div className="space-y-3 sm:col-span-2">
-                                                        <Label>Program type</Label>
-                                                        <div className="grid gap-3 sm:grid-cols-2">
-                                                            <VisualRadioButton
-                                                                title="College"
-                                                                checked={createForm.data.classification === "college"}
-                                                                onSelect={() => {
-                                                                    createForm.setData("classification", "college");
-                                                                    createForm.setData("course_codes", []);
-                                                                    createForm.setData("subject_ids", []);
-                                                                    createForm.setData("subject_code", "");
-                                                                    createForm.setData("shs_track_id", null);
-                                                                    createForm.setData("shs_strand_id", null);
-                                                                    createForm.setData("subject_code_shs", "");
-                                                                    setCollegeSubjectOptions([]);
-                                                                    setShsStrandOptions([]);
-                                                                    setShsSubjectOptions([]);
-                                                                    setSubjectCodeTouched(false);
-                                                                }}
-                                                            />
-                                                            <VisualRadioButton
-                                                                title="Senior High School"
-                                                                checked={createForm.data.classification === "shs"}
-                                                                onSelect={() => {
-                                                                    createForm.setData("classification", "shs");
-                                                                    createForm.setData("course_codes", []);
-                                                                    createForm.setData("subject_ids", []);
-                                                                    createForm.setData("subject_code", "");
-                                                                    createForm.setData("shs_track_id", null);
-                                                                    createForm.setData("shs_strand_id", null);
-                                                                    createForm.setData("subject_code_shs", "");
-                                                                    setCollegeSubjectOptions([]);
-                                                                    setShsStrandOptions([]);
-                                                                    setShsSubjectOptions([]);
-                                                                    setSubjectCodeTouched(false);
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    {createForm.data.classification === "college" ? (
-                                                        <>
-                                                            <div className="space-y-2">
-                                                                <Label>Courses</Label>
-                                                                <SearchableMultiSelect
-                                                                    placeholder="Search and select courses..."
-                                                                    searchPlaceholder="Search courses..."
-                                                                    emptyText="No courses found."
-                                                                    options={options.courses.map((course) => ({
-                                                                        value: String(course.id),
-                                                                        label: course.label,
-                                                                        searchText: course.label,
-                                                                    }))}
-                                                                    selected={createForm.data.course_codes.map(String)}
-                                                                    onChange={(values) => {
-                                                                        const next = values.map(Number);
-                                                                        createForm.setData("course_codes", next);
-                                                                        void loadCollegeSubjects(next, "create");
-                                                                    }}
-                                                                />
-                                                                {createForm.errors.course_codes ? (
-                                                                    <p className="text-destructive text-xs">{createForm.errors.course_codes}</p>
-                                                                ) : null}
-                                                            </div>
-
-                                                            <div className="space-y-2">
-                                                                <Label>Subjects</Label>
-                                                                <SearchableMultiSelect
-                                                                    placeholder={
-                                                                        createForm.data.course_codes.length
-                                                                            ? "Search and select subjects..."
-                                                                            : "Select courses first"
-                                                                    }
-                                                                    searchPlaceholder="Search subjects..."
-                                                                    emptyText="No subjects found."
-                                                                    options={collegeSubjectOptions.map((subject) => ({
-                                                                        value: String(subject.id),
-                                                                        label: subject.label,
-                                                                        description: subject.title,
-                                                                        searchText: `${subject.code} ${subject.title} ${subject.label}`,
-                                                                    }))}
-                                                                    selected={createForm.data.subject_ids.map(String)}
-                                                                    disabled={createForm.data.course_codes.length === 0 || collegeSubjectsLoading}
-                                                                    onChange={(values) => {
-                                                                        const subjectIds = values.map(Number);
-                                                                        createForm.setData("subject_ids", subjectIds);
-                                                                        if (!subjectCodeTouched) {
-                                                                            const computed = buildSubjectCodeFromSubjectOptions(
-                                                                                values,
-                                                                                collegeSubjectOptions,
-                                                                            );
-                                                                            createForm.setData("subject_code", computed);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                {createForm.errors.subject_ids ? (
-                                                                    <p className="text-destructive text-xs">{createForm.errors.subject_ids}</p>
-                                                                ) : null}
-                                                            </div>
-
-                                                            <div className="space-y-2 sm:col-span-2">
-                                                                <Label>Class code or name</Label>
-                                                                <Input
-                                                                    value={createForm.data.subject_code}
-                                                                    placeholder="Auto-generated from subjects..."
-                                                                    onChange={(e) => {
-                                                                        setSubjectCodeTouched(true);
-                                                                        createForm.setData("subject_code", e.target.value);
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <div className="space-y-2">
-                                                                <Label>SHS track</Label>
-                                                                <Select
-                                                                    value={createForm.data.shs_track_id ? String(createForm.data.shs_track_id) : ""}
-                                                                    onValueChange={(val) => {
-                                                                        const trackId = Number(val);
-                                                                        createForm.setData("shs_track_id", trackId);
-                                                                        createForm.setData("shs_strand_id", null);
-                                                                        createForm.setData("subject_code_shs", "");
-                                                                        void loadShsStrands(trackId, "create");
-                                                                    }}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue
-                                                                            placeholder={shsStrandsLoading ? "Loading..." : "Select track"}
-                                                                        />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {options.shs_tracks.map((track) => (
-                                                                            <SelectItem key={track.id} value={String(track.id)}>
-                                                                                {track.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-
-                                                            <div className="space-y-2">
-                                                                <Label>SHS strand</Label>
-                                                                <Select
-                                                                    value={createForm.data.shs_strand_id ? String(createForm.data.shs_strand_id) : ""}
-                                                                    onValueChange={(val) => {
-                                                                        const strandId = Number(val);
-                                                                        createForm.setData("shs_strand_id", strandId);
-                                                                        createForm.setData("subject_code_shs", "");
-                                                                        void loadShsSubjects(strandId);
-                                                                    }}
-                                                                    disabled={!createForm.data.shs_track_id || shsStrandsLoading}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue
-                                                                            placeholder={shsStrandsLoading ? "Loading..." : "Select strand"}
-                                                                        />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {shsStrandOptions.map((strand) => (
-                                                                            <SelectItem key={strand.id} value={String(strand.id)}>
-                                                                                {strand.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-
-                                                            <div className="space-y-2 sm:col-span-2">
-                                                                <Label>SHS subject</Label>
-                                                                <Select
-                                                                    value={createForm.data.subject_code_shs}
-                                                                    onValueChange={(val) => createForm.setData("subject_code_shs", val)}
-                                                                    disabled={!createForm.data.shs_strand_id || shsSubjectsLoading}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue
-                                                                            placeholder={shsSubjectsLoading ? "Loading..." : "Select subject"}
-                                                                        />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {shsSubjectOptions.map((subject) => (
-                                                                            <SelectItem key={subject.code} value={subject.code}>
-                                                                                {subject.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-
-                                                            <div className="space-y-2">
-                                                                <Label>Grade level</Label>
-                                                                <Select
-                                                                    value={createForm.data.grade_level}
-                                                                    onValueChange={(val) => createForm.setData("grade_level", val)}
-                                                                >
-                                                                    <SelectTrigger className="w-full">
-                                                                        <SelectValue />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {options.grade_levels.map((grade) => (
-                                                                            <SelectItem key={grade.value} value={grade.value}>
-                                                                                {grade.label}
-                                                                            </SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-
-                                        <Card className="border-border/60 h-fit shadow-sm">
-                                            <CardHeader className="bg-muted/20 border-b pb-4">
-                                                <CardTitle className="text-base font-semibold">Teaching details</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="space-y-4 pt-6">
-                                                <div className="grid gap-4 sm:grid-cols-2">
-                                                    <div className="space-y-2 sm:col-span-2">
-                                                        <Label>Faculty</Label>
-                                                        <Select
-                                                            value={createForm.data.faculty_id ? String(createForm.data.faculty_id) : ""}
-                                                            onValueChange={(val) => createForm.setData("faculty_id", val)}
-                                                        >
-                                                            <SelectTrigger className="w-full">
-                                                                <SelectValue placeholder="Select faculty" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {options.faculties.map((faculty) => (
-                                                                    <SelectItem key={faculty.id} value={String(faculty.id)}>
-                                                                        {faculty.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    {createForm.data.classification === "college" ? (
-                                                        <div className="space-y-3 sm:col-span-2">
-                                                            <Label>Year level</Label>
-                                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                                                {[1, 2, 3, 4].map((year) => (
-                                                                    <VisualRadioButton
-                                                                        key={year}
-                                                                        title={`${year} Year`}
-                                                                        checked={createForm.data.academic_year === year}
-                                                                        onSelect={() => createForm.setData("academic_year", year)}
-                                                                        className="min-h-0 px-3 py-3"
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    ) : null}
-
-                                                    <div className="space-y-3 sm:col-span-2">
-                                                        <Label>Semester</Label>
-                                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                                            {options.semesters.map((sem) => (
-                                                                <VisualRadioButton
-                                                                    key={sem.value}
-                                                                    title={sem.label}
-                                                                    className="min-h-0 px-3 py-3"
-                                                                    checked={createForm.data.semester === sem.value}
-                                                                    onSelect={() => createForm.setData("semester", sem.value)}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label>School year</Label>
-                                                        <Input
-                                                            value={createForm.data.school_year}
-                                                            onChange={(e) => createForm.setData("school_year", e.target.value)}
-                                                            placeholder="e.g., 2023 - 2024"
-                                                        />
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label>Section</Label>
-                                                        <Select
-                                                            value={createForm.data.section}
-                                                            onValueChange={(val) => createForm.setData("section", val)}
-                                                        >
-                                                            <SelectTrigger className="w-full">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {options.sections.map((sec) => (
-                                                                    <SelectItem key={sec.value} value={sec.value}>
-                                                                        {sec.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label>Room</Label>
-                                                        <Select
-                                                            value={String(createForm.data.room_id)}
-                                                            onValueChange={(val) => createForm.setData("room_id", Number(val))}
-                                                        >
-                                                            <SelectTrigger className="w-full">
-                                                                <SelectValue placeholder="Room" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {options.rooms.map((room) => (
-                                                                    <SelectItem key={room.id} value={String(room.id)}>
-                                                                        {room.label}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label>Class size limit</Label>
-                                                        <Input
-                                                            type="number"
-                                                            value={String(createForm.data.maximum_slots)}
-                                                            min={1}
-                                                            onChange={(e) => createForm.setData("maximum_slots", Number(e.target.value))}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-                                </TabsContent>
-
-                                <TabsContent value="schedule" className="m-0 flex h-full min-h-[500px] flex-col outline-none">
-                                    <SchedulePlanner
-                                        schedules={createForm.data.schedules}
-                                        setSchedules={(nextSchedules) => createForm.setData("schedules", nextSchedules)}
-                                        rooms={options.rooms}
-                                        dayOptions={options.day_of_week}
-                                        defaultRoomId={options.rooms[0]?.id ?? 0}
-                                        classRoomId={createForm.data.room_id}
-                                    />
-                                </TabsContent>
-
-                                <TabsContent value="settings" className="space-y-4">
-                                    {settingsEditor({
-                                        settings: createForm.data.settings,
-                                        setSettings: (nextSettings) => createForm.setData("settings", nextSettings),
-                                    })}
-                                </TabsContent>
-                            </div>
-                        </ScrollArea>
-                    </Tabs>
-
-                    <DialogFooter className="bg-muted/10 border-t p-6">
-                        <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            disabled={createForm.processing}
-                            onClick={() => {
-                                createForm.post(route("administrators.classes.store"), {
-                                    preserveScroll: true,
-                                    forceFormData: true,
-                                    onError: (errors) => {
-                                        setCreateActiveTab(getTabForFormErrors(errors as Record<string, string>));
-                                    },
-                                    onSuccess: () => {
-                                        setIsCreateOpen(false);
-                                        createForm.reset();
-                                        setCreateActiveTab("details");
-                                        setSearch(filters.search || "");
-                                    },
-                                });
-                            }}
-                        >
-                            {createForm.processing ? "Creating..." : "Create"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -2173,7 +1288,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                                         onChange={(values) => {
                                                                             const next = values.map(Number);
                                                                             editForm.setData("course_codes", next);
-                                                                            void loadCollegeSubjects(next, "edit");
+                                                                            void loadCollegeSubjects(next);
                                                                         }}
                                                                     />
                                                                     {editForm.errors.course_codes ? (
@@ -2239,7 +1354,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                                             editForm.setData("shs_track_id", trackId);
                                                                             editForm.setData("shs_strand_id", null);
                                                                             editForm.setData("subject_code_shs", "");
-                                                                            void loadShsStrands(trackId, "edit");
+                                                                            void loadShsStrands(trackId);
                                                                         }}
                                                                     >
                                                                         <SelectTrigger className="w-full">
@@ -2496,26 +1611,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={pendingDelete !== null} onOpenChange={(open) => !open && setPendingDelete(null)}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete this class?</DialogTitle>
-                        <DialogDescription>
-                            This will permanently remove <span className="text-foreground font-medium">{pendingDelete?.record_title}</span> along with
-                            its schedules and settings. Enrolled students will lose access. This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setPendingDelete(null)}>
-                            Cancel
-                        </Button>
-                        <Button variant="destructive" onClick={performDelete}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete class
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <DeleteClassDialog pendingDelete={pendingDelete} onConfirm={performDelete} onCancel={() => setPendingDelete(null)} />
 
             <Sheet open={isManageOpen} onOpenChange={setIsManageOpen}>
                 <SheetContent side="right" className="w-full sm:max-w-xl">

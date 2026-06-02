@@ -329,6 +329,24 @@ final class AdministratorClassManagementController extends Controller
         ]);
     }
 
+    public function create(GeneralSettingsService $generalSettingsService): Response
+    {
+        return Inertia::render('administrators/classes/create', [
+            'user' => $this->getUserProps(),
+            'filament' => [
+                'classes' => [
+                    'index_url' => route('filament.admin.resources.classes.index'),
+                ],
+            ],
+            'options' => $this->buildClassFormOptions(),
+            'defaults' => [
+                'semester' => (string) $generalSettingsService->getCurrentSemester(),
+                'school_year' => $generalSettingsService->getCurrentSchoolYearString(),
+            ],
+            'flash' => session('flash'),
+        ]);
+    }
+
     public function store(StoreClassRequest $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
@@ -940,6 +958,92 @@ final class AdministratorClassManagementController extends Controller
                 'error' => 'Failed to generate PDF: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function buildClassFormOptions(): array
+    {
+        $enrollmentCourseIds = app(GeneralSettingsService::class)
+            ->getGlobalSettingsModel()?->enrollment_courses ?? [];
+
+        $courses = Course::query()
+            ->when($enrollmentCourseIds !== [], fn ($query) => $query->whereIn('id', $enrollmentCourseIds))
+            ->orderBy('code')
+            ->get(['id', 'code', 'curriculum_year']);
+
+        $courseLabelById = $courses
+            ->mapWithKeys(fn (Course $course): array => [
+                $course->id => $course->curriculum_year
+                    ? sprintf('%s (%s)', $course->code, $course->curriculum_year)
+                    : $course->code,
+            ])
+            ->all();
+
+        return [
+            'classifications' => [
+                ['value' => 'college', 'label' => 'College'],
+                ['value' => 'shs', 'label' => 'Senior High School (SHS)'],
+            ],
+            'sections' => [
+                ['value' => 'A', 'label' => 'Section A'],
+                ['value' => 'B', 'label' => 'Section B'],
+                ['value' => 'C', 'label' => 'Section C'],
+                ['value' => 'D', 'label' => 'Section D'],
+            ],
+            'semesters' => [
+                ['value' => '1', 'label' => '1st Semester'],
+                ['value' => '2', 'label' => '2nd Semester'],
+                ['value' => 'summer', 'label' => 'Summer'],
+            ],
+            'grade_levels' => [
+                ['value' => 'Grade 11', 'label' => 'Grade 11'],
+                ['value' => 'Grade 12', 'label' => 'Grade 12'],
+            ],
+            'academic_years' => [
+                ['value' => '1', 'label' => '1st Year'],
+                ['value' => '2', 'label' => '2nd Year'],
+                ['value' => '3', 'label' => '3rd Year'],
+                ['value' => '4', 'label' => '4th Year'],
+            ],
+            'day_of_week' => [
+                ['value' => 'Monday', 'label' => 'Monday'],
+                ['value' => 'Tuesday', 'label' => 'Tuesday'],
+                ['value' => 'Wednesday', 'label' => 'Wednesday'],
+                ['value' => 'Thursday', 'label' => 'Thursday'],
+                ['value' => 'Friday', 'label' => 'Friday'],
+                ['value' => 'Saturday', 'label' => 'Saturday'],
+                ['value' => 'Sunday', 'label' => 'Sunday'],
+            ],
+            'courses' => $courses->map(fn (Course $course): array => [
+                'id' => $course->id,
+                'label' => $courseLabelById[$course->id],
+            ])->values()->all(),
+            'faculties' => Faculty::query()
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name', 'middle_name'])
+                ->map(fn (Faculty $faculty): array => [
+                    'id' => $faculty->id,
+                    'label' => $faculty->full_name,
+                ])->values()->all(),
+            'rooms' => Room::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Room $room): array => [
+                    'id' => $room->id,
+                    'label' => $room->name,
+                ])->values()->all(),
+            'shs_tracks' => ShsTrack::query()
+                ->orderBy('track_name')
+                ->get(['id', 'track_name'])
+                ->map(fn (ShsTrack $track): array => [
+                    'id' => $track->id,
+                    'label' => $track->track_name,
+                ])->values()->all(),
+        ];
     }
 
     private function buildSelectedClassProps(int $classId, array $courseCodeById, array $courseLabelById): ?array
