@@ -845,6 +845,7 @@ final class AdministratorStudentManagementController extends Controller
             ],
             'status' => ['required', Rule::enum(StudentStatus::class)],
             'remarks' => ['nullable', 'string'],
+            'submit_action' => ['nullable', 'string', 'in:view,create_another,create_enrollment'],
 
             'personal_contact' => ['nullable', 'string', 'max:20'],
             'emergency_contact_name' => ['nullable', 'string', 'max:100'],
@@ -918,6 +919,18 @@ final class AdministratorStudentManagementController extends Controller
             'employment_date' => ['nullable', 'date'],
             'employed_by_institution' => ['nullable', 'boolean'],
         ]);
+
+        if (blank($validated['guardian_name'] ?? null) && filled($validated['emergency_contact_name'] ?? null)) {
+            $validated['guardian_name'] = $validated['emergency_contact_name'];
+        }
+
+        if (blank($validated['guardian_contact'] ?? null) && filled($validated['emergency_contact_phone'] ?? null)) {
+            $validated['guardian_contact'] = $validated['emergency_contact_phone'];
+        }
+
+        if (blank($validated['guardian_relationship'] ?? null) && filled($validated['emergency_contact_relationship'] ?? null)) {
+            $validated['guardian_relationship'] = $validated['emergency_contact_relationship'];
+        }
 
         $student = DB::transaction(function () use ($validated): Student {
             $studentType = StudentType::from($validated['student_type']);
@@ -993,8 +1006,14 @@ final class AdministratorStudentManagementController extends Controller
             return $student;
         });
 
-        return to_route('administrators.students.edit', $student, 303)
-            ->with('success', 'Student created successfully.');
+        return match ($validated['submit_action'] ?? 'view') {
+            'create_another' => to_route('administrators.students.create', status: 303)
+                ->with('success', 'Student created successfully. You can now add another student.'),
+            'create_enrollment' => to_route('administrators.enrollments.create', ['student_id' => $student->id], 303)
+                ->with('success', 'Student created successfully. You can now create an enrollment.'),
+            default => to_route('administrators.students.show', $student, 303)
+                ->with('success', 'Student created successfully.'),
+        };
     }
 
     public function edit(Student $student): Response
@@ -2294,6 +2313,38 @@ final class AdministratorStudentManagementController extends Controller
         ];
     }
 
+    /**
+     * @return array<int, array{value: string, label: string, brackets: array<int, array{value: string, label: string}>}>
+     */
+    private function getIncomeModeOptions(): array
+    {
+        $currency = app(SiteSettings::class)->getCurrency();
+        $currencySymbol = match ($currency) {
+            'PHP' => '₱',
+            'USD' => '$',
+            default => $currency,
+        };
+
+        return collect(config('income_brackets.modes', []))
+            ->map(function (array $modeConfig, string $modeKey) use ($currencySymbol): array {
+                $brackets = collect($modeConfig['brackets'] ?? [])
+                    ->map(fn (array $bracket, string $key): array => [
+                        'value' => $key,
+                        'label' => str_replace('{symbol}', $currencySymbol, (string) ($bracket['label'] ?? '')),
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'value' => $modeKey,
+                    'label' => (string) ($modeConfig['label'] ?? ucfirst($modeKey)),
+                    'brackets' => $brackets,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     private function getFormOptions(): array
     {
         return [
@@ -2328,6 +2379,8 @@ final class AdministratorStudentManagementController extends Controller
                 ])
                 ->all(),
             'regions' => $this->getPhilippineRegions(),
+            'income_modes' => $this->getIncomeModeOptions(),
+            'default_income_mode' => (string) config('income_brackets.default_mode', 'annual'),
             'subjects' => Subject::all(['id', 'code', 'title', 'units'])->map(fn ($s): array => ['value' => $s->id, 'label' => "{$s->code} - {$s->title} ({$s->units} units)"])->all(),
         ];
     }

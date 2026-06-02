@@ -12,6 +12,21 @@ use Inertia\Testing\AssertableInertia;
 
 use function Pest\Laravel\actingAs;
 
+function studentCreatePayload(Course $course, array $overrides = []): array
+{
+    return array_merge([
+        'student_type' => 'college',
+        'student_id' => '212345',
+        'status' => 'enrolled',
+        'first_name' => 'Juan',
+        'last_name' => 'Dela Cruz',
+        'gender' => 'male',
+        'birth_date' => '2004-05-10',
+        'course_id' => (string) $course->id,
+        'academic_year' => '1',
+    ], $overrides);
+}
+
 it('displays active and inactive courses correctly on student create page', function (): void {
     $user = User::factory()->create(['role' => UserRole::Admin]);
 
@@ -46,6 +61,11 @@ it('displays active and inactive courses correctly on student create page', func
             ->where('options.religions.0.value', "Baha'i Faith")
             ->where('options.religions.0.label', "Baha'i Faith")
             ->where('options.religions.1.value', 'Roman Catholic')
+            ->where('options.default_income_mode', 'annual')
+            ->has('options.income_modes', 2)
+            ->where('options.income_modes.0.value', 'monthly')
+            ->where('options.income_modes.1.value', 'annual')
+            ->where('options.income_modes.1.brackets.0.value', 'below_250k')
         );
 });
 
@@ -54,24 +74,16 @@ it('stores related student information from the create page', function (): void 
     $course = Course::factory()->create(['is_active' => true]);
 
     $response = actingAs($user)
-        ->post(portalUrlForAdministrators('/administrators/students'), [
-            'student_type' => 'college',
-            'student_id' => '212345',
-            'status' => 'enrolled',
-            'first_name' => 'Juan',
-            'last_name' => 'Dela Cruz',
+        ->post(portalUrlForAdministrators('/administrators/students'), studentCreatePayload($course, [
             'middle_name' => 'Santos',
             'suffix' => 'Jr.',
-            'gender' => 'male',
-            'birth_date' => '2004-05-10',
             'email' => 'juan.delacruz@example.test',
             'phone' => '09170000000',
             'civil_status' => 'single',
             'nationality' => 'filipino',
-            'religion' => 'Roman Catholic',
-            'course_id' => (string) $course->id,
-            'academic_year' => '1',
+            'religion' => 'Pastafarian',
             'remarks' => 'Test student',
+            'submit_action' => 'view',
             'personal_contact' => '09171111111',
             'facebook_contact' => 'facebook.com/juan.delacruz',
             'emergency_contact_name' => 'Maria Dela Cruz',
@@ -98,13 +110,13 @@ it('stores related student information from the create page', function (): void 
             'is_indigenous_person' => false,
             'scholarship_type' => 'none',
             'employment_status' => 'not_applicable',
-        ]);
+        ]));
 
     $student = Student::withoutGlobalScopes()
         ->where('student_id', 212345)
         ->firstOrFail();
 
-    $response->assertRedirect(route('administrators.students.edit', $student));
+    $response->assertRedirect(route('administrators.students.show', $student));
 
     expect($student->student_contact_id)->not->toBeNull()
         ->and($student->student_parent_info)->not->toBeNull()
@@ -113,7 +125,7 @@ it('stores related student information from the create page', function (): void 
         ->and($student->phone)->toBe('09170000000')
         ->and($student->civil_status)->toBe('single')
         ->and($student->nationality)->toBe('filipino')
-        ->and($student->religion)->toBe('Roman Catholic')
+        ->and($student->religion)->toBe('Pastafarian')
         ->and($student->status->value)->toBe('enrolled');
 
     $contact = DB::table('student_contacts')->where('id', $student->student_contact_id)->first();
@@ -137,6 +149,14 @@ it('stores related student information from the create page', function (): void 
     expect($parent)->not->toBeNull()
         ->and($parent->{$fatherColumn})->toBe('Pedro Dela Cruz')
         ->and($parent->{$motherColumn})->toBe('Maria Dela Cruz');
+
+    if (Schema::hasColumn('student_parents_info', 'guardian_name')) {
+        expect($parent->guardian_name)->toBe('Maria Dela Cruz');
+    }
+
+    if (Schema::hasColumn('student_parents_info', 'guardian_contact')) {
+        expect($parent->guardian_contact)->toBe('09172222222');
+    }
 
     $education = DB::table('student_education_info')->where('id', $student->student_education_id)->first();
     $elementaryYearColumn = Schema::hasColumn('student_education_info', 'elementary_graduate_year')
@@ -166,6 +186,37 @@ it('stores related student information from the create page', function (): void 
     }
 
     expect(DB::table('student_statuses')->where('student_id', $student->id)->where('status', 'enrolled')->exists())->toBeTrue();
+});
+
+it('can redirect back to create another student after storing', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create(['is_active' => true]);
+
+    actingAs($user)
+        ->post(portalUrlForAdministrators('/administrators/students'), studentCreatePayload($course, [
+            'student_id' => '212346',
+            'submit_action' => 'create_another',
+        ]))
+        ->assertRedirect(route('administrators.students.create'));
+});
+
+it('can redirect to create an enrollment after storing', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create(['is_active' => true]);
+
+    $response = actingAs($user)
+        ->post(portalUrlForAdministrators('/administrators/students'), studentCreatePayload($course, [
+            'student_id' => '212347',
+            'submit_action' => 'create_enrollment',
+        ]));
+
+    $student = Student::withoutGlobalScopes()
+        ->where('student_id', 212347)
+        ->firstOrFail();
+
+    $response->assertRedirect(route('administrators.enrollments.create', ['student_id' => $student->id]));
+
+    expect(Student::withoutGlobalScopes()->whereKey($student->id)->exists())->toBeTrue();
 });
 
 it('updates facebook contact from the student edit payload', function (): void {
