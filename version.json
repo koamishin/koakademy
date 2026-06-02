@@ -1,18 +1,18 @@
 {
-  "version": "1.6.0-dev.0.18",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.18",
-  "commit": "890b90b743111d6932d407b43e4d27f3a49e386a",
+  "version": "1.7.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0",
+  "commit": "5515ec35cd0c015823194e1bcf9cce0020e7e819",
   "branch": "master",
-  "timestamp": "2026-06-02T04:00:01Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26797369299",
-  "release_type": "patch",
+  "timestamp": "2026-06-02T05:42:33Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26800718505",
+  "release_type": "official",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.18 - Add server-side student table sorting",
-    "previous": "1.6.0-dev.0.17"
+    "current": "Version 1.7.0 - manual release",
+    "previous": "1.6.0-dev.0.18"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Auto Pre-release and Docker Tag",
+    "workflow": "Manual Official Release",
     "repository": "yukazakiri/koakademy"
   }
 }
