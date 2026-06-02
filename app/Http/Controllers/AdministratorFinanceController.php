@@ -10,6 +10,7 @@ use App\Models\StudentTransaction;
 use App\Models\StudentTuition;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\EnrollmentBillingService;
 use App\Services\GeneralSettingsService;
 use Carbon\Carbon;
 use DateTimeInterface;
@@ -438,9 +439,10 @@ final class AdministratorFinanceController extends Controller
                     }
 
                     if ($tuition) {
-                        $tuition->paid += $amount;
-                        $tuition->total_balance -= $amount;
+                        $tuition->paid = (float) $tuition->paid + $amount;
                         $tuition->save();
+
+                        app(EnrollmentBillingService::class)->syncTuitionBalance($tuition);
                     }
                 }
             });
@@ -778,6 +780,7 @@ final class AdministratorFinanceController extends Controller
             ->where('total_balance', '>', $validated['min_balance'] ?? 0);
 
         $tuitions = $query->orderByDesc('total_balance')->get();
+        $billing = app(EnrollmentBillingService::class);
 
         $data = $tuitions->map(fn ($tuition): array => [
             'id' => $tuition->id,
@@ -786,20 +789,23 @@ final class AdministratorFinanceController extends Controller
             'course' => $tuition->student?->Course?->code ?? 'N/A',
             'year_level' => $tuition->student?->academic_year ?? 'N/A',
             'total_tuition' => $tuition->overall_tuition,
-            'total_paid' => $tuition->paid ?? ($tuition->overall_tuition - $tuition->total_balance),
-            'balance' => $tuition->total_balance,
+            'total_paid' => $billing->totalPaid($tuition),
+            'balance' => $billing->balanceDue($tuition),
             'payment_progress' => $tuition->payment_progress,
             'school_year' => $tuition->school_year,
             'semester' => $tuition->semester,
         ]);
 
+        $totalCollectible = (float) $tuitions->sum('overall_tuition');
+        $totalCollected = (float) $tuitions->sum(fn ($tuition): float => $billing->totalPaid($tuition));
+
         $summary = [
             'total_students' => $tuitions->count(),
-            'total_outstanding' => $tuitions->sum('total_balance'),
-            'total_collectible' => $tuitions->sum('overall_tuition'),
-            'total_collected' => $tuitions->sum(fn ($t) => $t->paid ?? ($t->overall_tuition - $t->total_balance)),
-            'collection_rate' => $tuitions->sum('overall_tuition') > 0
-                ? round(($tuitions->sum(fn ($t) => $t->paid ?? ($t->overall_tuition - $t->total_balance)) / $tuitions->sum('overall_tuition')) * 100, 2)
+            'total_outstanding' => $tuitions->sum(fn ($tuition): float => $billing->balanceDue($tuition)),
+            'total_collectible' => $totalCollectible,
+            'total_collected' => $totalCollected,
+            'collection_rate' => $totalCollectible > 0
+                ? round(($totalCollected / $totalCollectible) * 100, 2)
                 : 0,
             'school_year' => $schoolYear,
             'semester' => $semester,

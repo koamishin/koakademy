@@ -7,6 +7,7 @@ namespace App\Filament\Resources\StudentEnrollments\Schemas;
 use App\Enums\AcademicYear;
 use App\Models\StudentTransaction;
 use App\Models\Transaction;
+use App\Services\EnrollmentBillingService;
 use App\Services\EnrollmentPipelineService;
 use App\Services\GeneralSettingsService;
 use Exception;
@@ -471,40 +472,37 @@ final class StudentEnrollmentInfolist
                                     ->columnSpanFull()
                                     ->prefix('₱'),
                                 TextEntry::make('studentTuition.downpayment')
-                                    ->label('Down Payment')
+                                    ->label('Required Down Payment')
                                     ->columnSpanFull()
                                     ->prefix('₱')
-                                    ->tooltip('Reapply Transaction')
+                                    ->tooltip('Recalculate balance from verified payments')
                                     ->suffixAction(
-                                        Action::make('Reapply Downpayment')
-                                            ->icon('heroicon-m-arrow-uturn-left')
+                                        Action::make('Recalculate Balance')
+                                            ->icon('heroicon-m-arrow-path')
                                             ->requiresConfirmation()
                                             ->action(function ($record) {
                                                 DB::beginTransaction();
                                                 try {
                                                     $tuition = $record->studentTuition;
-                                                    $previous_balance =
-                                                        $tuition->total_balance;
-                                                    $tuition->total_balance -=
-                                                        $tuition->downpayment;
-                                                    $tuition->save();
+                                                    $previousBalance = $tuition->total_balance;
+                                                    $tuition = app(EnrollmentBillingService::class)->syncTuitionBalance($tuition);
+
                                                     Notification::make(
-                                                        'Successfully Reapplied Transaction'
+                                                        'Balance Recalculated'
                                                     )
                                                         ->success()
                                                         ->body(
                                                             'Balance: ₱'.
                                                                 $tuition->total_balance.
-                                                                ' has been updated'.
-                                                                'Previous Balance: ₱'.
-                                                                $previous_balance
+                                                                ' has been updated. Previous Balance: ₱'.
+                                                                $previousBalance
                                                         )
                                                         ->send();
                                                     DB::commit();
                                                 } catch (Exception $exception) {
                                                     DB::rollBack();
                                                     Notification::make(
-                                                        'Failed to Reapply Transaction'
+                                                        'Failed to Recalculate Balance'
                                                     )
                                                         ->danger()
                                                         ->body($exception->getMessage())

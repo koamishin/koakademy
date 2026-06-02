@@ -1293,9 +1293,9 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                         <span className="text-primary">{formatCurrency(totals.overallTotal)}</span>
                                     </div>
 
-                                    {/* Downpayment */}
+                                    {/* Required Downpayment */}
                                     <div className="space-y-2">
-                                        <Label className="text-xs">Downpayment</Label>
+                                        <Label className="text-xs">Required Downpayment</Label>
                                         <Input
                                             type="number"
                                             min={500}
@@ -1306,7 +1306,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                         />
                                     </div>
 
-                                    {/* Balance */}
+                                    {/* Projected balance after the required downpayment is received */}
                                     <div
                                         className={cn(
                                             "flex justify-between rounded-lg p-3 font-bold",
@@ -1315,9 +1315,12 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                 : "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400",
                                         )}
                                     >
-                                        <span>Balance</span>
+                                        <span>Projected Balance</span>
                                         <span>{formatCurrency(totals.balance)}</span>
                                     </div>
+                                    <p className="text-muted-foreground text-xs">
+                                        This downpayment is only counted as paid after cashier verification.
+                                    </p>
 
                                     {/* Submit Button */}
                                     <Button

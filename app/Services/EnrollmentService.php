@@ -33,6 +33,8 @@ use Illuminate\Support\Facades\Notification as NotificationFacade;
 
 final class EnrollmentService
 {
+    public function __construct(private readonly EnrollmentBillingService $billingService) {}
+
     /**
      * Checks if any selected classes for enrollment are full based on their maximum slots.
      *
@@ -185,7 +187,7 @@ final class EnrollmentService
             $balance = $overallTotal;
 
             // Create StudentTuition record
-            return StudentTuition::query()->create([
+            $tuition = StudentTuition::query()->create([
                 'enrollment_id' => $studentEnrollment->id,
                 'student_id' => $studentEnrollment->student_id, // Use ID from the record
                 'total_tuition' => $discountedTuition,
@@ -201,6 +203,8 @@ final class EnrollmentService
                 'school_year' => GeneralSetting::query()->first()?->getSchoolYearString(), // Fetch current school year
                 'academic_year' => $studentEnrollment->academic_year, // Assuming academic_year is on enrollment record
             ]);
+
+            return $this->billingService->syncTuitionBalance($tuition, $downPayment);
         } catch (Exception $exception) {
             Log::error('Error creating student tuition: '.$exception->getMessage(), [
                 'enrollment_id' => $studentEnrollment->id,
@@ -301,6 +305,7 @@ final class EnrollmentService
             $signatureData = $actionData['signature'] ?? null;
             $settlements = $actionData['settlements'] ?? [];
             $invoiceNumber = $actionData['invoicenumber'] ?? null;
+            $paymentMethod = (string) ($actionData['payment_method'] ?? 'Cash');
 
             if (empty($invoiceNumber)) {
                 throw new Exception('Invoice number is required.');
@@ -337,7 +342,7 @@ final class EnrollmentService
                 // Create separate transaction for this fee
                 $separateTransaction = Transaction::query()->create([
                     'description' => 'Payment for '.$separateTransactionFee->fee_name,
-                    'payment_method' => 'Cash',
+                    'payment_method' => $paymentMethod,
                     'settlements' => ['others' => $separateTransactionFee->amount], // Put in 'others' category
                     'status' => 'Paid',
                     'invoicenumber' => $transactionNumber,
@@ -351,6 +356,7 @@ final class EnrollmentService
                 StudentTransaction::query()->create([
                     'student_id' => $studentEnrollment->student_id,
                     'transaction_id' => $separateTransaction->id,
+                    'amount' => $separateTransactionFee->amount,
                     'status' => $separateTransaction->status,
                 ]);
 
@@ -372,7 +378,7 @@ final class EnrollmentService
             // Create Transaction
             $transaction = Transaction::query()->create([
                 'description' => 'Downpayment for student Tuition', // Consider making this more dynamic
-                'payment_method' => 'Cash', // Assuming Cash, might need flexibility
+                'payment_method' => $paymentMethod,
                 'settlements' => $settlements,
                 'status' => 'Paid', // Assuming paid upon verification
                 'invoicenumber' => $invoiceNumber,
@@ -387,6 +393,7 @@ final class EnrollmentService
             StudentTransaction::query()->create([
                 'student_id' => $studentEnrollment->student_id,
                 'transaction_id' => $transaction->id,
+                'amount' => $tuitionPayment,
                 'status' => $transaction->status,
             ]);
 
@@ -414,17 +421,14 @@ final class EnrollmentService
             // Update Student Tuition
             if ($studentEnrollment->studentTuition) {
                 $tuition = $studentEnrollment->studentTuition->refresh();
-                $totalPaid = $tuition->total_paid;
-                $newBalance = max(0, (float) $tuition->overall_tuition - $totalPaid);
 
                 $tuition->update([
-                    'status' => $newBalance <= 0 ? 'Paid' : 'Downpayment',
-                    'total_balance' => $newBalance,
-                    'downpayment' => $totalPaid > 0 ? $totalPaid : $tuitionPayment,
                     'semester' => $generalSettings?->semester,
                     'school_year' => $generalSettings?->getSchoolYearString(),
                     'academic_year' => $studentEnrollment->academic_year,
                 ]);
+
+                $this->billingService->syncTuitionBalance($tuition);
             } else {
                 // Handle case where studentTuition doesn't exist? Log error or create it?
                 Log::error(
@@ -809,13 +813,7 @@ final class EnrollmentService
             }
 
             if ($enrollmentRecord->studentTuition) {
-                $tuition = $enrollmentRecord->studentTuition;
-                $recomputedPaid = $tuition->total_paid;
-                $tuition->update([
-                    'status' => 'Pending',
-                    'downpayment' => 0,
-                    'total_balance' => max(0.0, (float) $tuition->overall_tuition - (float) $recomputedPaid),
-                ]);
+                $this->billingService->syncTuitionBalance($enrollmentRecord->studentTuition);
             }
 
             Log::info('Cashier verification undo reversed linked transactions.', [

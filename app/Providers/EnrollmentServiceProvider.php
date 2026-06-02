@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Enums\GradeEnum;
+use App\Services\EnrollmentBillingService;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\StudentTuition;
@@ -104,7 +105,7 @@ final class EnrollmentServiceProvider extends ServiceProvider
         // Overall Total = Discounted Tuition + Miscellaneous + Additional Fees + Modular Fees
         $overallTotal = $discountedTuition + $miscellaneousFee + $additionalFees + $totalModularFee;
         $downPayment = (float) ($get('downpayment') ?? 0); // Ensure downpayment is float
-        $balance = $overallTotal - $downPayment;
+        $balance = $overallTotal;
 
         // Set the calculated values in the form
         $set('total_lectures', number_format($discountedLecture, 2, '.', ''));
@@ -208,7 +209,7 @@ final class EnrollmentServiceProvider extends ServiceProvider
         // Overall Total = Discounted Tuition + Miscellaneous + Additional Fees + Modular Fees
         $overallTotal = $discountedTuition + $miscellaneousFee + $additionalFees + $totalModularFee;
         $downPayment = (float) ($get('downpayment') ?? 0); // Ensure float
-        $balance = $overallTotal - $downPayment;
+        $balance = $overallTotal;
 
         // Update the form fields
         $set('total_lectures', number_format($discountedLectures, 2, '.', ''));
@@ -421,13 +422,10 @@ final class EnrollmentServiceProvider extends ServiceProvider
         $discount = (int) ($get('discount') ?? 0);
         $downPayment = (float) ($get('downpayment') ?? 0);
 
-        // Calculate balance based on manual overall total
-        $balance = $manualOverallTotal - $downPayment;
-
         $tuitionData = [
             'student_id' => $studentEnrollment->student_id ?? $get('student_id'),
             'total_tuition' => $totalTuition,
-            'total_balance' => $balance,
+            'total_balance' => $manualOverallTotal,
             'total_lectures' => $totalLectures,
             'total_laboratory' => $totalLaboratory,
             'total_miscelaneous_fees' => $miscellaneousFee,
@@ -444,7 +442,9 @@ final class EnrollmentServiceProvider extends ServiceProvider
         }
 
         // Update or create the tuition record
-        StudentTuition::query()->updateOrCreate(['enrollment_id' => $studentEnrollment->id], $tuitionData);
+        $tuition = StudentTuition::query()->updateOrCreate(['enrollment_id' => $studentEnrollment->id], $tuitionData);
+
+        app(EnrollmentBillingService::class)->syncTuitionBalance($tuition, $downPayment);
     }
 
     /**
@@ -518,11 +518,13 @@ final class EnrollmentServiceProvider extends ServiceProvider
         }
 
         // Use updateOrCreate for efficiency and atomicity
-        StudentTuition::query()->updateOrCreate(
+        $tuition = StudentTuition::query()->updateOrCreate(
             ['enrollment_id' => $studentEnrollment->id],
             // Find by enrollment_id
             $tuitionData
         );
+
+        app(EnrollmentBillingService::class)->syncTuitionBalance($tuition, $downPayment);
     }
 
     // Methods checkFullClasses, createStudentTuition, verifyByHeadDept, verifyByCashier, and resendAssessmentNotification

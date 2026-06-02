@@ -79,6 +79,6 @@ it('undo cashier verification reverses linked transactions and recalculates tuit
 
     expect(Transaction::query()->whereKey($transaction->id)->exists())->toBeFalse();
     expect($pipeline->isCashierVerified($enrollment->status))->toBeFalse();
-    expect((float) $tuition->downpayment)->toBe(0.0);
+    expect((float) $tuition->downpayment)->toBe(500.0);
     expect((float) $tuition->total_balance)->toBe((float) $tuition->overall_tuition);
 });

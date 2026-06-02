@@ -35,7 +35,7 @@ final class StudentTuitionFactory extends Factory
         $discountAmount = $overallTuition * ($discount / 100);
         $overallTuitionAfterDiscount = $overallTuition - $discountAmount;
         $downpayment = $this->faker->numberBetween(0, $overallTuitionAfterDiscount * 0.5);
-        $totalBalance = $overallTuitionAfterDiscount - $downpayment;
+        $totalBalance = $overallTuitionAfterDiscount;
 
         return [
             'student_id' => $this->faker->numberBetween(100000, 999999),
@@ -49,7 +49,8 @@ final class StudentTuitionFactory extends Factory
             'downpayment' => $downpayment,
             'discount' => $discount,
             'total_balance' => $totalBalance,
-            'status' => $totalBalance <= 0 ? 'paid' : $this->faker->randomElement(['pending', 'partial', 'overdue']),
+            'paid' => 0,
+            'status' => $this->faker->randomElement(['pending', 'partial', 'overdue']),
         ];
     }
 
@@ -62,7 +63,7 @@ final class StudentTuitionFactory extends Factory
             $overallTuition = $attributes['overall_tuition'];
 
             return [
-                'downpayment' => $overallTuition,
+                'paid' => $overallTuition,
                 'total_balance' => 0,
                 'status' => 'paid',
             ];
@@ -80,6 +81,7 @@ final class StudentTuitionFactory extends Factory
 
             return [
                 'downpayment' => $downpayment,
+                'paid' => $downpayment,
                 'total_balance' => $overallTuition - $downpayment,
                 'status' => 'pending',
             ];

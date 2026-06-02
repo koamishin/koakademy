@@ -111,9 +111,12 @@ interface EnrollmentData {
         additional_fees_total: number;
         discount: number;
         downpayment: number;
+        required_downpayment: number;
         overall_tuition: number;
         total_balance: number;
+        balance_due: number;
         total_paid?: number;
+        status?: string;
     } | null;
     additional_fees: Array<{
         id: number;
@@ -229,6 +232,9 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
     const completionStatus = completionStep?.status ?? enrollment_pipeline.cashier_verified_status;
     const statusClasses = enrollment_pipeline.status_classes ?? {};
     const nextStep = enrollment_pipeline.next_step ?? null;
+    const balanceDue = enrollment.tuition?.balance_due ?? enrollment.tuition?.total_balance ?? 0;
+    const totalPaid = enrollment.tuition?.total_paid ?? 0;
+    const requiredDownpayment = enrollment.tuition?.required_downpayment ?? enrollment.tuition?.downpayment ?? 0;
 
     const getStatusColor = (status: string) => {
         return statusClasses[status] ?? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400 border-gray-200";
@@ -582,7 +588,7 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
                             </CardHeader>
                             <CardContent>
                                 <div className="mb-4 space-y-1">
-                                    <p className="text-3xl font-bold tracking-tight">{formatMoney(enrollment.tuition?.total_balance)}</p>
+                                    <p className="text-3xl font-bold tracking-tight">{formatMoney(balanceDue)}</p>
                                     <p className="text-muted-foreground text-xs">Remaining Balance</p>
                                 </div>
 
@@ -592,8 +598,12 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
                                         <span className="font-medium">{formatMoney(enrollment.tuition?.overall_tuition)}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Required Downpayment</span>
+                                        <span className="font-medium">{formatMoney(requiredDownpayment)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Total Paid</span>
-                                        <span className="font-medium text-green-600">- {formatMoney(enrollment.tuition?.total_paid)}</span>
+                                        <span className="font-medium text-green-600">- {formatMoney(totalPaid)}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -821,26 +831,30 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
                                             <Separator />
                                             <div className="space-y-2">
                                                 <div className="flex justify-between text-sm font-medium">
-                                                    <span>Subtotal</span>
-                                                    <span>
-                                                        {formatMoney(
-                                                            (enrollment.tuition?.overall_tuition || 0) + (enrollment.tuition?.discount || 0),
-                                                        )}
-                                                    </span>
+                                                    <span>Assessed Fees</span>
+                                                    <span>{formatMoney(enrollment.tuition?.overall_tuition)}</span>
                                                 </div>
                                                 {enrollment.tuition?.discount ? (
                                                     <div className="flex justify-between text-sm text-green-600">
                                                         <span>Discount</span>
-                                                        <span>- {formatMoney(enrollment.tuition.discount)}</span>
+                                                        <span>{enrollment.tuition.discount}% applied</span>
                                                     </div>
                                                 ) : null}
                                                 <div className="flex justify-between pt-2 text-base font-bold">
                                                     <span>Total Assessment</span>
                                                     <span>{formatMoney(enrollment.tuition?.overall_tuition)}</span>
                                                 </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span>Required Downpayment</span>
+                                                    <span>{formatMoney(requiredDownpayment)}</span>
+                                                </div>
                                                 <div className="flex justify-between text-sm text-green-600">
                                                     <span>Total Paid</span>
-                                                    <span>- {formatMoney(enrollment.tuition?.total_paid)}</span>
+                                                    <span>- {formatMoney(totalPaid)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-base font-bold">
+                                                    <span>Remaining Balance</span>
+                                                    <span>{formatMoney(balanceDue)}</span>
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -1150,12 +1164,18 @@ function EditTransactionDialog({ enrollmentId, transaction }: { enrollmentId: nu
 function VerifyCashierDialog({ enrollmentId, tuition, additionalFees }: { enrollmentId: number; tuition: any; additionalFees: any[] }) {
     const { props } = usePage<{ branding?: Branding }>();
     const currency = props.branding?.currency || "PHP";
+    const outstandingBalance = Number(tuition?.balance_due ?? tuition?.total_balance ?? 0);
+    const requiredPayment = Number(tuition?.required_downpayment ?? tuition?.downpayment ?? 5000);
+    const defaultTuitionPayment = Math.min(
+        requiredPayment > 0 ? requiredPayment : 5000,
+        outstandingBalance > 0 ? outstandingBalance : requiredPayment,
+    );
     const { data, setData, post, processing, errors, reset } = useForm({
         invoicenumber: "",
         payment_method: "Cash",
         settlements: {
             registration_fee: 0,
-            tuition_fee: tuition?.downpayment || 5000,
+            tuition_fee: defaultTuitionPayment,
             miscelanous_fee: 0,
             others: 0,
         },
@@ -1185,7 +1205,7 @@ function VerifyCashierDialog({ enrollmentId, tuition, additionalFees }: { enroll
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>Cashier Verification</DialogTitle>
-                    <DialogDescription>Confirm payment details to finalize enrollment.</DialogDescription>
+                    <DialogDescription>Confirm the actual payment received to finalize enrollment.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="grid gap-2">
@@ -1214,8 +1234,27 @@ function VerifyCashierDialog({ enrollmentId, tuition, additionalFees }: { enroll
                         </Select>
                     </div>
 
+                    <div className="bg-muted/40 rounded-lg border p-3 text-sm">
+                        <div className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">Required Downpayment</span>
+                            <span className="font-medium">
+                                {new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-PH", { style: "currency", currency }).format(
+                                    requiredPayment,
+                                )}
+                            </span>
+                        </div>
+                        <div className="mt-1 flex justify-between gap-4">
+                            <span className="text-muted-foreground">Current Balance</span>
+                            <span className="font-medium">
+                                {new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-PH", { style: "currency", currency }).format(
+                                    outstandingBalance,
+                                )}
+                            </span>
+                        </div>
+                    </div>
+
                     <div className="grid gap-2">
-                        <Label>Downpayment Amount</Label>
+                        <Label>Payment Amount</Label>
                         <div className="relative">
                             <span className="text-muted-foreground absolute top-2.5 left-3">{currency === "USD" ? "$" : "₱"}</span>
                             <Input

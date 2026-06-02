@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Services\EnrollmentBillingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -88,62 +89,7 @@ final class StudentTuition extends Model
      */
     protected function totalPaid(): Attribute
     {
-        return Attribute::make(get: function (): float {
-            // Use the paid column if it has a value greater than 0
-            if (isset($this->attributes['paid']) && $this->attributes['paid'] > 0) {
-                return (float) $this->attributes['paid'];
-            }
-
-            // Try to get the student - first via direct relationship, then via enrollment
-            $student = $this->student;
-            if (! $student && $this->enrollment) {
-                $student = $this->enrollment->student;
-            }
-
-            // If still no student, return 0
-            if (! $student) {
-                return 0.00;
-            }
-
-            // Clean school year format (remove spaces)
-            if (! is_string($this->school_year) || $this->school_year === '') {
-                return 0.00;
-            }
-
-            $schoolYear = str_replace(' ', '', $this->school_year);
-
-            if (preg_match('/^(\d{4})-(\d{4})$/', $schoolYear) !== 1) {
-                return 0.00;
-            }
-
-            $semester = (int) $this->semester;
-            if (! in_array($semester, [1, 2], true)) {
-                return 0.00;
-            }
-
-            // Get transactions using the scope from Transaction model
-            $transactions = $student->Transaction()
-                ->forAcademicPeriod($schoolYear, $semester)
-                ->get();
-
-            $total = 0.00;
-
-            foreach ($transactions as $transaction) {
-                $settlements = $transaction->settlements;
-
-                // Handle JSON decoding if it's a string
-                if (is_string($settlements)) {
-                    $settlements = json_decode($settlements, true);
-                }
-
-                // Sum up tuition_fee
-                if (is_array($settlements) && isset($settlements['tuition_fee'])) {
-                    $total += (float) $settlements['tuition_fee'];
-                }
-            }
-
-            return $total;
-        });
+        return Attribute::make(get: fn (): float => app(EnrollmentBillingService::class)->totalPaid($this));
     }
 
     /**
@@ -166,7 +112,7 @@ final class StudentTuition extends Model
                 return 0;
             }
 
-            $paid = $this->overall_tuition - $this->total_balance;
+            $paid = app(EnrollmentBillingService::class)->totalPaid($this);
 
             return min(100, round(($paid / $this->overall_tuition) * 100));
         });
@@ -178,18 +124,7 @@ final class StudentTuition extends Model
     protected function formattedTotalBalance(): Attribute
     {
         return Attribute::make(get: function (): string {
-            // Calculate balance dynamically if paid was calculated from transactions
-            // Total Balance = Overall Tuition - Total Paid
-
-            // If the DB total_balance seems inconsistent with our calculated paid, prefer calculated
-            // But let's stick to simple logic: If we rely on calculated Paid, we should rely on (Overall - Paid) for balance
-            // UNLESS paid column was used directly.
-
-            // However, modifying total_balance accessor might affect other things.
-            // The UI uses `formatted_total_balance`.
-
-            // Let's use the calculated total_paid to determine balance for consistency
-            $balance = $this->overall_tuition - $this->total_paid;
+            $balance = app(EnrollmentBillingService::class)->balanceDue($this);
 
             return $this->getCurrencySymbol().' '.number_format($balance, 2);
         });
@@ -224,7 +159,7 @@ final class StudentTuition extends Model
      */
     protected function paymentStatus(): Attribute
     {
-        return Attribute::make(get: fn (): string => $this->total_balance <= 0 ? 'Fully Paid' : 'Not Fully Paid');
+        return Attribute::make(get: fn (): string => app(EnrollmentBillingService::class)->balanceDue($this) <= 0 ? 'Fully Paid' : 'Not Fully Paid');
     }
 
     /**
@@ -232,7 +167,7 @@ final class StudentTuition extends Model
      */
     protected function statusClass(): Attribute
     {
-        return Attribute::make(get: fn (): string => $this->total_balance <= 0
+        return Attribute::make(get: fn (): string => app(EnrollmentBillingService::class)->balanceDue($this) <= 0
             ? 'bg-green-100 text-green-800 dark:bg-green-200 dark:text-green-900'
             : 'bg-red-100 text-red-800 dark:bg-red-200 dark:text-red-900');
     }

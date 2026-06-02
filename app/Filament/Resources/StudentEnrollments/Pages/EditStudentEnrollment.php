@@ -6,6 +6,7 @@ namespace App\Filament\Resources\StudentEnrollments\Pages;
 
 use App\Filament\Resources\StudentEnrollments\StudentEnrollmentResource;
 use App\Models\StudentTuition;
+use App\Services\EnrollmentBillingService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
@@ -47,7 +48,7 @@ final class EditStudentEnrollment extends EditRecord
             'total_miscelaneous_fees' => $data['miscellaneous'] ?? 3500,
             'overall_tuition' => $data['overall_total'] ?? 0,
             'downpayment' => $data['downpayment'] ?? 0,
-            'total_balance' => $data['total_balance'] ?? 0,
+            'total_balance' => $data['overall_total'] ?? 0,
         ];
 
         // Store tuition data temporarily
@@ -79,9 +80,14 @@ final class EditStudentEnrollment extends EditRecord
     {
         // Update or create the student tuition record
         if ($this->tuitionData !== []) {
-            StudentTuition::updateOrCreate(
+            $tuition = StudentTuition::updateOrCreate(
                 ['enrollment_id' => $this->record->id],
                 $this->tuitionData
+            );
+
+            app(EnrollmentBillingService::class)->syncTuitionBalance(
+                $tuition,
+                (float) ($this->tuitionData['downpayment'] ?? 0)
             );
         }
     }

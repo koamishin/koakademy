@@ -20,6 +20,7 @@ use App\Models\SubjectEnrollment;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\ApplicantApprovedForRequirements;
+use App\Services\EnrollmentBillingService;
 use App\Services\EnrollmentPipelineService;
 use App\Services\EnrollmentService;
 use App\Services\GeneralSettingsService;
@@ -45,7 +46,8 @@ final class AdministratorEnrollmentManagementController extends Controller
 {
     public function __construct(
         private readonly EnrollmentService $enrollmentService,
-        private readonly EnrollmentPipelineService $enrollmentPipelineService
+        private readonly EnrollmentPipelineService $enrollmentPipelineService,
+        private readonly EnrollmentBillingService $enrollmentBillingService,
     ) {}
 
     public function index(GeneralSettingsService $settingsService): Response|RedirectResponse
@@ -567,6 +569,13 @@ final class AdministratorEnrollmentManagementController extends Controller
             }
         }
 
+        $tuitionSummary = $enrollment->studentTuition
+            ? $this->enrollmentBillingService->toSummaryArray(
+                $enrollment->studentTuition,
+                (float) $enrollment->additionalFees->sum('amount')
+            )
+            : null;
+
         return Inertia::render('administrators/enrollments/show', [
             'user' => Auth::user(),
             'enrollment' => [
@@ -594,7 +603,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                 ]),
                 'class_enrollments' => $activeClassEnrollments,
                 'missing_classes' => $missingClasses,
-                'tuition' => $enrollment->studentTuition ? $enrollment->studentTuition->append('total_paid') : null,
+                'tuition' => $tuitionSummary,
                 'additional_fees' => $enrollment->additionalFees,
                 'transactions' => $enrollmentTransactions->map(function ($studentTransaction): array {
                     $tx = $studentTransaction->transaction;
@@ -731,16 +740,21 @@ final class AdministratorEnrollmentManagementController extends Controller
             return back()->with('flash', ['error' => 'Enrollment is not ready for cashier verification.']);
         }
 
-        $request->validate([
-            'invoicenumber' => 'required|string',
-            'settlements' => 'required|array',
-            'payment_method' => 'required|string',
+        $validated = $request->validate([
+            'invoicenumber' => ['required', 'string'],
+            'settlements' => ['required', 'array'],
+            'settlements.registration_fee' => ['nullable', 'numeric', 'min:0'],
+            'settlements.tuition_fee' => ['nullable', 'numeric', 'min:0'],
+            'settlements.miscelanous_fee' => ['nullable', 'numeric', 'min:0'],
+            'settlements.others' => ['nullable', 'numeric', 'min:0'],
+            'payment_method' => ['required', 'string'],
         ]);
 
-        // Merge extra dynamic fields for separate transaction fees if present in request
-        $allData = $request->all();
+        $separateFeeTransactionFields = collect($request->all())
+            ->filter(fn (mixed $value, int|string $key): bool => is_string($key) && str_starts_with($key, 'separate_fee_') && str_ends_with($key, '_transaction'))
+            ->all();
 
-        if ($this->enrollmentService->verifyByCashier($enrollment, $allData)) {
+        if ($this->enrollmentService->verifyByCashier($enrollment, [...$validated, ...$separateFeeTransactionFields])) {
             return back()->with('flash', ['success' => 'Successfully enrolled student.']);
         }
 
@@ -1006,15 +1020,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                 // Non-tuition settlement categories should not reduce tuition balance.
                 $tuition = $enrollment->studentTuition;
                 if ($tuition) {
-                    $tuition->refresh();
-                    $totalPaid = $tuition->total_paid;
-                    $tuition->total_balance = max(0, (float) $tuition->overall_tuition - $totalPaid);
-
-                    if (str_contains(mb_strtolower($transaction->description), 'downpayment')) {
-                        $tuition->downpayment = $totalPaid;
-                    }
-
-                    $tuition->save();
+                    $this->enrollmentBillingService->syncTuitionBalance($tuition->refresh());
                 }
             });
 
@@ -1064,14 +1070,9 @@ final class AdministratorEnrollmentManagementController extends Controller
                 $overall = $tuition->total_tuition + $misc + $additionalFees;
                 $tuition->overall_tuition = $overall;
 
-                // Recalculate balance
-                // balance = overall - paid
-                // We rely on the totalPaid accessor to get accurate paid amount
-                // If we updated 'paid' column above, accessor will prioritize it
-                $totalPaid = $tuition->total_paid;
-                $tuition->total_balance = $overall - $totalPaid;
-
                 $tuition->save();
+
+                $this->enrollmentBillingService->syncTuitionBalance($tuition);
             });
 
             return back()->with('flash', ['success' => 'Tuition details updated successfully.']);
@@ -2683,15 +2684,13 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->sum(fn (array $fee): float => (float) ($fee['amount'] ?? 0));
 
         $overallTotal = $totalTuition + $miscellaneousFee + $additionalFeesTotal;
-        $totalPaid = $enrollment->studentTuition?->total_paid ?? 0.0;
-        $balance = max(0.0, $overallTotal - $totalPaid);
 
-        StudentTuition::query()->updateOrCreate(
+        $tuition = StudentTuition::query()->updateOrCreate(
             ['enrollment_id' => $enrollment->id],
             [
                 'student_id' => $enrollment->student_id,
                 'total_tuition' => $totalTuition,
-                'total_balance' => $balance,
+                'total_balance' => $overallTotal,
                 'total_lectures' => $discountedLecture,
                 'total_laboratory' => $totalLaboratory,
                 'total_miscelaneous_fees' => $miscellaneousFee,
@@ -2703,6 +2702,8 @@ final class AdministratorEnrollmentManagementController extends Controller
                 'academic_year' => $enrollment->academic_year,
             ]
         );
+
+        $this->enrollmentBillingService->syncTuitionBalance($tuition, $downpayment);
     }
 
     private function getAssessmentData(StudentEnrollment $enrollment, GeneralSettingsService $settingsService): array
@@ -2794,13 +2795,8 @@ final class AdministratorEnrollmentManagementController extends Controller
         $calculatedBalance = null;
 
         if ($tuition) {
-            $calculatedBalance = max(0.0, (float) $tuition->overall_tuition - $tuition->total_paid);
-
-            if ((float) $tuition->total_balance !== $calculatedBalance) {
-                $tuition->forceFill([
-                    'total_balance' => $calculatedBalance,
-                ])->save();
-            }
+            $tuition = $this->enrollmentBillingService->syncTuitionBalance($tuition);
+            $calculatedBalance = $this->enrollmentBillingService->balanceDue($tuition);
         }
 
         // General settings

@@ -7,6 +7,7 @@ namespace App\Filament\Resources\StudentEnrollments\Pages;
 use App\Filament\Resources\StudentEnrollments\StudentEnrollmentResource;
 use App\Jobs\GenerateAssessmentPdfJob;
 use App\Models\StudentTuition;
+use App\Services\EnrollmentBillingService;
 use Exception;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Log;
@@ -68,11 +69,16 @@ final class CreateStudentEnrollment extends CreateRecord
     {
         // Create the student tuition record with the extracted data
         if (isset($this->tuitionData)) {
-            StudentTuition::create([
+            $tuition = StudentTuition::create([
                 'enrollment_id' => $this->record->id,
                 'student_id' => $this->record->student_id,
                 ...$this->tuitionData,
             ]);
+
+            app(EnrollmentBillingService::class)->syncTuitionBalance(
+                $tuition,
+                (float) ($this->tuitionData['downpayment'] ?? 0)
+            );
         }
 
         // Dispatch PDF generation job

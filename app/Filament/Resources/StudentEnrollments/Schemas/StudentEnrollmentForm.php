@@ -227,11 +227,7 @@ final class StudentEnrollmentForm
                                             $overallTotal =
                                                 $totalTuition + $miscellaneousFee;
                                             $set('overall_total', $overallTotal);
-
-                                            $downpayment =
-                                                (float) ($get('downpayment') ?? 0);
-                                            $balance = $overallTotal - $downpayment;
-                                            $set('total_balance', $balance);
+                                            $set('total_balance', $overallTotal);
                                         } else {
                                             // Reset to default if no course selected
                                             $set('miscellaneous', 3500);
@@ -327,11 +323,7 @@ final class StudentEnrollmentForm
                                     $overallTotal =
                                         $totalTuition + $miscellaneousFee;
                                     $set('overall_total', $overallTotal);
-
-                                    $downpayment =
-                                        (float) ($get('downpayment') ?? 0);
-                                    $balance = $overallTotal - $downpayment;
-                                    $set('total_balance', $balance);
+                                    $set('total_balance', $overallTotal);
                                 }
 
                                 // Removed picture_1x1 logic as it's not in the main form state
@@ -2297,10 +2289,7 @@ final class StudentEnrollmentForm
                                 // Recalculate balance when overall total changes
                                 $overallTotal =
                                     (float) ($get('overall_total') ?? 0);
-                                $downpayment =
-                                    (float) ($get('downpayment') ?? 0);
-                                $balance = $overallTotal - $downpayment;
-                                $set('total_balance', $balance);
+                                $set('total_balance', $overallTotal);
 
                                 // Persist changes if in edit context
                                 if ($record instanceof StudentEnrollment) {
@@ -2356,21 +2345,18 @@ final class StudentEnrollmentForm
                                 Get $get,
                                 Set $set
                             ): void {
-                                // Recalculate balance when downpayment changes
+                                // Required downpayment is not paid until cashier verification.
                                 $overallTotal =
                                     (float) ($get('overall_total') ?? 0);
-                                $downpayment =
-                                    (float) ($get('downpayment') ?? 0);
-                                $balance = $overallTotal - $downpayment;
-                                $set('total_balance', $balance);
+                                $set('total_balance', $overallTotal);
                             })
-                            ->label('Down Payment'),
+                            ->label('Required Down Payment'),
                         TextInput::make('total_balance')
                             ->numeric()
                             ->readOnly()
                             ->live()
                             ->prefix('₱')
-                            ->label('Balance'),
+                            ->label('Balance Due'),
                     ]),
 
                 // Remarks
