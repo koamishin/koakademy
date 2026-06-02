@@ -283,7 +283,11 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
                     )}
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" className="my-2 w-80">
+            <DropdownMenuContent
+                side="right"
+                align="start"
+                className="my-2 flex max-h-[min(var(--available-height),24rem)] w-80 flex-col overflow-hidden p-0"
+            >
                 <DropdownMenuLabel className="flex items-center justify-between">
                     <span>Notifications</span>
                     {unreadCount > 0 && (
@@ -307,76 +311,78 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
                         <p className="text-muted-foreground/70 text-xs">You're all caught up!</p>
                     </div>
                 ) : (
-                    <ScrollArea className="max-h-[300px]">
-                        {notifications.map((notification) => (
-                            <DropdownMenuItem
-                                key={notification.id}
-                                className={cn("flex cursor-pointer items-start gap-3 p-3", !notification.readAt && "bg-muted/50")}
-                                onClick={() => handleNotificationClick(notification)}
-                            >
-                                <Avatar className={cn("size-8 shrink-0", getNotificationTypeStyles(notification.notificationType))}>
-                                    <AvatarFallback className="text-xs">{getIconForType(notification.notificationType)}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <span className={cn("text-sm leading-tight font-medium", !notification.readAt && "font-semibold")}>
-                                            {notification.title}
-                                        </span>
-                                        {!notification.readAt && <span className="bg-primary size-2 shrink-0 rounded-full" />}
-                                    </div>
-                                    <p className="text-muted-foreground line-clamp-2 text-xs">{notification.message}</p>
-
-                                    {notification.actions && notification.actions.length > 0 && (
-                                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                                            {notification.actions
-                                                .filter((action) => action.url)
-                                                .slice(0, 2)
-                                                .map((action) => (
-                                                    <Button
-                                                        key={`${notification.id}-${action.name}`}
-                                                        variant={getActionButtonVariant(action.color)}
-                                                        size="sm"
-                                                        className="h-7 px-2 text-xs"
-                                                        onClick={(e) => handleActionClick(e, notification, action)}
-                                                    >
-                                                        {action.label}
-                                                    </Button>
-                                                ))}
+                    <ScrollArea className="max-h-[300px] min-h-0 flex-1">
+                        <div className="p-1">
+                            {notifications.map((notification) => (
+                                <DropdownMenuItem
+                                    key={notification.id}
+                                    className={cn("flex cursor-pointer items-start gap-3 p-3", !notification.readAt && "bg-muted/50")}
+                                    onClick={() => handleNotificationClick(notification)}
+                                >
+                                    <Avatar className={cn("size-8 shrink-0", getNotificationTypeStyles(notification.notificationType))}>
+                                        <AvatarFallback className="text-xs">{getIconForType(notification.notificationType)}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <span className={cn("text-sm leading-tight font-medium", !notification.readAt && "font-semibold")}>
+                                                {notification.title}
+                                            </span>
+                                            {!notification.readAt && <span className="bg-primary size-2 shrink-0 rounded-full" />}
                                         </div>
-                                    )}
+                                        <p className="text-muted-foreground line-clamp-2 text-xs">{notification.message}</p>
 
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground/70 text-[10px]">
-                                            {formatDistanceToNow(new Date(notification.createdAt), {
-                                                addSuffix: true,
-                                            })}
-                                        </span>
-                                        <div className="flex items-center gap-1">
-                                            {!notification.readAt && (
+                                        {notification.actions && notification.actions.length > 0 && (
+                                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                                                {notification.actions
+                                                    .filter((action) => action.url)
+                                                    .slice(0, 2)
+                                                    .map((action) => (
+                                                        <Button
+                                                            key={`${notification.id}-${action.name}`}
+                                                            variant={getActionButtonVariant(action.color)}
+                                                            size="sm"
+                                                            className="h-7 px-2 text-xs"
+                                                            onClick={(e) => handleActionClick(e, notification, action)}
+                                                        >
+                                                            {action.label}
+                                                        </Button>
+                                                    ))}
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-muted-foreground/70 text-[10px]">
+                                                {formatDistanceToNow(new Date(notification.createdAt), {
+                                                    addSuffix: true,
+                                                })}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                {!notification.readAt && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-6"
+                                                        onClick={(e) => handleMarkAsRead(e, notification.id)}
+                                                        title="Mark as read"
+                                                    >
+                                                        <IconCheck className="size-3" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="size-6"
-                                                    onClick={(e) => handleMarkAsRead(e, notification.id)}
-                                                    title="Mark as read"
+                                                    className="text-muted-foreground hover:text-destructive size-6"
+                                                    onClick={(e) => handleDelete(e, notification.id)}
+                                                    title="Delete"
                                                 >
-                                                    <IconCheck className="size-3" />
+                                                    <IconTrash className="size-3" />
                                                 </Button>
-                                            )}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-muted-foreground hover:text-destructive size-6"
-                                                onClick={(e) => handleDelete(e, notification.id)}
-                                                title="Delete"
-                                            >
-                                                <IconTrash className="size-3" />
-                                            </Button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </DropdownMenuItem>
-                        ))}
+                                </DropdownMenuItem>
+                            ))}
+                        </div>
                     </ScrollArea>
                 )}
             </DropdownMenuContent>
