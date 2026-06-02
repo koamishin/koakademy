@@ -1,14 +1,14 @@
 {
-  "version": "1.7.0-dev.0.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.1",
-  "commit": "98ef273fe4e37560883bfc3a40f3314fa76cbc4c",
+  "version": "1.7.0-dev.0.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.2",
+  "commit": "68445bd677a994af5dec48a7b0b6a104f45166af",
   "branch": "master",
-  "timestamp": "2026-06-02T05:58:51Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26801298701",
+  "timestamp": "2026-06-02T09:11:29Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26809820444",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.7.0-dev.0.1 - Add flexible submit actions and income bracket mode to student creation",
-    "previous": "1.7.0"
+    "current": "Version 1.7.0-dev.0.2 - Add tuition exclusion for subjects",
+    "previous": "1.7.0-dev.0.1"
   },
   "metadata": {
     "author": "yukazakiri",
