@@ -1,14 +1,14 @@
 {
-  "version": "1.6.0-dev.0.14",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.14",
-  "commit": "a928d38145119469a4204b2be367bce4bb3505f5",
+  "version": "1.6.0-dev.0.15",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.6.0-dev.0.15",
+  "commit": "e072522b667430a044d8686f4b3e164b46901936",
   "branch": "master",
-  "timestamp": "2026-06-01T04:39:58Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26735371244",
+  "timestamp": "2026-06-02T00:16:34Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26790046086",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.6.0-dev.0.14 - Default production PDFs to Gotenberg",
-    "previous": "1.6.0-dev.0.13"
+    "current": "Version 1.6.0-dev.0.15 - Derive Religion Options From Students",
+    "previous": "1.6.0-dev.0.14"
   },
   "metadata": {
     "author": "yukazakiri",
