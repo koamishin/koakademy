@@ -95,8 +95,8 @@ export function DataTable<TData, TValue>({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        // We use manual pagination if pagination prop is provided
         manualPagination: !!pagination,
+        manualSorting: !!pagination,
         pageCount: pagination?.last_page ?? -1,
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: (updater) => {
@@ -106,10 +106,18 @@ export function DataTable<TData, TValue>({
             // Trigger server-side sort
             if (newSorting.length > 0) {
                 const { id, desc } = newSorting[0];
-                router.get(route(routeName), { ...filters, sort: id, direction: desc ? "desc" : "asc" }, { preserveState: true, replace: true });
+                router.get(
+                    route(routeName),
+                    { ...filters, sort: id, direction: desc ? "desc" : "asc", page: 1 },
+                    { only: ["students", "filters"], preserveScroll: true, preserveState: true, replace: true },
+                );
             } else {
                 // Reset sort
-                router.get(route(routeName), { ...filters, sort: null, direction: null }, { preserveState: true, replace: true });
+                router.get(
+                    route(routeName),
+                    { ...filters, sort: "created_at", direction: "desc", page: 1 },
+                    { only: ["students", "filters"], preserveScroll: true, preserveState: true, replace: true },
+                );
             }
         },
         getSortedRowModel: getSortedRowModel(),
@@ -140,12 +148,16 @@ export function DataTable<TData, TValue>({
     // Function to handle page navigation via Inertia
     const navigateToPage = (url: string | null) => {
         if (url) {
-            router.get(url, {}, { preserveState: true, replace: true });
+            router.get(url, {}, { only: ["students", "filters"], preserveScroll: true, preserveState: true, replace: true });
         }
     };
 
     const handlePerPageChange = (value: string) => {
-        router.get(route(routeName), { ...filters, per_page: value, page: 1 }, { preserveState: true, replace: true });
+        router.get(
+            route(routeName),
+            { ...filters, per_page: value, page: 1 },
+            { only: ["students", "filters"], preserveScroll: true, preserveState: true, replace: true },
+        );
     };
 
     const exportColumns = [

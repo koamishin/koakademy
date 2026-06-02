@@ -138,8 +138,11 @@ final class AdministratorStudentManagementController extends Controller
                 });
             });
 
-        $sort = $request->input('sort');
-        $direction = $request->input('direction', 'asc');
+        $sort = $request->string('sort', 'created_at')->toString();
+        $allowedSorts = ['name', 'status', 'student_id', 'type', 'course', 'academic_year', 'created_at', 'age', 'gender'];
+        $sort = in_array($sort, $allowedSorts, true) ? $sort : 'created_at';
+        $direction = $request->string('direction', 'desc')->toString();
+        $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'desc';
 
         if ($sort) {
             if ($sort === 'name') {
@@ -171,14 +174,16 @@ final class AdministratorStudentManagementController extends Controller
                         ->limit(1),
                     $direction
                 );
-            } elseif (in_array($sort, ['academic_year', 'created_at', 'age', 'gender'])) {
-                // Check if column exists to avoid SQL errors
-                // White list allowed columns
+            } elseif (in_array($sort, ['academic_year', 'created_at', 'age', 'gender'], true)) {
                 $studentsQuery->orderBy($sort, $direction);
+
+                if ($sort === 'created_at') {
+                    $studentsQuery->orderBy('id', $direction);
+                }
             }
         } else {
-            $studentsQuery->orderBy('last_name')
-                ->orderBy('first_name');
+            $studentsQuery->orderByDesc('created_at')
+                ->orderByDesc('id');
         }
 
         /** @var LengthAwarePaginator $students */
@@ -311,6 +316,8 @@ final class AdministratorStudentManagementController extends Controller
                 'is_indigenous_person' => $isIndigenousPerson,
                 'region_of_origin' => $regionOfOrigin,
                 'previous_semester_cleared' => $previousSemesterCleared,
+                'sort' => $sort,
+                'direction' => $direction,
                 'per_page' => $perPage,
             ],
             'options' => [

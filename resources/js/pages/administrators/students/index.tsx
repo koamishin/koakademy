@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { User } from "@/types/user";
@@ -70,6 +71,8 @@ interface StudentsIndexProps {
         employment_status?: string | null;
         is_indigenous_person?: string | null;
         previous_semester_cleared?: string | null;
+        sort?: string | null;
+        direction?: "asc" | "desc" | null;
         per_page?: number;
     };
     options: {
@@ -83,6 +86,7 @@ interface StudentsIndexProps {
 export default function AdministratorStudentsIndex({ user, students, stats, filters, options }: StudentsIndexProps) {
     const [search, setSearch] = useState(filters.search || "");
     const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+    const [sortOption, setSortOption] = useState(`${filters.sort ?? "created_at"}:${filters.direction ?? "desc"}`);
 
     const [activeFilters, setActiveFilters] = useState<FilterType[]>([]);
 
@@ -138,7 +142,21 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
               to: students.to,
           };
 
-    const buildFilterParams = (searchTerm: string, filterValues: FilterType[] = activeFilters): Record<string, string | number | null> => {
+    const parseSortOption = (value: string): { sort: string; direction: "asc" | "desc" } => {
+        const [sort = "created_at", direction = "desc"] = value.split(":");
+
+        return {
+            sort,
+            direction: direction === "asc" ? "asc" : "desc",
+        };
+    };
+
+    const buildFilterParams = (
+        searchTerm: string,
+        filterValues: FilterType[] = activeFilters,
+        selectedSortOption: string = sortOption,
+    ): Record<string, string | number | null> => {
+        const sort = parseSortOption(selectedSortOption);
         const appliedFilters: Record<string, string | number | null> = {
             search: searchTerm.trim() || null,
             type: null,
@@ -147,21 +165,25 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
             employment_status: null,
             is_indigenous_person: null,
             previous_semester_cleared: null,
+            sort: sort.sort,
+            direction: sort.direction,
             per_page: students.per_page,
             page: 1,
         };
 
         filterValues.forEach((filter) => {
-            if (filter.values.length > 0) {
-                appliedFilters[filter.field] = filter.values[0];
+            const value = filter.values[0];
+
+            if (typeof value === "string" || typeof value === "number") {
+                appliedFilters[filter.field] = value;
             }
         });
 
         return appliedFilters;
     };
 
-    const refreshStudents = useDebouncedCallback((searchTerm: string, filterValues: FilterType[]) => {
-        router.get(route("administrators.students.index"), buildFilterParams(searchTerm, filterValues), {
+    const refreshStudents = useDebouncedCallback((searchTerm: string, filterValues: FilterType[], selectedSortOption: string = sortOption) => {
+        router.get(route("administrators.students.index"), buildFilterParams(searchTerm, filterValues, selectedSortOption), {
             only: ["students", "filters"],
             preserveScroll: true,
             preserveState: true,
@@ -192,6 +214,7 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                 values: [filters.previous_semester_cleared],
             });
         setActiveFilters(initialFilters);
+        setSortOption(`${filters.sort ?? "created_at"}:${filters.direction ?? "desc"}`);
     }, [filters]);
 
     const handleFiltersChange = (newFilters: FilterType[]) => {
@@ -213,6 +236,33 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
             preserveState: true,
             replace: true,
         });
+    };
+
+    const handleSortChange = (value: string) => {
+        setSortOption(value);
+        router.get(route("administrators.students.index"), buildFilterParams(search, activeFilters, value), {
+            only: ["students", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const navigateToStudentsPage = (url: string | null) => {
+        if (!url) {
+            return;
+        }
+
+        router.get(
+            url,
+            {},
+            {
+                only: ["students", "filters"],
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const filterFields: FilterFieldConfig[] = useMemo(
@@ -393,6 +443,20 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                        <Select value={sortOption} onValueChange={handleSortChange}>
+                            <SelectTrigger className="h-8 w-[180px]">
+                                <SelectValue placeholder="Sort students" />
+                            </SelectTrigger>
+                            <SelectContent align="end">
+                                <SelectItem value="created_at:desc">Latest added</SelectItem>
+                                <SelectItem value="created_at:asc">Oldest added</SelectItem>
+                                <SelectItem value="name:asc">Name A-Z</SelectItem>
+                                <SelectItem value="name:desc">Name Z-A</SelectItem>
+                                <SelectItem value="student_id:asc">Student ID ascending</SelectItem>
+                                <SelectItem value="student_id:desc">Student ID descending</SelectItem>
+                            </SelectContent>
+                        </Select>
+
                         <Filters
                             fields={filterFields}
                             filters={activeFilters}
@@ -531,23 +595,21 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                                         Showing {visiblePagination.from} to {visiblePagination.to} of {visiblePagination.total} entries
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button variant="outline" size="sm" asChild disabled={!visiblePagination.prev_page_url}>
-                                            {visiblePagination.prev_page_url ? (
-                                                <Link href={visiblePagination.prev_page_url} preserveState>
-                                                    Previous
-                                                </Link>
-                                            ) : (
-                                                <span>Previous</span>
-                                            )}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={!visiblePagination.prev_page_url}
+                                            onClick={() => navigateToStudentsPage(visiblePagination.prev_page_url)}
+                                        >
+                                            Previous
                                         </Button>
-                                        <Button variant="outline" size="sm" asChild disabled={!visiblePagination.next_page_url}>
-                                            {visiblePagination.next_page_url ? (
-                                                <Link href={visiblePagination.next_page_url} preserveState>
-                                                    Next
-                                                </Link>
-                                            ) : (
-                                                <span>Next</span>
-                                            )}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={!visiblePagination.next_page_url}
+                                            onClick={() => navigateToStudentsPage(visiblePagination.next_page_url)}
+                                        >
+                                            Next
                                         </Button>
                                     </div>
                                 </div>
