@@ -1,14 +1,14 @@
 {
-  "version": "1.7.0-dev.0.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.2",
-  "commit": "68445bd677a994af5dec48a7b0b6a104f45166af",
+  "version": "1.7.0-dev.0.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.3",
+  "commit": "98c58831e6f8ccfe7659d44a79b30a8bfc957481",
   "branch": "master",
-  "timestamp": "2026-06-02T09:11:29Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26809820444",
+  "timestamp": "2026-06-03T06:15:14Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26867067065",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.7.0-dev.0.2 - Add tuition exclusion for subjects",
-    "previous": "1.7.0-dev.0.1"
+    "current": "Version 1.7.0-dev.0.3 - Add modular launcher dependency",
+    "previous": "1.7.0-dev.0.2"
   },
   "metadata": {
     "author": "yukazakiri",
