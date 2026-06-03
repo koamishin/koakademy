@@ -16,6 +16,7 @@
         "php": "^8.4",
         "achyutn/filament-log-viewer": "^2.0",
         "alizharb/filament-activity-log": "^1.0",
+        "alizharb/filament-modular-luncher": "^1.0",
         "andreia/filament-nord-theme": "^3.0",
         "awcodes/filament-gravatar": "^4.0",
         "backstage/mails": "^3.0",

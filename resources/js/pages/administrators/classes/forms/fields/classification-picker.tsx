@@ -1,6 +1,6 @@
-import { VisualRadioButton } from "@/Components/ui/visual-radio-button";
-import type { Classification } from "../../lib/class-defaults";
+import { VisualRadioButton } from "@/components/ui/visual-radio-button";
 import type { ReactNode } from "react";
+import type { Classification } from "../../lib/class-defaults";
 
 type ClassificationPickerProps = {
     value: Classification;
@@ -18,7 +18,7 @@ export function ClassificationPicker({ value, onChange, collegeIcon, shsIcon }: 
                 icon={collegeIcon}
                 checked={value === "college"}
                 onSelect={() => onChange("college")}
-                className="min-h-28 bg-card/80"
+                className="bg-card/80 min-h-28"
             />
             <VisualRadioButton
                 title="Senior High School"
@@ -26,7 +26,7 @@ export function ClassificationPicker({ value, onChange, collegeIcon, shsIcon }: 
                 icon={shsIcon}
                 checked={value === "shs"}
                 onSelect={() => onChange("shs")}
-                className="min-h-28 bg-card/80"
+                className="bg-card/80 min-h-28"
             />
         </div>
     );

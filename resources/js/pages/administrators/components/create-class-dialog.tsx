@@ -7,24 +7,21 @@ import { MultiSelect as SearchableMultiSelect } from "@/components/ui/multi-sele
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisualRadioButton } from "@/Components/ui/visual-radio-button";
-import { useDraggable, useDroppable, DndContext, MouseSensor, TouchSensor, useSensor, useSensors, type DragEndEvent, type DragMoveEvent } from "@dnd-kit/core";
+import { VisualRadioButton } from "@/components/ui/visual-radio-button";
+import {
+    DndContext,
+    MouseSensor,
+    TouchSensor,
+    useDraggable,
+    useDroppable,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+    type DragMoveEvent,
+} from "@dnd-kit/core";
 import { useForm } from "@inertiajs/react";
 import axios from "axios";
-import {
-    AlertTriangle,
-    BookOpen,
-    Check,
-    Copy,
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    GripVertical,
-    MapPin,
-    Plus,
-    RefreshCw,
-    Trash2,
-} from "lucide-react";
+import { AlertTriangle, BookOpen, Check, ChevronLeft, ChevronRight, Clock, Copy, GripVertical, Plus, RefreshCw, Trash2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { route } from "ziggy-js";
@@ -37,12 +34,48 @@ const CELL_H = 52;
 const SNAP_MINUTES = 15;
 
 const PALETTES = [
-    { accent: "border-l-rose-500", bg: "bg-rose-500/10 dark:bg-rose-400/15", text: "text-rose-700 dark:text-rose-300", border: "border-rose-200 dark:border-rose-800", ghost: "bg-rose-500/5 dark:bg-rose-400/8" },
-    { accent: "border-l-sky-500", bg: "bg-sky-500/10 dark:bg-sky-400/15", text: "text-sky-700 dark:text-sky-300", border: "border-sky-200 dark:border-sky-800", ghost: "bg-sky-500/5 dark:bg-sky-400/8" },
-    { accent: "border-l-amber-500", bg: "bg-amber-500/10 dark:bg-amber-400/15", text: "text-amber-700 dark:text-amber-300", border: "border-amber-200 dark:border-amber-800", ghost: "bg-amber-500/5 dark:bg-amber-400/8" },
-    { accent: "border-l-emerald-500", bg: "bg-emerald-500/10 dark:bg-emerald-400/15", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-200 dark:border-emerald-800", ghost: "bg-emerald-500/5 dark:bg-emerald-400/8" },
-    { accent: "border-l-violet-500", bg: "bg-violet-500/10 dark:bg-violet-400/15", text: "text-violet-700 dark:text-violet-300", border: "border-violet-200 dark:border-violet-800", ghost: "bg-violet-500/5 dark:bg-violet-400/8" },
-    { accent: "border-l-orange-500", bg: "bg-orange-500/10 dark:bg-orange-400/15", text: "text-orange-700 dark:text-orange-300", border: "border-orange-200 dark:border-orange-800", ghost: "bg-orange-500/5 dark:bg-orange-400/8" },
+    {
+        accent: "border-l-rose-500",
+        bg: "bg-rose-500/10 dark:bg-rose-400/15",
+        text: "text-rose-700 dark:text-rose-300",
+        border: "border-rose-200 dark:border-rose-800",
+        ghost: "bg-rose-500/5 dark:bg-rose-400/8",
+    },
+    {
+        accent: "border-l-sky-500",
+        bg: "bg-sky-500/10 dark:bg-sky-400/15",
+        text: "text-sky-700 dark:text-sky-300",
+        border: "border-sky-200 dark:border-sky-800",
+        ghost: "bg-sky-500/5 dark:bg-sky-400/8",
+    },
+    {
+        accent: "border-l-amber-500",
+        bg: "bg-amber-500/10 dark:bg-amber-400/15",
+        text: "text-amber-700 dark:text-amber-300",
+        border: "border-amber-200 dark:border-amber-800",
+        ghost: "bg-amber-500/5 dark:bg-amber-400/8",
+    },
+    {
+        accent: "border-l-emerald-500",
+        bg: "bg-emerald-500/10 dark:bg-emerald-400/15",
+        text: "text-emerald-700 dark:text-emerald-300",
+        border: "border-emerald-200 dark:border-emerald-800",
+        ghost: "bg-emerald-500/5 dark:bg-emerald-400/8",
+    },
+    {
+        accent: "border-l-violet-500",
+        bg: "bg-violet-500/10 dark:bg-violet-400/15",
+        text: "text-violet-700 dark:text-violet-300",
+        border: "border-violet-200 dark:border-violet-800",
+        ghost: "bg-violet-500/5 dark:bg-violet-400/8",
+    },
+    {
+        accent: "border-l-orange-500",
+        bg: "bg-orange-500/10 dark:bg-orange-400/15",
+        text: "text-orange-700 dark:text-orange-300",
+        border: "border-orange-200 dark:border-orange-800",
+        ghost: "bg-orange-500/5 dark:bg-orange-400/8",
+    },
 ];
 
 function hashStr(s: string): number {
@@ -53,10 +86,7 @@ function hashStr(s: string): number {
 
 const getPalette = (s: string) => PALETTES[hashStr(s) % PALETTES.length];
 
-function buildSubjectCodeFromSubjectOptions(
-    selectedValues: string[],
-    options: Array<{ id: number; code: string; title: string }>,
-): string {
+function buildSubjectCodeFromSubjectOptions(selectedValues: string[], options: Array<{ id: number; code: string; title: string }>): string {
     const selectedSet = new Set(selectedValues.map((value) => Number(value)));
     return options
         .filter((option) => selectedSet.has(option.id))
@@ -104,7 +134,14 @@ function schedulesOverlap(a: { start_time: string; end_time: string }, b: { star
     return aStart < bEnd && aEnd > bStart;
 }
 
-export default function CreateClassDialog({ open, onOpenChange, options, defaults, existingSchedules, onClassCreated }: {
+export default function CreateClassDialog({
+    open,
+    onOpenChange,
+    options,
+    defaults,
+    existingSchedules,
+    onClassCreated,
+}: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     options: {
@@ -239,13 +276,11 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
     const selectedFacultyNames = React.useMemo(() => {
         if (form.data.faculty_ids.length === 0) return [];
         const selectedSet = new Set(form.data.faculty_ids.map(String));
-        return options.faculty
-            .filter((f) => selectedSet.has(String(f.id)))
-            .map((f) => f.name);
+        return options.faculty.filter((f) => selectedSet.has(String(f.id))).map((f) => f.name);
     }, [form.data.faculty_ids, options.faculty]);
 
     const conflicts = React.useMemo(() => {
-        const result: Array<{ type: "room" | "faculty"; newBlock: typeof form.data.schedules[0]; existing: typeof existingSchedules[0] }> = [];
+        const result: Array<{ type: "room" | "faculty"; newBlock: (typeof form.data.schedules)[0]; existing: (typeof existingSchedules)[0] }> = [];
         for (const ns of form.data.schedules) {
             for (const es of existingSchedules) {
                 if (es.day_of_week !== ns.day_of_week) continue;
@@ -269,7 +304,7 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
         setCollegeSubjectsLoading(true);
         try {
             const response = await fetch(route("administrators.classes.options.subjects", { course_ids: courseIds }));
-            const data = await response.json() as { data: Array<{ id: number; label: string; code: string; title: string }> };
+            const data = (await response.json()) as { data: Array<{ id: number; label: string; code: string; title: string }> };
             setCollegeSubjectOptions(data.data);
         } finally {
             setCollegeSubjectsLoading(false);
@@ -285,7 +320,7 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
         setShsStrandsLoading(true);
         try {
             const response = await fetch(route("administrators.classes.options.shs-strands", { track_id: trackId }));
-            const data = await response.json() as { data: Array<{ id: string | number; label: string }> };
+            const data = (await response.json()) as { data: Array<{ id: string | number; label: string }> };
             setShsStrandOptions(data.data);
         } finally {
             setShsStrandsLoading(false);
@@ -300,7 +335,7 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
         setShsSubjectsLoading(true);
         try {
             const response = await fetch(route("administrators.classes.options.shs-subjects", { strand_id: strandId }));
-            const data = await response.json() as { data: Array<{ code: string; label: string; title: string }> };
+            const data = (await response.json()) as { data: Array<{ code: string; label: string; title: string }> };
             setShsSubjectOptions(data.data);
         } finally {
             setShsSubjectsLoading(false);
@@ -345,18 +380,29 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
         setSelectedBlockIndex(sourceIndex + 1);
     };
 
-    const updateBlock = (index: number, patch: Partial<typeof form.data.schedules[0]>) => {
-        form.setData("schedules", form.data.schedules.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+    const updateBlock = (index: number, patch: Partial<(typeof form.data.schedules)[0]>) => {
+        form.setData(
+            "schedules",
+            form.data.schedules.map((s, i) => (i === index ? { ...s, ...patch } : s)),
+        );
     };
 
     const generateFromRecurrence = (recurrence: "mwf" | "tth" | "daily" | "custom", customDays: string[], startTime: string, endTime: string) => {
         const primaryRoomId = form.data.room_ids[0] ?? options.rooms[0]?.id ?? null;
         let days: string[] = [];
         switch (recurrence) {
-            case "mwf": days = ["Monday", "Wednesday", "Friday"]; break;
-            case "tth": days = ["Tuesday", "Thursday"]; break;
-            case "daily": days = [...DAYS]; break;
-            case "custom": days = customDays; break;
+            case "mwf":
+                days = ["Monday", "Wednesday", "Friday"];
+                break;
+            case "tth":
+                days = ["Tuesday", "Thursday"];
+                break;
+            case "daily":
+                days = [...DAYS];
+                break;
+            case "custom":
+                days = customDays;
+                break;
         }
         if (!startTime || !endTime || days.length === 0) return;
         const newBlocks = days.map((day) => ({
@@ -371,7 +417,10 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
     const autoAssignRooms = () => {
         if (options.rooms.length === 0 || form.data.schedules.length === 0) return;
-        form.setData("schedules", form.data.schedules.map((s, i) => ({ ...s, room_id: options.rooms[i % options.rooms.length].id })));
+        form.setData(
+            "schedules",
+            form.data.schedules.map((s, i) => ({ ...s, room_id: options.rooms[i % options.rooms.length].id })),
+        );
         toast.success("Rooms auto-assigned");
     };
 
@@ -469,9 +518,12 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
                 const idx = form.data.schedules.findIndex((s) => s.id === resizing.blockId);
                 if (idx !== -1) {
-                    form.setData("schedules", form.data.schedules.map((s, i) =>
-                        i === idx ? { ...s, start_time: minutesToTime(nStart), end_time: minutesToTime(nEnd) } : s
-                    ));
+                    form.setData(
+                        "schedules",
+                        form.data.schedules.map((s, i) =>
+                            i === idx ? { ...s, start_time: minutesToTime(nStart), end_time: minutesToTime(nEnd) } : s,
+                        ),
+                    );
                 }
             }
 
@@ -552,18 +604,21 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
     const hours = React.useMemo(() => Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i), []);
 
-    const blockHasConflict = (block: typeof form.data.schedules[0]) => {
+    const blockHasConflict = (block: (typeof form.data.schedules)[0]) => {
         return conflicts.some((c) => c.newBlock.id === block.id);
     };
 
-    const getBlockConflicts = (block: typeof form.data.schedules[0]) => {
+    const getBlockConflicts = (block: (typeof form.data.schedules)[0]) => {
         return conflicts.filter((c) => c.newBlock.id === block.id);
     };
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl lg:max-w-[1100px] flex flex-col gap-0 p-0">
-                <div ref={resizeTooltipRef} className="fixed z-[100] pointer-events-none opacity-0 bg-foreground text-background text-xs font-medium px-2 py-1 rounded shadow-lg transition-opacity" />
+            <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-xl md:max-w-2xl lg:max-w-[1100px]">
+                <div
+                    ref={resizeTooltipRef}
+                    className="bg-foreground text-background pointer-events-none fixed z-[100] rounded px-2 py-1 text-xs font-medium opacity-0 shadow-lg transition-opacity"
+                />
 
                 <SheetHeader className="bg-muted/20 border-b p-6 pb-4">
                     <div className="flex items-center gap-3">
@@ -577,16 +632,25 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                     </div>
                 </SheetHeader>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col overflow-hidden">
                     <div className="px-6 pt-4">
                         <TabsList className="h-12 w-full justify-start gap-6 rounded-none border-b bg-transparent p-0">
-                            <TabsTrigger value="details" className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                            <TabsTrigger
+                                value="details"
+                                className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            >
                                 <BookOpen className="mr-2 h-4 w-4" /> Details
                             </TabsTrigger>
-                            <TabsTrigger value="schedule" className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                            <TabsTrigger
+                                value="schedule"
+                                className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            >
                                 <Clock className="mr-2 h-4 w-4" /> Schedule
                             </TabsTrigger>
-                            <TabsTrigger value="review" className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                            <TabsTrigger
+                                value="review"
+                                className="data-[state=active]:border-primary text-muted-foreground data-[state=active]:text-foreground h-12 rounded-none px-2 data-[state=active]:border-b-2 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+                            >
                                 <Check className="mr-2 h-4 w-4" /> Review
                             </TabsTrigger>
                         </TabsList>
@@ -594,7 +658,9 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
                     <div className="flex-1 overflow-y-auto p-6">
                         {firstError ? (
-                            <div className="border-destructive/40 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">{firstError}</div>
+                            <div className="border-destructive/40 bg-destructive/5 text-destructive mb-6 rounded-lg border px-4 py-3 text-sm">
+                                {firstError}
+                            </div>
                         ) : null}
 
                         <TabsContent value="details" className="m-0 space-y-6 outline-none">
@@ -622,7 +688,7 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                             form.setData("shs_track_id", null);
                                                             form.setData("shs_strand_id", null);
                                                             form.setData("subject_code_shs", "");
-                                                                                                                        form.setData("subject_codes_shs", []);
+                                                            form.setData("subject_codes_shs", []);
                                                             setCollegeSubjectOptions([]);
                                                             setShsStrandOptions([]);
                                                             setShsSubjectOptions([]);
@@ -643,7 +709,7 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                             form.setData("shs_track_id", null);
                                                             form.setData("shs_strand_id", null);
                                                             form.setData("subject_code_shs", "");
-                                                                                                                        form.setData("subject_codes_shs", []);
+                                                            form.setData("subject_codes_shs", []);
                                                             setCollegeSubjectOptions([]);
                                                             setShsStrandOptions([]);
                                                             setShsSubjectOptions([]);
@@ -664,7 +730,9 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                             options={options.courses.map((course) => ({
                                                                 value: String(course.id),
                                                                 label: `${course.code} — ${course.title}`,
-                                                                description: course.curriculum_year ? `Curriculum ${course.curriculum_year}` : undefined,
+                                                                description: course.curriculum_year
+                                                                    ? `Curriculum ${course.curriculum_year}`
+                                                                    : undefined,
                                                                 searchText: `${course.code} ${course.title}`,
                                                             }))}
                                                             selected={form.data.course_codes.map(String)}
@@ -680,15 +748,17 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                                 void loadCollegeSubjects(next);
                                                             }}
                                                         />
-                                                        {form.errors.course_codes ? <p className="text-destructive text-xs">{form.errors.course_codes}</p> : null}
+                                                        {form.errors.course_codes ? (
+                                                            <p className="text-destructive text-xs">{form.errors.course_codes}</p>
+                                                        ) : null}
                                                     </div>
 
                                                     <div className="space-y-2 sm:col-span-2">
                                                         <Label>Subject</Label>
                                                         {collegeSubjectsLoading ? (
-                                                            <div className="text-muted-foreground text-xs py-2">Loading subjects...</div>
+                                                            <div className="text-muted-foreground py-2 text-xs">Loading subjects...</div>
                                                         ) : collegeSubjectOptions.length === 0 ? (
-                                                            <div className="text-muted-foreground text-xs py-2">Select a course to see subjects.</div>
+                                                            <div className="text-muted-foreground py-2 text-xs">Select a course to see subjects.</div>
                                                         ) : (
                                                             <SearchableMultiSelect
                                                                 placeholder="Search and select subjects..."
@@ -707,13 +777,18 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                                     form.setData("subject_ids", subjectIds);
                                                                     form.setData("subject_id", subjectIds[0] ?? null);
                                                                     if (!subjectCodeTouched) {
-                                                                        const computed = buildSubjectCodeFromSubjectOptions(values, collegeSubjectOptions);
+                                                                        const computed = buildSubjectCodeFromSubjectOptions(
+                                                                            values,
+                                                                            collegeSubjectOptions,
+                                                                        );
                                                                         form.setData("subject_code", computed);
                                                                     }
                                                                 }}
                                                             />
                                                         )}
-                                                        {form.errors.subject_ids ? <p className="text-destructive text-xs">{form.errors.subject_ids}</p> : null}
+                                                        {form.errors.subject_ids ? (
+                                                            <p className="text-destructive text-xs">{form.errors.subject_ids}</p>
+                                                        ) : null}
                                                     </div>
 
                                                     <div className="space-y-2 sm:col-span-2">
@@ -726,7 +801,9 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                                 form.setData("subject_code", e.target.value);
                                                             }}
                                                         />
-                                                        <p className="text-muted-foreground text-xs">Auto-generated from selected subject. You can customize it.</p>
+                                                        <p className="text-muted-foreground text-xs">
+                                                            Auto-generated from selected subject. You can customize it.
+                                                        </p>
                                                     </div>
 
                                                     <div className="space-y-2">
@@ -743,7 +820,8 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                                             : "border-border bg-background text-muted-foreground hover:bg-muted"
                                                                     }`}
                                                                 >
-                                                                    {year}{year === 1 ? "st" : year === 2 ? "nd" : year === 3 ? "rd" : "th"} Year
+                                                                    {year}
+                                                                    {year === 1 ? "st" : year === 2 ? "nd" : year === 3 ? "rd" : "th"} Year
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -760,15 +838,19 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                                 form.setData("shs_track_id", trackId);
                                                                 form.setData("shs_strand_id", null);
                                                                 form.setData("subject_code_shs", "");
-                                                                                                                            form.setData("subject_codes_shs", []);
+                                                                form.setData("subject_codes_shs", []);
                                                                 void loadShsStrands(trackId);
                                                             }}
                                                         >
-                                                            <SelectTrigger className="w-full"><SelectValue placeholder="Select track" /></SelectTrigger>
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Select track" />
+                                                            </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="__none__">Select track</SelectItem>
                                                                 {options.shs_tracks.map((track) => (
-                                                                    <SelectItem key={track.id} value={String(track.id)}>{track.track_name}</SelectItem>
+                                                                    <SelectItem key={track.id} value={String(track.id)}>
+                                                                        {track.track_name}
+                                                                    </SelectItem>
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
@@ -782,16 +864,20 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                                 const strandId = val === "__none__" ? null : Number(val);
                                                                 form.setData("shs_strand_id", strandId);
                                                                 form.setData("subject_code_shs", "");
-                                                                                                                            form.setData("subject_codes_shs", []);
+                                                                form.setData("subject_codes_shs", []);
                                                                 void loadShsSubjects(strandId);
                                                             }}
                                                             disabled={!form.data.shs_track_id || shsStrandsLoading}
                                                         >
-                                                            <SelectTrigger className="w-full"><SelectValue placeholder={shsStrandsLoading ? "Loading..." : "Select strand"} /></SelectTrigger>
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder={shsStrandsLoading ? "Loading..." : "Select strand"} />
+                                                            </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="__none__">Select strand</SelectItem>
                                                                 {shsStrandOptions.map((strand) => (
-                                                                    <SelectItem key={strand.id} value={String(strand.id)}>{strand.label}</SelectItem>
+                                                                    <SelectItem key={strand.id} value={String(strand.id)}>
+                                                                        {strand.label}
+                                                                    </SelectItem>
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
@@ -800,9 +886,9 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                     <div className="space-y-2 sm:col-span-2">
                                                         <Label>SHS subjects</Label>
                                                         {shsSubjectsLoading ? (
-                                                            <div className="text-muted-foreground text-xs py-2">Loading subjects...</div>
+                                                            <div className="text-muted-foreground py-2 text-xs">Loading subjects...</div>
                                                         ) : shsSubjectOptions.length === 0 ? (
-                                                            <div className="text-muted-foreground text-xs py-2">Select a strand to see subjects.</div>
+                                                            <div className="text-muted-foreground py-2 text-xs">Select a strand to see subjects.</div>
                                                         ) : (
                                                             <SearchableMultiSelect
                                                                 placeholder="Search and select subjects..."
@@ -825,8 +911,13 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
                                                     <div className="space-y-2">
                                                         <Label>Grade level</Label>
-                                                        <Select value={form.data.grade_level} onValueChange={(val) => form.setData("grade_level", val)}>
-                                                            <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                                        <Select
+                                                            value={form.data.grade_level}
+                                                            onValueChange={(val) => form.setData("grade_level", val)}
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="Grade 11">Grade 11</SelectItem>
                                                                 <SelectItem value="Grade 12">Grade 12</SelectItem>
@@ -887,16 +978,25 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
                                             <div className="space-y-2">
                                                 <Label>Max slots</Label>
-                                                <Input type="number" min={1} value={form.data.maximum_slots} onChange={(e) => form.setData("maximum_slots", Number(e.target.value))} />
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    value={form.data.maximum_slots}
+                                                    onChange={(e) => form.setData("maximum_slots", Number(e.target.value))}
+                                                />
                                             </div>
 
                                             <div className="space-y-2">
                                                 <Label>Semester</Label>
                                                 <Select value={form.data.semester} onValueChange={(val) => form.setData("semester", val)}>
-                                                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
                                                     <SelectContent>
                                                         {options.semesters.map((s) => (
-                                                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                                                            <SelectItem key={s.value} value={s.value}>
+                                                                {s.label}
+                                                            </SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
@@ -942,13 +1042,17 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                 form.setData("room_ids", next);
                                                 form.setData("room_id", next[0] ?? null);
                                                 if (next.length > 0) {
-                                                    form.setData("schedules", form.data.schedules.map((s) => ({ ...s, room_id: next[0] ?? s.room_id })));
+                                                    form.setData(
+                                                        "schedules",
+                                                        form.data.schedules.map((s) => ({ ...s, room_id: next[0] ?? s.room_id })),
+                                                    );
                                                 }
                                             }}
                                         />
                                         {selectedRoom && roomExistingSchedules.length > 0 && (
                                             <p className="text-muted-foreground text-xs">
-                                                {roomExistingSchedules.length} existing schedule{roomExistingSchedules.length !== 1 ? "s" : ""} in selected rooms will be shown in the timetable.
+                                                {roomExistingSchedules.length} existing schedule{roomExistingSchedules.length !== 1 ? "s" : ""} in
+                                                selected rooms will be shown in the timetable.
                                             </p>
                                         )}
                                     </div>
@@ -957,14 +1061,16 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
                             {conflicts.length > 0 && (
                                 <div className="border-destructive/40 bg-destructive/5 text-destructive rounded-lg border px-4 py-3 text-sm">
-                                    <div className="flex items-center gap-2 font-semibold mb-1">
+                                    <div className="mb-1 flex items-center gap-2 font-semibold">
                                         <AlertTriangle className="h-4 w-4" />
                                         {conflicts.length} potential conflict{conflicts.length !== 1 ? "s" : ""} detected
                                     </div>
                                     <ul className="space-y-1 text-xs">
                                         {conflicts.slice(0, 5).map((c, i) => (
                                             <li key={i}>
-                                                {c.type === "room" ? "Room" : "Faculty"} conflict on {c.newBlock.day_of_week} {fmtTime(c.newBlock.start_time)}–{fmtTime(c.newBlock.end_time)} with {c.existing.subject_code} ({c.existing.section})
+                                                {c.type === "room" ? "Room" : "Faculty"} conflict on {c.newBlock.day_of_week}{" "}
+                                                {fmtTime(c.newBlock.start_time)}–{fmtTime(c.newBlock.end_time)} with {c.existing.subject_code} (
+                                                {c.existing.section})
                                             </li>
                                         ))}
                                         {conflicts.length > 5 && <li>...and {conflicts.length - 5} more</li>}
@@ -1005,20 +1111,25 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                         const endEl = document.getElementById("quick-end") as HTMLInputElement | null;
                                                         generateFromRecurrence(r.key, [], startEl?.value ?? "08:00", endEl?.value ?? "10:00");
                                                     }}
-                                                    className="flex flex-col items-start rounded-md border border-border bg-background px-3 py-2 text-left transition-colors hover:bg-muted min-w-[80px]"
+                                                    className="border-border bg-background hover:bg-muted flex min-w-[80px] flex-col items-start rounded-md border px-3 py-2 text-left transition-colors"
                                                 >
-                                                    <span className="text-xs font-bold text-foreground">{r.label}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{r.desc}</span>
+                                                    <span className="text-foreground text-xs font-bold">{r.label}</span>
+                                                    <span className="text-muted-foreground text-[10px]">{r.desc}</span>
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
-                                        <Button type="button" variant="outline" size="sm" onClick={() => {
-                                            const startEl = document.getElementById("quick-start") as HTMLInputElement | null;
-                                            const endEl = document.getElementById("quick-end") as HTMLInputElement | null;
-                                            addScheduleBlock("Monday", startEl?.value ?? "08:00", endEl?.value ?? "10:00");
-                                        }}>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                const startEl = document.getElementById("quick-start") as HTMLInputElement | null;
+                                                const endEl = document.getElementById("quick-end") as HTMLInputElement | null;
+                                                addScheduleBlock("Monday", startEl?.value ?? "08:00", endEl?.value ?? "10:00");
+                                            }}
+                                        >
                                             <Plus className="mr-1 h-3.5 w-3.5" /> Add Single Block
                                         </Button>
                                     </div>
@@ -1026,63 +1137,81 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                             </Card>
 
                             <Card className="border-border/60 shadow-sm">
-                                    <CardHeader className="bg-muted/20 border-b pb-4">
-                                        <CardTitle className="text-base font-semibold">
-                                            Visual Timetable
-                                            {selectedRoom && <span className="text-muted-foreground text-xs font-normal ml-2">— showing existing classes in {selectedRoom.name}</span>}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="pt-6">
-                                        <DndContext sensors={sensors} onDragEnd={handleDragEnd} onDragMove={handleDragMove}>
-                                            <div className="relative border rounded-lg overflow-hidden">
-                                                <div className="grid grid-cols-[60px_repeat(6,1fr)] border-b bg-muted/30">
-                                                    <div className="p-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-center border-r">Time</div>
-                                                    {DAYS.map((day, i) => (
-                                                        <div key={day} className="p-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider text-center border-r last:border-r-0">
-                                                            {DAYS_SHORT[i]}
+                                <CardHeader className="bg-muted/20 border-b pb-4">
+                                    <CardTitle className="text-base font-semibold">
+                                        Visual Timetable
+                                        {selectedRoom && (
+                                            <span className="text-muted-foreground ml-2 text-xs font-normal">
+                                                — showing existing classes in {selectedRoom.name}
+                                            </span>
+                                        )}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-6">
+                                    <DndContext sensors={sensors} onDragEnd={handleDragEnd} onDragMove={handleDragMove}>
+                                        <div className="relative overflow-hidden rounded-lg border">
+                                            <div className="bg-muted/30 grid grid-cols-[60px_repeat(6,1fr)] border-b">
+                                                <div className="text-muted-foreground border-r p-2 text-center text-[10px] font-semibold tracking-wider uppercase">
+                                                    Time
+                                                </div>
+                                                {DAYS.map((day, i) => (
+                                                    <div
+                                                        key={day}
+                                                        className="text-muted-foreground border-r p-2 text-center text-[10px] font-semibold tracking-wider uppercase last:border-r-0"
+                                                    >
+                                                        {DAYS_SHORT[i]}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div
+                                                className="grid grid-cols-[60px_repeat(6,1fr)]"
+                                                style={{ height: (HOUR_END - HOUR_START + 1) * CELL_H }}
+                                            >
+                                                <div className="bg-muted/10 relative border-r">
+                                                    {hours.map((h) => (
+                                                        <div
+                                                            key={h}
+                                                            className="text-muted-foreground absolute w-full -translate-y-1/2 text-center text-[10px]"
+                                                            style={{ top: (h - HOUR_START) * CELL_H }}
+                                                        >
+                                                            {h <= 12 ? `${h === 0 ? 12 : h} ${h < 12 ? "AM" : "PM"}` : `${h - 12} PM`}
                                                         </div>
                                                     ))}
                                                 </div>
-                                                <div className="grid grid-cols-[60px_repeat(6,1fr)]" style={{ height: (HOUR_END - HOUR_START + 1) * CELL_H }}>
-                                                    <div className="relative border-r bg-muted/10">
-                                                        {hours.map((h) => (
-                                                            <div key={h} className="absolute w-full text-[10px] text-muted-foreground text-center -translate-y-1/2" style={{ top: (h - HOUR_START) * CELL_H }}>
-                                                                {h <= 12 ? `${h === 0 ? 12 : h} ${h < 12 ? "AM" : "PM"}` : `${h - 12} PM`}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    {DAYS.map((day, dayIdx) => {
-                                                        const dayBlocks = form.data.schedules.filter((s) => s.day_of_week === day);
-                                                        const dayExisting = roomExistingSchedules.filter((s) => s.day_of_week === day);
-                                                        return (
-                                                            <DayColumn
-                                                                key={day}
-                                                                dayIdx={dayIdx}
-                                                                dayBlocks={dayBlocks}
-                                                                allBlocks={form.data.schedules}
-                                                                existingBlocks={dayExisting}
-                                                                onBlockClick={setSelectedBlockIndex}
-                                                                onBlockHover={setHoveredBlockIndex}
-                                                                blockHasConflict={blockHasConflict}
-                                                             getBlockConflicts={getBlockConflicts}
-                                                                onAddBlock={(time) => addScheduleBlock(day, time, minutesToTime(parseTimeToMinutes(time)! + 120))}
-                                                                dragPreview={dragPreview?.dayIdx === dayIdx ? dragPreview : null}
-                                                                onResizeStart={handleResizeStart}
-                                                                onDeleteBlock={(blockId) => {
-                                                                    const targetIndex = form.data.schedules.findIndex((s) => s.id === blockId);
-                                                                    if (targetIndex >= 0) {
-                                                                        removeScheduleBlock(targetIndex);
-                                                                    }
-                                                                }}
-                                                                onDuplicateBlock={duplicateScheduleBlock}
-                                                            />
-                                                        );
-                                                    })}
-                                                </div>
+                                                {DAYS.map((day, dayIdx) => {
+                                                    const dayBlocks = form.data.schedules.filter((s) => s.day_of_week === day);
+                                                    const dayExisting = roomExistingSchedules.filter((s) => s.day_of_week === day);
+                                                    return (
+                                                        <DayColumn
+                                                            key={day}
+                                                            dayIdx={dayIdx}
+                                                            dayBlocks={dayBlocks}
+                                                            allBlocks={form.data.schedules}
+                                                            existingBlocks={dayExisting}
+                                                            onBlockClick={setSelectedBlockIndex}
+                                                            onBlockHover={setHoveredBlockIndex}
+                                                            blockHasConflict={blockHasConflict}
+                                                            getBlockConflicts={getBlockConflicts}
+                                                            onAddBlock={(time) =>
+                                                                addScheduleBlock(day, time, minutesToTime(parseTimeToMinutes(time)! + 120))
+                                                            }
+                                                            dragPreview={dragPreview?.dayIdx === dayIdx ? dragPreview : null}
+                                                            onResizeStart={handleResizeStart}
+                                                            onDeleteBlock={(blockId) => {
+                                                                const targetIndex = form.data.schedules.findIndex((s) => s.id === blockId);
+                                                                if (targetIndex >= 0) {
+                                                                    removeScheduleBlock(targetIndex);
+                                                                }
+                                                            }}
+                                                            onDuplicateBlock={duplicateScheduleBlock}
+                                                        />
+                                                    );
+                                                })}
                                             </div>
-                                        </DndContext>
-                                    </CardContent>
-                                </Card>
+                                        </div>
+                                    </DndContext>
+                                </CardContent>
+                            </Card>
 
                             {form.data.schedules.length > 0 && (
                                 <Card className="border-border/60 shadow-sm">
@@ -1101,8 +1230,8 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                         selectedBlockIndex === i
                                                             ? "border-primary bg-primary/5 shadow-sm"
                                                             : hasConflict
-                                                                ? "border-destructive bg-destructive/5"
-                                                                : "border-border bg-background"
+                                                              ? "border-destructive bg-destructive/5"
+                                                              : "border-border bg-background"
                                                     }`}
                                                 >
                                                     <button
@@ -1112,13 +1241,20 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                     >
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex items-center gap-2">
-                                                                <span className={`text-xs font-bold ${hasConflict ? "text-destructive" : pal.text}`}>{block.day_of_week}</span>
-                                                                <span className="text-muted-foreground text-xs">{fmtTime(block.start_time)} – {fmtTime(block.end_time)}</span>
-                                                                {hasConflict && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+                                                                <span className={`text-xs font-bold ${hasConflict ? "text-destructive" : pal.text}`}>
+                                                                    {block.day_of_week}
+                                                                </span>
+                                                                <span className="text-muted-foreground text-xs">
+                                                                    {fmtTime(block.start_time)} – {fmtTime(block.end_time)}
+                                                                </span>
+                                                                {hasConflict && <AlertTriangle className="text-destructive h-3.5 w-3.5" />}
                                                             </div>
                                                             <button
                                                                 type="button"
-                                                                onClick={(e) => { e.stopPropagation(); removeScheduleBlock(i); }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    removeScheduleBlock(i);
+                                                                }}
                                                                 className="text-muted-foreground hover:text-destructive transition-colors"
                                                             >
                                                                 <Trash2 className="h-3.5 w-3.5" />
@@ -1126,7 +1262,10 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                         </div>
                                                         {hasConflict && (
                                                             <div className="text-destructive text-[10px]">
-                                                                Conflicts with: {blockConflicts.map((c) => `${c.existing.subject_code} (${c.existing.section})`).join(", ")}
+                                                                Conflicts with:{" "}
+                                                                {blockConflicts
+                                                                    .map((c) => `${c.existing.subject_code} (${c.existing.section})`)
+                                                                    .join(", ")}
                                                             </div>
                                                         )}
                                                     </button>
@@ -1134,29 +1273,67 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                     {selectedBlockIndex === i && (
                                                         <div className="grid gap-3 border-t px-4 py-3 sm:grid-cols-3">
                                                             <div className="space-y-1.5">
-                                                                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Day</Label>
-                                                                <Select value={block.day_of_week} onValueChange={(val) => updateBlock(i, { day_of_week: val })}>
-                                                                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                                                <Label className="text-muted-foreground text-[10px] tracking-wider uppercase">
+                                                                    Day
+                                                                </Label>
+                                                                <Select
+                                                                    value={block.day_of_week}
+                                                                    onValueChange={(val) => updateBlock(i, { day_of_week: val })}
+                                                                >
+                                                                    <SelectTrigger className="h-8 text-xs">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
                                                                     <SelectContent>
-                                                                        {DAYS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                                                        {DAYS.map((d) => (
+                                                                            <SelectItem key={d} value={d}>
+                                                                                {d}
+                                                                            </SelectItem>
+                                                                        ))}
                                                                     </SelectContent>
                                                                 </Select>
                                                             </div>
                                                             <div className="space-y-1.5">
-                                                                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Start</Label>
-                                                                <Input type="time" value={block.start_time} onChange={(e) => updateBlock(i, { start_time: e.target.value })} className="h-8 text-xs" />
+                                                                <Label className="text-muted-foreground text-[10px] tracking-wider uppercase">
+                                                                    Start
+                                                                </Label>
+                                                                <Input
+                                                                    type="time"
+                                                                    value={block.start_time}
+                                                                    onChange={(e) => updateBlock(i, { start_time: e.target.value })}
+                                                                    className="h-8 text-xs"
+                                                                />
                                                             </div>
                                                             <div className="space-y-1.5">
-                                                                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">End</Label>
-                                                                <Input type="time" value={block.end_time} onChange={(e) => updateBlock(i, { end_time: e.target.value })} className="h-8 text-xs" />
+                                                                <Label className="text-muted-foreground text-[10px] tracking-wider uppercase">
+                                                                    End
+                                                                </Label>
+                                                                <Input
+                                                                    type="time"
+                                                                    value={block.end_time}
+                                                                    onChange={(e) => updateBlock(i, { end_time: e.target.value })}
+                                                                    className="h-8 text-xs"
+                                                                />
                                                             </div>
                                                             <div className="space-y-1.5 sm:col-span-3">
-                                                                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Room</Label>
-                                                                <Select value={block.room_id ? String(block.room_id) : "__none__"} onValueChange={(val) => updateBlock(i, { room_id: val === "__none__" ? null : Number(val) })}>
-                                                                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select room" /></SelectTrigger>
+                                                                <Label className="text-muted-foreground text-[10px] tracking-wider uppercase">
+                                                                    Room
+                                                                </Label>
+                                                                <Select
+                                                                    value={block.room_id ? String(block.room_id) : "__none__"}
+                                                                    onValueChange={(val) =>
+                                                                        updateBlock(i, { room_id: val === "__none__" ? null : Number(val) })
+                                                                    }
+                                                                >
+                                                                    <SelectTrigger className="h-8 text-xs">
+                                                                        <SelectValue placeholder="Select room" />
+                                                                    </SelectTrigger>
                                                                     <SelectContent>
                                                                         <SelectItem value="__none__">No room</SelectItem>
-                                                                        {options.rooms.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}
+                                                                        {options.rooms.map((r) => (
+                                                                            <SelectItem key={r.id} value={String(r.id)}>
+                                                                                {r.name}
+                                                                            </SelectItem>
+                                                                        ))}
                                                                     </SelectContent>
                                                                 </Select>
                                                             </div>
@@ -1171,9 +1348,9 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
 
                             {form.data.schedules.length === 0 && (
                                 <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center">
-                                    <Clock className="text-muted-foreground h-8 w-8 mb-3" />
+                                    <Clock className="text-muted-foreground mb-3 h-8 w-8" />
                                     <h3 className="text-sm font-semibold">No schedule blocks yet</h3>
-                                    <p className="text-muted-foreground text-xs mt-1">Use Quick Generate or add blocks manually.</p>
+                                    <p className="text-muted-foreground mt-1 text-xs">Use Quick Generate or add blocks manually.</p>
                                 </div>
                             )}
 
@@ -1224,10 +1401,10 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                             <span className="text-muted-foreground">Subject</span>
                                             <span className="font-medium">
                                                 {form.data.classification === "college"
-                                                    ? (form.data.subject_code || "—")
-                                                    : (form.data.subject_codes_shs.length > 0
-                                                        ? form.data.subject_codes_shs.join(", ")
-                                                        : "—")}
+                                                    ? form.data.subject_code || "—"
+                                                    : form.data.subject_codes_shs.length > 0
+                                                      ? form.data.subject_codes_shs.join(", ")
+                                                      : "—"}
                                             </span>
                                         </div>
                                         <div className="flex justify-between border-b pb-2">
@@ -1247,7 +1424,9 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                         </div>
                                         <div className="flex justify-between border-b pb-2">
                                             <span className="text-muted-foreground">Semester</span>
-                                            <span className="font-medium">{options.semesters.find((s) => s.value === form.data.semester)?.label ?? form.data.semester}</span>
+                                            <span className="font-medium">
+                                                {options.semesters.find((s) => s.value === form.data.semester)?.label ?? form.data.semester}
+                                            </span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">School Year</span>
@@ -1262,13 +1441,18 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                 const hasConflict = blockHasConflict(block);
                                                 const room = options.rooms.find((r) => r.id === block.room_id);
                                                 return (
-                                                    <div key={block.id} className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs ${hasConflict ? "border-destructive bg-destructive/5" : "border-border bg-muted/20"}`}>
+                                                    <div
+                                                        key={block.id}
+                                                        className={`flex items-center justify-between rounded-md border px-3 py-2 text-xs ${hasConflict ? "border-destructive bg-destructive/5" : "border-border bg-muted/20"}`}
+                                                    >
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-medium">{block.day_of_week}</span>
-                                                            <span className="text-muted-foreground">{fmtTime(block.start_time)} – {fmtTime(block.end_time)}</span>
+                                                            <span className="text-muted-foreground">
+                                                                {fmtTime(block.start_time)} – {fmtTime(block.end_time)}
+                                                            </span>
                                                             {room && <span className="text-muted-foreground">• {room.name}</span>}
                                                         </div>
-                                                        {hasConflict && <AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
+                                                        {hasConflict && <AlertTriangle className="text-destructive h-3.5 w-3.5" />}
                                                     </div>
                                                 );
                                             })}
@@ -1281,7 +1465,7 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                                 <AlertTriangle className="h-4 w-4" />
                                                 {conflicts.length} potential conflict{conflicts.length !== 1 ? "s" : ""} detected
                                             </div>
-                                            <p className="text-xs mt-1">Review the schedule tab to resolve conflicts before submitting.</p>
+                                            <p className="mt-1 text-xs">Review the schedule tab to resolve conflicts before submitting.</p>
                                         </div>
                                     )}
                                 </CardContent>
@@ -1292,7 +1476,11 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
                                     <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Back
                                 </Button>
                                 <Button type="button" size="sm" onClick={handleSubmit} disabled={isSubmitting || conflicts.length > 0}>
-                                    {isSubmitting ? <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-1.5 h-3.5 w-3.5" />}
+                                    {isSubmitting ? (
+                                        <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                        <Plus className="mr-1.5 h-3.5 w-3.5" />
+                                    )}
                                     {isSubmitting ? "Creating..." : conflicts.length > 0 ? "Resolve Conflicts First" : "Create Class"}
                                 </Button>
                             </div>
@@ -1304,7 +1492,21 @@ export default function CreateClassDialog({ open, onOpenChange, options, default
     );
 }
 
-function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick, onBlockHover, blockHasConflict, getBlockConflicts, onAddBlock, dragPreview, onResizeStart, onDeleteBlock, onDuplicateBlock }: {
+function DayColumn({
+    dayIdx,
+    dayBlocks,
+    allBlocks,
+    existingBlocks,
+    onBlockClick,
+    onBlockHover,
+    blockHasConflict,
+    getBlockConflicts,
+    onAddBlock,
+    dragPreview,
+    onResizeStart,
+    onDeleteBlock,
+    onDuplicateBlock,
+}: {
     dayIdx: number;
     dayBlocks: Array<{ id: string; day_of_week: string; start_time: string; end_time: string; room_id: number | null }>;
     allBlocks: Array<{ id: string; day_of_week: string; start_time: string; end_time: string; room_id: number | null }>;
@@ -1312,7 +1514,13 @@ function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick,
     onBlockClick: (index: number) => void;
     onBlockHover: (index: number | null) => void;
     blockHasConflict: (block: { id: string; day_of_week: string; start_time: string; end_time: string; room_id: number | null }) => boolean;
-    getBlockConflicts: (block: { id: string; day_of_week: string; start_time: string; end_time: string; room_id: number | null }) => Array<{ type: "room" | "faculty"; existing: any }>;
+    getBlockConflicts: (block: {
+        id: string;
+        day_of_week: string;
+        start_time: string;
+        end_time: string;
+        room_id: number | null;
+    }) => Array<{ type: "room" | "faculty"; existing: any }>;
     onAddBlock: (time: string) => void;
     dragPreview: { dayIdx: number; startMin: number; duration: number; blockId: string } | null;
     onResizeStart: (blockId: string, edge: "top" | "bottom", initialY: number, originalStartMin: number, originalEndMin: number) => void;
@@ -1325,11 +1533,11 @@ function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick,
     return (
         <div
             ref={setNodeRef}
-            className={`relative border-r last:border-r-0 transition-colors ${isOver ? "bg-primary/5" : ""}`}
+            className={`relative border-r transition-colors last:border-r-0 ${isOver ? "bg-primary/5" : ""}`}
             style={{ height: totalH }}
         >
             {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => (
-                <div key={i} className="absolute w-full border-b border-dashed border-border/40" style={{ top: i * CELL_H }} />
+                <div key={i} className="border-border/40 absolute w-full border-b border-dashed" style={{ top: i * CELL_H }} />
             ))}
 
             {Array.from({ length: HOUR_END - HOUR_START }, (_, i) => {
@@ -1338,7 +1546,7 @@ function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick,
                     <button
                         key={hour}
                         type="button"
-                        className="absolute w-full hover:bg-primary/5 transition-colors cursor-cell"
+                        className="hover:bg-primary/5 absolute w-full cursor-cell transition-colors"
                         style={{ top: i * CELL_H, height: CELL_H }}
                         onClick={() => onAddBlock(`${String(hour).padStart(2, "0")}:00`)}
                     />
@@ -1349,17 +1557,17 @@ function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick,
                 const startMin = parseTimeToMinutes(block.start_time);
                 const endMin = parseTimeToMinutes(block.end_time);
                 if (startMin === null || endMin === null) return null;
-                const top = ((startMin / 60) - HOUR_START) * CELL_H;
+                const top = (startMin / 60 - HOUR_START) * CELL_H;
                 const height = ((endMin - startMin) / 60) * CELL_H;
                 const pal = getPalette(block.subject_code);
                 return (
                     <div
                         key={`existing-${block.id}`}
-                        className={`absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 pointer-events-none ${pal.accent} ${pal.ghost} opacity-40`}
+                        className={`pointer-events-none absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 ${pal.accent} ${pal.ghost} opacity-40`}
                         style={{ top, height: Math.max(height - 2, 20), left: 2, right: 2 }}
                         title={`${block.subject_code} (${block.section}) — ${block.room || "No room"}`}
                     >
-                        <div className={`truncate text-[9px] font-bold leading-tight ${pal.text} opacity-60`}>{block.subject_code}</div>
+                        <div className={`truncate text-[9px] leading-tight font-bold ${pal.text} opacity-60`}>{block.subject_code}</div>
                         <div className="text-muted-foreground truncate text-[8px] leading-tight opacity-50">{block.section}</div>
                     </div>
                 );
@@ -1367,13 +1575,13 @@ function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick,
 
             {dragPreview && (
                 <div
-                    className="absolute left-[2px] right-[2px] rounded-md border-[2.5px] border-dashed border-primary/40 bg-primary/5 z-10 pointer-events-none flex items-start p-1.5 opacity-80"
+                    className="border-primary/40 bg-primary/5 pointer-events-none absolute right-[2px] left-[2px] z-10 flex items-start rounded-md border-[2.5px] border-dashed p-1.5 opacity-80"
                     style={{
-                        top: ((dragPreview.startMin / 60) - HOUR_START) * CELL_H,
+                        top: (dragPreview.startMin / 60 - HOUR_START) * CELL_H,
                         height: (dragPreview.duration / 60) * CELL_H,
                     }}
                 >
-                    <span className="text-[10px] font-bold tracking-tight uppercase opacity-70 text-primary">Move Here</span>
+                    <span className="text-primary text-[10px] font-bold tracking-tight uppercase opacity-70">Move Here</span>
                 </div>
             )}
 
@@ -1382,7 +1590,7 @@ function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick,
                 const startMin = parseTimeToMinutes(block.start_time);
                 const endMin = parseTimeToMinutes(block.end_time);
                 if (startMin === null || endMin === null) return null;
-                const top = ((startMin / 60) - HOUR_START) * CELL_H;
+                const top = (startMin / 60 - HOUR_START) * CELL_H;
                 const height = ((endMin - startMin) / 60) * CELL_H;
                 const hasConflict = blockHasConflict(block);
                 const pal = getPalette(block.day_of_week);
@@ -1407,7 +1615,18 @@ function DayColumn({ dayIdx, dayBlocks, allBlocks, existingBlocks, onBlockClick,
     );
 }
 
-function DraggableScheduleBlock({ block, globalIndex, style, hasConflict, palette, onClick, onHover, onResizeStart, onDelete, onDuplicate }: {
+function DraggableScheduleBlock({
+    block,
+    globalIndex,
+    style,
+    hasConflict,
+    palette,
+    onClick,
+    onHover,
+    onResizeStart,
+    onDelete,
+    onDuplicate,
+}: {
     block: { id: string; day_of_week: string; start_time: string; end_time: string; room_id: number | null };
     globalIndex: number;
     style: React.CSSProperties;
@@ -1441,36 +1660,39 @@ function DraggableScheduleBlock({ block, globalIndex, style, hasConflict, palett
                     ref={setNodeRef}
                     {...listeners}
                     {...attributes}
-                    onClick={(e) => { e.stopPropagation(); onClick(); }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClick();
+                    }}
                     onMouseEnter={() => onHover(true)}
                     onMouseLeave={() => onHover(false)}
-                    className={`absolute overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left cursor-grab active:cursor-grabbing transition-all z-10 ${
-                        hasConflict
-                            ? "border-l-red-500 bg-red-500/12 dark:bg-red-400/15 ring-2 ring-red-400/40"
-                            : `${palette.accent} ${palette.bg}`
-                    } ${isDragging ? "opacity-40" : "hover:shadow-md hover:z-20"}`}
+                    className={`absolute z-10 cursor-grab overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-left transition-all active:cursor-grabbing ${
+                        hasConflict ? "border-l-red-500 bg-red-500/12 ring-2 ring-red-400/40 dark:bg-red-400/15" : `${palette.accent} ${palette.bg}`
+                    } ${isDragging ? "opacity-40" : "hover:z-20 hover:shadow-md"}`}
                     style={style}
                 >
                     <div
-                        className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-30 opacity-0 hover:opacity-100 transition-opacity"
+                        className="absolute top-0 right-0 left-0 z-30 h-2 cursor-ns-resize opacity-0 transition-opacity hover:opacity-100"
                         onPointerDown={(e) => handleResizePointerDown(e, "top")}
                     >
-                        <div className="mx-auto w-8 h-1 rounded-full bg-foreground/30 mt-0.5" />
+                        <div className="bg-foreground/30 mx-auto mt-0.5 h-1 w-8 rounded-full" />
                     </div>
 
                     <div className="flex items-center gap-1">
                         <GripVertical className="text-muted-foreground h-3 w-3 shrink-0 opacity-60" />
-                        <div className={`truncate text-[10px] font-bold leading-tight ${hasConflict ? "text-red-700 dark:text-red-300" : palette.text}`}>
+                        <div
+                            className={`truncate text-[10px] leading-tight font-bold ${hasConflict ? "text-red-700 dark:text-red-300" : palette.text}`}
+                        >
                             {fmtTime(block.start_time)}
                         </div>
                     </div>
                     <div className="text-muted-foreground truncate text-[9px] leading-tight">{fmtTime(block.end_time)}</div>
 
                     <div
-                        className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-30 opacity-0 hover:opacity-100 transition-opacity"
+                        className="absolute right-0 bottom-0 left-0 z-30 h-2 cursor-ns-resize opacity-0 transition-opacity hover:opacity-100"
                         onPointerDown={(e) => handleResizePointerDown(e, "bottom")}
                     >
-                        <div className="mx-auto w-8 h-1 rounded-full bg-foreground/30 mb-0.5" />
+                        <div className="bg-foreground/30 mx-auto mb-0.5 h-1 w-8 rounded-full" />
                     </div>
                 </div>
             </ContextMenuTrigger>

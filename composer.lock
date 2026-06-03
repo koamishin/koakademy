@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "75ff9ef07636467b7e2674ce45e871fe",
+    "content-hash": "91ea30702e648d26b35cc59abba9f7dc",
     "packages": [
         {
             "name": "achyutn/filament-log-viewer",
@@ -178,6 +178,190 @@
                 }
             ],
             "time": "2026-04-16T10:02:46+00:00"
+        },
+        {
+            "name": "alizharb/filament-modular-luncher",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/AlizHarb/filament-modular-luncher.git",
+                "reference": "edd53ab9e53797801d61f58f654d8af44a770422"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/AlizHarb/filament-modular-luncher/zipball/edd53ab9e53797801d61f58f654d8af44a770422",
+                "reference": "edd53ab9e53797801d61f58f654d8af44a770422",
+                "shasum": ""
+            },
+            "require": {
+                "alizharb/laravel-modular": "^1.1",
+                "calebporzio/sushi": "^2.5",
+                "filament/filament": "^5.0",
+                "php": "^8.3",
+                "spatie/laravel-data": "^4.19"
+            },
+            "require-dev": {
+                "driftingly/rector-laravel": "^2.1",
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.24",
+                "mockery/mockery": "^1.6",
+                "orchestra/testbench": "^9.5|^10.0",
+                "pestphp/pest": "^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^11.5|^12.0",
+                "rector/rector": "^2.0",
+                "spatie/phpunit-snapshot-assertions": "^5.1"
+            },
+            "suggest": {
+                "alizharb/laravel-hooks": "For modular hook system support",
+                "alizharb/laravel-modular": "For core modular system support",
+                "alizharb/laravel-modular-filament": "For Filament admin panel integration in modules",
+                "alizharb/laravel-modular-js": "For JavaScript component support in modules",
+                "alizharb/laravel-modular-livewire": "For Livewire component support in modules",
+                "alizharb/laravel-themer": "For advanced theme management support"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "AlizHarb\\ModularLuncher\\ModularLuncherServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "AlizHarb\\ModularLuncher\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ali Harb",
+                    "email": "harbzali@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "The ultimate Filament module manager for Laravel Modular. Seamlessly search, install, update, and manage your application modules directly from your Filament admin panel. Supports ZIP, Git, and Composer sources.",
+            "keywords": [
+                "admin-panel",
+                "filament",
+                "filament-plugin",
+                "laravel",
+                "laravel-modular",
+                "luncher",
+                "modular",
+                "module-manager",
+                "modules",
+                "package-manager"
+            ],
+            "support": {
+                "issues": "https://github.com/alizharb/filament-modular-luncher/issues",
+                "source": "https://github.com/alizharb/filament-modular-luncher"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/alizharb",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-01-31T05:06:24+00:00"
+        },
+        {
+            "name": "alizharb/laravel-modular",
+            "version": "v1.1.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/AlizHarb/laravel-modular.git",
+                "reference": "feba60f52d89a03527b16264a2ed83ca64e8e395"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/AlizHarb/laravel-modular/zipball/feba60f52d89a03527b16264a2ed83ca64e8e395",
+                "reference": "feba60f52d89a03527b16264a2ed83ca64e8e395",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^11.0|^12.0|^13.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16",
+                "wikimedia/composer-merge-plugin": "^2.1"
+            },
+            "require-dev": {
+                "driftingly/rector-laravel": "^2.1",
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.24",
+                "mockery/mockery": "^1.6",
+                "orchestra/testbench": "^9.5|^10.0|^11.0",
+                "pestphp/pest": "^3.0",
+                "pestphp/pest-plugin-laravel": "^3.0",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^11.5|^12.0",
+                "rector/rector": "^2.0",
+                "spatie/phpunit-snapshot-assertions": "^5.1"
+            },
+            "suggest": {
+                "alizharb/filament-modular-luncher": "A powerful Filament v5 manager for listing, toggling, and backing up system modules.",
+                "alizharb/filament-themer-luncher": "Provides a comprehensive Filament v5 interface for managing and switching themes.",
+                "alizharb/laravel-hooks": "Adds a universal extensibility and plugin system for Laravel applications.",
+                "alizharb/laravel-modular-filament": "Enables Filament v5 admin panel integration with automatic discovery in modules.",
+                "alizharb/laravel-modular-js": "Enables JS discovery within modular structures and provides zero-config autoloading for modules.",
+                "alizharb/laravel-modular-livewire": "Provides automatic Livewire component discovery and registration within modules.",
+                "alizharb/laravel-themer": "For advanced theme management support"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Modular": "AlizHarb\\Modular\\Facades\\Modular"
+                    },
+                    "providers": [
+                        "AlizHarb\\Modular\\ModularServiceProvider"
+                    ]
+                },
+                "merge-plugin": {
+                    "recurse": true,
+                    "replace": false,
+                    "merge-dev": true,
+                    "merge-extra": false,
+                    "merge-scripts": false,
+                    "merge-extra-deep": false,
+                    "ignore-duplicates": false
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "AlizHarb\\Modular\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ali Harb",
+                    "email": "harbzali@gmail.com"
+                }
+            ],
+            "description": "A professional, framework-agnostic modular architecture for Laravel 11+. Features zero-config autoloading, 29+ Artisan command overrides, and seamless Vite integration.",
+            "support": {
+                "issues": "https://github.com/AlizHarb/laravel-modular/issues",
+                "source": "https://github.com/AlizHarb/laravel-modular/tree/v1.1.5"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/alizharb",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-03-01T03:46:20+00:00"
         },
         {
             "name": "andreia/filament-nord-theme",
@@ -1371,6 +1555,60 @@
                 }
             ],
             "time": "2026-02-10T14:33:43+00:00"
+        },
+        {
+            "name": "calebporzio/sushi",
+            "version": "v2.5.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/calebporzio/sushi.git",
+                "reference": "ef71a031f78a80b0ed82ce51fc5b648c01145281"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/calebporzio/sushi/zipball/ef71a031f78a80b0ed82ce51fc5b648c01145281",
+                "reference": "ef71a031f78a80b0ed82ce51fc5b648c01145281",
+                "shasum": ""
+            },
+            "require": {
+                "ext-pdo_sqlite": "*",
+                "ext-sqlite3": "*",
+                "illuminate/database": "^5.8 || ^6.0 || ^7.0 || ^8.0 || ^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "illuminate/support": "^5.8 || ^6.0 || ^7.0 || ^8.0 || ^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0",
+                "php": "^7.1.3|^8.0"
+            },
+            "require-dev": {
+                "doctrine/dbal": "^2.9 || ^3.1.4",
+                "orchestra/testbench": "3.8.* || 3.9.* || ^4.0 || ^5.0 || ^6.0 || ^7.0 || ^8.0 || ^9.0 || ^10.0 || ^11.0",
+                "phpunit/phpunit": "^7.5 || ^8.4 || ^9.0 || ^10.0 || ^11.0 || ^12.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Sushi\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Caleb Porzio",
+                    "email": "calebporzio@gmail.com"
+                }
+            ],
+            "description": "Eloquent's missing \"array\" driver.",
+            "support": {
+                "source": "https://github.com/calebporzio/sushi/tree/v2.5.4"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/calebporzio",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-02-21T02:53:22+00:00"
         },
         {
             "name": "carbonphp/carbon-doctrine-types",
@@ -13800,6 +14038,90 @@
             "time": "2026-03-24T10:30:33+00:00"
         },
         {
+            "name": "spatie/laravel-data",
+            "version": "4.23.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/laravel-data.git",
+                "reference": "230543769c996e407fec2873930626aed7dd0d3b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/laravel-data/zipball/230543769c996e407fec2873930626aed7dd0d3b",
+                "reference": "230543769c996e407fec2873930626aed7dd0d3b",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.1",
+                "phpdocumentor/reflection-common": "^2.2",
+                "phpdocumentor/reflection-docblock": "^5.3 || ^6.0",
+                "phpdocumentor/type-resolver": "^1.7 || ^2.0",
+                "spatie/laravel-package-tools": "^1.9.0",
+                "spatie/php-structure-discoverer": "^2.0"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.14",
+                "friendsofphp/php-cs-fixer": "^3.0",
+                "inertiajs/inertia-laravel": "^2.0|^3.0",
+                "livewire/livewire": "^3.0|^4.0",
+                "mockery/mockery": "^1.6",
+                "nesbot/carbon": "^2.63|^3.0",
+                "orchestra/testbench": "^8.37.0|^9.16|^10.9|^11.0",
+                "pestphp/pest": "^2.36|^3.8|^4.3",
+                "pestphp/pest-plugin-laravel": "^2.4|^3.0|^4.0",
+                "pestphp/pest-plugin-livewire": "^2.1|^3.0|^4.0",
+                "phpbench/phpbench": "^1.2",
+                "phpstan/extension-installer": "^1.1",
+                "spatie/invade": "^1.0",
+                "spatie/laravel-typescript-transformer": "^2.5",
+                "spatie/pest-plugin-snapshots": "^2.1",
+                "spatie/test-time": "^1.2"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Spatie\\LaravelData\\LaravelDataServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\LaravelData\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ruben Van Assche",
+                    "email": "ruben@spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Create unified resources and data transfer objects",
+            "homepage": "https://github.com/spatie/laravel-data",
+            "keywords": [
+                "laravel",
+                "laravel-data",
+                "spatie"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/laravel-data/issues",
+                "source": "https://github.com/spatie/laravel-data/tree/4.23.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-05-08T14:41:13+00:00"
+        },
+        {
             "name": "spatie/laravel-medialibrary",
             "version": "11.22.1",
             "source": {
@@ -14611,6 +14933,85 @@
                 }
             ],
             "time": "2026-04-23T08:26:29+00:00"
+        },
+        {
+            "name": "spatie/php-structure-discoverer",
+            "version": "2.4.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/php-structure-discoverer.git",
+                "reference": "10cd4e0018450d23e2bd8f8472569ad0c445c0fc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/php-structure-discoverer/zipball/10cd4e0018450d23e2bd8f8472569ad0c445c0fc",
+                "reference": "10cd4e0018450d23e2bd8f8472569ad0c445c0fc",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/collections": "^11.0|^12.0|^13.0",
+                "php": "^8.3",
+                "spatie/laravel-package-tools": "^1.92.7",
+                "symfony/finder": "^6.0|^7.3.5|^8.0"
+            },
+            "require-dev": {
+                "amphp/parallel": "^2.3.2",
+                "illuminate/console": "^11.0|^12.0|^13.0",
+                "nunomaduro/collision": "^7.0|^8.8.3",
+                "orchestra/testbench": "^9.5|^10.8|^11.0",
+                "pestphp/pest": "^3.8|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.2|^4.0",
+                "phpstan/extension-installer": "^1.4.3",
+                "phpstan/phpstan-deprecation-rules": "^1.2.1",
+                "phpstan/phpstan-phpunit": "^1.4.2",
+                "spatie/laravel-ray": "^1.43.1"
+            },
+            "suggest": {
+                "amphp/parallel": "When you want to use the Parallel discover worker"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Spatie\\StructureDiscoverer\\StructureDiscovererServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\StructureDiscoverer\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ruben Van Assche",
+                    "email": "ruben@spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Automatically discover structures within your PHP application",
+            "homepage": "https://github.com/spatie/php-structure-discoverer",
+            "keywords": [
+                "discover",
+                "laravel",
+                "php",
+                "php-structure-discoverer"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/php-structure-discoverer/issues",
+                "source": "https://github.com/spatie/php-structure-discoverer/tree/2.4.2"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/LaravelAutoDiscoverer",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-04-28T06:26:02+00:00"
         },
         {
             "name": "spatie/shiki-php",
@@ -22931,5 +23332,5 @@
         "php": "^8.4"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

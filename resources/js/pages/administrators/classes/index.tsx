@@ -13,22 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { VisualRadioButton } from "@/Components/ui/visual-radio-button";
+import { VisualRadioButton } from "@/components/ui/visual-radio-button";
 import type { User } from "@/types/user";
 import { Head, Link, router, useForm } from "@inertiajs/react";
-import {
-    BookOpen,
-    CalendarIcon,
-    Layers,
-    ListTodo,
-    MapPin,
-    Palette,
-    Pencil,
-    Plus,
-    Settings2,
-    SlidersHorizontal,
-    Trash2,
-} from "lucide-react";
+import { BookOpen, CalendarIcon, Layers, ListTodo, MapPin, Palette, Pencil, Plus, Settings2, SlidersHorizontal, Trash2 } from "lucide-react";
 import * as React from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { route } from "ziggy-js";
