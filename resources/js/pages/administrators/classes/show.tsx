@@ -47,6 +47,7 @@ import {
     MapPin,
     MoreHorizontal,
     Palette,
+    Pencil,
     Plus,
     Settings2,
     Trash2,
@@ -1482,10 +1483,16 @@ export default function AdministratorClassShow({
                                 </div>
 
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                    <div className="flex w-full items-center gap-2 sm:w-auto">
+                                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                                         <Button size="lg" onClick={() => setScheduleDialogOpen(true)} className="flex-1 shadow-sm sm:flex-none font-bold">
                                             <CalendarIcon className="mr-2 h-5 w-5" />
                                             Manage Schedule
+                                        </Button>
+                                        <Button size="lg" asChild variant="secondary" className="flex-1 shadow-sm sm:flex-none font-bold">
+                                            <a href={classItem.filament?.edit_url ?? "#"}>
+                                                <Pencil className="mr-2 h-5 w-5" />
+                                                Edit Class
+                                            </a>
                                         </Button>
                                         <Button size="icon" asChild variant="secondary" className="h-11 w-11 shrink-0 shadow-sm" title="Open in Filament">
                                             <a href={classItem.filament?.view_url ?? "#"} target="_blank" rel="noreferrer">
