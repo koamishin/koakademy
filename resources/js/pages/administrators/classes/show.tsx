@@ -1489,10 +1489,10 @@ export default function AdministratorClassShow({
                                             Manage Schedule
                                         </Button>
                                         <Button size="lg" asChild variant="secondary" className="flex-1 shadow-sm sm:flex-none font-bold">
-                                            <a href={classItem.filament?.edit_url ?? "#"}>
+                                            <Link href={route("administrators.classes.edit", { class: classItem.id })}>
                                                 <Pencil className="mr-2 h-5 w-5" />
                                                 Edit Class
-                                            </a>
+                                            </Link>
                                         </Button>
                                         <Button size="icon" asChild variant="secondary" className="h-11 w-11 shrink-0 shadow-sm" title="Open in Filament">
                                             <a href={classItem.filament?.view_url ?? "#"} target="_blank" rel="noreferrer">

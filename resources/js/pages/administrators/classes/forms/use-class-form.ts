@@ -48,8 +48,8 @@ async function fetchOptionData<T>(url: string, guard: (value: unknown) => value 
     return rows.filter(guard);
 }
 
-export function useClassForm(defaults: ClassDefaultsInput): UseClassFormReturn {
-    const form = useForm<ClassFormData>(buildClassDefaults(defaults));
+export function useClassForm(defaults: ClassDefaultsInput, initialData?: ClassFormData): UseClassFormReturn {
+    const form = useForm<ClassFormData>(initialData ?? buildClassDefaults(defaults));
     const [subjectCodeTouched, setSubjectCodeTouched] = useState(false);
     const [collegeSubjects, setCollegeSubjects] = useState<SubjectOption[]>([]);
     const [collegeSubjectsLoading, setCollegeSubjectsLoading] = useState(false);
@@ -62,7 +62,10 @@ export function useClassForm(defaults: ClassDefaultsInput): UseClassFormReturn {
 
         setCollegeSubjectsLoading(true);
         try {
-            const subjects = await fetchOptionData<SubjectOption>(route("administrators.classes.options.subjects", { course_ids: courseIds }), isSubjectOption);
+            const subjects = await fetchOptionData<SubjectOption>(
+                route("administrators.classes.options.subjects", { course_ids: courseIds }),
+                isSubjectOption,
+            );
             setCollegeSubjects(subjects);
             return subjects;
         } finally {

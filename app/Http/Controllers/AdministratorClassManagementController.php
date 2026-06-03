@@ -347,6 +347,26 @@ final class AdministratorClassManagementController extends Controller
         ]);
     }
 
+    public function edit(Classes $class): Response
+    {
+        $class->loadMissing(['schedules']);
+
+        return Inertia::render('administrators/classes/create', [
+            'user' => $this->getUserProps(),
+            'filament' => [
+                'classes' => [
+                    'index_url' => route('filament.admin.resources.classes.index'),
+                ],
+            ],
+            'options' => $this->buildClassFormOptions(),
+            'defaults' => $this->buildClassFormData($class),
+            'mode' => 'edit',
+            'class_id' => $class->id,
+            'class_title' => $class->record_title,
+            'flash' => session('flash'),
+        ]);
+    }
+
     public function store(StoreClassRequest $request): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
@@ -958,6 +978,61 @@ final class AdministratorClassManagementController extends Controller
                 'error' => 'Failed to generate PDF: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildClassFormData(Classes $class): array
+    {
+        $settings = array_merge(Classes::getDefaultSettings(), (array) ($class->settings ?? []));
+        $classification = $class->classification === 'shs' ? 'shs' : 'college';
+        $defaultRoomId = (int) ($class->room_id ?? Room::query()->where('is_active', true)->value('id') ?? 0);
+
+        $subjectIds = Arr::wrap($class->subject_ids ?: ($class->subject_id ? [$class->subject_id] : []));
+
+        return [
+            'classification' => $classification,
+            'course_codes' => array_map(intval(...), Arr::wrap($class->course_codes ?? [])),
+            'subject_ids' => array_map(intval(...), $subjectIds),
+            'subject_code' => $classification === 'college' ? (string) ($class->subject_code ?? '') : '',
+            'academic_year' => (int) ($class->academic_year ?? 1),
+            'shs_track_id' => $class->shs_track_id,
+            'shs_strand_id' => $class->shs_strand_id,
+            'subject_code_shs' => $classification === 'shs' ? (string) ($class->subject_code ?? '') : '',
+            'grade_level' => (string) ($class->grade_level ?? 'Grade 11'),
+            'faculty_id' => $class->faculty_id,
+            'semester' => (string) ($class->semester ?? '1'),
+            'school_year' => (string) ($class->school_year ?? ''),
+            'section' => (string) ($class->section ?? 'A'),
+            'room_id' => $defaultRoomId,
+            'maximum_slots' => (int) ($class->maximum_slots ?? 40),
+            'schedules' => $class->schedules
+                ->sortBy([
+                    fn (Schedule $schedule) => $schedule->day_of_week,
+                    fn (Schedule $schedule) => $schedule->start_time,
+                ])
+                ->values()
+                ->map(fn (Schedule $schedule): array => [
+                    'day_of_week' => $schedule->day_of_week,
+                    'start_time' => $schedule->start_time?->format('H:i') ?? '08:00',
+                    'end_time' => $schedule->end_time?->format('H:i') ?? '09:00',
+                    'room_id' => (int) ($schedule->room_id ?? $defaultRoomId),
+                ])
+                ->all(),
+            'settings' => [
+                'background_color' => (string) ($settings['background_color'] ?? '#ffffff'),
+                'accent_color' => (string) ($settings['accent_color'] ?? '#3b82f6'),
+                'theme' => (string) ($settings['theme'] ?? 'default'),
+                'enable_announcements' => (bool) ($settings['enable_announcements'] ?? true),
+                'enable_grade_visibility' => (bool) ($settings['enable_grade_visibility'] ?? true),
+                'enable_attendance_tracking' => (bool) ($settings['enable_attendance_tracking'] ?? false),
+                'allow_late_submissions' => (bool) ($settings['allow_late_submissions'] ?? false),
+                'enable_discussion_board' => (bool) ($settings['enable_discussion_board'] ?? false),
+                'custom' => (array) ($settings['custom'] ?? []),
+                'banner_image' => null,
+            ],
+        ];
     }
 
     /**

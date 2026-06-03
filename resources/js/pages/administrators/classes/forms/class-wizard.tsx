@@ -2,13 +2,24 @@ import { Wizard, type WizardValidationResult } from "@/components/ui/wizard";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { route } from "ziggy-js";
-import { buildClassDefaults, buildClassStorePayload, buildSubjectCodeFromSubjectOptions, type ClassDefaultsInput, type ClassFormData, type Classification, type ValidationResult } from "../lib/class-defaults";
+import {
+    buildClassDefaults,
+    buildClassStorePayload,
+    buildSubjectCodeFromSubjectOptions,
+    type ClassDefaultsInput,
+    type ClassFormData,
+    type Classification,
+    type ValidationResult,
+} from "../lib/class-defaults";
 import { BasicsStep } from "./steps/basics-step";
 import { ReviewStep } from "./steps/review-step";
 import { TeachingStep } from "./steps/teaching-step";
 import { useClassForm } from "./use-class-form";
 
 type ClassWizardProps = ClassDefaultsInput & {
+    mode?: "create" | "edit";
+    classId?: number;
+    initialData?: ClassFormData;
     onCreated?: () => void;
 };
 
@@ -22,12 +33,18 @@ function isDraftData(value: unknown): value is ClassFormData {
     return typeof value === "object" && value !== null && "classification" in value && "schedules" in value && "settings" in value;
 }
 
-export function ClassWizard({ semester, school_year, options, onCreated }: ClassWizardProps): ReactNode {
+export function ClassWizard({ semester, school_year, options, mode = "create", classId, initialData, onCreated }: ClassWizardProps): ReactNode {
     const defaults = useMemo(() => ({ semester, school_year, options }), [semester, school_year, options]);
-    const { form, subjectCodeTouched, setSubjectCodeTouched, collegeSubjects, collegeSubjectsLoading, loadCollegeSubjects, step1Valid, step2Valid } = useClassForm(defaults);
+    const { form, subjectCodeTouched, setSubjectCodeTouched, collegeSubjects, collegeSubjectsLoading, loadCollegeSubjects, step1Valid, step2Valid } =
+        useClassForm(defaults, initialData);
     const [currentStep, setCurrentStep] = useState(0);
+    const isEditing = mode === "edit";
 
     const saveDraft = (): void => {
+        if (isEditing) {
+            return;
+        }
+
         localStorage.setItem(draftKey, JSON.stringify({ ...form.data, settings: { ...form.data.settings, banner_image: null } }));
         toast.success("Draft saved.");
     };
@@ -46,6 +63,10 @@ export function ClassWizard({ semester, school_year, options, onCreated }: Class
     };
 
     useEffect(() => {
+        if (isEditing) {
+            return;
+        }
+
         const storedDraft = localStorage.getItem(draftKey);
 
         if (!storedDraft) {
@@ -59,7 +80,11 @@ export function ClassWizard({ semester, school_year, options, onCreated }: Class
                 onClick: () => {
                     const parsed = JSON.parse(storedDraft) as unknown;
                     if (isDraftData(parsed)) {
-                        form.setData({ ...buildClassDefaults(defaults), ...parsed, settings: { ...buildClassDefaults(defaults).settings, ...parsed.settings, banner_image: null } });
+                        form.setData({
+                            ...buildClassDefaults(defaults),
+                            ...parsed,
+                            settings: { ...buildClassDefaults(defaults).settings, ...parsed.settings, banner_image: null },
+                        });
                     }
                 },
             },
@@ -101,21 +126,34 @@ export function ClassWizard({ semester, school_year, options, onCreated }: Class
     }, [collegeSubjects, form.data.classification, form.data.course_codes.length, form.data.subject_ids.length]);
 
     useEffect(() => {
+        if (isEditing) {
+            return;
+        }
+
         const timeout = window.setTimeout(() => {
             localStorage.setItem(draftKey, JSON.stringify({ ...form.data, settings: { ...form.data.settings, banner_image: null } }));
         }, 1000);
 
         return () => window.clearTimeout(timeout);
-    }, [form.data]);
+    }, [form.data, isEditing]);
 
     const submit = (): void => {
-        form.transform(() => buildClassStorePayload(form.data)).post(route("administrators.classes.store"), {
+        const options = {
             forceFormData: form.data.settings.banner_image !== null,
             onSuccess: () => {
                 localStorage.removeItem(draftKey);
                 onCreated?.();
             },
-        });
+        };
+
+        form.transform(() => buildClassStorePayload(form.data));
+
+        if (isEditing && classId) {
+            form.patch(route("administrators.classes.update", { class: classId }), options);
+            return;
+        }
+
+        form.post(route("administrators.classes.store"), options);
     };
 
     return (
@@ -128,14 +166,32 @@ export function ClassWizard({ semester, school_year, options, onCreated }: Class
             labels={{
                 back: "Back",
                 next: "Next",
-                complete: "Create class",
-                saveDraft: "Save as draft",
+                complete: isEditing ? "Update class" : "Create class",
+                saveDraft: isEditing ? "" : "Save as draft",
                 stepLabel: (stepNumber) => `Step ${stepNumber}`,
             }}
             steps={[
-                { id: "basics", title: "Basics", description: "Type, subject, section", isComplete: () => step1Valid === true, isValid: () => toWizardResult(step1Valid) },
-                { id: "teaching", title: "Teaching", description: "Faculty, room, schedule", isComplete: () => step2Valid === true, isValid: () => toWizardResult(step2Valid) },
-                { id: "review", title: "Review", description: "Confirm and create", isComplete: () => true, isValid: () => true },
+                {
+                    id: "basics",
+                    title: "Basics",
+                    description: "Type, subject, section",
+                    isComplete: () => step1Valid === true,
+                    isValid: () => toWizardResult(step1Valid),
+                },
+                {
+                    id: "teaching",
+                    title: "Teaching",
+                    description: "Faculty, room, schedule",
+                    isComplete: () => step2Valid === true,
+                    isValid: () => toWizardResult(step2Valid),
+                },
+                {
+                    id: "review",
+                    title: "Review",
+                    description: isEditing ? "Confirm and update" : "Confirm and create",
+                    isComplete: () => true,
+                    isValid: () => true,
+                },
             ]}
         >
             {currentStep === 0 ? (

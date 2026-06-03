@@ -12,6 +12,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Inertia\Testing\AssertableInertia;
 
 beforeEach(function () {
     if (! Schema::hasTable('activity_log')) {
@@ -104,4 +105,66 @@ it('stores a college class with schedules from the administrator page payload', 
     expect($schedule?->start_time?->format('H:i'))->toBe('08:00');
     expect($schedule?->end_time?->format('H:i'))->toBe('09:00');
     expect($schedule?->room_id)->toBe($room->id);
+});
+
+it('renders the administrator class edit page with existing class data', function () {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $this->actingAs($user);
+
+    $course = Course::factory()->create();
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'IT202',
+        'title' => 'Data Structures',
+    ]);
+    $faculty = Faculty::factory()->create();
+    $room = Room::factory()->create(['is_active' => true]);
+
+    $class = Classes::factory()->create([
+        'classification' => 'college',
+        'course_codes' => [$course->id],
+        'subject_ids' => [$subject->id],
+        'subject_id' => $subject->id,
+        'subject_code' => 'IT202',
+        'academic_year' => 2,
+        'faculty_id' => $faculty->id,
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'B',
+        'room_id' => $room->id,
+        'maximum_slots' => 35,
+        'settings' => array_merge(Classes::getDefaultSettings(), [
+            'accent_color' => '#ef4444',
+            'enable_attendance_tracking' => true,
+        ]),
+    ]);
+
+    Schedule::factory()->create([
+        'class_id' => $class->id,
+        'room_id' => $room->id,
+        'day_of_week' => 'Tuesday',
+        'start_time' => '10:00',
+        'end_time' => '11:30',
+    ]);
+
+    $this->get(route('administrators.classes.edit', $class))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/classes/create', false)
+            ->where('mode', 'edit')
+            ->where('class_id', $class->id)
+            ->where('defaults.classification', 'college')
+            ->where('defaults.course_codes.0', $course->id)
+            ->where('defaults.subject_ids.0', $subject->id)
+            ->where('defaults.subject_code', 'IT202')
+            ->where('defaults.academic_year', 2)
+            ->where('defaults.faculty_id', (string) $faculty->id)
+            ->where('defaults.section', 'B')
+            ->where('defaults.maximum_slots', 35)
+            ->where('defaults.schedules.0.day_of_week', 'Tuesday')
+            ->where('defaults.schedules.0.start_time', '10:00')
+            ->where('defaults.schedules.0.end_time', '11:30')
+            ->where('defaults.settings.accent_color', '#ef4444')
+            ->where('defaults.settings.enable_attendance_tracking', true)
+        );
 });
