@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "91ea30702e648d26b35cc59abba9f7dc",
+    "content-hash": "02c102188135cac577d9f1ad212b1c76",
     "packages": [
         {
             "name": "achyutn/filament-log-viewer",
@@ -2328,6 +2328,83 @@
                 "source": "https://github.com/cweagans/composer-patches/tree/1.7.3"
             },
             "time": "2022-12-20T22:53:13+00:00"
+        },
+        {
+            "name": "daacreators/pennant-manager",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/jabirmayar/pennant-manager.git",
+                "reference": "3d62f7f720669fb78f15fbaace56513c7d6bd095"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/jabirmayar/pennant-manager/zipball/3d62f7f720669fb78f15fbaace56513c7d6bd095",
+                "reference": "3d62f7f720669fb78f15fbaace56513c7d6bd095",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^4.0|^5.0",
+                "illuminate/contracts": "^11.0|^12.0",
+                "laravel/pennant": "^1.0|^2.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^8.0",
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "pestphp/pest": "^3.7|^4.0",
+                "pestphp/pest-plugin-arch": "^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+                "pestphp/pest-plugin-livewire": "^3.0|^4.0",
+                "rector/rector": "^2.0",
+                "spatie/laravel-ray": "^1.26"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "PennantManager": "daacreators\\PennantManager\\Facades\\PennantManager"
+                    },
+                    "providers": [
+                        "daacreators\\PennantManager\\PennantManagerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "daacreators\\PennantManager\\": "src/",
+                    "daacreators\\PennantManager\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Jabir Khan",
+                    "email": "hello@jabirkhan.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A Filament plugin for managing Laravel Pennant feature flags",
+            "homepage": "https://github.com/jabirmayar/pennant-manager",
+            "keywords": [
+                "Jabir Khan",
+                "filament",
+                "filament-plugin",
+                "filamentphp",
+                "laravel",
+                "pennant-manager"
+            ],
+            "support": {
+                "issues": "https://github.com/jabirmayar/pennant-manager/issues",
+                "source": "https://github.com/jabirmayar/pennant-manager"
+            },
+            "time": "2026-05-31T21:51:39+00:00"
         },
         {
             "name": "danharrin/date-format-converter",

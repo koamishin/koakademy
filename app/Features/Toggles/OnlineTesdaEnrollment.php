@@ -6,7 +6,6 @@ namespace App\Features\Toggles;
 
 use App\Features\Concerns\ResolvesFeatureToggle;
 use App\Features\Contracts\FeatureToggle;
-use App\Models\User;
 
 final class OnlineTesdaEnrollment implements FeatureToggle
 {
@@ -60,17 +59,5 @@ final class OnlineTesdaEnrollment implements FeatureToggle
     public function ctaUrl(): ?string
     {
         return null;
-    }
-
-    /**
-     * Use default audience-based resolution from trait.
-     */
-    public function resolve(User $scope): bool
-    {
-        if ($this->audience() === 'all') {
-            return true;
-        }
-
-        return $scope->isStudentRole();
     }
 }

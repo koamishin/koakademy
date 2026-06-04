@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\Account;
 use App\Models\GeneralSetting;
+use App\Models\Student;
 use App\Models\StudentEnrollment;
+use App\Models\User;
 use App\Services\PdfGenerationService;
 use App\Settings\SiteSettings;
 use App\Support\ResourceStorageLocator;
@@ -16,6 +19,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 final class MigrateToStudent extends Notification implements ShouldQueue
 {
@@ -108,6 +112,10 @@ final class MigrateToStudent extends Notification implements ShouldQueue
             $logoUrl = url($logoUrl);
         }
 
+        // Detect if the student already has a portal account so the email
+        // can either prompt them to create one or simply link them in.
+        $portalAccount = $this->resolveStudentPortalAccount();
+
         $mailMessage = (new MailMessage)
             ->subject(sprintf(
                 'Enrollment Confirmation - %s',
@@ -127,6 +135,10 @@ final class MigrateToStudent extends Notification implements ShouldQueue
                 ),
                 'siteSettings' => $siteSettings,
                 'logoUrl' => $logoUrl,
+                'has_portal_account' => $portalAccount['has_account'],
+                'student_id_display' => $portalAccount['student_id_display'],
+                'student_email' => $portalAccount['student_email'],
+                'signup_url' => $portalAccount['signup_url'],
             ]);
 
         $pdfAttached = false;
@@ -346,6 +358,100 @@ final class MigrateToStudent extends Notification implements ShouldQueue
         }
 
         return null;
+    }
+
+    /**
+     * Determine whether the student already has a portal account and, if not,
+     * build the URL that points to the public sign-up page so the email can
+     * prompt them to create one.
+     *
+     * A student is considered to have a portal account when ANY of these hold:
+     *  - Student->user_id is set (canonical link from the signup flow)
+     *  - A User row exists with `record_id` matching the student's primary key
+     *  - A User row exists with the same email (covers legacy/manual cases)
+     *  - A polymorphic Account row is linked via Student::account()
+     *  - An Account row exists with the same email
+     *
+     * @return array{has_account: bool, student_id_display: ?string, student_email: ?string, signup_url: ?string}
+     */
+    private function resolveStudentPortalAccount(): array
+    {
+        $student = $this->record->student;
+
+        if (! $student instanceof Student) {
+            return [
+                'has_account' => false,
+                'student_id_display' => null,
+                'student_email' => null,
+                'signup_url' => null,
+            ];
+        }
+
+        $studentIdDisplay = (string) ($student->student_id ?: $student->id);
+        $studentEmail = $student->email !== null && $student->email !== ''
+            ? $student->email
+            : null;
+
+        $hasUserAccount = $student->user_id !== null
+            || User::query()->where('record_id', $student->id)->exists()
+            || ($studentEmail !== null
+                && User::query()->where('email', $studentEmail)->exists());
+
+        $hasAccount = $student->account !== null
+            || ($studentEmail !== null
+                && Account::query()->where('email', $studentEmail)->exists());
+
+        $hasAnyAccount = $hasUserAccount || $hasAccount;
+
+        if ($hasAnyAccount) {
+            return [
+                'has_account' => true,
+                'student_id_display' => $studentIdDisplay,
+                'student_email' => $studentEmail,
+                'signup_url' => null,
+            ];
+        }
+
+        return [
+            'has_account' => false,
+            'student_id_display' => $studentIdDisplay,
+            'student_email' => $studentEmail,
+            'signup_url' => $this->buildSignupUrl($student, $studentIdDisplay, $studentEmail),
+        ];
+    }
+
+    private function buildSignupUrl(Student $student, string $studentIdDisplay, ?string $studentEmail): ?string
+    {
+        $params = [
+            'record_id' => $student->id,
+            'student_id' => $studentIdDisplay,
+        ];
+        if ($studentEmail !== null) {
+            $params['email'] = $studentEmail;
+        }
+
+        try {
+            return route('signup', $params);
+        } catch (Throwable $exception) {
+            // Fallback when the signup route is unavailable in this context
+            // (e.g., very early queue worker boot). Build the URL manually
+            // using the configured portal host so the email still links
+            // somewhere sensible.
+            $portalHost = (string) config('app.portal_host', 'portal.koakademy.test');
+            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+            $query = http_build_query($params);
+
+            Log::warning('Failed to generate signup route URL, using fallback.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return sprintf(
+                '%s://%s/signup%s',
+                $scheme,
+                $portalHost,
+                $query !== '' ? '?'.$query : ''
+            );
+        }
     }
 
     private function freshEnrollmentRecord(): StudentEnrollment

@@ -617,6 +617,22 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         return $this->role?->isStudent() ?? false;
     }
 
+    /**
+     * Check if the user has never engaged with the onboarding flow for a given variant.
+     *
+     * Uses the onboarding_progress table as the source of truth — a row is created on
+     * the first user interaction (step advance, dismiss, etc.) and persists across
+     * sessions, so a returning user who has already seen the onboarding is correctly
+     * reported as not new.
+     */
+    public function isNewToOnboarding(string $variant): bool
+    {
+        return ! OnboardingProgress::query()
+            ->where('user_id', $this->id)
+            ->where('variant', $variant)
+            ->exists();
+    }
+
     public function hasEmailAuthentication(): bool
     {
         // This method should return true if the user has enabled email authentication.
