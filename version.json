@@ -1,18 +1,18 @@
 {
-  "version": "1.0.0-dev.0.6",
-  "image": "ghcr.io/koamishin/koakademy:v1.0.0-dev.0.6",
-  "commit": "c66780b7a6d6b54c1baade0d8246630ab1fd59b9",
+  "version": "1.7.5",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5",
+  "commit": "14ae6dcc5fbc61bc36a58798b4e89a43e4d05bf3",
   "branch": "master",
-  "timestamp": "2026-06-04T09:08:22Z",
-  "build_url": "https://github.com/koamishin/koakademy/actions/runs/26942008665",
-  "release_type": "patch",
+  "timestamp": "2026-06-04T10:59:56Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26947419769",
+  "release_type": "official",
   "changelog": {
-    "current": "Version 1.0.0-dev.0.6 - Merge pull request #97 from yukazakiri/upgrade-passkeys",
-    "previous": "1.7.0-dev.0.5"
+    "current": "Version 1.7.5 - manual release",
+    "previous": "1.7.0-dev.0.6"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Auto Pre-release and Docker Tag",
-    "repository": "koamishin/koakademy"
+    "workflow": "Manual Official Release",
+    "repository": "yukazakiri/koakademy"
   }
 }
