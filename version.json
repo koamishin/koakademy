@@ -1,14 +1,14 @@
 {
-  "version": "1.7.0-dev.0.5",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.5",
-  "commit": "d7d8e3d1c24e369f3465ebe63be51ac10e866279",
+  "version": "1.7.0-dev.0.6",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.6",
+  "commit": "c66780b7a6d6b54c1baade0d8246630ab1fd59b9",
   "branch": "master",
-  "timestamp": "2026-06-04T07:22:36Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26937007381",
+  "timestamp": "2026-06-04T09:07:20Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26941961865",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.7.0-dev.0.5 - Harden module route loading and setup script",
-    "previous": "1.7.0-dev.0.4"
+    "current": "Version 1.7.0-dev.0.6 - Merge pull request #97 from yukazakiri/upgrade-passkeys",
+    "previous": "1.7.0-dev.0.5"
   },
   "metadata": {
     "author": "yukazakiri",
