@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Spatie\LaravelPasskeys\Support\Config;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        $authenticatableClass = Config::getAuthenticatableModel();
+        $authenticatableClass = config('auth.providers.users.model', User::class);
 
         $authenticatableTableName = (new $authenticatableClass)->getTable();
 

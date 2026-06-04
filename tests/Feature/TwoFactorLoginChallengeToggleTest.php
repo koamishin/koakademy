@@ -7,7 +7,6 @@ use App\Filament\Auth\MultiFactor\SecurityAwareAppAuthentication;
 use App\Filament\Auth\MultiFactor\SecurityAwareEmailAuthentication;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
-use Spatie\LaravelPasskeys\Models\Passkey;
 
 it('requires a two factor challenge when configured credentials are active for login', function (): void {
     $user = User::factory()->create([
@@ -50,9 +49,12 @@ it('disables login challenges without deleting existing two factor credentials',
         'security_two_factor_enabled' => true,
     ]);
 
-    Passkey::factory()->create([
-        'authenticatable_id' => $user->id,
+    $credentialId = mb_rtrim(strtr(base64_encode('laptop-touch-id-'.$user->id), '+/', '-_'), '=');
+
+    $user->passkeys()->create([
         'name' => 'Laptop Touch ID',
+        'credential_id' => $credentialId,
+        'credential' => ['publicKeyCredentialId' => $credentialId],
     ]);
 
     $response = $this

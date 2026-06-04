@@ -10,16 +10,19 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use Spatie\LaravelPasskeys\Actions\FindPasskeyToAuthenticateAction;
-use Spatie\LaravelPasskeys\Support\Config;
-use Spatie\LaravelPasskeys\Support\Serializer;
+use Laravel\Passkeys\Actions\GenerateVerificationOptions;
+use Laravel\Passkeys\Actions\VerifyPasskey;
+use Laravel\Passkeys\Support\WebAuthn;
 use Throwable;
+use Webauthn\PublicKeyCredential;
 use Webauthn\PublicKeyCredentialRequestOptions;
 
 final class TwoFactorChallengeController extends Controller
 {
+    private const VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.two_factor_verification_options';
+
     public function __construct(
         private readonly SecurityAwareAppAuthentication $appAuthentication,
         private readonly SecurityAwareEmailAuthentication $emailAuthentication,
@@ -112,10 +115,7 @@ final class TwoFactorChallengeController extends Controller
         return back()->with('flash', ['success' => 'Code sent to your email.']);
     }
 
-    /**
-     * Generate WebAuthn authentication options for the user in the 2FA session.
-     */
-    public function passkeyOptions(Request $request): JsonResponse
+    public function passkeyOptions(Request $request, GenerateVerificationOptions $generate): JsonResponse
     {
         if (! $request->session()->has('auth.2fa.id')) {
             return response()->json(['error' => 'No active two-factor session.'], 403);
@@ -127,41 +127,26 @@ final class TwoFactorChallengeController extends Controller
             return response()->json(['error' => 'User not found.'], 404);
         }
 
-        $passkeys = $user->passkeys;
-
-        if ($passkeys->isEmpty()) {
+        if (! $user->passkeys()->exists()) {
             return response()->json(['error' => 'No passkeys registered.'], 404);
         }
 
-        // Dynamic RP ID to match current domain
-        config(['passkeys.relying_party.id' => $request->getHost()]);
-        config(['app.url' => $request->getSchemeAndHttpHost()]);
+        $this->configurePasskeysForRequest($request);
 
-        // Use discoverable credential flow (empty allowCredentials) to avoid
-        // credential ID encoding issues. The passkey ownership is verified
-        // server-side in passkeyVerify() after the ceremony completes.
-        $options = new PublicKeyCredentialRequestOptions(
-            challenge: Str::random(32),
-            rpId: Config::getRelyingPartyId(),
-            allowCredentials: [],
-            userVerification: 'preferred',
-        );
+        $options = $generate($user);
 
-        $serializedOptions = Serializer::make()->toJson($options);
-        $request->session()->put('passkey-authentication-options', $serializedOptions);
+        $request->session()->put(self::VERIFICATION_OPTIONS_SESSION_KEY, WebAuthn::toJson($options));
 
         return response()->json([
-            'options' => json_decode($serializedOptions),
+            'options' => json_decode(WebAuthn::toJson($options), true),
         ]);
     }
 
-    /**
-     * Verify a passkey assertion during the 2FA challenge and complete login.
-     */
-    public function passkeyVerify(Request $request): JsonResponse
+    public function passkeyVerify(Request $request, VerifyPasskey $verify): JsonResponse
     {
         $request->validate([
-            'passkey' => 'required|string',
+            'passkey' => ['required_without:credential', 'string'],
+            'credential' => ['nullable', 'array'],
         ]);
 
         if (! $request->session()->has('auth.2fa.id')) {
@@ -174,27 +159,20 @@ final class TwoFactorChallengeController extends Controller
             return response()->json(['error' => 'User not found.'], 404);
         }
 
-        // Dynamic RP ID to match current domain
-        config(['passkeys.relying_party.id' => $request->getHost()]);
-        config(['app.url' => $request->getSchemeAndHttpHost()]);
+        $this->configurePasskeysForRequest($request);
 
-        $options = $request->session()->pull('passkey-authentication-options');
+        $serializedOptions = $request->session()->pull(self::VERIFICATION_OPTIONS_SESSION_KEY);
 
-        if (! $options) {
+        if (! is_string($serializedOptions) || $serializedOptions === '') {
             return response()->json(['error' => 'Authentication options not found or expired.'], 400);
         }
 
-        $findPasskeyAction = Config::getAction('find_passkey', FindPasskeyToAuthenticateAction::class);
-
         try {
-            $passkeyModel = $findPasskeyAction->execute(
-                $request->input('passkey'),
-                $options
+            $verify(
+                $this->credentialFromRequest($request),
+                WebAuthn::fromJson($serializedOptions, PublicKeyCredentialRequestOptions::class),
+                $user,
             );
-
-            if (! $passkeyModel || $passkeyModel->authenticatable_id !== $user->id) {
-                return response()->json(['error' => 'Passkey verification failed.'], 400);
-            }
 
             Auth::login($user, $request->session()->get('auth.2fa.remember', false));
             $request->session()->forget('auth.2fa.id');
@@ -205,9 +183,11 @@ final class TwoFactorChallengeController extends Controller
                 ? '/administrators'
                 : '/dashboard';
 
-            return response()->json(['url' => $defaultRedirect]);
-        } catch (Throwable $e) {
-            return response()->json(['error' => 'Passkey verification failed: '.$e->getMessage()], 400);
+            return response()->json(['url' => $defaultRedirect, 'redirect' => $defaultRedirect]);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            return response()->json(['error' => 'Passkey verification failed: '.$exception->getMessage()], 400);
         }
     }
 
@@ -240,10 +220,44 @@ final class TwoFactorChallengeController extends Controller
         $request->session()->forget('auth.2fa.remember');
         $request->session()->regenerate();
 
-        $defaultRedirect = $user instanceof User && $user->isAdministrative()
+        $defaultRedirect = $user->isAdministrative()
                 ? '/administrators'
                 : '/dashboard';
 
         return redirect()->intended($defaultRedirect);
+    }
+
+    private function configurePasskeysForRequest(Request $request): void
+    {
+        config([
+            'passkeys.relying_party_id' => $request->getHost(),
+            'passkeys.allowed_origins' => [$request->getSchemeAndHttpHost()],
+        ]);
+    }
+
+    private function credentialFromRequest(Request $request): PublicKeyCredential
+    {
+        $credential = $request->input('credential');
+
+        if (! is_array($credential) && is_string($request->input('passkey'))) {
+            $credential = json_decode((string) $request->input('passkey'), true);
+        }
+
+        if (! is_array($credential)) {
+            throw ValidationException::withMessages([
+                'credential' => __('Invalid credential format.'),
+            ]);
+        }
+
+        try {
+            return WebAuthn::fromJson(
+                json_encode($credential, JSON_THROW_ON_ERROR),
+                PublicKeyCredential::class,
+            );
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'credential' => __('Invalid credential format.'),
+            ]);
+        }
     }
 }

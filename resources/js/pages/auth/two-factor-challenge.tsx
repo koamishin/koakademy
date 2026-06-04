@@ -4,8 +4,8 @@ import { ArrowLeft, Fingerprint, KeyRound, Loader2, Mail, ShieldAlert, ShieldChe
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { OnboardingPanel } from "@/components/onboarding-panel";
 import { AnnouncementBanner } from "@/components/announcement-banner";
+import { OnboardingPanel } from "@/components/onboarding-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TransitionWrapper } from "@/components/transition-wrapper";
 import { Button } from "@/components/ui/button";
@@ -127,7 +127,7 @@ export default function TwoFactorChallengePage() {
 
             const assertionResponse = credential.response as AuthenticatorAssertionResponse;
 
-            const passkeyData = JSON.stringify({
+            const passkeyData = {
                 id: credential.id,
                 rawId: bufferToBase64url(credential.rawId),
                 type: credential.type,
@@ -137,14 +137,16 @@ export default function TwoFactorChallengePage() {
                     signature: bufferToBase64url(assertionResponse.signature),
                     userHandle: assertionResponse.userHandle ? bufferToBase64url(assertionResponse.userHandle) : null,
                 },
-            });
+            };
 
             const verifyResponse = await axios.post("/two-factor-challenge/passkey-verify", {
-                passkey: passkeyData,
+                credential: passkeyData,
             });
 
-            if (verifyResponse.data.url) {
-                window.location.href = verifyResponse.data.url;
+            const redirectUrl = verifyResponse.data.url ?? verifyResponse.data.redirect;
+
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
             }
         } catch (error: any) {
             console.error("Passkey verification failed:", error);

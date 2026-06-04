@@ -49,6 +49,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passkeys\Passkeys;
 use Laravel\Pennant\Feature;
 use Livewire\Livewire;
 use Throwable;
@@ -72,6 +73,9 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::unguard();
+
+        Passkeys::useUserModel(User::class);
+        Passkeys::usePasskeyModel(Passkey::class);
 
         if (app()->environment('production')) {
             URL::forceScheme('https');

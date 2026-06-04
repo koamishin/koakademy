@@ -61,7 +61,7 @@
         "laravel/wayfinder": "^0.1.12",
         "maatwebsite/excel": "^3.1",
         "mansoor/filament-versionable": "5.x-dev",
-        "marcelweidum/filament-passkeys": "^2.0",
+        "marcelweidum/filament-passkeys": "4.0",
         "meilisearch/meilisearch-php": "^1.16",
         "moataz-01/filament-notification-sound": "^1.0",
         "owenvoke/blade-fontawesome": "^2.9",
