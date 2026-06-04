@@ -1,14 +1,14 @@
 {
-  "version": "1.7.0-dev.0.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.3",
-  "commit": "98c58831e6f8ccfe7659d44a79b30a8bfc957481",
+  "version": "1.7.0-dev.0.4",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.0-dev.0.4",
+  "commit": "9a402e449cd4d5a81c18370f2a4e0bfa5df38664",
   "branch": "master",
-  "timestamp": "2026-06-03T06:15:14Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26867067065",
+  "timestamp": "2026-06-04T05:33:29Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26932758388",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.7.0-dev.0.3 - Add modular launcher dependency",
-    "previous": "1.7.0-dev.0.2"
+    "current": "Version 1.7.0-dev.0.4 - Merge pull request #98 from yukazakiri/penant-manager",
+    "previous": "1.7.0-dev.0.3"
   },
   "metadata": {
     "author": "yukazakiri",
