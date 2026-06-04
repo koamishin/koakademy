@@ -1,6 +1,7 @@
 import { DigitalIdCard, type IdCardData } from "@/components/digital-id-card";
+import { OnboardingChecklistWidget } from "@/components/onboarding-checklist";
 import { OnboardingProvider, type OnboardingChecklistItem } from "@/components/onboarding-context";
-import { OnboardingExperience, type OnboardingFeatureData } from "@/components/onboarding-experience";
+import { OnboardingTour, type TourStep } from "@/components/onboarding-tour";
 import { SemesterSelectorProps } from "@/components/semester-selector";
 import StudentLayout from "@/components/student/student-layout";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +70,7 @@ interface AnnouncementInfo {
 
 interface StudentDashboardProps {
     user: User;
+    is_new_user: boolean;
     student_data: {
         student_id: number | string;
         student_name: string;
@@ -125,8 +127,8 @@ const studentChecklist: OnboardingChecklistItem[] = [
         id: "check-grades",
         label: "Check your grades",
         description: "Review your academic performance and progress.",
-        actionRoute: "/student/grades",
-        actionLabel: "View Grades",
+        actionRoute: "/student/classes",
+        actionLabel: "View Classes",
         isCompleted: false,
     },
     {
@@ -136,6 +138,45 @@ const studentChecklist: OnboardingChecklistItem[] = [
         actionRoute: "/student/id-card/view",
         actionLabel: "View ID",
         isCompleted: false,
+    },
+];
+
+const studentTourSteps: TourStep[] = [
+    {
+        id: "student-welcome",
+        target: '[data-tour="welcome-header"]',
+        title: "Your Hub",
+        description: "Everything in one focused view — your greeting, program, and current term at a glance.",
+        placement: "bottom",
+    },
+    {
+        id: "student-stats",
+        target: '[data-tour="stats-grid"]',
+        title: "Quick Stats",
+        description: "Your GWA, enrolled subjects, clearance, and balance — the numbers that matter, all in one row.",
+        placement: "bottom",
+    },
+    {
+        id: "student-up-next",
+        target: '[data-tour="up-next"]',
+        title: "Up Next",
+        description: "Your next class with day, time, and room. No more guessing where you should be.",
+        placement: "right",
+    },
+    {
+        id: "student-subjects",
+        target: '[data-tour="my-subjects"]',
+        title: "Your Subjects",
+        description: "Every enrolled class with schedule, instructor, and posted grade — open one to see the full breakdown.",
+        placement: "top",
+        ahaMoment: "Open any subject to see prelim, midterm, and finals side by side. That is your fastest read on where you stand.",
+    },
+    {
+        id: "student-id-card",
+        target: '[data-tour="id-card"]',
+        title: "Digital ID Card",
+        description: "Your student ID with a refreshable QR. Tap to expand or refresh the code at any time.",
+        placement: "left",
     },
 ];
 
@@ -901,14 +942,13 @@ function FallbackIdCard({ user, studentData }: { user: User; studentData: Studen
     );
 }
 
-export default function StudentDashboard({ user, student_data, id_card }: StudentDashboardProps) {
+export default function StudentDashboard({ user, is_new_user, student_data, id_card }: StudentDashboardProps) {
     const { props } = usePage<{
         branding?: Branding;
         settings?: SemesterSelectorProps;
         onboarding?: {
             forceOnLogin?: boolean;
-            features?: OnboardingFeatureData[];
-            dismissEndpoint?: string;
+            features?: unknown[];
         };
     }>();
     const currency = props.branding?.currency || "PHP";
@@ -919,10 +959,9 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
             ? props.settings.availableSchoolYears[props.settings.currentSchoolYear]
             : student_data.school_year;
 
-    const shouldForceOnboarding = props.onboarding?.forceOnLogin ?? false;
-    const onboardingFeatures = props.onboarding?.features ?? [];
-    const dismissEndpoint = props.onboarding?.dismissEndpoint;
-    const onboardingEnabled = shouldForceOnboarding || onboardingFeatures.length > 0;
+    const shouldForceOnboarding = (props.onboarding?.forceOnLogin ?? false) && is_new_user;
+    const hasOnboardingFeatures = (props.onboarding?.features?.length ?? 0) > 0;
+    const onboardingEnabled = shouldForceOnboarding || hasOnboardingFeatures;
     const [qrCode, setQrCode] = useState(id_card?.qr_code ?? "");
     const [isRefreshingQr, setIsRefreshingQr] = useState(false);
 
@@ -987,32 +1026,8 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
         }
     };
 
-    return (
-        <StudentLayout
-            user={{
-                name: user.name,
-                email: user.email,
-                avatar: user.avatar,
-                role: user.role,
-            }}
-        >
-            <Head title="Student Dashboard" />
-            {onboardingEnabled && (
-                <OnboardingProvider variant="student" userId={user.id} checklist={studentChecklist} totalSteps={4} enabled={onboardingEnabled}>
-                    <OnboardingExperience
-                        enabled={onboardingEnabled}
-                        features={onboardingFeatures.length > 0 ? onboardingFeatures : undefined}
-                        onDismiss={(featureKey) => {
-                            if (!dismissEndpoint) {
-                                return;
-                            }
-
-                            router.post(dismissEndpoint, { feature_key: featureKey }, { preserveScroll: true });
-                        }}
-                    />
-                </OnboardingProvider>
-            )}
-
+    const body = (
+        <>
             <MobileStudentDashboard
                 greeting={greeting}
                 studentData={student_data}
@@ -1031,7 +1046,7 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="mx-auto hidden w-full max-w-7xl flex-col gap-4 p-4 pb-16 md:flex md:gap-6 md:p-6"
             >
-                <section>
+                <section data-tour="welcome-header">
                     <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
                         {/* Decorative Glass Elements */}
                         <div className="bg-primary/5 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
@@ -1087,7 +1102,9 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
 
                 <MobileQuickActions />
 
-                <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {onboardingEnabled && <OnboardingChecklistWidget />}
+
+                <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-tour="stats-grid">
                     <StatTile
                         icon={Trophy}
                         label="GWA"
@@ -1119,7 +1136,7 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                     />
                 </section>
 
-                <section>
+                <section data-tour="up-next">
                     <Card className={`${dashboardCardClass} group relative overflow-hidden`}>
                         <CardContent className="relative grid gap-4 p-4 pr-14 md:grid-cols-[1fr_auto] md:items-center md:p-5 md:pr-24">
                             <Calendar className="text-primary pointer-events-none absolute top-4 right-4 h-12 w-12 opacity-15 transition-all duration-200 group-hover:scale-105 group-hover:opacity-25 md:right-5 md:h-20 md:w-20" />
@@ -1183,7 +1200,7 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                                     </Badge>
                                 </div>
 
-                                <div className="grid gap-3">
+                                <div className="grid gap-3" data-tour="my-subjects">
                                     {student_data.enrolled_classes.length > 0 ? (
                                         student_data.enrolled_classes.map((classItem, index) => (
                                             <CourseCard key={classItem.id} classItem={classItem} index={index} />
@@ -1312,7 +1329,7 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                     </div>
 
                     <aside className="space-y-4">
-                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                        <motion.div data-tour="id-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             {id_card ? (
                                 <DigitalIdCard
                                     cardData={id_card.card_data}
@@ -1377,6 +1394,33 @@ export default function StudentDashboard({ user, student_data, id_card }: Studen
                     </aside>
                 </section>
             </motion.div>
+        </>
+    );
+
+    return (
+        <StudentLayout
+            user={{
+                name: user.name,
+                email: user.email,
+                avatar: user.avatar,
+                role: user.role,
+            }}
+        >
+            <Head title="Student Dashboard" />
+            {onboardingEnabled ? (
+                <OnboardingProvider
+                    variant="student"
+                    userId={user.id}
+                    checklist={studentChecklist}
+                    totalSteps={4}
+                    enabled={onboardingEnabled}
+                >
+                    <OnboardingTour steps={studentTourSteps} />
+                    {body}
+                </OnboardingProvider>
+            ) : (
+                body
+            )}
         </StudentLayout>
     );
 }

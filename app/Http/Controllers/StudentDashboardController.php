@@ -100,6 +100,8 @@ final class StudentDashboardController extends Controller
         $idCardService = app(DigitalIdCardService::class);
         $idCardData = $idCardService->generateIdCardForUser($user);
 
+        $isNewStudentUser = $user->isNewToOnboarding('student');
+
         return Inertia::render('student/dashboard', [
             'user' => [
                 'id' => $user->id,
@@ -110,6 +112,7 @@ final class StudentDashboardController extends Controller
             ],
             'student_data' => $studentData,
             'id_card' => $idCardData,
+            'is_new_user' => $isNewStudentUser,
         ]);
     }
 
