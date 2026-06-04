@@ -20,18 +20,10 @@ trait ResolvesFeatureToggle
      */
     public function resolve(User $scope): bool
     {
-        // Check global activation state first
-        $globalState = DB::table('features')
-            ->where('name', static::class)
-            ->where('scope', '__laravel_null')
-            ->value('value');
-
-        // If explicitly deactivated globally, deny access
-        if ($globalState === 'false') {
+        if ($this->globalFeatureState() === false) {
             return false;
         }
 
-        // If explicitly activated globally or no global state set, apply audience matching
         $audience = $this->audience();
 
         if ($audience === 'all') {
@@ -77,5 +69,35 @@ trait ResolvesFeatureToggle
         }
 
         return $lottery->choose();
+    }
+
+    private function globalFeatureState(): ?bool
+    {
+        $globalState = DB::table('features')
+            ->where('name', static::class)
+            ->where('scope', '__laravel_null')
+            ->value('value');
+
+        if ($globalState === null) {
+            return null;
+        }
+
+        $globalState = mb_trim((string) $globalState);
+
+        if (in_array($globalState, ['false', '0', '', 'null'], true)) {
+            return false;
+        }
+
+        if (in_array($globalState, ['true', '1'], true)) {
+            return true;
+        }
+
+        $decodedValue = json_decode($globalState, true);
+
+        if (! is_array($decodedValue) || ! array_key_exists('enabled', $decodedValue)) {
+            return null;
+        }
+
+        return filter_var($decodedValue['enabled'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
     }
 }

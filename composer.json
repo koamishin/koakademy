@@ -28,6 +28,7 @@
         "chrome-php/chrome": "^1.15",
         "coolsam/modules": "^5.0",
         "cweagans/composer-patches": "^1.7",
+        "daacreators/pennant-manager": "^1.0",
         "dcblogdev/laravel-db-sync": "^1.1",
         "endroid/qr-code": "^6.0",
         "erag/laravel-pwa": "^1.9",

@@ -11,6 +11,7 @@ use App\Filament\Auth\MultiFactor\SecurityAwareAppAuthentication;
 use App\Filament\Auth\MultiFactor\SecurityAwareEmailAuthentication;
 use App\Filament\Pages\Backups;
 use App\Filament\Pages\GeneralSettings;
+use App\Filament\Plugins\PennantManagerPlugin;
 use App\Services\AnalyticsSettingsService;
 use App\Settings\SiteSettings;
 use Awcodes\Gravatar\GravatarPlugin;
@@ -124,6 +125,7 @@ final class AdminPanelProvider extends PanelProvider
             GravatarPlugin::make()
                 ->default('initials')
                 ->size(200),
+            PennantManagerPlugin::make(),
             FilamentSpatieLaravelBackupPlugin::make()
                 ->usingPage(Backups::class),
             FilamentNotificationSoundPlugin::make()
