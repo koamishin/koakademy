@@ -11,9 +11,19 @@
 # - Database setup
 #
 # Usage:
-#   .\scripts\dev-setup.ps1              # Full setup
-#   .\scripts\dev-setup.ps1 -SkipMigrations  # Skip migrations
-#   .\scripts\dev-setup.ps1 -SkipNpm         # Skip npm install
+#   .\scripts\dev-setup.ps1                 # Full setup
+#   .\scripts\dev-setup.ps1 -SkipMigrations # Skip migrations
+#   .\scripts\dev-setup.ps1 -SkipNpm        # Skip npm install
+#
+# Re-running on an already-configured environment:
+#   If .env already exists, the script prompts:
+#     [S] Skip     - Leave .env untouched, skip DB setup and migrations.
+#                   (Still runs composer, npm, Herd link/secure, and build.)
+#     [C] Continue - Run full setup, but PRESERVE existing database credentials.
+#   In both cases, DB_* values in your .env are NEVER modified.
+#   You can also opt in to add optional services (Redis, Mailpit). The script
+#   will auto-configure the related .env keys (REDIS_*, MAIL_*, CACHE_STORE,
+#   QUEUE_CONNECTION) without touching DB_*.
 
 [CmdletBinding()]
 param(
@@ -263,7 +273,38 @@ Write-Section "Environment Configuration"
 
 $EnvFile = Join-Path $ProjectRoot ".env"
 $EnvExampleFile = Join-Path $ProjectRoot ".env.example"
+$EnvAlreadyConfigured = Test-Path $EnvFile
+$SkipEnvSetup = $false
+$PreserveDbCredentials = $false
 
+if ($EnvAlreadyConfigured)
+{
+    Write-Warn ".env file already exists at $EnvFile"
+    Write-Host ""
+    Write-Host "Your environment is already configured." -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  [S] Skip     - Leave .env untouched, skip DB setup and migrations." -ForegroundColor White
+    Write-Host "                 (Still runs composer, npm, Herd link/secure, and build.)" -ForegroundColor DarkGray
+    Write-Host "  [C] Continue - Run full setup, but PRESERVE existing database credentials." -ForegroundColor White
+    Write-Host ""
+
+    $envChoice = Read-Choice -Prompt "Choose action" -Allowed @("skip", "continue") -Default "skip"
+
+    if ($envChoice -eq "skip")
+    {
+        $SkipEnvSetup = $true
+        $PreserveDbCredentials = $true
+        Write-Info "Skipping environment setup. Existing .env and DB credentials will NOT be touched."
+    } else
+    {
+        $PreserveDbCredentials = $true
+        Write-Info "Continuing with full setup. Existing database credentials will be PRESERVED."
+    }
+    Write-Host ""
+}
+
+if (-not $SkipEnvSetup)
+{
 if (-not (Test-Path $EnvFile))
 {
     Write-Info "Creating .env from .env.example..."
@@ -356,6 +397,7 @@ if (-not (Test-Path $EnvFile))
         Write-Success "Added missing domain configuration to .env"
     }
 }
+}
 
 # Read domains from .env (in case user customized them)
 $EnvContent = Get-Content $EnvFile -Raw
@@ -382,6 +424,123 @@ foreach ($domain in $Domains)
 # -----------------------------------------------------------------------------
 Write-Section "Local Services"
 
+if ($PreserveDbCredentials)
+{
+    # Report existing DB config; never modify DB_* values
+    $currentEnvContent = Get-Content $EnvFile -Raw
+    $currentDbConnection = "sqlite"
+    $currentDbDatabase = "database/database.sqlite"
+    $currentDbHost = ""
+    $currentDbPort = ""
+    $currentDbUsername = ""
+
+    if ($currentEnvContent -match '(?m)^DB_CONNECTION=(.*)')
+    {
+        $currentDbConnection = $matches[1].Trim()
+    }
+    if ($currentEnvContent -match '(?m)^DB_DATABASE=(.*)')
+    {
+        $currentDbDatabase = $matches[1].Trim()
+    }
+    if ($currentEnvContent -match '(?m)^DB_HOST=(.*)')
+    {
+        $currentDbHost = $matches[1].Trim()
+    }
+    if ($currentEnvContent -match '(?m)^DB_PORT=(.*)')
+    {
+        $currentDbPort = $matches[1].Trim()
+    }
+    if ($currentEnvContent -match '(?m)^DB_USERNAME=(.*)')
+    {
+        $currentDbUsername = $matches[1].Trim()
+    }
+
+    Write-Info "Preserving existing database credentials (DB_* values will NOT be modified)"
+    Write-Host ""
+    Write-Host "  DB_CONNECTION: $currentDbConnection" -ForegroundColor Cyan
+    if ($currentDbConnection -ne "sqlite")
+    {
+        if ($currentDbHost) { Write-Host "  DB_HOST:       $currentDbHost" -ForegroundColor Cyan }
+        if ($currentDbPort) { Write-Host "  DB_PORT:       $currentDbPort" -ForegroundColor Cyan }
+        if ($currentDbDatabase) { Write-Host "  DB_DATABASE:   $currentDbDatabase" -ForegroundColor Cyan }
+        if ($currentDbUsername) { Write-Host "  DB_USERNAME:   $currentDbUsername" -ForegroundColor Cyan }
+        Write-Host "  DB_PASSWORD:   ******** (preserved)" -ForegroundColor Cyan
+    } else
+    {
+        Write-Host "  DB_DATABASE:   $currentDbDatabase" -ForegroundColor Cyan
+    }
+    Write-Host ""
+
+    if ($currentDbConnection -eq "sqlite")
+    {
+        $sqlitePath = Join-Path $ProjectRoot $currentDbDatabase
+        if (-not (Test-Path $sqlitePath))
+        {
+            New-Item -Path $sqlitePath -ItemType File -Force | Out-Null
+            Write-Success "Created SQLite database file at $currentDbDatabase"
+        } else
+        {
+            Write-Success "SQLite database file exists at $currentDbDatabase"
+        }
+    } else
+    {
+        Write-Info "External database ($currentDbConnection) - skipping local service setup"
+    }
+
+    # Ask whether to add optional services (Redis, Mailpit). DB_* is never touched;
+    # only service-related keys (REDIS_*, MAIL_*, CACHE_STORE, QUEUE_CONNECTION) are written.
+    Write-Host ""
+    $addServicesChoice = Read-Choice -Prompt "Add optional services (e.g. Redis, Mailpit)?" -Allowed @("yes", "no") -Default "no"
+
+    if ($addServicesChoice -eq "yes")
+    {
+        $DockerAvailableForServices = Test-DockerAvailable
+        if (-not $DockerAvailableForServices)
+        {
+            Write-Warn "Docker is not installed or is not running - cannot start optional services."
+            Write-Info "Install Docker Desktop and re-run, or configure services manually in .env."
+        } else
+        {
+            Write-Success "Docker is available - configuring optional services"
+
+            $redisChoice = Read-Choice -Prompt "Start Redis with Docker?" -Allowed @("yes", "no") -Default "no"
+            if ($redisChoice -eq "yes")
+            {
+                Start-DockerContainer -Name "koakademy-redis" -Image "redis:7-alpine" -Arguments @(
+                    "-p", "6379:6379",
+                    "-v", "koakademy-redis:/data"
+                )
+
+                Set-EnvValue -Path $EnvFile -Key "REDIS_HOST" -Value "127.0.0.1"
+                Set-EnvValue -Path $EnvFile -Key "REDIS_PORT" -Value "6379"
+                Set-EnvValue -Path $EnvFile -Key "CACHE_STORE" -Value "redis"
+                Set-EnvValue -Path $EnvFile -Key "QUEUE_CONNECTION" -Value "redis"
+                Write-Success "Auto-configured .env for Redis (REDIS_HOST, REDIS_PORT, CACHE_STORE, QUEUE_CONNECTION)"
+            }
+
+            $mailpitChoice = Read-Choice -Prompt "Start Mailpit with Docker?" -Allowed @("yes", "no") -Default "no"
+            if ($mailpitChoice -eq "yes")
+            {
+                Start-DockerContainer -Name "koakademy-mailpit" -Image "axllent/mailpit:latest" -Arguments @(
+                    "-p", "1025:1025",
+                    "-p", "8025:8025"
+                )
+
+                Set-EnvValue -Path $EnvFile -Key "MAIL_MAILER" -Value "smtp"
+                Set-EnvValue -Path $EnvFile -Key "MAIL_HOST" -Value "127.0.0.1"
+                Set-EnvValue -Path $EnvFile -Key "MAIL_PORT" -Value "1025"
+                Set-EnvValue -Path $EnvFile -Key "MAIL_USERNAME" -Value "null"
+                Set-EnvValue -Path $EnvFile -Key "MAIL_PASSWORD" -Value "null"
+                Set-EnvValue -Path $EnvFile -Key "MAIL_ENCRYPTION" -Value "null"
+                Write-Success "Auto-configured .env for Mailpit (MAIL_MAILER, MAIL_HOST, MAIL_PORT, etc.)"
+            }
+        }
+    } else
+    {
+        Write-Info "Skipping optional services"
+    }
+} else
+{
 $DockerAvailable = Test-DockerAvailable
 if ($DockerAvailable)
 {
@@ -506,6 +665,7 @@ if ($DockerAvailable)
         Write-Success "Created SQLite database at database/database.sqlite"
     }
 }
+}
 
 # -----------------------------------------------------------------------------
 # Step 4: Install Composer dependencies
@@ -538,24 +698,36 @@ if ($AppKeyLine)
     $HasAppKey = -not [string]::IsNullOrWhiteSpace($AppKeyValue)
 }
 
-if (-not $HasAppKey)
+if (-not $SkipEnvSetup)
 {
-    Write-Info "Generating APP_KEY using Artisan..."
-    Set-Location $ProjectRoot
-    $keyGenerateOutput = php artisan key:generate --force 2>&1
-
-    if ($LASTEXITCODE -eq 0)
+    if (-not $HasAppKey)
     {
-        Write-Success "APP_KEY generated successfully"
+        Write-Info "Generating APP_KEY using Artisan..."
+        Set-Location $ProjectRoot
+        $keyGenerateOutput = php artisan key:generate --force 2>&1
+
+        if ($LASTEXITCODE -eq 0)
+        {
+            Write-Success "APP_KEY generated successfully"
+        } else
+        {
+            Write-ErrorMsg "Failed to generate APP_KEY"
+            Write-Host $keyGenerateOutput
+            exit 1
+        }
     } else
     {
-        Write-ErrorMsg "Failed to generate APP_KEY"
-        Write-Host $keyGenerateOutput
-        exit 1
+        Write-Success "APP_KEY already exists"
     }
 } else
 {
-    Write-Success "APP_KEY already exists"
+    if ($HasAppKey)
+    {
+        Write-Success "APP_KEY already exists (env setup skipped)"
+    } else
+    {
+        Write-Warn "APP_KEY is missing and env setup was skipped - run 'php artisan key:generate' manually"
+    }
 }
 
 # ─────────────────────────────────────────────────────
@@ -717,18 +889,25 @@ if ($HerdInstalled)
 # ─────────────────────────────────────────────────────
 if (-not $SkipMigrations)
 {
-    Write-Section "Database Setup"
-
-    Write-Info "Running database migrations..."
-    Set-Location $ProjectRoot
-
-    try
+    if ($SkipEnvSetup)
     {
-        $migrateOutput = php artisan migrate --force 2>&1
-        Write-Success "Database migrations completed"
-    } catch
+        Write-Info "Skipping database migrations (environment setup was skipped)"
+        Write-Info "Run migrations manually with: php artisan migrate"
+    } else
     {
-        Write-Warn "Migration had some issues: $_"
+        Write-Section "Database Setup"
+
+        Write-Info "Running database migrations..."
+        Set-Location $ProjectRoot
+
+        try
+        {
+            $migrateOutput = php artisan migrate --force 2>&1
+            Write-Success "Database migrations completed"
+        } catch
+        {
+            Write-Warn "Migration had some issues: $_"
+        }
     }
 } else
 {

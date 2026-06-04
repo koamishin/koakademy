@@ -37,7 +37,13 @@ final class RouteServiceProvider extends ServiceProvider
      */
     protected function mapWebRoutes(): void
     {
-        Route::middleware('web')->group(module_path($this->name, '/routes/web.php'));
+        $routes = $this->routePath('web.php');
+
+        if (! is_file($routes)) {
+            return;
+        }
+
+        Route::middleware('web')->group($routes);
     }
 
     /**
@@ -47,6 +53,17 @@ final class RouteServiceProvider extends ServiceProvider
      */
     protected function mapApiRoutes(): void
     {
-        Route::middleware('api')->prefix('api')->name('api.')->group(module_path($this->name, '/routes/api.php'));
+        $routes = $this->routePath('api.php');
+
+        if (! is_file($routes)) {
+            return;
+        }
+
+        Route::middleware('api')->prefix('api')->name('api.')->group($routes);
+    }
+
+    private function routePath(string $file): string
+    {
+        return dirname(__DIR__, 2).DIRECTORY_SEPARATOR.'routes'.DIRECTORY_SEPARATOR.$file;
     }
 }
