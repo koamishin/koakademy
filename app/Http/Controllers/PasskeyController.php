@@ -4,106 +4,148 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Spatie\LaravelPasskeys\Actions\GeneratePasskeyRegisterOptionsAction;
-use Spatie\LaravelPasskeys\Actions\StorePasskeyAction;
-use Spatie\LaravelPasskeys\Support\Config;
+use Illuminate\Validation\ValidationException;
+use Laravel\Passkeys\Actions\DeletePasskey;
+use Laravel\Passkeys\Actions\GenerateRegistrationOptions;
+use Laravel\Passkeys\Actions\StorePasskey;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\Passkey;
+use Laravel\Passkeys\Support\WebAuthn;
 use Throwable;
+use Webauthn\PublicKeyCredential;
+use Webauthn\PublicKeyCredentialCreationOptions;
 
 final class PasskeyController extends Controller
 {
-    /**
-     * Generate registration options for a new passkey.
-     */
-    public function generateRegistrationOptions(Request $request)
+    private const REGISTRATION_OPTIONS_SESSION_KEY = 'passkey.registration_options';
+
+    public function generateRegistrationOptions(Request $request, GenerateRegistrationOptions $generate): JsonResponse
     {
-        $user = Auth::user();
+        $this->configurePasskeysForRequest($request);
 
-        // Dynamic RP ID to match current domain
-        config(['passkeys.relying_party.id' => $request->getHost()]);
-        // Also set app.url just in case actions rely on it
-        config(['app.url' => $request->getSchemeAndHttpHost()]);
+        $options = $generate($this->currentUser());
 
-        $generatePassKeyOptionsAction = Config::getAction('generate_passkey_register_options', GeneratePasskeyRegisterOptionsAction::class);
-
-        $options = $generatePassKeyOptionsAction->execute($user);
-
-        $request->session()->put('passkey-registration-options', $options);
+        $request->session()->put(self::REGISTRATION_OPTIONS_SESSION_KEY, WebAuthn::toJson($options));
 
         return response()->json([
-            'options' => json_decode($options),
+            'options' => json_decode(WebAuthn::toJson($options), true),
         ]);
     }
 
-    /**
-     * Store a newly created passkey.
-     */
-    public function store(Request $request)
+    public function store(Request $request, StorePasskey $storePasskey): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'passkey' => 'required|string',
-            'name' => 'required|string|max:255',
+            'passkey' => ['required_without:credential', 'string'],
+            'credential' => ['nullable', 'array'],
+            'name' => ['required', 'string', 'max:255'],
         ]);
 
-        $user = Auth::user();
+        $this->configurePasskeysForRequest($request);
 
-        // Dynamic RP ID to match current domain
-        config(['passkeys.relying_party.id' => $request->getHost()]);
-        config(['app.url' => $request->getSchemeAndHttpHost()]);
+        $serializedOptions = $request->session()->pull(self::REGISTRATION_OPTIONS_SESSION_KEY);
 
-        $storePasskeyAction = Config::getAction('store_passkey', StorePasskeyAction::class);
+        if (! is_string($serializedOptions) || $serializedOptions === '') {
+            return $this->passkeyError($request, 'Registration options not found or expired.');
+        }
 
         try {
-            $passkey = $request->input('passkey');
-            $name = $request->input('name');
-            $options = $request->session()->pull('passkey-registration-options');
-
-            if (! $options) {
-                return response()->json(['error' => 'Registration options not found or expired.'], 400);
-            }
-
-            $storePasskeyAction->execute(
-                $user,
-                $passkey,
-                $options,
-                $request->getHost(), // hostName
-                ['name' => $name]
+            $storePasskey(
+                $this->currentUser(),
+                $request->string('name')->toString(),
+                $this->credentialFromRequest($request),
+                WebAuthn::fromJson($serializedOptions, PublicKeyCredentialCreationOptions::class),
             );
 
             return back()->with('flash', [
                 'success' => 'Passkey added successfully.',
             ]);
-        } catch (Throwable $e) {
-            return back()->withErrors(['error' => 'Failed to add passkey: '.$e->getMessage()]);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            return $this->passkeyError($request, 'Failed to add passkey: '.$exception->getMessage());
         }
     }
 
-    /**
-     * Delete a passkey.
-     */
-    public function destroy(Request $request, $id)
+    public function destroy(Request $request, DeletePasskey $deletePasskey, int|string $id): RedirectResponse
     {
-        $user = Auth::user();
+        $user = $this->currentUser();
 
-        $user->passkeys()->where('id', $id)->delete();
+        /** @var Passkey $passkey */
+        $passkey = $user->passkeys()->whereKey($id)->firstOrFail();
+
+        $deletePasskey($user, $passkey);
 
         return back()->with('flash', [
             'success' => 'Passkey deleted successfully.',
         ]);
     }
 
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        $user = Auth::user();
-
-        // Select specific columns to avoid fetching binary data
-        $passkeys = $user->passkeys()
+        $passkeys = $this->currentUser()
+            ->passkeys()
             ->select(['id', 'name', 'created_at', 'last_used_at'])
             ->get();
 
         return response()->json([
             'passkeys' => $passkeys,
         ]);
+    }
+
+    private function currentUser(): Authenticatable&PasskeyUser
+    {
+        $user = Auth::user();
+
+        abort_unless($user instanceof Authenticatable && $user instanceof PasskeyUser, 403);
+
+        return $user;
+    }
+
+    private function configurePasskeysForRequest(Request $request): void
+    {
+        config([
+            'passkeys.relying_party_id' => $request->getHost(),
+            'passkeys.allowed_origins' => [$request->getSchemeAndHttpHost()],
+        ]);
+    }
+
+    private function credentialFromRequest(Request $request): PublicKeyCredential
+    {
+        $credential = $request->input('credential');
+
+        if (! is_array($credential) && is_string($request->input('passkey'))) {
+            $credential = json_decode((string) $request->input('passkey'), true);
+        }
+
+        if (! is_array($credential)) {
+            throw ValidationException::withMessages([
+                'credential' => __('Invalid credential format.'),
+            ]);
+        }
+
+        try {
+            return WebAuthn::fromJson(
+                json_encode($credential, JSON_THROW_ON_ERROR),
+                PublicKeyCredential::class,
+            );
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'credential' => __('Invalid credential format.'),
+            ]);
+        }
+    }
+
+    private function passkeyError(Request $request, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['error' => $message], 400);
+        }
+
+        return back()->withErrors(['error' => $message]);
     }
 }

@@ -123,7 +123,6 @@ export function LoginForm({
                 ...options,
                 challenge,
                 allowCredentials,
-                userVerification: "preferred",
             };
 
             const credential = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential;
@@ -137,31 +136,27 @@ export function LoginForm({
                 .replace(/\+/g, "-")
                 .replace(/\//g, "_")
                 .replace(/=+$/, "");
-            const authenticatorData = btoa(
-                String.fromCharCode(...new Uint8Array((credential.response as AuthenticatorAssertionResponse).authenticatorData)),
-            )
+            const assertionResponse = credential.response as AuthenticatorAssertionResponse;
+            const authenticatorData = btoa(String.fromCharCode(...new Uint8Array(assertionResponse.authenticatorData)))
                 .replace(/\+/g, "-")
                 .replace(/\//g, "_")
                 .replace(/=+$/, "");
-            const clientDataJSON = btoa(
-                String.fromCharCode(...new Uint8Array((credential.response as AuthenticatorAssertionResponse).clientDataJSON)),
-            )
+            const clientDataJSON = btoa(String.fromCharCode(...new Uint8Array(assertionResponse.clientDataJSON)))
                 .replace(/\+/g, "-")
                 .replace(/\//g, "_")
                 .replace(/=+$/, "");
-            const signature = btoa(String.fromCharCode(...new Uint8Array((credential.response as AuthenticatorAssertionResponse).signature)))
+            const signature = btoa(String.fromCharCode(...new Uint8Array(assertionResponse.signature)))
                 .replace(/\+/g, "-")
                 .replace(/\//g, "_")
                 .replace(/=+$/, "");
-            // @ts-ignore
-            const userHandle = credential.response.userHandle
-                ? btoa(String.fromCharCode(...new Uint8Array(credential.response.userHandle)))
+            const userHandle = assertionResponse.userHandle
+                ? btoa(String.fromCharCode(...new Uint8Array(assertionResponse.userHandle)))
                       .replace(/\+/g, "-")
                       .replace(/\//g, "_")
                       .replace(/=+$/, "")
                 : null;
 
-            const passkeyData = JSON.stringify({
+            const passkeyData = {
                 id: credential.id,
                 rawId,
                 type: credential.type,
@@ -171,16 +166,18 @@ export function LoginForm({
                     signature,
                     userHandle,
                 },
-            });
+            };
 
             const verifyResponse = await axios.post("/passkeys/login", {
-                passkey: passkeyData,
+                credential: passkeyData,
             });
 
-            if (verifyResponse.data.url) {
+            const redirectUrl = verifyResponse.data.url ?? verifyResponse.data.redirect;
+
+            if (redirectUrl) {
                 toast.success("Welcome back!");
                 // Inertia manual visit
-                window.location.href = verifyResponse.data.url;
+                window.location.href = redirectUrl;
             } else {
                 toast.error("Passkey verification failed.");
             }
@@ -202,10 +199,14 @@ export function LoginForm({
     }, [loggingInWithPasskey]);
 
     const handleDemoLogin = (role: string) => {
-        router.post(route("demo.login", { role }), {}, {
-            onStart: () => toast.info(`Opening ${role} demo workspace...`),
-            onError: () => toast.error("Demo login is unavailable. Please try again."),
-        });
+        router.post(
+            route("demo.login", { role }),
+            {},
+            {
+                onStart: () => toast.info(`Opening ${role} demo workspace...`),
+                onError: () => toast.error("Demo login is unavailable. Please try again."),
+            },
+        );
     };
 
     return (
@@ -311,16 +312,20 @@ export function LoginForm({
                                                     key={account.role}
                                                     type="button"
                                                     variant="outline"
-                                                    className="border-primary/20 bg-background/70 hover:bg-primary/10 h-auto justify-start gap-2 sm:gap-3 px-3 py-2.5 sm:py-3 text-left transition-all duration-300"
+                                                    className="border-primary/20 bg-background/70 hover:bg-primary/10 h-auto justify-start gap-2 px-3 py-2.5 text-left transition-all duration-300 sm:gap-3 sm:py-3"
                                                     onClick={() => handleDemoLogin(account.role)}
                                                     disabled={processing || loggingInWithPasskey}
                                                 >
-                                                    <span className="bg-primary/10 text-primary flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl">
+                                                    <span className="bg-primary/10 text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-xl sm:h-9 sm:w-9">
                                                         <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                                     </span>
-                                                    <span className="grid gap-0.5 flex-1 min-w-0">
-                                                        <span className="text-foreground text-sm font-semibold truncate">Continue as {account.label}</span>
-                                                        <span className="text-muted-foreground text-xs leading-snug line-clamp-2">{account.description}</span>
+                                                    <span className="grid min-w-0 flex-1 gap-0.5">
+                                                        <span className="text-foreground truncate text-sm font-semibold">
+                                                            Continue as {account.label}
+                                                        </span>
+                                                        <span className="text-muted-foreground line-clamp-2 text-xs leading-snug">
+                                                            {account.description}
+                                                        </span>
                                                     </span>
                                                 </Button>
                                             );

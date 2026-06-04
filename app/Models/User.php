@@ -27,10 +27,10 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Passkeys\Contracts\PasskeyUser;
+use Laravel\Passkeys\PasskeyAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Scout\Searchable;
-use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
-use Spatie\LaravelPasskeys\Models\Concerns\InteractsWithPasskeys;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -84,14 +84,14 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * @mixin \Eloquent
  */
-final class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasAvatar, HasEmailAuthentication, HasPasskeys
+final class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasAvatar, HasEmailAuthentication, PasskeyUser
 {
     use BroadcastsEvents;
     use HasApiTokens;
     use HasFactory;
     use HasRoles;
-    use InteractsWithPasskeys;
     use Notifiable;
+    use PasskeyAuthenticatable;
     use Searchable;
     use SoftDeletes;
 

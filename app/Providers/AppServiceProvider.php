@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Filament\Handlers\ExportFailureHandler;
+use App\Models\Passkey;
 use App\Models\User;
 use App\Services\ChangelogService;
 use App\Services\FeatureToggleRegistry;
@@ -12,10 +13,11 @@ use App\Services\GeneralSettingsService;
 use App\Services\VersionService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passkeys\Passkeys;
 use Laravel\Pennant\Feature;
-use Log;
 use Throwable;
 
 final class AppServiceProvider extends ServiceProvider
@@ -37,6 +39,9 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::unguard();
+
+        Passkeys::useUserModel(User::class);
+        Passkeys::usePasskeyModel(Passkey::class);
 
         if (app()->environment('production')) {
             URL::forceScheme('https');

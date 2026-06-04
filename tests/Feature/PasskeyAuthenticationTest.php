@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
-use Spatie\LaravelPasskeys\Models\Passkey;
 
 test('passkey options endpoint returns options without email (discoverable credentials)', function () {
     $response = $this->postJson('/passkeys/options', []);
@@ -33,10 +32,12 @@ test('passkey options endpoint returns 404 for non-existent user when email prov
 test('passkey options endpoint returns options for valid user with passkey', function () {
     $user = User::factory()->create();
 
-    // Create a passkey for the user
-    Passkey::factory()->create([
-        'authenticatable_id' => $user->id,
+    $credentialId = mb_rtrim(strtr(base64_encode('test-credential-'.$user->id), '+/', '-_'), '=');
+
+    $user->passkeys()->create([
         'name' => 'Test Passkey',
+        'credential_id' => $credentialId,
+        'credential' => ['publicKeyCredentialId' => $credentialId],
     ]);
 
     $response = $this->postJson('/passkeys/options', [
@@ -68,14 +69,10 @@ test('passkey login endpoint returns error when no options in session', function
 });
 
 test('passkey routes are accessible without domain restriction', function () {
-    // Test that routes exist and don't require a specific domain
-    $routes = collect(Route::getRoutes())
-        ->filter(fn ($route) => in_array($route->uri(), ['passkeys/options', 'passkeys/login']))
-        ->map(fn ($route) => [
-            'uri' => $route->uri(),
-            'domain' => $route->getDomain(),
-        ]);
+    // Test that the app's custom passkey routes exist and don't require a specific domain.
+    $routes = collect(['passkeys.login.options', 'passkeys.login.verify'])
+        ->map(fn (string $name) => Route::getRoutes()->getByName($name));
 
-    expect($routes)->toHaveCount(2);
-    $routes->each(fn ($route) => expect($route['domain'])->toBeNull());
+    expect($routes)->not->toContain(null);
+    $routes->each(fn ($route) => expect($route->getDomain())->toBeNull());
 });

@@ -8,8 +8,6 @@ use App\Models\Faculty;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Route;
 
-Route::passkeys();
-
 /*
 |--------------------------------------------------------------------------
 | Admin Domain Routes

@@ -8,30 +8,25 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
-use Spatie\LaravelPasskeys\Actions\FindPasskeyToAuthenticateAction;
-use Spatie\LaravelPasskeys\Support\Config;
-use Spatie\LaravelPasskeys\Support\Serializer;
+use Illuminate\Validation\ValidationException;
+use Laravel\Passkeys\Actions\GenerateVerificationOptions;
+use Laravel\Passkeys\Actions\VerifyPasskey;
+use Laravel\Passkeys\Support\WebAuthn;
 use Throwable;
+use Webauthn\PublicKeyCredential;
 use Webauthn\PublicKeyCredentialRequestOptions;
 
 final class PasskeyAuthController extends Controller
 {
-    /**
-     * Generate authentication options for passkey login.
-     * If email is provided, generates options with allowCredentials for that user.
-     * If no email, generates options for discoverable credentials (resident keys).
-     */
-    public function generateAuthenticationOptions(Request $request): JsonResponse
+    private const VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.verification_options';
+
+    public function generateAuthenticationOptions(Request $request, GenerateVerificationOptions $generate): JsonResponse
     {
-        // Dynamic RP ID to match current domain
-        config(['passkeys.relying_party.id' => $request->getHost()]);
-        config(['app.url' => $request->getSchemeAndHttpHost()]);
+        $this->configurePasskeysForRequest($request);
 
         $email = $request->input('email');
-        $allowCredentials = [];
+        $user = null;
 
-        // If email is provided, look up user and their passkeys
         if ($email) {
             $user = User::where('email', $email)->first();
 
@@ -39,85 +34,91 @@ final class PasskeyAuthController extends Controller
                 return response()->json(['error' => 'User not found.'], 404);
             }
 
-            // Get user's passkeys for allowCredentials
-            $passkeys = $user->passkeys ?? collect();
-            foreach ($passkeys as $passkey) {
-                $allowCredentials[] = [
-                    'type' => 'public-key',
-                    'id' => base64_encode((string) $passkey->credential_id),
-                ];
-            }
-
             $request->session()->put('passkey-authentication-user-id', $user->id);
         }
 
-        // Generate options - empty allowCredentials enables discoverable credentials
-        $options = new PublicKeyCredentialRequestOptions(
-            challenge: Str::random(32),
-            rpId: Config::getRelyingPartyId(),
-            allowCredentials: $allowCredentials,
-            userVerification: 'preferred',
-        );
+        $options = $generate($user);
 
-        $serializedOptions = Serializer::make()->toJson($options);
-
-        $request->session()->put('passkey-authentication-options', $serializedOptions);
+        $request->session()->put(self::VERIFICATION_OPTIONS_SESSION_KEY, WebAuthn::toJson($options));
 
         return response()->json([
-            'options' => json_decode($serializedOptions),
+            'options' => json_decode(WebAuthn::toJson($options), true),
         ]);
     }
 
-    /**
-     * Verify the passkey authentication response and log the user in.
-     */
-    public function verifyAuthentication(Request $request): JsonResponse
+    public function verifyAuthentication(Request $request, VerifyPasskey $verify): JsonResponse
     {
         $request->validate([
-            'passkey' => 'required|string',
+            'passkey' => ['required_without:credential', 'string'],
+            'credential' => ['nullable', 'array'],
         ]);
 
-        // Dynamic RP ID to match current domain
-        config(['passkeys.relying_party.id' => $request->getHost()]);
-        // Fix for FindPasskeyToAuthenticateAction usage of config('app.url')
-        config(['app.url' => $request->getSchemeAndHttpHost()]);
+        $this->configurePasskeysForRequest($request);
 
-        $passkey = $request->input('passkey');
-        $options = $request->session()->pull('passkey-authentication-options');
+        $serializedOptions = $request->session()->pull(self::VERIFICATION_OPTIONS_SESSION_KEY);
 
-        if (! $options) {
+        if (! is_string($serializedOptions) || $serializedOptions === '') {
             return response()->json(['error' => 'Authentication options not found or expired.'], 400);
         }
 
-        $findPasskeyAction = Config::getAction('find_passkey', FindPasskeyToAuthenticateAction::class);
-
         try {
-            $passkeyModel = $findPasskeyAction->execute(
-                $passkey,
-                $options
+            $passkey = $verify(
+                $this->credentialFromRequest($request),
+                WebAuthn::fromJson($serializedOptions, PublicKeyCredentialRequestOptions::class),
             );
 
-            if ($passkeyModel) {
-                // Determine user from passkey
-                $user = $passkeyModel->authenticatable;
+            $user = $passkey->user;
 
-                if (! $user) {
-                    return response()->json(['error' => 'User associated with passkey not found.'], 404);
-                }
+            if (! $user instanceof User) {
+                return response()->json(['error' => 'User associated with passkey not found.'], 404);
+            }
 
-                Auth::login($user);
-                $request->session()->regenerate();
+            Auth::login($user);
+            $request->session()->regenerate();
 
-                $defaultRedirect = $user instanceof User && $user->isAdministrative()
+            $defaultRedirect = $user->isAdministrative()
                 ? '/administrators'
                 : '/dashboard';
 
-                return response()->json(['url' => $defaultRedirect]);
-            }
+            return response()->json(['url' => $defaultRedirect, 'redirect' => $defaultRedirect]);
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            return response()->json(['error' => 'Passkey verification failed: '.$exception->getMessage()], 400);
+        }
+    }
 
-            return response()->json(['error' => 'Passkey verification failed.'], 400);
-        } catch (Throwable $e) {
-            return response()->json(['error' => 'Passkey verification failed: '.$e->getMessage()], 400);
+    private function configurePasskeysForRequest(Request $request): void
+    {
+        config([
+            'passkeys.relying_party_id' => $request->getHost(),
+            'passkeys.allowed_origins' => [$request->getSchemeAndHttpHost()],
+        ]);
+    }
+
+    private function credentialFromRequest(Request $request): PublicKeyCredential
+    {
+        $credential = $request->input('credential');
+
+        if (! is_array($credential) && is_string($request->input('passkey'))) {
+            $credential = json_decode((string) $request->input('passkey'), true);
+        }
+
+        if (! is_array($credential)) {
+            throw ValidationException::withMessages([
+                'credential' => __('Invalid credential format.'),
+            ]);
+        }
+
+        try {
+            return WebAuthn::fromJson(
+                json_encode($credential, JSON_THROW_ON_ERROR),
+                PublicKeyCredential::class,
+            );
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'credential' => __('Invalid credential format.'),
+            ]);
         }
     }
 }

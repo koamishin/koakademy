@@ -251,7 +251,7 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
             // @ts-ignore
             const transports = response.getTransports ? response.getTransports() : [];
 
-            const passkeyData = JSON.stringify({
+            const passkeyData = {
                 id: credential.id,
                 rawId,
                 type: credential.type,
@@ -260,12 +260,12 @@ export function SecuritySection({ isFaculty, isStudent, user, paths, developerMo
                     clientDataJSON,
                     transports: transports,
                 },
-            });
+            };
 
             router.post(
                 paths.passkeys,
                 {
-                    passkey: passkeyData,
+                    credential: passkeyData,
                     name: passkeyForm.name,
                 },
                 {
