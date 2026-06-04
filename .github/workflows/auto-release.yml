@@ -22,6 +22,7 @@ env:
 jobs:
   optimize_ci:
     runs-on: ubuntu-24.04
+    if: github.event.repository.fork == false
     outputs:
       skip: ${{ steps.check_skip.outputs.skip }}
     steps:
