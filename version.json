@@ -1,14 +1,14 @@
 {
-  "version": "1.7.5-dev.0.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.3",
-  "commit": "e6ee85011534a9bda8e49db4e3624f03e2089ddb",
+  "version": "1.7.5-dev.0.4",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.4",
+  "commit": "e0d1b5940690eaa630b725e577a618d9d4398119",
   "branch": "master",
-  "timestamp": "2026-06-05T04:41:01Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26995651507",
+  "timestamp": "2026-06-05T06:09:59Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26998547744",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.7.5-dev.0.3 - Display the school student_id in the enrollment student picker",
-    "previous": "1.7.5-dev.0.2"
+    "current": "Version 1.7.5-dev.0.4 - Add soft delete, restore, and force delete for administrator students",
+    "previous": "1.7.5-dev.0.3"
   },
   "metadata": {
     "author": "yukazakiri",
