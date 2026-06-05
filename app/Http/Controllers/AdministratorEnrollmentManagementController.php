@@ -1637,28 +1637,20 @@ final class AdministratorEnrollmentManagementController extends Controller
         $schoolYear = $settingsService->getCurrentSchoolYearString();
         $semester = $settingsService->getCurrentSemester();
 
-        $allClasses = Classes::query()
+        $classes = Classes::query()
             ->where('school_year', $schoolYear)
             ->where('semester', $semester)
             ->where(function ($query) use ($subject): void {
                 $query->whereJsonContains('subject_ids', $subject->id)
-                    ->orWhereRaw('LOWER(TRIM(subject_code)) = LOWER(TRIM(?))', [$subject->code])
-                    ->orWhereRaw('LOWER(subject_code) LIKE LOWER(?)', ['%'.$subject->code.'%']);
+                    ->orWhereRaw('LOWER(TRIM(subject_code)) = LOWER(TRIM(?))', [$subject->code]);
+            })
+            ->where(function ($query) use ($courseId): void {
+                $query->whereJsonContains('course_codes', (int) $courseId)
+                    ->orWhereJsonContains('course_codes', (string) $courseId);
             })
             ->with(['Faculty', 'schedules.room'])
             ->withCount('class_enrollments')
             ->get();
-
-        // Filter by course
-        $classes = $allClasses->filter(function ($class) use ($courseId): bool {
-            if (! empty($class->course_codes) && is_array($class->course_codes)) {
-                $courseCodesAsStrings = array_map(strval(...), $class->course_codes);
-
-                return in_array((string) $courseId, $courseCodesAsStrings);
-            }
-
-            return false;
-        });
 
         $sections = $classes->map(function ($class): array {
             $enrolledCount = $class->class_enrollments_count;

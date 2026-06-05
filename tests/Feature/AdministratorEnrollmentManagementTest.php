@@ -671,3 +671,126 @@ it('creates class enrollments when storing an enrollment with assigned classes',
 
     expect(App\Models\ClassEnrollment::query()->where('student_id', $student->id)->where('class_id', $class->id)->exists())->toBeTrue();
 });
+
+it('only returns sections whose subject code matches exactly when fetching sections for a subject', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    GeneralSetting::factory()->create([
+        'school_starting_date' => '2026-06-01',
+        'school_ending_date' => '2027-03-31',
+        'semester' => 1,
+    ]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $bsba = Course::factory()->create(['code' => 'BSBA']);
+    $otherCourse = Course::factory()->create(['code' => 'BSIT']);
+
+    $mgmt1 = Subject::factory()->create([
+        'course_id' => $bsba->id,
+        'code' => 'MGMT 1',
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+
+    $bmgmt1 = Subject::factory()->create([
+        'course_id' => $otherCourse->id,
+        'code' => 'BMGMT 1',
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+
+    $correctClass = App\Models\Classes::factory()->create([
+        'subject_code' => 'MGMT 1',
+        'subject_id' => $mgmt1->id,
+        'subject_ids' => [$mgmt1->id],
+        'course_codes' => [$bsba->id],
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'A',
+    ]);
+
+    $falsePositivePrefixClass = App\Models\Classes::factory()->create([
+        'subject_code' => 'BMGMT 1',
+        'subject_id' => $bmgmt1->id,
+        'subject_ids' => [$bmgmt1->id],
+        'course_codes' => [$bsba->id, $otherCourse->id],
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'B',
+    ]);
+
+    $falsePositiveCsvClass = App\Models\Classes::factory()->create([
+        'subject_code' => 'BMGMT 1, BMGMT 1',
+        'subject_id' => $bmgmt1->id,
+        'subject_ids' => [$bmgmt1->id],
+        'course_codes' => [$bsba->id, $otherCourse->id],
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'C',
+    ]);
+
+    $response = $this->actingAs($user)->getJson(portalUrlForAdministrators(
+        '/administrators/enrollments/api/sections?subject_id='.$mgmt1->id.'&course_id='.$bsba->id
+    ));
+
+    $response->assertOk();
+
+    $ids = collect($response->json())->pluck('id')->all();
+
+    expect($ids)->toContain($correctClass->id)
+        ->and($ids)->not->toContain($falsePositivePrefixClass->id)
+        ->and($ids)->not->toContain($falsePositiveCsvClass->id);
+});
+
+it('returns sections whose course_codes store the course id as a string', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    GeneralSetting::factory()->create([
+        'school_starting_date' => '2026-06-01',
+        'school_ending_date' => '2027-03-31',
+        'semester' => 1,
+    ]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $bsba = Course::factory()->create(['code' => 'BSBA']);
+
+    $mgmt1 = Subject::factory()->create([
+        'course_id' => $bsba->id,
+        'code' => 'MGMT 1',
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+
+    $stringCodedClass = App\Models\Classes::factory()->create([
+        'subject_code' => 'MGMT 1',
+        'subject_id' => $mgmt1->id,
+        'subject_ids' => [$mgmt1->id],
+        'course_codes' => [(string) $bsba->id],
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'A',
+    ]);
+
+    $intCodedClass = App\Models\Classes::factory()->create([
+        'subject_code' => 'MGMT 1',
+        'subject_id' => $mgmt1->id,
+        'subject_ids' => [$mgmt1->id],
+        'course_codes' => [$bsba->id],
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'B',
+    ]);
+
+    $response = $this->actingAs($user)->getJson(portalUrlForAdministrators(
+        '/administrators/enrollments/api/sections?subject_id='.$mgmt1->id.'&course_id='.$bsba->id
+    ));
+
+    $response->assertOk();
+
+    $ids = collect($response->json())->pluck('id')->all();
+
+    expect($ids)->toContain($stringCodedClass->id)
+        ->and($ids)->toContain($intCodedClass->id);
+});
