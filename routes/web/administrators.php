@@ -213,17 +213,17 @@ Route::middleware(['auth', 'administrators.only'])
         Route::delete('/students/bulk', [AdministratorStudentManagementController::class, 'bulkDestroy'])->name('students.bulk-destroy');
         Route::get('/students/documents', [AdministratorStudentDocumentController::class, 'listAll'])->name('students.documents.list');
         Route::get('/students/field-values', [AdministratorStudentManagementController::class, 'fieldValues'])->name('students.field-values');
-        Route::get('/students/{student}', [AdministratorStudentManagementController::class, 'show'])->name('students.show');
+        Route::get('/students/{student}', [AdministratorStudentManagementController::class, 'show'])->name('students.show')->withTrashed();
         Route::get('/students/{student}/tuition/soa', [AdministratorStudentManagementController::class, 'printSoa'])->name('students.tuition.soa');
         Route::get('/students/{student}/documents', [AdministratorStudentDocumentController::class, 'index'])->name('students.documents.index');
         Route::post('/students/{student}/documents/fixed', [AdministratorStudentDocumentController::class, 'updateFixed'])->name('students.documents.fixed.update');
         Route::post('/students/{student}/documents/dynamic', [AdministratorStudentDocumentController::class, 'storeDynamic'])->name('students.documents.dynamic.store');
         Route::delete('/students/{student}/documents/dynamic/{resource}', [AdministratorStudentDocumentController::class, 'destroyDynamic'])->name('students.documents.dynamic.destroy');
-        Route::get('/students/{student}/edit', [AdministratorStudentManagementController::class, 'edit'])->name('students.edit');
-        Route::put('/students/{student}', [AdministratorStudentManagementController::class, 'update'])->name('students.update');
-        Route::post('/students/{student}/subjects', [AdministratorStudentManagementController::class, 'addSubject'])->name('students.subjects.add');
-        Route::patch('/students/{student}/subjects/{subject}', [AdministratorStudentManagementController::class, 'updateSubjectGrade'])->name('students.subjects.update-grade');
-        Route::delete('/students/{student}/subjects/{subjectEnrollment}', [AdministratorStudentManagementController::class, 'removeSubject'])->name('students.subjects.remove');
+        Route::get('/students/{student}/edit', [AdministratorStudentManagementController::class, 'edit'])->name('students.edit')->withTrashed();
+        Route::put('/students/{student}', [AdministratorStudentManagementController::class, 'update'])->name('students.update')->withTrashed();
+        Route::post('/students/{student}/subjects', [AdministratorStudentManagementController::class, 'addSubject'])->name('students.subjects.add')->withTrashed();
+        Route::patch('/students/{student}/subjects/{subject}', [AdministratorStudentManagementController::class, 'updateSubjectGrade'])->name('students.subjects.update-grade')->withTrashed();
+        Route::delete('/students/{student}/subjects/{subjectEnrollment}', [AdministratorStudentManagementController::class, 'removeSubject'])->name('students.subjects.remove')->withTrashed();
 
         // Student Actions
         Route::post('/students/{student}/link-account', [AdministratorStudentManagementController::class, 'linkAccount'])->name('students.link-account');
@@ -236,7 +236,8 @@ Route::middleware(['auth', 'administrators.only'])
         Route::post('/students/{student}/signature', [AdministratorStudentManagementController::class, 'updateSignature'])->name('students.signature.update');
         Route::post('/students/{student}/manage-clearance', [AdministratorStudentManagementController::class, 'manageClearance'])->name('students.manage-clearance');
         Route::patch('/students/{student}/update-status', [AdministratorStudentManagementController::class, 'updateStatus'])->name('students.update-status');
-        Route::delete('/students/{student}', [AdministratorStudentManagementController::class, 'destroy'])->name('students.destroy');
+        Route::post('/students/{student}/restore', [AdministratorStudentManagementController::class, 'restore'])->name('students.restore');
+        Route::delete('/students/{student}', [AdministratorStudentManagementController::class, 'destroy'])->name('students.destroy')->withTrashed();
         Route::delete('/students/{student}/force', [AdministratorStudentManagementController::class, 'forceDestroy'])->name('students.force-destroy');
 
         // Classes Management

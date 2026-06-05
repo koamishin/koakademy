@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Enums\StudentStatus;
 use App\Enums\SubjectEnrolledEnum;
 use App\Enums\UserRole;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\StudentClearance;
 use App\Models\StudentEnrollment;
+use App\Models\StudentStatusRecord;
 use App\Models\Subject;
 use App\Models\SubjectEnrollment;
 use App\Models\User;
@@ -15,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\withoutVite;
 
 beforeEach(function (): void {
     School::factory()->create();
@@ -233,4 +237,125 @@ it('stores student signature on the default filesystem and returns a show-page s
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('administrators/students/show', false)
             ->where('student.signature_url', Storage::disk($defaultDisk)->url((string) $student->signature_path)));
+});
+
+it('soft deletes a student via the destroy endpoint', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $student = Student::factory()->create();
+
+    actingAs($user)
+        ->delete(route('administrators.students.destroy', $student))
+        ->assertRedirect();
+
+    expect(Student::query()->whereKey($student->id)->exists())->toBeFalse();
+    expect(Student::withTrashed()->whereKey($student->id)->first()?->trashed())->toBeTrue();
+});
+
+it('restores a soft-deleted student via the restore endpoint', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $student = Student::factory()->create();
+    $student->delete();
+
+    expect(Student::query()->whereKey($student->id)->exists())->toBeFalse();
+
+    actingAs($user)
+        ->post(route('administrators.students.restore', $student->id))
+        ->assertRedirect();
+
+    expect(Student::query()->whereKey($student->id)->exists())->toBeTrue()
+        ->and(Student::query()->whereKey($student->id)->first()?->trashed())->toBeFalse();
+});
+
+it('force deletes a student and all of their related records', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $student = Student::factory()->create();
+    $studentId = $student->id;
+
+    $enrollment = StudentEnrollment::factory()->create(['student_id' => $studentId]);
+    $subjectEnrollment = SubjectEnrollment::query()->create([
+        'student_id' => $studentId,
+        'subject_id' => Subject::factory()->create()->id,
+        'enrollment_id' => $enrollment->id,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+        'classification' => 'credited',
+    ]);
+    StudentClearance::query()->create([
+        'student_id' => $studentId,
+        'academic_year' => '2026 - 2027',
+        'semester' => 1,
+        'is_cleared' => true,
+    ]);
+    StudentStatusRecord::query()->create([
+        'student_id' => $studentId,
+        'academic_year' => '2026 - 2027',
+        'semester' => 1,
+        'status' => StudentStatus::Enrolled->value,
+    ]);
+
+    expect(StudentEnrollment::query()->where('student_id', $studentId)->exists())->toBeTrue();
+    expect(SubjectEnrollment::query()->where('student_id', $studentId)->exists())->toBeTrue();
+
+    actingAs($user)
+        ->delete(route('administrators.students.force-destroy', $studentId))
+        ->assertRedirect();
+
+    expect(Student::withTrashed()->whereKey($studentId)->exists())->toBeFalse()
+        ->and(StudentEnrollment::withTrashed()->whereKey($enrollment->id)->exists())->toBeFalse()
+        ->and(SubjectEnrollment::query()->whereKey($subjectEnrollment->id)->exists())->toBeFalse()
+        ->and(StudentClearance::query()->where('student_id', $studentId)->exists())->toBeFalse()
+        ->and(StudentStatusRecord::query()->where('student_id', $studentId)->exists())->toBeFalse();
+});
+
+it('shows the trashed students list when the trashed filter is set', function (): void {
+    config(['activitylog.enabled' => false, 'inertia.testing.ensure_pages_exist' => false]);
+    withoutVite();
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $active = Student::factory()->create(['first_name' => 'Active', 'last_name' => 'One']);
+    $trashed = Student::factory()->create(['first_name' => 'Trashed', 'last_name' => 'Two']);
+    $trashed->delete();
+
+    actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/students?trashed=trashed'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/students/index', false)
+            ->where('students.data.0.id', $trashed->id)
+            ->where('students.data.0.deleted_at', fn ($value) => $value !== null)
+            ->where('filters.trashed', 'trashed')
+        );
+
+    actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/students'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/students/index', false)
+            ->where('students.data.0.id', $active->id)
+            ->where('students.data.0.deleted_at', null)
+        );
+});
+
+it('renders the show page for a soft-deleted student', function (): void {
+    config(['activitylog.enabled' => false, 'inertia.testing.ensure_pages_exist' => false]);
+    withoutVite();
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $student = Student::factory()->create();
+    $student->delete();
+
+    actingAs($user)
+        ->get(route('administrators.students.show', $student->id))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/students/show', false)
+            ->where('student.is_trashed', true)
+            ->where('student.deleted_at', fn ($value) => $value !== null)
+        );
 });

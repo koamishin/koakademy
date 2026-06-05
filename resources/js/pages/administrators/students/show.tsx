@@ -60,6 +60,7 @@ import { StudentDetailsCard } from "./components/student-details-card";
 import { StudentTabs } from "./components/student-tabs";
 import { StudentSidebar } from "./components/student-sidebar";
 import { StudentActionMenu } from "./components/student-action-menu";
+import { StudentDeleteDialogs } from "./components/student-delete-dialogs";
 import { SubjectEnrollmentDialog } from "./components/subject-enrollment-dialog";
 import { AcademicScheduleDashboard } from "./components/academic-schedule-dashboard";
 import { StudentChecklistSection } from "./components/student-checklist-section";
@@ -104,6 +105,7 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
     const [actionDialog, setActionDialog] = useState<string | null>(null);
     const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
     const [printDialogOption, setPrintDialogOption] = useState<PrintOption>("both");
+    const [studentDeleteAction, setStudentDeleteAction] = useState<"softDelete" | "forceDelete" | "restore" | null>(null);
     const fallbackSubject =
         student.checklist.flatMap((yearGroup: ChecklistYearGroup) => yearGroup.semesters.flatMap((semesterGroup) => semesterGroup.subjects))[0] ??
         null;
@@ -305,6 +307,12 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
             {actionDialog === "updateTuition" && <UpdateTuitionDialog open={true} onOpenChange={() => setActionDialog(null)} student={student} />}
             {actionDialog === "clearance" && <ManageClearanceDialog open={true} onOpenChange={() => setActionDialog(null)} student={student} />}
 
+            <StudentDeleteDialogs
+                student={student}
+                action={studentDeleteAction}
+                onClose={() => setStudentDeleteAction(null)}
+            />
+
             <PrintScheduleDialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen} student={student} initialOption={printDialogOption} />
 
             <Head title={`Administrators • Student • ${student.name}`} />
@@ -312,9 +320,17 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold tracking-tight">{student.name}</h2>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-2xl font-bold tracking-tight">{student.name}</h2>
+                            {student.is_trashed && (
+                                <Badge variant="destructive" className="text-xs">
+                                    <Trash2 className="mr-1 h-3 w-3" /> Trashed
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-muted-foreground">
                             Student ID: {student.student_id ?? "—"} • {student.academic_year}
+                            {student.deleted_at ? ` • Deleted: ${student.deleted_at}` : ""}
                         </p>
                     </div>
 
@@ -323,7 +339,12 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
                             <Link href={route("administrators.students.index")}>Back</Link>
                         </Button>
 
-                        <StudentActionMenu student={student} options={options} setActionDialog={setActionDialog} />
+                        <StudentActionMenu
+                            student={student}
+                            options={options}
+                            setActionDialog={setActionDialog}
+                            setDeleteAction={setStudentDeleteAction}
+                        />
 
                         <Button asChild variant="secondary">
                             <Link href={route("administrators.students.documents.index", student.id)}>

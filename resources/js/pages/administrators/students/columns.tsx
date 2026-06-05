@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "@inertiajs/react";
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Check, CheckCircle, Copy, Eye, FileText, HelpCircle, MoreHorizontal, UserCheck, XCircle } from "lucide-react";
+import { ArrowUpDown, Check, CheckCircle, Copy, Eye, FileText, HelpCircle, MoreHorizontal, RotateCcw, Trash2, UserCheck, XCircle, Zap } from "lucide-react";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -35,6 +35,7 @@ export type Student = {
     region_of_origin: string | null;
     previous_sem_clearance: "cleared" | "not_cleared" | "no_record";
     created_at: string | null;
+    deleted_at: string | null;
     filament: {
         view_url: string;
         edit_url: string;
@@ -265,6 +266,27 @@ export const columns: ColumnDef<Student>[] = [
                             >
                                 <FileText className="mr-2 h-4 w-4" /> View in Filament
                             </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {student.deleted_at ? (
+                            <DropdownMenuItem
+                                onClick={() => (window as any).dispatchEvent(new CustomEvent("students:restore", { detail: student }))}
+                            >
+                                <RotateCcw className="mr-2 h-4 w-4" /> Restore
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem
+                                onClick={() => (window as any).dispatchEvent(new CustomEvent("students:soft-delete", { detail: student }))}
+                                className="text-orange-600 focus:text-orange-600"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" /> Soft Delete
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                            onClick={() => (window as any).dispatchEvent(new CustomEvent("students:force-delete", { detail: student }))}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Zap className="mr-2 h-4 w-4" /> Force Delete
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

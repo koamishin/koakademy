@@ -17,9 +17,11 @@ use App\Http\Requests\Administrators\BulkUpdateStudentStatusRequest;
 use App\Jobs\GenerateStudentSoaPdfJob;
 use App\Mail\StudentBulkMessage;
 use App\Models\Account;
+use App\Models\ClassAttendanceRecord;
 use App\Models\Course;
 use App\Models\GeneralSetting;
 use App\Models\ShsStrand;
+use App\Models\ShsStudent;
 use App\Models\Student;
 use App\Models\StudentClearance;
 use App\Models\StudentEnrollment;
@@ -67,8 +69,18 @@ final class AdministratorStudentManagementController extends Controller
         $isIndigenousPerson = $request->input('is_indigenous_person');
         $regionOfOrigin = $request->input('region_of_origin');
         $previousSemesterCleared = $request->input('previous_semester_cleared');
+        $trashedFilter = $request->string('trashed', 'active')->toString();
+        if (! in_array($trashedFilter, ['active', 'trashed', 'all'], true)) {
+            $trashedFilter = 'active';
+        }
 
         $studentsQuery = Student::query()
+            ->when($trashedFilter !== 'active', function ($builder): void {
+                $builder->withTrashed();
+            })
+            ->when($trashedFilter === 'trashed', function ($builder): void {
+                $builder->onlyTrashed();
+            })
             ->with([
                 'Course',
                 'DocumentLocation',
@@ -235,6 +247,7 @@ final class AdministratorStudentManagementController extends Controller
                 'previous_sem_clearance' => $currentClearanceStatus,
                 'avatar_url' => $student->picture1x1 !== '' ? $student->picture1x1 : null,
                 'created_at' => format_timestamp($student->created_at),
+                'deleted_at' => $student->deleted_at ? format_timestamp($student->deleted_at) : null,
                 'filament' => [
                     'view_url' => route('filament.admin.resources.students.view', $student),
                     'edit_url' => route('filament.admin.resources.students.edit', $student),
@@ -316,6 +329,7 @@ final class AdministratorStudentManagementController extends Controller
                 'is_indigenous_person' => $isIndigenousPerson,
                 'region_of_origin' => $regionOfOrigin,
                 'previous_semester_cleared' => $previousSemesterCleared,
+                'trashed' => $trashedFilter,
                 'sort' => $sort,
                 'direction' => $direction,
                 'per_page' => $perPage,
@@ -636,6 +650,8 @@ final class AdministratorStudentManagementController extends Controller
                 ],
                 'created_at' => format_timestamp($student->created_at),
                 'updated_at' => format_timestamp($student->updated_at),
+                'deleted_at' => $student->deleted_at ? format_timestamp($student->deleted_at) : null,
+                'is_trashed' => $student->trashed(),
                 'contacts' => $student->studentContactsInfo,
                 'parents' => $student->studentParentInfo,
                 'education' => $student->studentEducationInfo,
@@ -1981,31 +1997,58 @@ final class AdministratorStudentManagementController extends Controller
     }
 
     /**
-     * Permanently delete a student (applicant) and all related records.
+     * Restore a soft-deleted student.
+     */
+    public function restore(int $student): RedirectResponse
+    {
+        $studentModel = Student::withTrashed()->findOrFail($student);
+
+        if (! $studentModel->trashed()) {
+            return back()->with('warning', "Student \"{$studentModel->full_name}\" is not deleted.");
+        }
+
+        $studentName = $studentModel->full_name;
+
+        $studentModel->restore();
+
+        return back()->with('success', "Student \"{$studentName}\" has been restored.");
+    }
+
+    /**
+     * Permanently delete a student and all related records.
      */
     public function forceDestroy(Request $request, int $student): RedirectResponse
     {
-        // Use withTrashed to find soft-deleted students too
         $studentModel = Student::withTrashed()->findOrFail($student);
 
         $studentName = $studentModel->full_name;
 
         try {
             DB::transaction(function () use ($studentModel): void {
-                // Delete related records first
-                $studentModel->subjectEnrollments()->forceDelete();
-                $studentModel->clearances()->delete();
-                $studentModel->classEnrollments()->delete();
+                $studentId = $studentModel->id;
 
-                // Delete student enrollments
-                StudentEnrollment::where('student_id', $studentModel->id)->forceDelete();
+                $studentModel->subjectEnrolled()->forceDelete();
+                $studentModel->clearances()->forceDelete();
+                $studentModel->classEnrollments()->forceDelete();
+                $studentModel->StudentTuition()->forceDelete();
+                $studentModel->StudentTransactions()->forceDelete();
 
-                // Force delete the student
+                StudentEnrollment::where('student_id', $studentId)->forceDelete();
+                StudentStatusRecord::where('student_id', $studentId)->forceDelete();
+
+                if (Schema::hasTable('class_attendance_records')) {
+                    ClassAttendanceRecord::where('student_id', $studentId)->delete();
+                }
+
+                if ($studentModel->lrn && Schema::hasTable('shs_students')) {
+                    ShsStudent::where('student_lrn', $studentModel->lrn)->forceDelete();
+                }
+
                 $studentModel->forceDelete();
             });
 
             return redirect()
-                ->route('administrators.enrollments.index')
+                ->route('administrators.students.index')
                 ->with('success', "Student \"{$studentName}\" has been permanently deleted.");
         } catch (Exception $e) {
             return back()->with('error', 'Failed to delete student: '.$e->getMessage());

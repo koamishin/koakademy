@@ -25,6 +25,7 @@ use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Scout\Searchable;
 use Overtrue\LaravelVersionable\Versionable;
 use Overtrue\LaravelVersionable\VersionStrategy;
@@ -1489,7 +1490,7 @@ final class Student extends Model
         });
         self::forceDeleting(function ($student): void {
             $student->StudentTransactions()->delete();
-            $student->StudentTuition()->delete();
+            $student->StudentTuition()->forceDelete();
             $student->StudentParentInfo()->delete();
             $student->StudentEducationInfo()->delete();
             $student->StudentContactsInfo()->delete();
@@ -1498,10 +1499,11 @@ final class Student extends Model
             // $student->DocumentLocation()->delete();
             $student->account()->delete();
             $student->classEnrollments()->delete();
+            $student->statusRecords()->delete();
+            $student->clearances()->delete();
 
-            // Delete corresponding ShsStudent record if exists
-            if ($student->lrn) {
-                ShsStudent::where('student_lrn', $student->lrn)->delete();
+            if ($student->lrn && Schema::hasTable('shs_students')) {
+                ShsStudent::where('student_lrn', $student->lrn)->forceDelete();
             }
         });
         // Note: Student ID updates are handled by StudentIdUpdateService

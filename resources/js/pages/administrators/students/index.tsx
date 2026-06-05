@@ -1,11 +1,22 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Filters, type FilterFieldConfig, type Filter as FilterType } from "@/components/reui/filters";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,18 +31,22 @@ import {
     HelpCircle,
     LayoutGrid,
     List,
+    Loader2,
     MapPin,
     MoreHorizontal,
     Plus,
     RotateCcw,
     Search,
+    Trash2,
     UserCheck,
     UserIcon,
     UserPlus,
     Users,
     XCircle,
+    Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useDebouncedCallback } from "use-debounce";
 import { columns, Student } from "./columns";
 import { DataTable } from "./data-table";
@@ -71,6 +86,7 @@ interface StudentsIndexProps {
         employment_status?: string | null;
         is_indigenous_person?: string | null;
         previous_semester_cleared?: string | null;
+        trashed?: "active" | "trashed" | "all" | null;
         sort?: string | null;
         direction?: "asc" | "desc" | null;
         per_page?: number;
@@ -193,6 +209,10 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
 
     useEffect(() => {
         const initialFilters: FilterType[] = [];
+        const trashedValue = filters.trashed ?? "active";
+        if (trashedValue !== "active") {
+            initialFilters.push({ id: "trashed", field: "trashed", operator: "is", values: [trashedValue] });
+        }
         if (filters.type) initialFilters.push({ id: "type", field: "type", operator: "is", values: [filters.type] });
         if (filters.status) initialFilters.push({ id: "status", field: "status", operator: "is", values: [filters.status] });
         if (filters.scholarship_type)
@@ -267,6 +287,17 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
 
     const filterFields: FilterFieldConfig[] = useMemo(
         () => [
+            {
+                key: "trashed",
+                label: "Status",
+                type: "select",
+                icon: <Filter className="h-4 w-4" />,
+                options: [
+                    { value: "active", label: "Active", icon: <CheckCircle className="h-4 w-4 text-green-500" /> },
+                    { value: "trashed", label: "Trashed", icon: <Trash2 className="h-4 w-4 text-red-500" /> },
+                    { value: "all", label: "All", icon: <Users className="h-4 w-4" /> },
+                ],
+            },
             {
                 key: "type",
                 label: "Student Type",
@@ -353,6 +384,79 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
             default:
                 return <HelpCircle className="text-muted-foreground h-4 w-4" />;
         }
+    };
+
+    const [softDeleteTarget, setSoftDeleteTarget] = useState<Student | null>(null);
+    const [forceDeleteTarget, setForceDeleteTarget] = useState<Student | null>(null);
+    const [restoreTarget, setRestoreTarget] = useState<Student | null>(null);
+    const [confirmForceText, setConfirmForceText] = useState("");
+    const [deleting, setDeleting] = useState(false);
+
+    useEffect(() => {
+        const onSoft = (e: Event) => setSoftDeleteTarget((e as CustomEvent<Student>).detail);
+        const onForce = (e: Event) => {
+            setForceDeleteTarget((e as CustomEvent<Student>).detail);
+            setConfirmForceText("");
+        };
+        const onRestore = (e: Event) => setRestoreTarget((e as CustomEvent<Student>).detail);
+        window.addEventListener("students:soft-delete", onSoft as EventListener);
+        window.addEventListener("students:force-delete", onForce as EventListener);
+        window.addEventListener("students:restore", onRestore as EventListener);
+        return () => {
+            window.removeEventListener("students:soft-delete", onSoft as EventListener);
+            window.removeEventListener("students:force-delete", onForce as EventListener);
+            window.removeEventListener("students:restore", onRestore as EventListener);
+        };
+    }, []);
+
+    const handleConfirmSoftDelete = () => {
+        if (!softDeleteTarget) return;
+        setDeleting(true);
+        router.delete(route("administrators.students.destroy", softDeleteTarget.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`Student "${softDeleteTarget.name}" has been moved to trash.`);
+                setSoftDeleteTarget(null);
+            },
+            onError: () => toast.error("Failed to delete student."),
+            onFinish: () => setDeleting(false),
+        });
+    };
+
+    const handleConfirmForceDelete = () => {
+        if (!forceDeleteTarget || confirmForceText !== forceDeleteTarget.student_id) {
+            toast.error("Student ID confirmation does not match.");
+            return;
+        }
+        setDeleting(true);
+        router.delete(route("administrators.students.force-destroy", forceDeleteTarget.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`Student "${forceDeleteTarget.name}" has been permanently deleted.`);
+                setForceDeleteTarget(null);
+                setConfirmForceText("");
+            },
+            onError: () => toast.error("Failed to permanently delete student."),
+            onFinish: () => setDeleting(false),
+        });
+    };
+
+    const handleConfirmRestore = () => {
+        if (!restoreTarget) return;
+        setDeleting(true);
+        router.post(
+            route("administrators.students.restore", restoreTarget.id),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(`Student "${restoreTarget.name}" has been restored.`);
+                    setRestoreTarget(null);
+                },
+                onError: () => toast.error("Failed to restore student."),
+                onFinish: () => setDeleting(false),
+            },
+        );
     };
 
     return (
@@ -618,6 +722,90 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                     </TabsContent>
                 </Tabs>
             </div>
+
+            <AlertDialog open={!!softDeleteTarget} onOpenChange={(open) => !open && setSoftDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <Trash2 className="h-5 w-5" />
+                            Soft Delete Student?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            <strong className="text-foreground">{softDeleteTarget?.name}</strong> will be moved to trash and hidden from default views. You can restore them later from the "Trashed" filter.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirmSoftDelete}
+                            disabled={deleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                            Soft Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={!!forceDeleteTarget} onOpenChange={(open) => !open && !deleting && setForceDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                            <Zap className="h-5 w-5" />
+                            Permanently Delete Student?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently erase <strong className="text-foreground">{forceDeleteTarget?.name}</strong> along with all enrollments, tuition, transactions, clearances, and contact data. This action <strong className="text-foreground">cannot be undone</strong>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-2">
+                        <Label htmlFor="index-force-confirm">
+                            Type <span className="font-mono font-semibold">{forceDeleteTarget?.student_id}</span> to confirm:
+                        </Label>
+                        <Input
+                            id="index-force-confirm"
+                            value={confirmForceText}
+                            onChange={(e) => setConfirmForceText(e.target.value)}
+                            placeholder={String(forceDeleteTarget?.student_id ?? "")}
+                            autoComplete="off"
+                            disabled={deleting}
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                        <Button
+                            onClick={handleConfirmForceDelete}
+                            disabled={deleting || confirmForceText !== forceDeleteTarget?.student_id}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                            Force Delete
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={!!restoreTarget} onOpenChange={(open) => !open && setRestoreTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <RotateCcw className="h-5 w-5" />
+                            Restore Student?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            <strong className="text-foreground">{restoreTarget?.name}</strong> will be restored and reappear in the active students list.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmRestore} disabled={deleting}>
+                            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                            Restore
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </AdminLayout>
     );
 }

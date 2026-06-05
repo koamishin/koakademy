@@ -9,7 +9,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { router } from "@inertiajs/react";
-import { ArrowRightLeft, BookOpen, ChevronDown, CreditCard, FileText, GraduationCap, RotateCcw, Settings, ShieldCheck, UserCog } from "lucide-react";
+import { ArrowRightLeft, BookOpen, ChevronDown, CreditCard, FileText, GraduationCap, RotateCcw, Settings, ShieldCheck, Trash2, UserCog, Zap } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import type { StudentDetail } from "../types";
@@ -18,9 +18,10 @@ interface StudentActionMenuProps {
     student: StudentDetail;
     options: any;
     setActionDialog: (dialog: string | null) => void;
+    setDeleteAction?: (action: "softDelete" | "forceDelete" | "restore" | null) => void;
 }
 
-export function StudentActionMenu({ student, options, setActionDialog }: StudentActionMenuProps) {
+export function StudentActionMenu({ student, options, setActionDialog, setDeleteAction }: StudentActionMenuProps) {
     return (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -88,6 +89,27 @@ export function StudentActionMenu({ student, options, setActionDialog }: Student
                                     </DropdownMenuLabel>
                                     <DropdownMenuItem onClick={() => setActionDialog("clearance")}>
                                         <ShieldCheck className="mr-2 h-4 w-4" /> Manage Clearance
+                                    </DropdownMenuItem>
+                                </DropdownMenuGroup>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuGroup>
+                                    <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
+                                        Record
+                                    </DropdownMenuLabel>
+                                    {student.is_trashed ? (
+                                        <DropdownMenuItem onClick={() => setDeleteAction?.("restore")}>
+                                            <RotateCcw className="mr-2 h-4 w-4" /> Restore Student
+                                        </DropdownMenuItem>
+                                    ) : (
+                                        <DropdownMenuItem onClick={() => setDeleteAction?.("softDelete")}>
+                                            <Trash2 className="mr-2 h-4 w-4" /> Soft Delete
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem
+                                        onClick={() => setDeleteAction?.("forceDelete")}
+                                        className="text-destructive focus:text-destructive"
+                                    >
+                                        <Zap className="mr-2 h-4 w-4" /> Force Delete
                                     </DropdownMenuItem>
                                 </DropdownMenuGroup>
                             </DropdownMenuContent>

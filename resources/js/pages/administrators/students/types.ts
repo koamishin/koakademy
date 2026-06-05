@@ -93,6 +93,8 @@ export type StudentDetail = {
     course: { id?: number; code: string | null; title: string | null };
     created_at: string | null;
     updated_at: string | null;
+    deleted_at: string | null;
+    is_trashed: boolean;
     contacts: any;
     parents: any;
     education: any;
