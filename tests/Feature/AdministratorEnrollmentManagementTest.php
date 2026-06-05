@@ -794,3 +794,55 @@ it('returns sections whose course_codes store the course id as a string', functi
     expect($ids)->toContain($stringCodedClass->id)
         ->and($ids)->toContain($intCodedClass->id);
 });
+
+it('returns sections whose subject_ids store the subject id as a string in json', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    GeneralSetting::factory()->create([
+        'school_starting_date' => '2026-06-01',
+        'school_ending_date' => '2027-03-31',
+        'semester' => 1,
+    ]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $bsba = Course::factory()->create(['code' => 'BSBA']);
+
+    $cordi = Subject::factory()->create([
+        'course_id' => $bsba->id,
+        'code' => 'CORDI 101',
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+
+    $sectionA = App\Models\Classes::factory()->create([
+        'subject_code' => 'CORDI 101, Cordi 101, cordi 101',
+        'subject_id' => $cordi->id,
+        'subject_ids' => [(string) $cordi->id],
+        'course_codes' => [$bsba->id],
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'A',
+    ]);
+
+    $sectionB = App\Models\Classes::factory()->create([
+        'subject_code' => 'cordi 101',
+        'subject_id' => $cordi->id,
+        'subject_ids' => [(string) $cordi->id],
+        'course_codes' => [$bsba->id],
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'B',
+    ]);
+
+    $response = $this->actingAs($user)->getJson(portalUrlForAdministrators(
+        '/administrators/enrollments/api/sections?subject_id='.$cordi->id.'&course_id='.$bsba->id
+    ));
+
+    $response->assertOk();
+
+    $ids = collect($response->json())->pluck('id')->all();
+
+    expect($ids)->toContain($sectionA->id)
+        ->and($ids)->toContain($sectionB->id);
+});

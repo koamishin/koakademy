@@ -1642,6 +1642,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->where('semester', $semester)
             ->where(function ($query) use ($subject): void {
                 $query->whereJsonContains('subject_ids', $subject->id)
+                    ->orWhereJsonContains('subject_ids', (string) $subject->id)
                     ->orWhereRaw('LOWER(TRIM(subject_code)) = LOWER(TRIM(?))', [$subject->code]);
             })
             ->where(function ($query) use ($courseId): void {
