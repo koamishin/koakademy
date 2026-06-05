@@ -1497,6 +1497,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->with('Course')
             ->where(function ($query) use ($like): void {
                 $query->where('id', 'like', $like)
+                    ->orWhere('student_id', 'like', $like)
                     ->orWhereRaw('LOWER(first_name) LIKE ?', [$like])
                     ->orWhereRaw('LOWER(last_name) LIKE ?', [$like])
                     ->orWhereRaw("LOWER(CONCAT(first_name, ' ', last_name)) LIKE ?", [$like])
@@ -1508,6 +1509,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->get()
             ->map(fn (Student $student): array => [
                 'id' => $student->id,
+                'student_id' => $student->student_id,
                 'full_name' => $student->full_name,
                 'email' => $student->email,
                 'course_id' => $student->course_id,
@@ -1515,8 +1517,8 @@ final class AdministratorEnrollmentManagementController extends Controller
                 'academic_year' => $student->academic_year,
                 'formatted_academic_year' => $student->formatted_academic_year,
                 'label' => sprintf(
-                    '%d - %s, %s | %s | %s',
-                    $student->id,
+                    '%s - %s, %s | %s | %s',
+                    (string) $student->student_id,
                     $student->last_name,
                     $student->first_name,
                     $student->Course?->code ?? 'No Course',
@@ -1764,6 +1766,7 @@ final class AdministratorEnrollmentManagementController extends Controller
 
         return response()->json([
             'id' => $student->id,
+            'student_id' => $student->student_id,
             'full_name' => $student->full_name,
             'email' => $student->email,
             'course_id' => $student->course_id,

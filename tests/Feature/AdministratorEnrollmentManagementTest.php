@@ -846,3 +846,52 @@ it('returns sections whose subject_ids store the subject id as a string in json'
     expect($ids)->toContain($sectionA->id)
         ->and($ids)->toContain($sectionB->id);
 });
+
+it('returns the school student_id in the search and details student endpoints', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $course = Course::factory()->create(['code' => 'BSBA']);
+    $student = Student::factory()->create([
+        'student_id' => 208323,
+        'course_id' => $course->id,
+    ]);
+
+    $searchResponse = $this->actingAs($user)->getJson(portalUrlForAdministrators(
+        '/administrators/enrollments/api/students?search='.$student->last_name
+    ));
+
+    $searchResponse->assertOk();
+
+    $match = collect($searchResponse->json())->firstWhere('id', $student->id);
+
+    expect($match)->not->toBeNull()
+        ->and((string) $match['student_id'])->toBe('208323');
+
+    $detailsResponse = $this->actingAs($user)->getJson(portalUrlForAdministrators(
+        '/administrators/enrollments/api/student-details?student_id='.$student->id
+    ));
+
+    $detailsResponse->assertOk();
+
+    $details = $detailsResponse->json();
+    expect($details['id'])->toBe($student->id)
+        ->and((string) $details['student_id'])->toBe('208323');
+});
+
+it('finds a student in the search endpoint when typing their school student_id', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $student = Student::factory()->create([
+        'student_id' => 208323,
+    ]);
+
+    $response = $this->actingAs($user)->getJson(portalUrlForAdministrators(
+        '/administrators/enrollments/api/students?search=208323'
+    ));
+
+    $response->assertOk();
+
+    $ids = collect($response->json())->pluck('id')->all();
+
+    expect($ids)->toContain($student->id);
+});

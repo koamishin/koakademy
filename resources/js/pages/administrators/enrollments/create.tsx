@@ -41,6 +41,7 @@ import { route } from "ziggy-js";
 // Types
 interface StudentOption {
     id: number;
+    student_id: string | number | null;
     full_name: string;
     email: string;
     course_id: number | null;
@@ -52,6 +53,7 @@ interface StudentOption {
 
 interface StudentDetails {
     id: number;
+    student_id: string | number | null;
     full_name: string;
     email: string;
     course_id: number | null;
@@ -684,7 +686,8 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                         <div>
                                             <div className="font-medium">{selectedStudent?.full_name ?? "Student not found"}</div>
                                             <div className="text-muted-foreground text-xs">
-                                                {selectedStudent?.course_code ?? ""}
+                                                {selectedStudent?.student_id ? `ID: ${selectedStudent.student_id}` : ""}
+                                                {selectedStudent?.course_code ? ` | ${selectedStudent.course_code}` : ""}
                                                 {selectedStudent?.formatted_academic_year ? ` | ${selectedStudent.formatted_academic_year}` : ""}
                                             </div>
                                         </div>
@@ -751,7 +754,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                                         <div className="min-w-0 flex-1">
                                                                             <div className="truncate font-medium">{student.full_name}</div>
                                                                             <div className="text-muted-foreground text-xs">
-                                                                                ID: {student.id} | {student.course_code || "No Course"}
+                                                                                ID: {student.student_id ?? student.id} | {student.course_code || "No Course"}
                                                                             </div>
                                                                         </div>
                                                                         {selectedStudent?.id === student.id && (
