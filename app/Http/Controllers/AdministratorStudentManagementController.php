@@ -12,6 +12,7 @@ use App\Enums\StudentType;
 use App\Enums\SubjectEnrolledEnum;
 use App\Http\Requests\Administrators\BulkDeleteStudentRequest;
 use App\Http\Requests\Administrators\BulkEmailStudentsRequest;
+use App\Http\Requests\Administrators\BulkForceDeleteStudentRequest;
 use App\Http\Requests\Administrators\BulkUpdateStudentClearanceRequest;
 use App\Http\Requests\Administrators\BulkUpdateStudentStatusRequest;
 use App\Jobs\GenerateStudentSoaPdfJob;
@@ -1971,6 +1972,65 @@ final class AdministratorStudentManagementController extends Controller
         }
 
         return back()->with('success', "Deleted {$deletedCount} student(s).");
+    }
+
+    public function bulkForceDestroy(BulkForceDeleteStudentRequest $request): RedirectResponse
+    {
+        $validated = $request->validated();
+        $studentIds = $validated['student_ids'];
+
+        $expectedConfirm = 'PERMANENTLY DELETE '.count($studentIds).' STUDENT'.(count($studentIds) === 1 ? '' : 'S');
+
+        if (! hash_equals($expectedConfirm, (string) $validated['confirm_text'])) {
+            return back()->withErrors([
+                'confirm_text' => 'Confirmation text does not match. Type "'.$expectedConfirm.'" exactly to proceed.',
+            ])->withInput();
+        }
+
+        $deletedCount = 0;
+        $failures = [];
+
+        foreach (Student::withTrashed()->whereIn('id', $studentIds)->get() as $student) {
+            try {
+                DB::transaction(function () use ($student): void {
+                    $studentId = $student->id;
+
+                    $student->subjectEnrolled()->forceDelete();
+                    $student->clearances()->forceDelete();
+                    $student->classEnrollments()->forceDelete();
+                    $student->StudentTuition()->forceDelete();
+                    $student->StudentTransactions()->forceDelete();
+
+                    StudentEnrollment::where('student_id', $studentId)->forceDelete();
+                    StudentStatusRecord::where('student_id', $studentId)->forceDelete();
+
+                    if (Schema::hasTable('class_attendance_records')) {
+                        ClassAttendanceRecord::where('student_id', $studentId)->delete();
+                    }
+
+                    if ($student->lrn && Schema::hasTable('shs_students')) {
+                        ShsStudent::where('student_lrn', $student->lrn)->forceDelete();
+                    }
+
+                    $student->forceDelete();
+                });
+                $deletedCount++;
+            } catch (Exception $e) {
+                $failures[] = $student->full_name.' ('.$e->getMessage().')';
+            }
+        }
+
+        $message = "Permanently deleted {$deletedCount} student(s).";
+
+        if ($failures !== []) {
+            $message .= ' '.count($failures).' failed: '.implode('; ', $failures);
+
+            return back()->with('error', $message);
+        }
+
+        return redirect()
+            ->route('administrators.students.index')
+            ->with('success', $message);
     }
 
     public function removeSubject(Student $student, SubjectEnrollment $subjectEnrollment): RedirectResponse

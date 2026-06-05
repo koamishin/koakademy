@@ -211,6 +211,7 @@ Route::middleware(['auth', 'administrators.only'])
         Route::post('/students/bulk/manage-clearance', [AdministratorStudentManagementController::class, 'bulkManageClearance'])->name('students.bulk-manage-clearance');
         Route::post('/students/bulk/email', [AdministratorStudentManagementController::class, 'bulkSendEmail'])->name('students.bulk-email');
         Route::delete('/students/bulk', [AdministratorStudentManagementController::class, 'bulkDestroy'])->name('students.bulk-destroy');
+        Route::delete('/students/bulk/force', [AdministratorStudentManagementController::class, 'bulkForceDestroy'])->name('students.bulk-force-destroy');
         Route::get('/students/documents', [AdministratorStudentDocumentController::class, 'listAll'])->name('students.documents.list');
         Route::get('/students/field-values', [AdministratorStudentManagementController::class, 'fieldValues'])->name('students.field-values');
         Route::get('/students/{student}', [AdministratorStudentManagementController::class, 'show'])->name('students.show')->withTrashed();

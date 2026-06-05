@@ -359,3 +359,40 @@ it('renders the show page for a soft-deleted student', function (): void {
             ->where('student.deleted_at', fn ($value) => $value !== null)
         );
 });
+
+it('permanently deletes multiple students via the bulk force-destroy endpoint when the confirmation text matches', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $studentOne = Student::factory()->create(['first_name' => 'Alpha', 'last_name' => 'One']);
+    $studentTwo = Student::factory()->create(['first_name' => 'Bravo', 'last_name' => 'Two']);
+    $studentOneEnrollment = StudentEnrollment::factory()->create(['student_id' => $studentOne->id]);
+    $studentTwoEnrollment = StudentEnrollment::factory()->create(['student_id' => $studentTwo->id]);
+
+    actingAs($user)
+        ->delete(route('administrators.students.bulk-force-destroy'), [
+            'student_ids' => [$studentOne->id, $studentTwo->id],
+            'confirm_text' => 'PERMANENTLY DELETE 2 STUDENTS',
+        ])
+        ->assertRedirect(route('administrators.students.index'));
+
+    expect(Student::withTrashed()->whereIn('id', [$studentOne->id, $studentTwo->id])->exists())->toBeFalse()
+        ->and(StudentEnrollment::withTrashed()->whereIn('id', [$studentOneEnrollment->id, $studentTwoEnrollment->id])->exists())->toBeFalse();
+});
+
+it('rejects the bulk force-destroy endpoint when the confirmation text does not match', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $student = Student::factory()->create();
+
+    actingAs($user)
+        ->delete(route('administrators.students.bulk-force-destroy'), [
+            'student_ids' => [$student->id],
+            'confirm_text' => 'not the right phrase',
+        ])
+        ->assertSessionHasErrors('confirm_text')
+        ->assertRedirect();
+
+    expect(Student::query()->whereKey($student->id)->exists())->toBeTrue();
+});

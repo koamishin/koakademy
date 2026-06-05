@@ -30,10 +30,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { router } from "@inertiajs/react";
-import { CheckCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GraduationCap, Mail, Settings2, Trash2 } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GraduationCap, Loader2, Mail, Settings2, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 declare let route: any;
@@ -74,12 +75,20 @@ export function DataTable<TData, TValue>({
     const [globalFilter, setGlobalFilter] = React.useState("");
     const [emailDialogOpen, setEmailDialogOpen] = React.useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+    const [forceDeleteDialogOpen, setForceDeleteDialogOpen] = React.useState(false);
+    const [forceDeleteConfirmText, setForceDeleteConfirmText] = React.useState("");
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const defaultEmailSubject = "Important Update Regarding Your Student Record";
     const defaultEmailMessage =
         "We hope this message finds you well.\n\nWe are writing to inform you of an important update to your student record. Please review this information at your earliest convenience and respond if any details require clarification.\n\nThank you for your attention and cooperation.";
     const [emailSubject, setEmailSubject] = React.useState(defaultEmailSubject);
     const [emailMessage, setEmailMessage] = React.useState(defaultEmailMessage);
+
+    React.useEffect(() => {
+        if (!forceDeleteDialogOpen) {
+            setForceDeleteConfirmText("");
+        }
+    }, [forceDeleteDialogOpen]);
 
     // Initialize sorting from URL if present
     React.useEffect(() => {
@@ -266,6 +275,41 @@ export function DataTable<TData, TValue>({
         });
     };
 
+    const expectedForceConfirm = `PERMANENTLY DELETE ${selectedCount} STUDENT${selectedCount === 1 ? "" : "S"}`;
+
+    const handleBulkForceDelete = () => {
+        if (!hasSelection || isSubmitting) {
+            return;
+        }
+
+        if (forceDeleteConfirmText !== expectedForceConfirm) {
+            toast.error(`Type "${expectedForceConfirm}" exactly to confirm.`);
+            return;
+        }
+
+        setIsSubmitting(true);
+        router.delete(route("administrators.students.bulk-force-destroy"), {
+            data: {
+                student_ids: selectedIds,
+                confirm_text: forceDeleteConfirmText,
+            },
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`Permanently deleted ${selectedCount} student(s).`);
+                setForceDeleteDialogOpen(false);
+                setForceDeleteConfirmText("");
+                resetSelection();
+            },
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                toast.error(typeof firstError === "string" ? firstError : "Failed to permanently delete students.");
+            },
+            onFinish: () => {
+                setIsSubmitting(false);
+            },
+        });
+    };
+
     const handleBulkEmailSubmit = () => {
         if (!hasSelection || !emailSubject.trim() || !emailMessage.trim() || isSubmitting) {
             return;
@@ -337,6 +381,16 @@ export function DataTable<TData, TValue>({
                     <Button variant="destructive" size="sm" className="gap-2" disabled={!hasSelection} onClick={() => setDeleteDialogOpen(true)}>
                         <Trash2 className="h-4 w-4" />
                         Soft Delete
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-2 border-red-900 bg-red-700 hover:bg-red-800"
+                        disabled={!hasSelection}
+                        onClick={() => setForceDeleteDialogOpen(true)}
+                    >
+                        <Zap className="h-4 w-4" />
+                        Force Delete
                     </Button>
                 </div>
 
@@ -437,6 +491,43 @@ export function DataTable<TData, TValue>({
                         <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 hover:bg-red-700" disabled={isSubmitting}>
                             Soft Delete
                         </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={forceDeleteDialogOpen} onOpenChange={(open) => !isSubmitting && setForceDeleteDialogOpen(open)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                            <Zap className="h-5 w-5" />
+                            Permanently Delete {selectedCount} Student{selectedCount === 1 ? "" : "s"}?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently erase all {selectedCount} selected student record{selectedCount === 1 ? "" : "s"} along with their enrollments, tuition, transactions, clearances, and contact data. This action <span className="font-semibold text-foreground">cannot be undone</span>.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-2">
+                        <Label htmlFor="bulk-force-confirm">
+                            Type <span className="font-mono font-semibold">{expectedForceConfirm}</span> to confirm:
+                        </Label>
+                        <Input
+                            id="bulk-force-confirm"
+                            value={forceDeleteConfirmText}
+                            onChange={(e) => setForceDeleteConfirmText(e.target.value)}
+                            placeholder={expectedForceConfirm}
+                            autoComplete="off"
+                            disabled={isSubmitting}
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                        <Button
+                            onClick={handleBulkForceDelete}
+                            disabled={isSubmitting || forceDeleteConfirmText !== expectedForceConfirm}
+                            className="bg-red-700 text-white hover:bg-red-800"
+                        >
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                            Force Delete
+                        </Button>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
