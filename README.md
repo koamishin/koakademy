@@ -18,9 +18,9 @@
   <h3 align="center">KoAkademy</h3>
 
   <p align="center">
-    KoAkademy is an academic management platform that keeps student records, enrollment, billing, schedules, and school administration together in one application.
+    A free, self-hosted school management system built by people who actually survived Philippine school portals.
     <br />
-    Built for schools, staff, and developers, it combines a polished web experience with a modern backend stack.
+    <em>Because paying six figures annually for software that crashes during enrollment shouldn't be a thing.</em>
     <br />
     <a href="GETTING_STARTED.md"><strong>Explore the docs »</strong></a>
     <br />
@@ -40,6 +40,8 @@
     <li>
       <a href="#about-the-project">About The Project</a>
       <ul>
+        <li><a href="#what-you-get">What You Get</a></li>
+        <li><a href="#whats-next">What's Next</a></li>
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
@@ -63,10 +65,36 @@
 ## About The Project
 
 ![KoAkademy][product-screenshot]
-KoAkademy is an academic management system made to simplify school operations for administrators, teachers, and students.
-It brings admissions, tuition, schedules, reporting, and school settings into one place so teams can work without switching tools.
 
-The platform is built with Laravel 12, Inertia + React, Filament, and Tailwind CSS, giving developers a modern codebase and users a fast, intuitive interface.
+Let's address the elephant in the room: school management systems in the Philippines are... an experience.
+
+Most of them are **closed-source black boxes** priced like they're made of rare earth metals. Some private schools don't mind paying—as long as the software actually improves workflow. But let's be real: a depressing number of private schools in the Philippines are still running on spreadsheets, paper ledgers, and prayers. They couldn't afford an "enterprise solution" even if they wanted one.
+
+And for the schools that *do* pay? Congratulations, you now rent your own student data. It's hosted on someone else's server, in someone else's cloud, governed by someone else's uptime. Oh, and sometimes you can casually browse students from other schools because apparently "multi-tenant security" was just a suggestion. Cool.
+
+So we asked a dangerous question: **What if your school actually owned its own system?**
+
+No monthly subscriptions. No annual hostage negotiations. No provider downtime during enrollment week. No existential dread about where your students' personal data is sleeping at night.
+
+**We built KoAkademy because we were those students.** We sat in those classrooms. We wrestled with the systems that inspired an entire generation to question their life choices. We survived password resets that took three business days. And we decided the next generation deserves better.
+
+### What You Get
+
+KoAkademy is free, open-source, and self-hosted. You bring the server; we bring the software. Your data stays yours. Your bandwidth stays yours. Your bills stay... well, they're your bills, but at least they're *infrastructure* bills, not "license extortion" bills.
+
+You can use it as a **Student Information System** with dedicated portals for students, faculty, and parents. Or treat it as an **Academic Management Platform** that handles enrollment, scheduling, records, and all the administrative heavy lifting. There's even a full **Accounting module** for tuition, fees, and financial reporting—because schools are basically small businesses with stricter bell schedules.
+
+### What's Next
+
+This is just the beginning. We're actively building:
+
+- **HR Management** — Faculty records, payroll prep, and HR workflows
+- **Online Billing & Transactions** — Let parents pay fees without physically visiting the accounting office
+- **Learning Management System (LMS)** — Google Classroom-style modules, assignments, and submissions
+- **Online Library** — Digital cataloging and resource management
+- **Inventory Management** — Track equipment, from lab tools to those projectors that always vanish
+
+And more. This project grows because schools actually need it, not because a sales team needs quarterly targets.
 
 ### Key Features
 
@@ -95,7 +123,7 @@ The platform is built with Laravel 12, Inertia + React, Filament, and Tailwind C
 <!-- GETTING STARTED -->
 ## Getting Started
 
-KoAkademy is a self-hosted academic management platform for student portals, admin work, enrollment, finance, schedules, and content.
+Ready to stop renting your school system? KoAkademy is a self-hosted academic management platform for student portals, admin work, enrollment, finance, schedules, and content.
 
 Just want to run it? Start with Docker below. Want to contribute code? Jump to [Development](#development).
 
@@ -494,6 +522,11 @@ Docs:
 - [ ] Continue migration of legacy hardcoded brand/domain strings to settings-driven values
 - [ ] Expand API docs coverage for enrollment and finance endpoints
 - [ ] Improve release automation and deployment validation checks
+- [ ] HR Management for faculty records and payroll workflows
+- [ ] Online billing and payment transactions
+- [ ] Learning Management System (LMS) with Google Classroom-style functionality
+- [ ] Online Library for digital cataloging and resource management
+- [ ] Inventory Management for school equipment and assets
 
 See the [open issues][issues-url] for a full list of proposed features (and known issues).
 
