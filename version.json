@@ -1,14 +1,14 @@
 {
-  "version": "1.7.5-dev.0.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.2",
-  "commit": "e8df6cfa90619870332956c1517dbee2faf1dc21",
+  "version": "1.7.5-dev.0.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.3",
+  "commit": "e6ee85011534a9bda8e49db4e3624f03e2089ddb",
   "branch": "master",
-  "timestamp": "2026-06-05T03:28:44Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26993403018",
+  "timestamp": "2026-06-05T04:41:01Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26995651507",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.7.5-dev.0.2 - Match string-form subject ids in subject_ids json when fetching sections",
-    "previous": "1.7.5-dev.0.1"
+    "current": "Version 1.7.5-dev.0.3 - Display the school student_id in the enrollment student picker",
+    "previous": "1.7.5-dev.0.2"
   },
   "metadata": {
     "author": "yukazakiri",
