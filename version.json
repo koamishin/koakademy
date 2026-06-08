@@ -1,14 +1,14 @@
 {
-  "version": "1.7.5-dev.0.6",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.6",
-  "commit": "692f31fe74482799289a4a23cc3a07e4a5b66836",
+  "version": "1.7.5-dev.0.7",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.7",
+  "commit": "b3a10f993212ee7d53c446d570bac10d7fd0a309",
   "branch": "master",
-  "timestamp": "2026-06-08T01:21:01Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27110671961",
-  "release_type": "patch",
+  "timestamp": "2026-06-08T08:34:37Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27125400518",
+  "release_type": "chore",
   "changelog": {
-    "current": "Version 1.7.5-dev.0.6 - Update composer.lock",
-    "previous": "1.7.5-dev.0.5"
+    "current": "Version 1.7.5-dev.0.7 - chore(tmp): Delete .tmp session and task artifacts",
+    "previous": "1.7.5-dev.0.6"
   },
   "metadata": {
     "author": "yukazakiri",
