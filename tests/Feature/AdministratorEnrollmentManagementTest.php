@@ -61,6 +61,73 @@ it('returns 404 when enrollments path receives a non-numeric identifier', functi
         ->assertNotFound();
 });
 
+it('supports partial reloads for enrollment table updates', function (): void {
+    GeneralSetting::factory()->create([
+        'school_starting_date' => '2024-08-01',
+        'school_ending_date' => '2025-05-30',
+        'semester' => 1,
+        'more_configs' => [
+            'enrollment_pipeline' => [
+                'steps' => [
+                    [
+                        'key' => 'pending',
+                        'status' => 'Pending',
+                        'label' => 'Pending',
+                        'color' => 'amber',
+                        'allowed_roles' => ['student'],
+                        'action_type' => 'standard',
+                    ],
+                    [
+                        'key' => 'department_review',
+                        'status' => 'Verified By Department',
+                        'label' => 'Verified By Department',
+                        'color' => 'blue',
+                        'allowed_roles' => ['admin'],
+                        'action_type' => 'department_verification',
+                    ],
+                    [
+                        'key' => 'cashier_verification',
+                        'status' => 'Verified By Cashier',
+                        'label' => 'Verified By Cashier',
+                        'color' => 'green',
+                        'allowed_roles' => ['cashier'],
+                        'action_type' => 'cashier_verification',
+                    ],
+                ],
+                'entry_step_key' => 'pending',
+                'completion_step_key' => 'cashier_verification',
+            ],
+        ],
+    ]);
+
+    $user = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    $manifest = public_path('build/manifest.json');
+    $inertiaVersion = config('app.asset_url')
+        ? hash('xxh128', (string) config('app.asset_url'))
+        : (file_exists($manifest) ? hash_file('xxh128', $manifest) : '');
+
+    $this->actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/enrollments?search=Jane'), [
+            'X-Inertia' => 'true',
+            'X-Inertia-Partial-Component' => 'administrators/enrollments/index',
+            'X-Inertia-Partial-Data' => 'enrollments,filters',
+            'X-Inertia-Version' => $inertiaVersion,
+        ])
+        ->assertSuccessful()
+        ->assertJsonPath('component', 'administrators/enrollments/index')
+        ->assertJsonStructure([
+            'props' => [
+                'enrollments',
+                'filters',
+            ],
+        ])
+        ->assertJsonMissingPath('props.analytics')
+        ->assertJsonMissingPath('props.applicantsCount');
+});
+
 it('shares an absolute avatar URL for authenticated admin data', function (): void {
     $user = User::factory()->create([
         'role' => UserRole::Admin,

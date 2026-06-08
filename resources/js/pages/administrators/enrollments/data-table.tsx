@@ -1,11 +1,9 @@
 import {
     ColumnDef,
-    ColumnFiltersState,
     SortingState,
     VisibilityState,
     flexRender,
     getCoreRowModel,
-    getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
@@ -23,6 +21,8 @@ import { router } from "@inertiajs/react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Settings2 } from "lucide-react";
 
 declare let route: any;
+
+type InertiaGetPayload = NonNullable<Parameters<typeof router.get>[1]>;
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -58,12 +58,28 @@ export function DataTable<TData, TValue>({
     selectionActions,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
     const [internalLoading, setInternalLoading] = React.useState(false);
 
     const showLoading = isLoading || internalLoading;
+    const showSkeleton = showLoading && data.length === 0;
+
+    const visitTable = React.useCallback(
+        (url: string, query: InertiaGetPayload = {}) => {
+            router.cancelAll();
+
+            router.get(url, query, {
+                preserveState: true,
+                replace: true,
+                preserveScroll: true,
+                only: dataKey ? [dataKey, "filters"] : undefined,
+                onStart: () => setInternalLoading(true),
+                onFinish: () => setInternalLoading(false),
+            });
+        },
+        [dataKey],
+    );
 
     // Initialize sorting from URL if present
     React.useEffect(() => {
@@ -79,8 +95,9 @@ export function DataTable<TData, TValue>({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        // We use manual pagination if pagination prop is provided
+        // Server-provided enrollment/applicant pages should not be paginated or sorted again in the browser.
         manualPagination: !!pagination,
+        manualSorting: !!pagination,
         pageCount: pagination?.last_page ?? -1,
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: (updater) => {
@@ -90,42 +107,18 @@ export function DataTable<TData, TValue>({
             // Trigger server-side sort
             if (newSorting.length > 0) {
                 const { id, desc } = newSorting[0];
-                router.get(
-                    route(routeName),
-                    { ...filters, sort: id, direction: desc ? "desc" : "asc" },
-                    {
-                        preserveState: true,
-                        replace: true,
-                        preserveScroll: true,
-                        only: dataKey ? [dataKey, "filters"] : undefined,
-                        onStart: () => setInternalLoading(true),
-                        onFinish: () => setInternalLoading(false),
-                    },
-                );
+                visitTable(route(routeName), { ...filters, sort: id, direction: desc ? "desc" : "asc", page: 1 });
             } else {
                 // Reset sort
-                router.get(
-                    route(routeName),
-                    { ...filters, sort: null, direction: null },
-                    {
-                        preserveState: true,
-                        replace: true,
-                        preserveScroll: true,
-                        only: dataKey ? [dataKey, "filters"] : undefined,
-                        onStart: () => setInternalLoading(true),
-                        onFinish: () => setInternalLoading(false),
-                    },
-                );
+                visitTable(route(routeName), { ...filters, sort: null, direction: null, page: 1 });
             }
         },
         getSortedRowModel: getSortedRowModel(),
-        onColumnFiltersChange: setColumnFilters,
-        getFilteredRowModel: getFilteredRowModel(),
+
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
         state: {
             sorting,
-            columnFilters,
             columnVisibility,
             rowSelection,
             pagination: {
@@ -141,35 +134,13 @@ export function DataTable<TData, TValue>({
     // Function to handle page navigation via Inertia
     const navigateToPage = (url: string | null) => {
         if (url) {
-            router.get(
-                url,
-                {},
-                {
-                    preserveState: true,
-                    replace: true,
-                    preserveScroll: true,
-                    only: dataKey ? [dataKey, "filters"] : undefined,
-                    onStart: () => setInternalLoading(true),
-                    onFinish: () => setInternalLoading(false),
-                },
-            );
+            visitTable(url);
         }
     };
 
     // Handle page size change
     const onPageSizeChange = (value: string) => {
-        router.get(
-            route(routeName),
-            { ...filters, per_page: value, page: 1 },
-            {
-                preserveState: true,
-                replace: true,
-                preserveScroll: true,
-                only: dataKey ? [dataKey, "filters"] : undefined,
-                onStart: () => setInternalLoading(true),
-                onFinish: () => setInternalLoading(false),
-            },
-        );
+        visitTable(route(routeName), { ...filters, per_page: value, page: 1 });
     };
 
     return (
@@ -227,7 +198,7 @@ export function DataTable<TData, TValue>({
                     </DropdownMenu>
                 </div>
             </div>
-            <div className="bg-card rounded-md border">
+            <div className="bg-card relative rounded-md border">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -242,8 +213,8 @@ export function DataTable<TData, TValue>({
                             </TableRow>
                         ))}
                     </TableHeader>
-                    <TableBody>
-                        {showLoading ? (
+                    <TableBody className={cn(showLoading && !showSkeleton && "opacity-60 transition-opacity")}>
+                        {showSkeleton ? (
                             // Skeleton Loading State
                             Array.from({ length: 10 }).map((_, rowIndex) => (
                                 <TableRow key={`skeleton-row-${rowIndex}`}>
@@ -276,6 +247,11 @@ export function DataTable<TData, TValue>({
                         )}
                     </TableBody>
                 </Table>
+                {showLoading && !showSkeleton && (
+                    <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center pt-3">
+                        <span className="bg-background/90 text-muted-foreground rounded-full border px-3 py-1 text-xs shadow-sm">Updating…</span>
+                    </div>
+                )}
             </div>
 
             {/* Pagination Controls */}

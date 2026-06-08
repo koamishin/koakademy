@@ -13,7 +13,7 @@
     ],
     "license": "AGPL-3.0-or-later",
     "require": {
-        "php": "^8.4",
+        "php": ">=8.4 <8.5",
         "achyutn/filament-log-viewer": "^2.0",
         "alizharb/filament-activity-log": "^1.0",
         "alizharb/filament-modular-luncher": "^1.0",

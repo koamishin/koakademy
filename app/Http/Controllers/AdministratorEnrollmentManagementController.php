@@ -196,7 +196,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->groupBy('status')
             ->get();
 
-        $applicantsCount = Student::query()
+        $applicantsCount = fn (): int => Student::query()
             ->withTrashed()
             ->where('status', StudentStatus::Applicant)
             ->count();
@@ -267,7 +267,8 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->when($yearLevelFilter !== 'all', function ($query) use ($yearLevelFilter): void {
                 $query->where('student_enrollment.academic_year', (int) $yearLevelFilter);
             })
-            ->with(['student.Course', 'course', 'studentTuition'])
+            ->with(['student.Course', 'course.department', 'studentTuition'])
+            ->withCount('subjectsEnrolled')
             ->when($sort === 'student_name', function ($query) use ($direction): void {
                 $query->leftJoin('students', DB::raw('CAST(NULLIF(student_enrollment.student_id, \'\') AS BIGINT)'), '=', 'students.id')
                     ->orderBy('students.last_name', $direction)
@@ -293,7 +294,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                 'school_year' => $enrollment->school_year,
                 'semester' => $enrollment->semester,
                 'academic_year' => $enrollment->academic_year,
-                'subjects_count' => $enrollment->subjectsEnrolled()->count(),
+                'subjects_count' => $enrollment->subjects_enrolled_count,
                 'tuition' => $enrollment->studentTuition ? [
                     'overall' => $enrollment->studentTuition->overall_tuition,
                     'balance' => $enrollment->studentTuition->total_balance,

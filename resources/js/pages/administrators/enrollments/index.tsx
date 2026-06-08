@@ -17,6 +17,8 @@ import { EnrollmentsCard } from "./enrollments-card";
 import { ReportsSection } from "./reports-section";
 import type { Branding, BulkReportFilters, EnrollmentManagementProps, ReportFilters } from "./types";
 
+type InertiaGetPayload = NonNullable<Parameters<typeof router.get>[1]>;
+
 export default function AdministratorEnrollmentsIndex({
     user,
     workflow_setup_required,
@@ -87,9 +89,37 @@ export default function AdministratorEnrollmentsIndex({
         setYearLevelFilter(filters.year_level_filter || "all");
     }, [filters.search, filters.status_filter, filters.department_filter, filters.year_level_filter]);
 
+    const visitEnrollments = useCallback((query: InertiaGetPayload) => {
+        router.cancelAll();
+
+        router.get(route("administrators.enrollments.index"), query, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+            only: ["enrollments", "filters"],
+            onStart: () => setIsSearching(true),
+            onFinish: () => setIsSearching(false),
+        });
+    }, []);
+
+    const applyFilters = useCallback(
+        (overrides: InertiaGetPayload = {}) => {
+            visitEnrollments({
+                ...filters,
+                search: enrollmentSearch || undefined,
+                status_filter: statusFilter !== "all" ? statusFilter : undefined,
+                department_filter: departmentFilter !== "all" ? departmentFilter : undefined,
+                year_level_filter: yearLevelFilter !== "all" ? yearLevelFilter : undefined,
+                page: 1,
+                ...overrides,
+            });
+        },
+        [departmentFilter, enrollmentSearch, filters, statusFilter, visitEnrollments, yearLevelFilter],
+    );
+
     const handleEnrollmentSearch = useDebouncedCallback((term: string) => {
         applyFilters({ search: term || undefined });
-    }, 300);
+    }, 150);
 
     const handleEnrollmentSearchChange = (value: string) => {
         setEnrollmentSearch(value);
@@ -111,46 +141,15 @@ export default function AdministratorEnrollmentsIndex({
         applyFilters({ year_level_filter: value });
     };
 
-    const applyFilters = (overrides: Record<string, unknown> = {}) => {
-        router.get(
-            route("administrators.enrollments.index"),
-            {
-                ...filters,
-                search: enrollmentSearch || undefined,
-                status_filter: statusFilter !== "all" ? statusFilter : undefined,
-                department_filter: departmentFilter !== "all" ? departmentFilter : undefined,
-                year_level_filter: yearLevelFilter !== "all" ? yearLevelFilter : undefined,
-                ...overrides,
-            },
-            {
-                preserveState: true,
-                replace: true,
-                preserveScroll: true,
-                only: ["enrollments", "filters"],
-                onStart: () => setIsSearching(true),
-                onFinish: () => setIsSearching(false),
-            },
-        );
-    };
-
     const clearFilters = () => {
         setEnrollmentSearch("");
         setStatusFilter("all");
         setDepartmentFilter("all");
         setYearLevelFilter("all");
-        router.get(
-            route("administrators.enrollments.index"),
-            {
-                currentSemester: filters.currentSemester,
-                currentSchoolYear: filters.currentSchoolYear,
-            },
-            {
-                preserveState: true,
-                replace: true,
-                preserveScroll: true,
-                only: ["enrollments", "filters"],
-            },
-        );
+        visitEnrollments({
+            currentSemester: filters.currentSemester,
+            currentSchoolYear: filters.currentSchoolYear,
+        });
     };
 
     const hasActiveFilters = enrollmentSearch || statusFilter !== "all" || departmentFilter !== "all" || yearLevelFilter !== "all";
