@@ -1,14 +1,14 @@
 {
-  "version": "1.7.5-dev.0.5",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.5",
-  "commit": "955caac3b56169a7e3828b7ca95132df02ceb6fe",
+  "version": "1.7.5-dev.0.6",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.6",
+  "commit": "692f31fe74482799289a4a23cc3a07e4a5b66836",
   "branch": "master",
-  "timestamp": "2026-06-05T06:20:12Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/26998904181",
+  "timestamp": "2026-06-08T01:21:01Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27110671961",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.7.5-dev.0.5 - Add bulk force-delete for administrator students",
-    "previous": "1.7.5-dev.0.4"
+    "current": "Version 1.7.5-dev.0.6 - Update composer.lock",
+    "previous": "1.7.5-dev.0.5"
   },
   "metadata": {
     "author": "yukazakiri",
