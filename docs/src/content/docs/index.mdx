@@ -11,7 +11,7 @@ Welcome to **KoAkademy** — an open-source, modular learning management system 
 
 <CardGrid stagger>
 	<Card title="Quick Start" icon="rocket">
-		Deploy in minutes with Docker or Sail.
+		Run locally in minutes with SQLite, or deploy with Docker Compose.
 	</Card>
 	<Card title="Developer Friendly" icon="seti:php">
 		Built on Laravel 12 with PHP 8.4, Pest testing, and modern tooling.
@@ -24,24 +24,70 @@ Welcome to **KoAkademy** — an open-source, modular learning management system 
 	</Card>
 </CardGrid>
 
+## Requirements
+
+KoAkademy ships with sensible defaults that let you run locally without Docker or any external services.
+
+### Required
+
+| Dependency | Version | Purpose |
+|---|---|---|
+| PHP | 8.4+ | Application runtime (extensions: SQLite, PDO, mbstring, bcmath, zip, intl, gd, redis, exif) |
+| Composer | 2.x | PHP dependency manager |
+| Node.js | 22+ | Frontend asset build (not needed for the pre-built Docker image) |
+| Database | — | SQLite (default), PostgreSQL 17, or MySQL 8.4 |
+
+### Optional
+
+| Service | Purpose | Fallback when not used |
+|---|---|---|
+| Redis 7+ | Cache, queues, sessions, Pulse ingest, Horizon | SQLite / database driver |
+| Meilisearch | Full-text search via Laravel Scout | Collection / database driver |
+| Mailpit / SMTP | Transactional email | Log driver |
+| MinIO / R2 / S3 | Object storage | Local filesystem |
+| Gotenberg | PDF rendering (via Browsershot) | Cloudflare Browser Rendering or DOMPDF |
+
 ## Get Started in 60 Seconds
 
-The fastest way to run KoAkademy is with our pre-built Docker image:
+The fastest correct way to evaluate KoAkademy is with a native SQLite setup — no Docker, Redis, or PostgreSQL required.
+
+### Prerequisites
+
+- PHP 8.4+, Composer, and Node.js 22+ installed
+
+### Run it
 
 ```bash "Terminal"
-docker run -d \
-  --name koakademy \
-  -p 8000:8000 \
-  -e APP_KEY=$(openssl rand -base64 32) \
-  docker.io/yukazakiri/koakademy:latest
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+composer install --no-dev
+cp .env.example .env
+touch database/database.sqlite
+php artisan key:generate
+php artisan migrate
+npm install
+npm run build
+php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-Then visit `http://localhost:8000`.
+Visit `http://localhost:8000`.
+
+This uses:
+
+- **SQLite** for the database
+- **Database** driver for cache and sessions
+- **Sync** driver for queues (jobs run immediately, no worker needed)
+- **Log** driver for mail (emails are written to the log)
+
+### Want Docker instead?
+
+For a full containerized stack with PostgreSQL, Redis, and Meilisearch, see [Docker Deployment](/getting-started/docker). The pre-built image is designed for production Compose deployments rather than a single one-line evaluation.
 
 ## Explore the Docs
 
-- **[Getting Started](/getting-started/introduction)** — Install locally with Docker, Sail, or Laravel Herd
-- **[Docker Deployment](/getting-started/docker)** — Production Docker Compose with PostgreSQL and Redis
+- **[Introduction](/getting-started/introduction)** — What KoAkademy is and architecture overview
+- **[Installation](/getting-started/installation)** — Laravel Herd, Sail, native manual, XAMPP/WAMP
+- **[Docker Deployment](/getting-started/docker)** — Production Docker Compose with all services
 - **[Configuration](/getting-started/configuration)** — Environment variables, domains, and services
 - **[Development](/development)** — Daily contributor workflow, testing, and conventions
 - **[API](/api/api-overview)** — RESTful API for student data, enrollments, and verification

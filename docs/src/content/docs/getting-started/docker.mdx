@@ -9,17 +9,55 @@ KoAkademy provides pre-built Docker images for both **quick evaluation** and **p
 
 ## Quick Run
 
-Evaluate KoAkademy instantly with our Docker Hub image:
+Evaluate KoAkademy instantly with our Docker Hub image.
+
+:::caution
+The pre-built image is optimized for production-style deployments. For a quick evaluation, you must provide a valid Laravel `APP_KEY` and tell the container to use SQLite so it can start without an external database.
+:::
+
+### 1. Generate an app key
+
+```bash "Terminal"
+APP_KEY="base64:$(openssl rand -base64 32)"
+echo "$APP_KEY"
+```
+
+On Windows (PowerShell):
+
+```powershell
+$bytes = New-Object byte[] 32
+(New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($bytes)
+$APP_KEY = "base64:" + [Convert]::ToBase64String($bytes)
+Write-Output $APP_KEY
+```
+
+### 2. Run the container
 
 ```bash "Terminal"
 docker run -d \
   --name koakademy \
   -p 8000:8000 \
-  -e APP_KEY=$(openssl rand -base64 32) \
+  -e APP_KEY="$APP_KEY" \
+  -e APP_ENV=local \
+  -e DB_CONNECTION=sqlite \
+  -e DB_DATABASE=/app/database/database.sqlite \
+  -e CACHE_STORE=database \
+  -e SESSION_DRIVER=database \
+  -e QUEUE_CONNECTION=sync \
+  -e MAIL_MAILER=log \
   docker.io/yukazakiri/koakademy:latest
 ```
 
 Visit `http://localhost:8000`. The container runs FrankenPHP with Laravel Octane on port `8000`.
+
+:::note
+Data is stored inside the container. If you remove the container, the SQLite database and uploaded files are lost. Mount a volume for persistence:
+
+```bash
+  -v koakademy-sqlite:/app/database \
+  -v koakademy-storage:/app/storage \
+```
+:::
 
 :::tip
 Use `docker.io/yukazakiri/koakademy:dev-latest` for the latest development build.
@@ -28,6 +66,8 @@ Use `docker.io/yukazakiri/koakademy:dev-latest` for the latest development build
 ## Docker Compose
 
 For production or persistent deployments, use Docker Compose with PostgreSQL and Redis.
+
+The project includes an `.env.production.example` file with sensible defaults. Start from there instead of writing an `.env` from scratch.
 
 ### 1. Create a Compose File
 
@@ -47,7 +87,7 @@ services:
       - pgsql
       - redis
     volumes:
-      - koakademy-storage:/var/www/html/storage
+      - koakademy-storage:/app/storage
 
   pgsql:
     image: postgres:17-alpine
@@ -75,16 +115,23 @@ volumes:
 
 ### 2. Create Your Environment File
 
-Create `.env` with at minimum:
+Copy the production example and customize it:
 
 ```bash
+cp .env.production.example .env
+```
+
+Edit the values that matter for your setup:
+
+```ini
 APP_NAME="KoAkademy"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://koakademy.edu
-ADMIN_HOST=admin.koakademy.edu
-PORTAL_HOST=portal.koakademy.edu
-APP_KEY=base64:GENERATE_WITH_php_artisan_key:generate
+APP_URL=http://localhost:8000
+APP_KEY=   # leave empty for now; we will generate it below
+
+ADMIN_HOST=admin.localhost
+PORTAL_HOST=localhost
 
 DB_CONNECTION=pgsql
 DB_HOST=pgsql
@@ -95,11 +142,12 @@ DB_PASSWORD=replace-with-strong-password
 
 CACHE_STORE=redis
 QUEUE_CONNECTION=redis
-SESSION_DRIVER=database
+SESSION_DRIVER=redis
+
 REDIS_HOST=redis
 REDIS_PORT=6379
 
-MAIL_MAILER=smtp
+MAIL_MAILER=log
 MAIL_FROM_ADDRESS=noreply@koakademy.edu
 MAIL_FROM_NAME="${APP_NAME}"
 
@@ -108,13 +156,24 @@ OCTANE_HOST=0.0.0.0
 OCTANE_PORT=8000
 ```
 
-Generate an app key:
+:::caution
+`ADMIN_HOST` and `PORTAL_HOST` are used for domain-based routing in production. If you are evaluating on `localhost`, keep them simple or update your `/etc/hosts` file to match.
+:::
+
+Generate an app key and add it to `.env`:
 
 ```bash
-docker run --rm docker.io/yukazakiri/koakademy:latest php artisan key:generate --show
+docker run --rm \
+  -e APP_KEY=base64:000000000000000000000000000000000000000000= \
+  docker.io/yukazakiri/koakademy:latest \
+  php artisan key:generate --show
 ```
 
 Copy the output into `APP_KEY=` in your `.env`.
+
+:::note
+Migrations run automatically when the `app` container starts (`RUN_MIGRATIONS=true` by default). You only need to run them manually if you disable auto-migrations or want to verify the state.
+:::
 
 ### 3. Start the Stack
 
@@ -122,13 +181,7 @@ Copy the output into `APP_KEY=` in your `.env`.
 docker compose up -d
 ```
 
-### 4. Run Migrations
-
-```bash
-docker exec koakademy-app php artisan migrate --force
-```
-
-### 5. Create an Admin User
+### 4. Create an Admin User
 
 ```bash
 docker exec -it koakademy-app php artisan make:filament-user
@@ -136,12 +189,11 @@ docker exec -it koakademy-app php artisan make:filament-user
 
 Follow the prompts to create your first administrator.
 
-### 6. Verify Deployment
+### 5. Verify Deployment
 
 ```bash
 docker ps
 docker logs koakademy-app --tail=200
-docker exec koakademy-app php artisan octane:status
 docker exec koakademy-app php artisan about
 ```
 
@@ -164,7 +216,7 @@ services:
       - redis
       - meilisearch
     volumes:
-      - koakademy-storage:/var/www/html/storage
+      - koakademy-storage:/app/storage
 
   horizon:
     image: docker.io/yukazakiri/koakademy:latest
@@ -177,7 +229,7 @@ services:
       - redis
     command: php artisan horizon
     volumes:
-      - koakademy-storage:/var/www/html/storage
+      - koakademy-storage:/app/storage
 
   pulse:
     image: docker.io/yukazakiri/koakademy:latest
@@ -190,7 +242,7 @@ services:
       - redis
     command: /bin/bash -c "php artisan pulse:check & php artisan pulse:work"
     volumes:
-      - koakademy-storage:/var/www/html/storage
+      - koakademy-storage:/app/storage
 
   pgsql:
     image: postgres:17-alpine
@@ -226,6 +278,17 @@ volumes:
   koakademy-meilisearch:
 ```
 
+Add to your `.env`:
+
+```ini
+SCOUT_DRIVER=meilisearch
+MEILISEARCH_HOST=http://meilisearch:7700
+```
+
+:::note
+The `horizon` and `pulse` services use `command:` to bypass the container entrypoint and run only the worker process. The `app` container already runs the web server, and it includes Horizon and Pulse via Supervisor when `QUEUE_CONNECTION=redis`.
+:::
+
 ## Available Container Modes
 
 The KoAkademy image supports different container modes via the `CONTAINER_MODE` environment variable:
@@ -236,8 +299,11 @@ The KoAkademy image supports different container modes via the `CONTAINER_MODE` 
 | `horizon` | Queue worker with Horizon | `docker run -e CONTAINER_MODE=horizon ...` |
 | `scheduler` | Cron scheduler | `docker run -e CONTAINER_MODE=scheduler ...` |
 | `worker` | General queue worker | `docker run -e CONTAINER_MODE=worker ...` |
-| `pulse` | Pulse monitoring | `docker run -e CONTAINER_MODE=pulse ...` |
 | `nightwatch` | Nightwatch monitoring | `docker run -e CONTAINER_MODE=nightwatch ...` |
+
+:::note
+The main `http` container automatically starts Horizon and Pulse via Supervisor when Redis is configured. You only need separate `horizon` or `pulse` containers if you want to scale workers independently or run them on different hosts.
+:::
 
 ## Image Registries
 
@@ -256,10 +322,9 @@ docker compose pull
 docker compose up -d
 ```
 
-Then run migrations:
+The container automatically runs migrations on startup. After the update, warm the caches:
 
 ```bash
-docker exec koakademy-app php artisan migrate --force
 docker exec koakademy-app php artisan optimize
 ```
 
@@ -268,18 +333,20 @@ docker exec koakademy-app php artisan optimize
 Back up before every deploy:
 
 ```bash
-# Database
-docker exec koakademy-app pg_dump -U koakademy koakademy > backup.sql
+# Database (pass the password via the environment)
+docker exec -e PGPASSWORD=replace-with-strong-password koakademy-app \
+  pg_dump -U koakademy koakademy > backup.sql
 
 # Storage
-docker run --rm -v koakademy-storage:/data -v $(pwd):/backup alpine tar czf /backup/storage.tar.gz -C /data .
+docker run --rm -v koakademy-storage:/data -v $(pwd):/backup alpine \
+  tar czf /backup/storage.tar.gz -C /data .
 ```
 
-To roll back, switch to the previous image tag and redeploy:
+To roll back to a previous image tag:
 
 ```bash
+# Update your docker-compose.yml to use the previous tag, then:
 docker compose down
-docker tag koakademy-app docker.io/yukazakiri/koakademy:previous-tag
 docker compose up -d
 ```
 

@@ -605,19 +605,47 @@ final class AdministratorSystemManagementController extends Controller
     {
         $this->authorize('updateMail', GeneralSetting::class);
 
-        $request->validate([
+        $validated = $request->validate([
             'to' => 'required|email',
+            'type' => 'sometimes|string|in:plain,html,markdown,pdf-attachment',
         ]);
 
-        try {
-            Mail::raw('This is a test email from your system configuration.', function ($message) use ($request): void {
-                $message->to($request->to)
-                    ->subject('Test Email - System Configuration');
-            });
+        $to = $validated['to'];
+        $type = $validated['type'] ?? 'html';
 
-            return response()->json(['message' => 'Test email sent successfully!'], 200);
+        $typeLabels = [
+            'plain' => 'Plain text',
+            'html' => 'HTML',
+            'markdown' => 'Markdown',
+            'pdf-attachment' => 'HTML with PDF attachment',
+        ];
+
+        try {
+            if ($type === 'plain') {
+                $appName = $this->siteSettings->getAppName();
+
+                Mail::raw(
+                    "This is a plain text test email from your {$appName} system configuration.\n\n"
+                    .'Sent at: '.now()->format('Y-m-d H:i:s')."\n"
+                    .'Environment: '.app()->environment()."\n\n"
+                    ."This confirms that your SMTP settings are working correctly.\n\n"
+                    ."Best regards,\n{$appName}",
+                    function ($message) use ($to, $appName): void {
+                        $message->to($to)
+                            ->subject("{$appName} - Plain Text Test Email");
+                    }
+                );
+            } else {
+                Mail::to($to)->send(new \App\Mail\TestMail($type));
+            }
+
+            return response()->json([
+                'message' => ($typeLabels[$type] ?? 'Test').' email sent successfully!',
+            ], 200);
         } catch (Exception $e) {
-            return response()->json(['message' => 'Failed to send test email: '.$e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Failed to send test email: '.$e->getMessage(),
+            ], 500);
         }
     }
 
