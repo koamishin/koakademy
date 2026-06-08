@@ -13,12 +13,15 @@ import {
 import * as React from "react";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 import { router } from "@inertiajs/react";
 import { DataTablePagination } from "./data-table-pagination";
 import { DataTableViewOptions } from "./data-table-view-options";
 
 declare let route: (name: string, params?: Record<string, unknown> | string | number) => string;
+
+type InertiaGetPayload = NonNullable<Parameters<typeof router.get>[1]>;
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -35,6 +38,7 @@ interface DataTableProps<TData, TValue> {
     };
     filters?: Record<string, unknown>;
     routeName?: string;
+    isLoading?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -43,11 +47,31 @@ export function DataTable<TData, TValue>({
     pagination,
     filters = {},
     routeName = "administrators.classes.index",
+    isLoading = false,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
+    const [internalLoading, setInternalLoading] = React.useState(false);
+
+    const showLoading = isLoading || internalLoading;
+
+    const visitTable = React.useCallback(
+        (query: InertiaGetPayload) => {
+            router.cancelAll();
+
+            router.get(route(routeName), query, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                only: ["classes", "filters"],
+                onStart: () => setInternalLoading(true),
+                onFinish: () => setInternalLoading(false),
+            });
+        },
+        [routeName],
+    );
 
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -63,6 +87,7 @@ export function DataTable<TData, TValue>({
         columns,
         getCoreRowModel: getCoreRowModel(),
         manualPagination: !!pagination,
+        manualSorting: !!pagination,
         pageCount: pagination?.last_page ?? -1,
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: (updater) => {
@@ -71,9 +96,9 @@ export function DataTable<TData, TValue>({
 
             if (newSorting.length > 0) {
                 const { id, desc } = newSorting[0];
-                router.get(route(routeName), { ...filters, sort: id, direction: desc ? "desc" : "asc" }, { preserveState: true, replace: true });
+                visitTable({ ...filters, sort: id, direction: desc ? "desc" : "asc", page: 1 });
             } else {
-                router.get(route(routeName), { ...filters, sort: null, direction: null }, { preserveState: true, replace: true });
+                visitTable({ ...filters, sort: null, direction: null, page: 1 });
             }
         },
         getSortedRowModel: getSortedRowModel(),
@@ -90,15 +115,11 @@ export function DataTable<TData, TValue>({
             const nextState = typeof updater === "function" ? updater(currentPaginationState) : updater;
 
             if (nextState.pageIndex !== currentPaginationState.pageIndex || nextState.pageSize !== currentPaginationState.pageSize) {
-                router.get(
-                    route(routeName),
-                    {
-                        ...filters,
-                        page: nextState.pageIndex + 1,
-                        per_page: nextState.pageSize,
-                    },
-                    { preserveState: true, replace: true },
-                );
+                visitTable({
+                    ...filters,
+                    page: nextState.pageIndex + 1,
+                    per_page: nextState.pageSize,
+                });
             }
         },
         state: {
@@ -118,7 +139,7 @@ export function DataTable<TData, TValue>({
             <div className="flex items-center justify-between">
                 <DataTableViewOptions table={table} />
             </div>
-            <div className="overflow-hidden rounded-lg border">
+            <div className="relative overflow-hidden rounded-lg border">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -131,7 +152,7 @@ export function DataTable<TData, TValue>({
                             </TableRow>
                         ))}
                     </TableHeader>
-                    <TableBody>
+                    <TableBody className={cn(showLoading && "opacity-60 transition-opacity")}>
                         {table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
@@ -170,8 +191,13 @@ export function DataTable<TData, TValue>({
                         )}
                     </TableBody>
                 </Table>
+                {showLoading && (
+                    <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center pt-3">
+                        <span className="bg-background/90 text-muted-foreground rounded-full border px-3 py-1 text-xs shadow-sm">Updating…</span>
+                    </div>
+                )}
             </div>
-            <DataTablePagination table={table} pagination={pagination} />
+            <DataTablePagination table={table} pagination={pagination} isLoading={showLoading} />
         </div>
     );
 }

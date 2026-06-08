@@ -5,6 +5,37 @@ description: Fix common issues during installation and development.
 
 ## Docker
 
+### Pulse crashes with `SIGSEGV (core dumped)`
+
+If your logs show `pulse` repeatedly exiting with `SIGSEGV`, the cause is almost always the **PHP 8.5 nightly image** used in the pre-built container. PHP 8.5 is still in development and is prone to segfaults, especially when extensions like `redis`, `opcache`, or `gd` are loaded.
+
+**Quick workaround:**
+
+```ini
+# .env
+PULSE_ENABLED=false
+```
+
+Then restart:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+**Proper fix:** Build the image with PHP 8.4 (the version `composer.json` requires). Update your `docker/Dockerfile`:
+
+```dockerfile
+ARG PHP_VERSION=8.4
+```
+
+Then rebuild:
+
+```bash
+docker compose build --no-cache app
+docker compose up -d
+```
+
 ### `portal.koakademy.test` returns 502 Bad Gateway
 
 Traefik cannot resolve the upstream `laravel` container. Fix by recreating the services:

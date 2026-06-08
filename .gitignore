@@ -46,6 +46,8 @@ yarn-error.log
 /.github/skills/*
 /.mcp.json
 /.opencode/*
+/.tmp/*
+/.outputs/*
 CLAUDE.md
 GEMINI.md
 AGENTS.md

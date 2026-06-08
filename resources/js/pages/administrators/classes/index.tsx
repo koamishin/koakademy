@@ -154,6 +154,9 @@ interface ClassesIndexProps {
         semester?: string | null;
         available_slots?: boolean | null;
         fully_enrolled?: boolean | null;
+        per_page?: number | string | null;
+        sort?: string | null;
+        direction?: string | null;
     };
     options: {
         classifications: SelectOption[];
@@ -171,6 +174,8 @@ interface ClassesIndexProps {
         school_year: string;
     };
 }
+
+type InertiaGetPayload = NonNullable<Parameters<typeof router.get>[1]>;
 
 function normalizeSemester(semester: string | number): string {
     if (semester === 1 || semester === "1") return "1";
@@ -411,43 +416,36 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     const shouldUseLocalSearchResults = search.trim() !== "" && !isServerSearchCurrent;
     const visibleClasses = shouldUseLocalSearchResults ? filteredClassesBySearch : classes.data;
 
+    const visitClasses = React.useCallback((query: InertiaGetPayload) => {
+        router.cancelAll();
+
+        router.get(route("administrators.classes.index"), query, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ["classes", "filters"],
+            onStart: () => setIsSearchLoading(true),
+            onFinish: () => setIsSearchLoading(false),
+        });
+    }, []);
+
     const handleSearch = useDebouncedCallback((term: string) => {
-        router.get(
-            route("administrators.classes.index"),
-            {
-                ...filters,
-                search: term.trim() ? term : null,
-                page: 1,
-            },
-            {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-                only: ["classes", "filters"],
-                onStart: () => setIsSearchLoading(true),
-                onFinish: () => setIsSearchLoading(false),
-            },
-        );
-    }, 700);
+        visitClasses({
+            ...filters,
+            search: term.trim() ? term : null,
+            page: 1,
+        });
+    }, 150);
 
     const handleFilterChange = (key: string, value: string | number | boolean | null) => {
         const nextSearch = search.trim() ? search.trim() : null;
 
-        router.get(
-            route("administrators.classes.index"),
-            {
-                ...filters,
-                search: nextSearch,
-                [key]: value === "all" ? null : value,
-                page: 1,
-            },
-            {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-                only: ["classes", "filters"],
-            },
-        );
+        visitClasses({
+            ...filters,
+            search: nextSearch,
+            [key]: value === "all" ? null : value,
+            page: 1,
+        });
     };
 
     const openManage = (classId: number) => {
@@ -980,7 +978,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
                 const clearAll = () => {
                     setSearch("");
-                    router.get(route("administrators.classes.index"), {}, { replace: true });
+                    visitClasses({});
                 };
 
                 const filteredStatsTotalStudents = visibleClasses.reduce((acc, curr) => acc + curr.students_count, 0);
@@ -1079,7 +1077,11 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                   }
                                                 : classes
                                         }
-                                        filters={filters}
+                                        filters={{
+                                            ...filters,
+                                            search: search.trim() ? search.trim() : null,
+                                        }}
+                                        isLoading={isSearchLoading}
                                     />
                                 )}
 

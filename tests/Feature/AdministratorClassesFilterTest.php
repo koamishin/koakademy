@@ -40,6 +40,34 @@ beforeEach(function () {
     }
 });
 
+it('supports partial reloads for classes table updates', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $manifest = public_path('build/manifest.json');
+    $inertiaVersion = config('app.asset_url')
+        ? hash('xxh128', (string) config('app.asset_url'))
+        : (file_exists($manifest) ? hash_file('xxh128', $manifest) : '');
+
+    $this->actingAs($user)
+        ->get(route('administrators.classes.index', ['search' => 'math']), [
+            'X-Inertia' => 'true',
+            'X-Inertia-Partial-Component' => 'administrators/classes/index',
+            'X-Inertia-Partial-Data' => 'classes,filters',
+            'X-Inertia-Version' => $inertiaVersion,
+        ])
+        ->assertSuccessful()
+        ->assertJsonPath('component', 'administrators/classes/index')
+        ->assertJsonStructure([
+            'props' => [
+                'classes',
+                'filters',
+            ],
+        ])
+        ->assertJsonMissingPath('props.options')
+        ->assertJsonMissingPath('props.defaults')
+        ->assertJsonMissingPath('props.selected_class');
+});
+
 it('can filter classes by available slots', function () {
     // Authenticate as admin
     $user = User::factory()->create(['role' => UserRole::Admin]);

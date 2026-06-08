@@ -45,7 +45,7 @@ docker run -d \
   -e SESSION_DRIVER=database \
   -e QUEUE_CONNECTION=sync \
   -e MAIL_MAILER=log \
-  docker.io/yukazakiri/koakademy:latest
+  yukazaki/koakademy:latest
 ```
 
 Visit `http://localhost:8000`. The container runs FrankenPHP with Laravel Octane on port `8000`.
@@ -60,7 +60,7 @@ Data is stored inside the container. If you remove the container, the SQLite dat
 :::
 
 :::tip
-Use `docker.io/yukazakiri/koakademy:dev-latest` for the latest development build.
+Use `yukazaki/koakademy:dev-latest` for the latest development build.
 :::
 
 ## Docker Compose
@@ -76,7 +76,7 @@ Create `docker-compose.yml`:
 ```yaml
 services:
   app:
-    image: docker.io/yukazakiri/koakademy:latest
+    image: yukazaki/koakademy:latest
     container_name: koakademy-app
     restart: unless-stopped
     ports:
@@ -88,9 +88,11 @@ services:
       - redis
     volumes:
       - koakademy-storage:/app/storage
+    networks:
+      - koakademy
 
   pgsql:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: koakademy-pgsql
     restart: unless-stopped
     environment:
@@ -98,7 +100,9 @@ services:
       POSTGRES_USER: koakademy
       POSTGRES_PASSWORD: replace-with-strong-password
     volumes:
-      - koakademy-pgsql:/var/lib/postgresql/data
+      - koakademy-pgsql:/var/lib/postgresql
+    networks:
+      - koakademy
 
   redis:
     image: redis:7-alpine
@@ -106,12 +110,22 @@ services:
     restart: unless-stopped
     volumes:
       - koakademy-redis:/data
+    networks:
+      - koakademy
 
 volumes:
   koakademy-storage:
   koakademy-pgsql:
   koakademy-redis:
+
+networks:
+  koakademy:
+    driver: bridge
 ```
+
+:::caution
+If you are using PostgreSQL 18+, mount the volume to `/var/lib/postgresql` instead of `/var/lib/postgresql/data`. The PostgreSQL 18+ Docker image stores data in a version-specific subdirectory inside `/var/lib/postgresql` to support `pg_upgrade`.
+:::
 
 ### 2. Create Your Environment File
 
@@ -165,7 +179,7 @@ Generate an app key and add it to `.env`:
 ```bash
 docker run --rm \
   -e APP_KEY=base64:000000000000000000000000000000000000000000= \
-  docker.io/yukazakiri/koakademy:latest \
+  yukazaki/koakademy:latest \
   php artisan key:generate --show
 ```
 
@@ -199,12 +213,12 @@ docker exec koakademy-app php artisan about
 
 ## Production Compose with All Services
 
-For a full production deployment with Meilisearch, Horizon workers, and Pulse monitoring:
+For a full production deployment with Meilisearch and Gotenberg:
 
 ```yaml
 services:
   app:
-    image: docker.io/yukazakiri/koakademy:latest
+    image: yukazaki/koakademy:latest
     container_name: koakademy-app
     restart: unless-stopped
     ports:
@@ -215,37 +229,14 @@ services:
       - pgsql
       - redis
       - meilisearch
+      - gotenberg
     volumes:
       - koakademy-storage:/app/storage
-
-  horizon:
-    image: docker.io/yukazakiri/koakademy:latest
-    container_name: koakademy-horizon
-    restart: unless-stopped
-    env_file:
-      - .env
-    depends_on:
-      - pgsql
-      - redis
-    command: php artisan horizon
-    volumes:
-      - koakademy-storage:/app/storage
-
-  pulse:
-    image: docker.io/yukazakiri/koakademy:latest
-    container_name: koakademy-pulse
-    restart: unless-stopped
-    env_file:
-      - .env
-    depends_on:
-      - pgsql
-      - redis
-    command: /bin/bash -c "php artisan pulse:check & php artisan pulse:work"
-    volumes:
-      - koakademy-storage:/app/storage
+    networks:
+      - koakademy
 
   pgsql:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: koakademy-pgsql
     restart: unless-stopped
     environment:
@@ -253,7 +244,9 @@ services:
       POSTGRES_USER: koakademy
       POSTGRES_PASSWORD: replace-with-strong-password
     volumes:
-      - koakademy-pgsql:/var/lib/postgresql/data
+      - koakademy-pgsql:/var/lib/postgresql
+    networks:
+      - koakademy
 
   redis:
     image: redis:7-alpine
@@ -261,6 +254,8 @@ services:
     restart: unless-stopped
     volumes:
       - koakademy-redis:/data
+    networks:
+      - koakademy
 
   meilisearch:
     image: getmeili/meilisearch:v1.42
@@ -270,12 +265,25 @@ services:
       MEILI_NO_ANALYTICS: "false"
     volumes:
       - koakademy-meilisearch:/meili_data
+    networks:
+      - koakademy
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: koakademy-gotenberg
+    restart: unless-stopped
+    networks:
+      - koakademy
 
 volumes:
   koakademy-storage:
   koakademy-pgsql:
   koakademy-redis:
   koakademy-meilisearch:
+
+networks:
+  koakademy:
+    driver: bridge
 ```
 
 Add to your `.env`:
@@ -283,11 +291,39 @@ Add to your `.env`:
 ```ini
 SCOUT_DRIVER=meilisearch
 MEILISEARCH_HOST=http://meilisearch:7700
+
+LARAVEL_PDF_DRIVER=gotenberg
+LARAVEL_PDF_PRODUCTION_DRIVER=gotenberg
+GOTENBERG_URL=http://gotenberg:3000
 ```
 
 :::note
-The `horizon` and `pulse` services use `command:` to bypass the container entrypoint and run only the worker process. The `app` container already runs the web server, and it includes Horizon and Pulse via Supervisor when `QUEUE_CONNECTION=redis`.
+The `app` container runs FrankenPHP, Horizon, Pulse, and Nightwatch together via Supervisor when `QUEUE_CONNECTION=redis`. You do **not** need separate `horizon` or `pulse` containers unless you are horizontally scaling workers across multiple hosts.
 :::
+
+## Scaling Workers Separately
+
+If you need to scale Horizon or Pulse workers independently (for example, on a different host or with different resource limits), run dedicated worker containers:
+
+```yaml
+  horizon:
+    image: yukazaki/koakademy:latest
+    container_name: koakademy-horizon
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CONTAINER_MODE: horizon
+    depends_on:
+      - pgsql
+      - redis
+    volumes:
+      - koakademy-storage:/app/storage
+    networks:
+      - koakademy
+```
+
+Use `CONTAINER_MODE=horizon` to run only the Horizon queue worker, bypassing the web server entirely. The same pattern works for `scheduler` and `nightwatch`.
 
 ## Available Container Modes
 
@@ -295,23 +331,19 @@ The KoAkademy image supports different container modes via the `CONTAINER_MODE` 
 
 | Mode | Use Case | Command |
 |---|---|---|
-| `http` (default) | Web server with Octane | `docker run ... docker.io/yukazakiri/koakademy:latest` |
-| `horizon` | Queue worker with Horizon | `docker run -e CONTAINER_MODE=horizon ...` |
-| `scheduler` | Cron scheduler | `docker run -e CONTAINER_MODE=scheduler ...` |
-| `worker` | General queue worker | `docker run -e CONTAINER_MODE=worker ...` |
-| `nightwatch` | Nightwatch monitoring | `docker run -e CONTAINER_MODE=nightwatch ...` |
-
-:::note
-The main `http` container automatically starts Horizon and Pulse via Supervisor when Redis is configured. You only need separate `horizon` or `pulse` containers if you want to scale workers independently or run them on different hosts.
-:::
+| `http` (default) | Web server with Octane, Horizon, Pulse, and Nightwatch | `docker run ... yukazaki/koakademy:latest` |
+| `horizon` | Queue worker with Horizon only | `docker run -e CONTAINER_MODE=horizon ...` |
+| `scheduler` | Cron scheduler only | `docker run -e CONTAINER_MODE=scheduler ...` |
+| `worker` | General queue worker only | `docker run -e CONTAINER_MODE=worker ...` |
+| `nightwatch` | Nightwatch monitoring only | `docker run -e CONTAINER_MODE=nightwatch ...` |
 
 ## Image Registries
 
 | Registry | Image |
 |---|---|
-| Docker Hub | `docker.io/yukazakiri/koakademy:latest` |
-| GitHub Container Registry | `ghcr.io/yukazakiri/koakademy:latest` |
-| Dev (latest unstable) | `docker.io/yukazakiri/koakademy:dev-latest` |
+| Docker Hub | `yukazaki/koakademy:latest` |
+| GitHub Container Registry | `ghcr.io/yukazakiri/koakademy` |
+| Dev (latest unstable) | `yukazaki/koakademy:dev-latest` |
 
 ## Rolling Updates
 

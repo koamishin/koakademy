@@ -51,6 +51,19 @@ final class AdministratorClassManagementController extends Controller
             'fully_enrolled' => $request->has('fully_enrolled') ? $request->boolean('fully_enrolled') : null,
         ];
 
+        $sort = $this->nullableString($request->input('sort')) ?? 'created_at';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $perPage = $request->input('per_page', 20);
+
+        if ($perPage === 'all') {
+            $perPage = 100000;
+        } else {
+            $perPage = (int) $perPage;
+            if (! in_array($perPage, [10, 20, 30, 40, 50], true)) {
+                $perPage = 20;
+            }
+        }
+
         /** @var list<int> $enrollmentCourseIds */
         $enrollmentCourseIds = $generalSettingsService->getGlobalSettingsModel()?->enrollment_courses ?? [];
 
@@ -199,11 +212,22 @@ final class AdministratorClassManagementController extends Controller
             }
         }
 
+        $classesQuery = match ($sort) {
+            'record_title' => $classesQuery->orderBy('subject_code', $direction)->orderBy('section', $direction),
+            'faculty' => $classesQuery
+                ->leftJoin('faculties', 'classes.faculty_id', '=', 'faculties.id')
+                ->select('classes.*')
+                ->orderBy('faculties.last_name', $direction)
+                ->orderBy('faculties.first_name', $direction),
+            'period' => $classesQuery->orderBy('school_year', $direction)->orderBy('semester', $direction),
+            'enrollment' => $classesQuery->orderBy('class_enrollments_count', $direction),
+            default => $classesQuery->orderBy('created_at', $direction),
+        };
+
         /** @var LengthAwarePaginator $classes */
         $classes = $classesQuery
-            ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->paginate(20)
+            ->paginate($perPage)
             ->withQueryString();
 
         $classes->through(function (Classes $class) use ($courseCodeById): array {
@@ -261,9 +285,14 @@ final class AdministratorClassManagementController extends Controller
                 ],
             ],
             'classes' => $classes,
-            'selected_class' => $selectedClass,
-            'filters' => $filters,
-            'options' => [
+            'selected_class' => fn (): ?array => $selectedClass,
+            'filters' => [
+                ...$filters,
+                'per_page' => $perPage,
+                'sort' => $sort,
+                'direction' => $direction,
+            ],
+            'options' => fn (): array => [
                 'classifications' => [
                     ['value' => 'all', 'label' => 'All'],
                     ['value' => 'college', 'label' => 'College'],
@@ -321,7 +350,7 @@ final class AdministratorClassManagementController extends Controller
                         'label' => $track->track_name,
                     ])->values(),
             ],
-            'defaults' => [
+            'defaults' => fn (): array => [
                 'semester' => (string) $generalSettingsService->getCurrentSemester(),
                 'school_year' => $generalSettingsService->getCurrentSchoolYearString(),
             ],

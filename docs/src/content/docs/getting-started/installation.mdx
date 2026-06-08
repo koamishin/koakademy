@@ -89,7 +89,7 @@ docker run -d --name koakademy-pgsql `
   -e POSTGRES_DB=koakademy `
   -e POSTGRES_USER=koakademy `
   -e POSTGRES_PASSWORD=koakademy `
-  -v koakademy-pgsql:/var/lib/postgresql/data `
+  -v koakademy-pgsql:/var/lib/postgresql `
   postgres:17-alpine
 
 # Redis
@@ -308,7 +308,7 @@ docker run -d --name koakademy-pgsql \
   -e POSTGRES_DB=koakademy \
   -e POSTGRES_USER=koakademy \
   -e POSTGRES_PASSWORD=koakademy \
-  -v koakademy-pgsql:/var/lib/postgresql/data \
+  -v koakademy-pgsql:/var/lib/postgresql \
   postgres:17-alpine
 ```
 
