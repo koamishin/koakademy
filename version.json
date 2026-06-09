@@ -1,18 +1,18 @@
 {
-  "version": "1.7.5-dev.1.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.1.0",
-  "commit": "2901f6921939d992f4139600fbbedd1a8ff742a7",
+  "version": "1.8.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0",
+  "commit": "ff5c209b8e446bc402b574de9db86385c57e88d1",
   "branch": "master",
-  "timestamp": "2026-06-09T09:26:25Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27196533632",
-  "release_type": "feature",
+  "timestamp": "2026-06-09T09:42:45Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27197416381",
+  "release_type": "official",
   "changelog": {
-    "current": "Version 1.7.5-dev.1.0 - feat(classes): implement client-side filtering and sorting for admin",
-    "previous": "1.7.5-dev.0.8"
+    "current": "Version 1.8.0 - manual release",
+    "previous": "1.7.5-dev.1.0"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Auto Pre-release and Docker Tag",
+    "workflow": "Manual Official Release",
     "repository": "yukazakiri/koakademy"
   }
 }
