@@ -1,5 +1,6 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import { ClassScheduleVisualizer } from "@/Components/administrators/classes/schedule-visualizer";
+import { Filters, type FilterFieldConfig, type Filter as FilterType } from "@/components/reui/filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,13 +17,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VisualRadioButton } from "@/components/ui/visual-radio-button";
 import type { User } from "@/types/user";
 import { Head, Link, router, useForm } from "@inertiajs/react";
-import { BookOpen, CalendarIcon, Layers, ListTodo, MapPin, Palette, Pencil, Plus, Settings2, SlidersHorizontal, Trash2 } from "lucide-react";
+import {
+    BookOpen,
+    CalendarIcon,
+    Filter,
+    GraduationCap,
+    Layers,
+    ListTodo,
+    MapPin,
+    Palette,
+    Pencil,
+    Plus,
+    RotateCcw,
+    Settings2,
+    Trash2,
+    Users,
+} from "lucide-react";
 import * as React from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { route } from "ziggy-js";
 import { ClassRow, getColumns } from "./columns";
-import { ClassActiveFilters, type ActiveFilterBadge } from "./components/class-active-filters";
 import { ClassCard } from "./components/class-card";
-import { ClassFiltersSheet } from "./components/class-filters-sheet";
 import { ClassStats } from "./components/class-stats";
 import { ClassToolbar } from "./components/class-toolbar";
 import { DeleteClassDialog } from "./components/delete-class-dialog";
@@ -347,13 +362,14 @@ function SchedulePlanner({
 }
 
 export default function AdministratorClassesIndex({ user, classes, selected_class, filters, options, defaults }: ClassesIndexProps) {
-    const [search, setSearch] = React.useState("");
+    const [search, setSearch] = React.useState(filters.search || "");
     const [isSelectedClassLoading, setIsSelectedClassLoading] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
+    const [sortOption, setSortOption] = React.useState(`${filters.sort ?? "created_at"}:${filters.direction ?? "desc"}`);
+    const [activeFilters, setActiveFilters] = React.useState<FilterType[]>([]);
     const [isEditOpen, setIsEditOpen] = React.useState(false);
     const [isCopyOpen, setIsCopyOpen] = React.useState(false);
     const [isManageOpen, setIsManageOpen] = React.useState(false);
-    const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
     const [editActiveTab, setEditActiveTab] = React.useState<ClassDialogTab>("details");
     const [copySourceId, setCopySourceId] = React.useState<number | null>(null);
     const [copySection, setCopySection] = React.useState("A");
@@ -394,6 +410,225 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 .some((value) => value.toLowerCase().includes(searchTerm)),
         );
     }, [classes, search]);
+
+    const hasLocalSearch = search.trim() !== "";
+    const serverSearch = filters.search ?? "";
+    const isServerSearchCurrent = search.trim() === serverSearch.trim();
+    const shouldUseLocalSearchResults = hasLocalSearch && !isServerSearchCurrent;
+    const visibleClasses = shouldUseLocalSearchResults ? filteredClasses : classes;
+
+    const parseSortOption = (value: string): { sort: string; direction: "asc" | "desc" } => {
+        const [sort = "created_at", direction = "desc"] = value.split(":");
+
+        return {
+            sort,
+            direction: direction === "asc" ? "asc" : "desc",
+        };
+    };
+
+    const buildFilterParams = (
+        searchTerm: string,
+        filterValues: FilterType[] = activeFilters,
+        selectedSortOption: string = sortOption,
+    ): Record<string, string | number | null> => {
+        const sort = parseSortOption(selectedSortOption);
+        const appliedFilters: Record<string, string | number | null> = {
+            search: searchTerm.trim() || null,
+            classification: null,
+            course_id: null,
+            shs_track_id: null,
+            room_id: null,
+            faculty_id: null,
+            academic_year: null,
+            grade_level: null,
+            semester: null,
+            available_slots: null,
+            fully_enrolled: null,
+            sort: sort.sort,
+            direction: sort.direction,
+        };
+
+        filterValues.forEach((filter) => {
+            const value = filter.values[0];
+
+            if (typeof value === "string" || typeof value === "number") {
+                appliedFilters[filter.field] = value;
+            }
+        });
+
+        return appliedFilters;
+    };
+
+    const refreshClasses = useDebouncedCallback((searchTerm: string, filterValues: FilterType[], selectedSortOption: string = sortOption) => {
+        router.get(route("administrators.classes.index"), buildFilterParams(searchTerm, filterValues, selectedSortOption), {
+            only: ["classes", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    }, 350);
+
+    React.useEffect(() => {
+        const initialFilters: FilterType[] = [];
+
+        if (filters.classification)
+            initialFilters.push({ id: "classification", field: "classification", operator: "is", values: [filters.classification] });
+        if (filters.course_id) initialFilters.push({ id: "course_id", field: "course_id", operator: "is", values: [filters.course_id] });
+        if (filters.shs_track_id) initialFilters.push({ id: "shs_track_id", field: "shs_track_id", operator: "is", values: [filters.shs_track_id] });
+        if (filters.room_id) initialFilters.push({ id: "room_id", field: "room_id", operator: "is", values: [filters.room_id] });
+        if (filters.faculty_id) initialFilters.push({ id: "faculty_id", field: "faculty_id", operator: "is", values: [filters.faculty_id] });
+        if (filters.academic_year)
+            initialFilters.push({ id: "academic_year", field: "academic_year", operator: "is", values: [filters.academic_year] });
+        if (filters.grade_level) initialFilters.push({ id: "grade_level", field: "grade_level", operator: "is", values: [filters.grade_level] });
+        if (filters.semester) initialFilters.push({ id: "semester", field: "semester", operator: "is", values: [filters.semester] });
+        if (filters.available_slots) initialFilters.push({ id: "available_slots", field: "available_slots", operator: "is", values: ["true"] });
+        if (filters.fully_enrolled !== null && filters.fully_enrolled !== undefined) {
+            initialFilters.push({
+                id: "fully_enrolled",
+                field: "fully_enrolled",
+                operator: "is",
+                values: [filters.fully_enrolled ? "true" : "false"],
+            });
+        }
+
+        setActiveFilters(initialFilters);
+        setSortOption(`${filters.sort ?? "created_at"}:${filters.direction ?? "desc"}`);
+    }, [filters]);
+
+    const handleFiltersChange = (newFilters: FilterType[]) => {
+        setActiveFilters(newFilters);
+
+        router.get(route("administrators.classes.index"), buildFilterParams(search, newFilters), {
+            only: ["classes", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const clearFilters = () => {
+        setSearch("");
+        setActiveFilters([]);
+
+        router.get(route("administrators.classes.index"), buildFilterParams("", []), {
+            only: ["classes", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const handleSortChange = (value: string) => {
+        setSortOption(value);
+
+        router.get(route("administrators.classes.index"), buildFilterParams(search, activeFilters, value), {
+            only: ["classes", "filters"],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const filterFields: FilterFieldConfig[] = React.useMemo(
+        () => [
+            {
+                key: "classification",
+                label: "Class Type",
+                type: "select",
+                icon: <GraduationCap className="h-4 w-4" />,
+                options: options.classifications
+                    .filter((option) => option.value !== "all")
+                    .map((option) => ({ ...option, icon: <GraduationCap className="text-muted-foreground h-4 w-4" /> })),
+            },
+            {
+                key: "course_id",
+                label: "Course",
+                type: "select",
+                icon: <BookOpen className="h-4 w-4" />,
+                options: options.courses.map((option) => ({
+                    value: option.id,
+                    label: option.label,
+                    icon: <BookOpen className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+            {
+                key: "shs_track_id",
+                label: "SHS Track",
+                type: "select",
+                icon: <Layers className="h-4 w-4" />,
+                options: options.shs_tracks.map((option) => ({
+                    value: option.id,
+                    label: option.label,
+                    icon: <Layers className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+            {
+                key: "faculty_id",
+                label: "Faculty",
+                type: "select",
+                icon: <Users className="h-4 w-4" />,
+                options: options.faculties.map((option) => ({
+                    value: option.id,
+                    label: option.label,
+                    icon: <Users className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+            {
+                key: "room_id",
+                label: "Room",
+                type: "select",
+                icon: <MapPin className="h-4 w-4" />,
+                options: options.rooms.map((option) => ({
+                    value: option.id,
+                    label: option.label,
+                    icon: <MapPin className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+            {
+                key: "semester",
+                label: "Semester",
+                type: "select",
+                icon: <CalendarIcon className="h-4 w-4" />,
+                options: options.semesters.map((option) => ({ ...option, icon: <CalendarIcon className="text-muted-foreground h-4 w-4" /> })),
+            },
+            {
+                key: "academic_year",
+                label: "College Year",
+                type: "select",
+                icon: <GraduationCap className="h-4 w-4" />,
+                options: [1, 2, 3, 4].map((year) => ({
+                    value: year,
+                    label: `${year} year`,
+                    icon: <GraduationCap className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+            {
+                key: "grade_level",
+                label: "SHS Grade",
+                type: "select",
+                icon: <GraduationCap className="h-4 w-4" />,
+                options: options.grade_levels.map((option) => ({ ...option, icon: <GraduationCap className="text-muted-foreground h-4 w-4" /> })),
+            },
+            {
+                key: "available_slots",
+                label: "Available Slots",
+                type: "select",
+                icon: <Users className="h-4 w-4" />,
+                options: [{ value: "true", label: "Has available slots", icon: <Users className="h-4 w-4 text-green-500" /> }],
+            },
+            {
+                key: "fully_enrolled",
+                label: "Enrollment Status",
+                type: "select",
+                icon: <Users className="h-4 w-4" />,
+                options: [
+                    { value: "true", label: "Fully enrolled", icon: <Users className="h-4 w-4 text-red-500" /> },
+                    { value: "false", label: "Not fully enrolled", icon: <Users className="h-4 w-4 text-green-500" /> },
+                ],
+            },
+        ],
+        [options],
+    );
 
     const openManage = (classId: number) => {
         setIsManageOpen(true);
@@ -506,16 +741,16 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
             subject_code: selected_class.subject_code ?? "",
             academic_year: selected_class.academic_year ?? null,
 
-            shs_track_id: selected_class.shs_track?.id ?? null,
-            shs_strand_id: selected_class.shs_strand?.id ?? null,
+            shs_track_id: selected_class.shs_track ? Number(selected_class.shs_track.id) : null,
+            shs_strand_id: selected_class.shs_strand ? Number(selected_class.shs_strand.id) : null,
             subject_code_shs: selected_class.classification === "shs" ? selected_class.subject_code : "",
             grade_level: selected_class.grade_level ?? null,
 
-            faculty_id: selected_class.faculty?.id ?? null,
+            faculty_id: selected_class.faculty ? String(selected_class.faculty.id) : null,
             semester: normalizeSemester(selected_class.semester),
             school_year: selected_class.school_year,
             section: selected_class.section,
-            room_id: selected_class.room?.id ?? options.rooms[0]?.id ?? 0,
+            room_id: Number(selected_class.room?.id ?? options.rooms[0]?.id ?? 0),
             maximum_slots: selected_class.maximum_slots,
 
             schedules: selected_class.schedules.map((s) => ({
@@ -535,15 +770,15 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 allow_late_submissions: selected_class.settings.allow_late_submissions ?? false,
                 enable_discussion_board: selected_class.settings.enable_discussion_board ?? false,
                 custom: selected_class.settings.custom ?? {},
-                banner_image: null,
+                banner_image: null as File | null,
             },
             remove_banner_image: false,
-        });
+        } as typeof editForm.data);
 
         setSubjectCodeTouched(false);
         void loadCollegeSubjects(selected_class.course_ids ?? []);
-        void loadShsStrands(selected_class.shs_track?.id ?? null);
-        void loadShsSubjects(selected_class.shs_strand?.id ?? null);
+        void loadShsStrands(selected_class.shs_track ? Number(selected_class.shs_track.id) : null);
+        void loadShsSubjects(selected_class.shs_strand ? Number(selected_class.shs_strand.id) : null);
     }, [isEditOpen, selected_class]);
 
     const editFirstError = getFirstFormError(editForm.errors);
@@ -839,97 +1074,8 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
             <Head title="Administrators • Classes" />
 
             {(() => {
-                const courseLabelById = new Map(options.courses.map((course) => [course.id, course.label]));
-                const roomLabelById = new Map(options.rooms.map((room) => [room.id, room.label]));
-                const facultyLabelById = new Map(options.faculties.map((faculty) => [faculty.id, faculty.label]));
-                const semesterLabelByValue = new Map(options.semesters.map((semester) => [semester.value, semester.label]));
-
-                const activeFilterBadges: ActiveFilterBadge[] = [];
-
-                const classification = filters.classification ?? "all";
-                if (classification !== "all") {
-                    const label = options.classifications.find((c) => c.value === classification)?.label ?? classification;
-
-                    activeFilterBadges.push({
-                        key: "classification",
-                        label: `Type: ${label}`,
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.course_id) {
-                    activeFilterBadges.push({
-                        key: "course_id",
-                        label: `Course: ${courseLabelById.get(filters.course_id) ?? filters.course_id}`,
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.faculty_id) {
-                    activeFilterBadges.push({
-                        key: "faculty_id",
-                        label: `Faculty: ${facultyLabelById.get(filters.faculty_id) ?? filters.faculty_id}`,
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.room_id) {
-                    activeFilterBadges.push({
-                        key: "room_id",
-                        label: `Room: ${roomLabelById.get(filters.room_id) ?? filters.room_id}`,
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.semester) {
-                    activeFilterBadges.push({
-                        key: "semester",
-                        label: `Semester: ${semesterLabelByValue.get(filters.semester) ?? filters.semester}`,
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.academic_year) {
-                    activeFilterBadges.push({
-                        key: "academic_year",
-                        label: `Year: ${filters.academic_year}`,
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.grade_level) {
-                    activeFilterBadges.push({
-                        key: "grade_level",
-                        label: `Grade: ${filters.grade_level}`,
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.available_slots) {
-                    activeFilterBadges.push({
-                        key: "available_slots",
-                        label: "Has available slots",
-                        onClear: () => {},
-                    });
-                }
-
-                if (filters.fully_enrolled) {
-                    activeFilterBadges.push({
-                        key: "fully_enrolled",
-                        label: "Fully enrolled",
-                        onClear: () => {},
-                    });
-                }
-
-                const hasActiveFilters = activeFilterBadges.length > 0;
-
-                const clearAll = () => {
-                    setSearch("");
-                    router.reload({ only: ["classes"] });
-                };
-
-                const filteredStatsTotalStudents = filteredClasses.reduce((acc, curr) => acc + curr.students_count, 0);
-                const filteredStatsTotalClasses = filteredClasses.length;
+                const filteredStatsTotalStudents = visibleClasses.reduce((acc, curr) => acc + curr.students_count, 0);
+                const filteredStatsTotalClasses = visibleClasses.length;
 
                 return (
                     <div className="flex flex-col gap-6">
@@ -939,15 +1085,6 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                 <p className="text-muted-foreground text-sm">Manage classes, track enrollment, and organize schedules.</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setIsFiltersOpen(true)}>
-                                    <SlidersHorizontal className="mr-2 h-4 w-4" />
-                                    Filters
-                                    {hasActiveFilters ? (
-                                        <Badge variant="secondary" className="ml-2 h-5 px-1.5">
-                                            {activeFilterBadges.length}
-                                        </Badge>
-                                    ) : null}
-                                </Button>
                                 <Button asChild size="sm">
                                     <Link href={route("administrators.classes.create")}>
                                         <Plus className="mr-1.5 h-4 w-4" />
@@ -959,11 +1096,51 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                         </div>
 
                         <ClassStats totalClasses={filteredStatsTotalClasses} totalStudents={filteredStatsTotalStudents} />
-                        <ClassToolbar search={search} onSearchChange={setSearch} viewMode={viewMode} onViewModeChange={setViewMode} />
+                        <ClassToolbar
+                            search={search}
+                            onSearchChange={(nextSearch) => {
+                                setSearch(nextSearch);
+                                refreshClasses(nextSearch, activeFilters);
+                            }}
+                            sortOption={sortOption}
+                            onSortChange={handleSortChange}
+                            activeFiltersCount={activeFilters.length}
+                            filterControl={
+                                <Filters
+                                    fields={filterFields}
+                                    filters={activeFilters}
+                                    onChange={handleFiltersChange}
+                                    trigger={
+                                        <Button variant="outline" className="relative gap-2" size="sm">
+                                            <Filter className="h-4 w-4" />
+                                            Filters
+                                            {activeFilters.length > 0 && (
+                                                <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5 text-xs">
+                                                    {activeFilters.length}
+                                                </Badge>
+                                            )}
+                                        </Button>
+                                    }
+                                />
+                            }
+                            resetControl={
+                                activeFilters.length > 0 ? (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={clearFilters}
+                                        className="text-muted-foreground hover:text-foreground h-8 px-2"
+                                    >
+                                        <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                                        Reset
+                                    </Button>
+                                ) : null
+                            }
+                            viewMode={viewMode}
+                            onViewModeChange={setViewMode}
+                        />
 
-                        <ClassActiveFilters activeFilterBadges={activeFilterBadges} onClearAll={clearAll} />
-
-                        {filteredClasses.length === 0 ? (
+                        {visibleClasses.length === 0 ? (
                             <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center">
                                 <div className="bg-muted/50 border-border flex h-14 w-14 items-center justify-center rounded-full border">
                                     <Layers className="text-muted-foreground h-7 w-7" />
@@ -972,7 +1149,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                 <p className="text-muted-foreground mt-1.5 max-w-sm text-sm">
                                     Try adjusting your search or filters, or create a new class to get started.
                                 </p>
-                                <Button variant="outline" size="sm" className="mt-5" onClick={clearAll}>
+                                <Button variant="outline" size="sm" className="mt-5" onClick={clearFilters}>
                                     Clear filters
                                 </Button>
                             </div>
@@ -980,7 +1157,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             <>
                                 {viewMode === "grid" ? (
                                     <div className="animate-in fade-in slide-in-from-bottom-4 grid gap-4 duration-500 md:grid-cols-2 2xl:grid-cols-3">
-                                        {filteredClasses.map((row) => (
+                                        {visibleClasses.map((row) => (
                                             <ClassCard
                                                 key={row.id}
                                                 classRow={row}
@@ -996,28 +1173,18 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                         ))}
                                     </div>
                                 ) : (
-                                    <DataTable columns={columns} data={filteredClasses} />
+                                    <DataTable columns={columns} data={visibleClasses} />
                                 )}
 
                                 {viewMode === "grid" && (
                                     <div className="flex items-center justify-between gap-3 border-t pt-4">
                                         <div className="text-muted-foreground text-sm">
-                                            Showing {filteredClasses.length} {filteredClasses.length === 1 ? "class" : "classes"}
+                                            Showing {visibleClasses.length} {visibleClasses.length === 1 ? "class" : "classes"}
                                         </div>
                                     </div>
                                 )}
                             </>
                         )}
-
-                        <ClassFiltersSheet
-                            open={isFiltersOpen}
-                            onOpenChange={setIsFiltersOpen}
-                            filters={{ ...filters, search }}
-                            handleFilterChange={() => {}}
-                            options={options}
-                            hasActiveFilters={hasActiveFilters}
-                            clearAll={clearAll}
-                        />
                     </div>
                 );
             })()}
@@ -1467,8 +1634,8 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                             setSchedules={(nextSchedules) => editForm.setData("schedules", nextSchedules)}
                                             rooms={options.rooms}
                                             dayOptions={options.day_of_week}
-                                            defaultRoomId={options.rooms[0]?.id ?? 0}
-                                            classRoomId={editForm.data.room_id}
+                                            defaultRoomId={Number(options.rooms[0]?.id ?? 0)}
+                                            classRoomId={Number(editForm.data.room_id)}
                                         />
                                     </TabsContent>
 

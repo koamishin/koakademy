@@ -35,6 +35,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property-read Subject|null $SubjectByCode
  * @property-read Subject|null $SubjectByCodeFallback
  * @property-read Subject|null $SubjectById
+ * @property-read Collection<int, Subject> $subjects
  * @property-read Collection<int, ClassEnrollment> $class_enrollments
  * @property-read int|null $class_enrollments_count
  * @property-read Collection<int, ClassEnrollment> $enrollments
@@ -98,11 +99,6 @@ final class Classes extends Model
         'settings',
         'school_id',
     ];
-
-    /**
-     * Cached subjects collection to avoid duplicate queries.
-     */
-    private ?\Illuminate\Support\Collection $cachedSubjects = null;
 
     /**
      * Cached formatted course codes to avoid duplicate queries
@@ -289,34 +285,11 @@ final class Classes extends Model
     }
 
     /**
-     * Get the subjects associated with this class (multiple subjects support)
-     * This is an accessor method, not a relationship.
-     * Results are cached per instance to avoid duplicate queries.
+     * The subjects associated with this class.
      */
-    public function getSubjectsAttribute()
+    public function subjects(): Relations\ArrayBasedRelation
     {
-        if ($this->cachedSubjects instanceof \Illuminate\Support\Collection) {
-            return $this->cachedSubjects;
-        }
-
-        if (empty($this->subject_ids) || ! is_array($this->subject_ids)) {
-            $this->cachedSubjects = collect();
-
-            return $this->cachedSubjects;
-        }
-
-        // Filter out any null or empty values and remove duplicates
-        $validSubjectIds = array_unique(array_filter($this->subject_ids, fn ($id): bool => ! empty($id)));
-
-        if ($validSubjectIds === []) {
-            $this->cachedSubjects = collect();
-
-            return $this->cachedSubjects;
-        }
-
-        $this->cachedSubjects = Subject::query()->whereIn('id', $validSubjectIds)->get();
-
-        return $this->cachedSubjects;
+        return new Relations\ArrayBasedRelation($this, Subject::class, 'subject_ids', 'id');
     }
 
     /**

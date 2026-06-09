@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-table";
 import * as React from "react";
 
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
@@ -156,6 +157,22 @@ export function DataTable<TData, TValue>({ columns, data, pagination, filters = 
                                 ))}
                             </TableRow>
                         ))}
+                        {!isServerSide && (
+                            <TableRow>
+                                {table.getHeaderGroups()[0].headers.map((header) => (
+                                    <TableHead key={`filter-${header.id}`} className="pb-2">
+                                        {header.column.getCanFilter() && header.column.id !== "select" && header.column.id !== "actions" ? (
+                                            <Input
+                                                placeholder={`Filter ${header.column.id.replace(/_/g, " ")}...`}
+                                                value={(header.column.getFilterValue() as string) ?? ""}
+                                                onChange={(e) => header.column.setFilterValue(e.target.value)}
+                                                className="h-8 text-xs"
+                                            />
+                                        ) : null}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        )}
                     </TableHeader>
                     <TableBody className={cn(showLoading && "opacity-60 transition-opacity")}>
                         {table.getRowModel().rows?.length ? (

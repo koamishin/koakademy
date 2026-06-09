@@ -6,7 +6,9 @@ use App\Enums\UserRole;
 use App\Models\ClassEnrollment;
 use App\Models\Classes;
 use App\Models\Student;
+use App\Models\Subject;
 use App\Models\User;
+use App\Services\GeneralSettingsService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia;
@@ -38,6 +40,35 @@ beforeEach(function () {
             $table->timestamps();
         });
     }
+});
+
+it('lists classes with multiple subjects on the administrator index', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $this->actingAs($user);
+
+    $subject = Subject::factory()->create([
+        'code' => 'GE-TEST',
+        'title' => 'General Education Test Subject',
+    ]);
+
+    $period = app(GeneralSettingsService::class);
+    $class = Classes::factory()->create([
+        'subject_id' => null,
+        'subject_code' => 'GE-TEST',
+        'subject_ids' => [$subject->id],
+        'school_year' => $period->getCurrentSchoolYearString(),
+        'semester' => $period->getCurrentSemester(),
+        'classification' => 'college',
+    ]);
+
+    $this->get(route('administrators.classes.index', ['search' => 'GE-TEST']))
+        ->assertSuccessful()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/classes/index', false)
+            ->has('classes', 1)
+            ->where('classes.0.id', $class->id)
+            ->where('classes.0.subject_code', 'GE-TEST')
+        );
 });
 
 it('supports partial reloads for classes table updates', function (): void {
