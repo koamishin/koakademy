@@ -25846,30 +25846,6 @@ parameters:
 			path: app/Jobs/SendEventReminder.php
 
 		-
-			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
-			identifier: larastan.noEnvCallsOutsideOfConfig
-			count: 4
-			path: app/Jobs/TestBrowsershotEnvironmentJob.php
-
-		-
-			message: '#^Cannot access offset ''chrome_path'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: app/Jobs/TestBrowsershotEnvironmentJob.php
-
-		-
-			message: '#^Cannot access offset ''node_binary_path'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: app/Jobs/TestBrowsershotEnvironmentJob.php
-
-		-
-			message: '#^Cannot access offset ''npm_binary_path'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: app/Jobs/TestBrowsershotEnvironmentJob.php
-
-		-
 			message: '#^Access to an undefined property Filament\\Actions\\Exports\\Models\\Export\:\:\$user_id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -31046,12 +31022,6 @@ parameters:
 			path: app/Notifications/InvoiceTransact.php
 
 		-
-			message: '#^Call to an undefined static method App\\Services\\BrowsershotService\:\:generateScreenshot\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 1
-			path: app/Notifications/InvoiceTransact.php
-
-		-
 			message: '#^Call to an undefined static method Endroid\\QrCode\\Builder\\Builder\:\:create\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
@@ -31371,12 +31341,6 @@ parameters:
 
 		-
 			message: '#^Method App\\Notifications\\MigrateToStudent\:\:generatePdf\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Notifications/MigrateToStudent.php
-
-		-
-			message: '#^Method App\\Notifications\\MigrateToStudent\:\:generatePdfWithBrowsershot\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Notifications/MigrateToStudent.php
@@ -32090,12 +32054,6 @@ parameters:
 			path: app/Services/AnnouncementShareService.php
 
 		-
-			message: '#^Method App\\Services\\BrowsershotService\:\:generatePdf\(\) has parameter \$options with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/BrowsershotService.php
-
-		-
 			message: '#^Cannot access offset ''tag_name'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -32742,108 +32700,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/FacultyClassShareService.php
-
-		-
-			message: '#^Call to an undefined method Spatie\\Browsershot\\Browsershot\:\:disableSetuidSandbox\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method disableDevShmUsage\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method disableGpu\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method emulateMedia\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method format\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method landscape\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method margins\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method pdf\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method printBackground\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method save\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method timeout\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot call method waitUntilNetworkIdle\(\) on mixed\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot cast mixed to float\.$#'
-			identifier: cast.double
-			count: 4
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot cast mixed to int\.$#'
-			identifier: cast.int
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Method App\\Services\\FixedBrowsershotService\:\:generatePdf\(\) has parameter \$options with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
-
-		-
-			message: '#^Method App\\Services\\FixedBrowsershotService\:\:generatePdf\(\) should return bool\|string but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/FixedBrowsershotService.php
 
 		-
 			message: '#^Call to function is_null\(\) with int will always evaluate to false\.$#'
@@ -37759,6 +37615,3 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: routes/web/testing.php
-
-
-

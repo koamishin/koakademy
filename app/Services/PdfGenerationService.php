@@ -8,7 +8,6 @@ use Deprecated;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use setasign\Fpdi\Fpdi;
-use Spatie\Browsershot\Browsershot;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Spatie\LaravelPdf\PdfBuilder;
 
@@ -286,12 +285,6 @@ final class PdfGenerationService
 
         if (isset($normalizedOptions['page-ranges']) && is_string($normalizedOptions['page-ranges'])) {
             $pdfBuilder->pageRanges($normalizedOptions['page-ranges']);
-        }
-
-        if (($normalizedOptions['print-background'] ?? null) === false) {
-            $pdfBuilder->withBrowsershot(static function (Browsershot $browsershot): void {
-                $browsershot->hideBackground();
-            });
         }
     }
 
