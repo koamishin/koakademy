@@ -1,14 +1,14 @@
 {
-  "version": "1.7.5-dev.0.7",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.7",
-  "commit": "b3a10f993212ee7d53c446d570bac10d7fd0a309",
+  "version": "1.7.5-dev.0.8",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.8",
+  "commit": "7f243235b96957e1e4e1095355487ca4045ff46b",
   "branch": "master",
-  "timestamp": "2026-06-08T08:34:37Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27125400518",
+  "timestamp": "2026-06-09T07:08:05Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27189668667",
   "release_type": "chore",
   "changelog": {
-    "current": "Version 1.7.5-dev.0.7 - chore(tmp): Delete .tmp session and task artifacts",
-    "previous": "1.7.5-dev.0.6"
+    "current": "Version 1.7.5-dev.0.8 - refactor: Remove Browsershot as headless browser PDF option",
+    "previous": "1.7.5-dev.0.7"
   },
   "metadata": {
     "author": "yukazakiri",
