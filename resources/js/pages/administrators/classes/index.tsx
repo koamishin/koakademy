@@ -18,7 +18,6 @@ import type { User } from "@/types/user";
 import { Head, Link, router, useForm } from "@inertiajs/react";
 import { BookOpen, CalendarIcon, Layers, ListTodo, MapPin, Palette, Pencil, Plus, Settings2, SlidersHorizontal, Trash2 } from "lucide-react";
 import * as React from "react";
-import { useDebouncedCallback } from "use-debounce";
 import { route } from "ziggy-js";
 import { ClassRow, getColumns } from "./columns";
 import { ClassActiveFilters, type ActiveFilterBadge } from "./components/class-active-filters";
@@ -128,17 +127,7 @@ interface ClassesIndexProps {
             create_url: string;
         };
     };
-    classes: {
-        data: ClassRow[];
-        prev_page_url: string | null;
-        next_page_url: string | null;
-        total: number;
-        from: number;
-        to: number;
-        current_page: number;
-        last_page: number;
-        per_page: number;
-    };
+    classes: ClassRow[];
     selected_class: SelectedClass | null;
     filters: {
         search?: string | null;
@@ -358,8 +347,7 @@ function SchedulePlanner({
 }
 
 export default function AdministratorClassesIndex({ user, classes, selected_class, filters, options, defaults }: ClassesIndexProps) {
-    const [search, setSearch] = React.useState(() => filters.search || "");
-    const [isSearchLoading, setIsSearchLoading] = React.useState(false);
+    const [search, setSearch] = React.useState("");
     const [isSelectedClassLoading, setIsSelectedClassLoading] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
     const [isEditOpen, setIsEditOpen] = React.useState(false);
@@ -382,71 +370,30 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
     const [subjectCodeTouched, setSubjectCodeTouched] = React.useState(false);
 
-    React.useEffect(() => {
-        setSearch(filters.search ?? "");
-    }, [filters.search]);
-
-    const filteredClassesBySearch = React.useMemo(() => {
+    const filteredClasses = React.useMemo(() => {
         const searchTerm = search.trim().toLowerCase();
 
         if (searchTerm === "") {
-            return classes.data;
+            return classes;
         }
 
-        return classes.data.filter((classRow) =>
+        return classes.filter((classRow) =>
             [
                 classRow.record_title,
                 classRow.subject_code,
                 classRow.subject_title,
                 classRow.section,
                 classRow.school_year,
-                classRow.semester,
+                String(classRow.semester ?? ""),
                 classRow.classification,
                 classRow.faculty,
                 classRow.shs_track,
                 classRow.shs_strand,
             ]
-                .filter((value): value is string | number => value !== null && value !== undefined)
-                .some((value) => String(value).toLowerCase().includes(searchTerm)),
+                .filter((value): value is string => value !== null && value !== undefined)
+                .some((value) => value.toLowerCase().includes(searchTerm)),
         );
-    }, [classes.data, search]);
-
-    const serverSearch = filters.search ?? "";
-    const isServerSearchCurrent = search.trim() === serverSearch.trim();
-    const shouldUseLocalSearchResults = search.trim() !== "" && !isServerSearchCurrent;
-    const visibleClasses = shouldUseLocalSearchResults ? filteredClassesBySearch : classes.data;
-
-    const visitClasses = React.useCallback((query: InertiaGetPayload) => {
-        router.cancelAll();
-
-        router.get(route("administrators.classes.index"), query, {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-            only: ["classes", "filters"],
-            onStart: () => setIsSearchLoading(true),
-            onFinish: () => setIsSearchLoading(false),
-        });
-    }, []);
-
-    const handleSearch = useDebouncedCallback((term: string) => {
-        visitClasses({
-            ...filters,
-            search: term.trim() ? term : null,
-            page: 1,
-        });
-    }, 150);
-
-    const handleFilterChange = (key: string, value: string | number | boolean | null) => {
-        const nextSearch = search.trim() ? search.trim() : null;
-
-        visitClasses({
-            ...filters,
-            search: nextSearch,
-            [key]: value === "all" ? null : value,
-            page: 1,
-        });
-    };
+    }, [classes, search]);
 
     const openManage = (classId: number) => {
         setIsManageOpen(true);
@@ -454,7 +401,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
         router.get(
             route("administrators.classes.index"),
-            { ...filters, selected: classId },
+            { selected: classId },
             {
                 preserveState: true,
                 replace: true,
@@ -471,7 +418,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
         router.get(
             route("administrators.classes.index"),
-            { ...filters, selected: classId },
+            { selected: classId },
             {
                 preserveState: true,
                 replace: true,
@@ -906,7 +853,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "classification",
                         label: `Type: ${label}`,
-                        onClear: () => handleFilterChange("classification", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -914,7 +861,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "course_id",
                         label: `Course: ${courseLabelById.get(filters.course_id) ?? filters.course_id}`,
-                        onClear: () => handleFilterChange("course_id", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -922,7 +869,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "faculty_id",
                         label: `Faculty: ${facultyLabelById.get(filters.faculty_id) ?? filters.faculty_id}`,
-                        onClear: () => handleFilterChange("faculty_id", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -930,7 +877,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "room_id",
                         label: `Room: ${roomLabelById.get(filters.room_id) ?? filters.room_id}`,
-                        onClear: () => handleFilterChange("room_id", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -938,7 +885,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "semester",
                         label: `Semester: ${semesterLabelByValue.get(filters.semester) ?? filters.semester}`,
-                        onClear: () => handleFilterChange("semester", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -946,7 +893,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "academic_year",
                         label: `Year: ${filters.academic_year}`,
-                        onClear: () => handleFilterChange("academic_year", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -954,7 +901,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "grade_level",
                         label: `Grade: ${filters.grade_level}`,
-                        onClear: () => handleFilterChange("grade_level", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -962,7 +909,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "available_slots",
                         label: "Has available slots",
-                        onClear: () => handleFilterChange("available_slots", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -970,7 +917,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     activeFilterBadges.push({
                         key: "fully_enrolled",
                         label: "Fully enrolled",
-                        onClear: () => handleFilterChange("fully_enrolled", null),
+                        onClear: () => {},
                     });
                 }
 
@@ -978,11 +925,11 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
                 const clearAll = () => {
                     setSearch("");
-                    visitClasses({});
+                    router.reload({ only: ["classes"] });
                 };
 
-                const filteredStatsTotalStudents = visibleClasses.reduce((acc, curr) => acc + curr.students_count, 0);
-                const filteredStatsTotalClasses = shouldUseLocalSearchResults ? visibleClasses.length : classes.total;
+                const filteredStatsTotalStudents = filteredClasses.reduce((acc, curr) => acc + curr.students_count, 0);
+                const filteredStatsTotalClasses = filteredClasses.length;
 
                 return (
                     <div className="flex flex-col gap-6">
@@ -1012,22 +959,11 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                         </div>
 
                         <ClassStats totalClasses={filteredStatsTotalClasses} totalStudents={filteredStatsTotalStudents} />
-                        <ClassToolbar
-                            search={search}
-                            onSearchChange={(value) => {
-                                setSearch(value);
-                                handleSearch(value);
-                            }}
-                            isSearchLoading={isSearchLoading}
-                            classification={filters.classification ?? "all"}
-                            onClassificationChange={(value) => handleFilterChange("classification", value === "all" ? null : value)}
-                            viewMode={viewMode}
-                            onViewModeChange={setViewMode}
-                        />
+                        <ClassToolbar search={search} onSearchChange={setSearch} viewMode={viewMode} onViewModeChange={setViewMode} />
 
                         <ClassActiveFilters activeFilterBadges={activeFilterBadges} onClearAll={clearAll} />
 
-                        {visibleClasses.length === 0 ? (
+                        {filteredClasses.length === 0 ? (
                             <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center">
                                 <div className="bg-muted/50 border-border flex h-14 w-14 items-center justify-center rounded-full border">
                                     <Layers className="text-muted-foreground h-7 w-7" />
@@ -1044,7 +980,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             <>
                                 {viewMode === "grid" ? (
                                     <div className="animate-in fade-in slide-in-from-bottom-4 grid gap-4 duration-500 md:grid-cols-2 2xl:grid-cols-3">
-                                        {visibleClasses.map((row) => (
+                                        {filteredClasses.map((row) => (
                                             <ClassCard
                                                 key={row.id}
                                                 classRow={row}
@@ -1060,36 +996,13 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                         ))}
                                     </div>
                                 ) : (
-                                    <DataTable
-                                        columns={columns}
-                                        data={visibleClasses}
-                                        pagination={
-                                            shouldUseLocalSearchResults
-                                                ? {
-                                                      current_page: 1,
-                                                      last_page: 1,
-                                                      per_page: classes.per_page,
-                                                      total: visibleClasses.length,
-                                                      next_page_url: null,
-                                                      prev_page_url: null,
-                                                      from: visibleClasses.length > 0 ? 1 : 0,
-                                                      to: visibleClasses.length,
-                                                  }
-                                                : classes
-                                        }
-                                        filters={{
-                                            ...filters,
-                                            search: search.trim() ? search.trim() : null,
-                                        }}
-                                        isLoading={isSearchLoading}
-                                    />
+                                    <DataTable columns={columns} data={filteredClasses} />
                                 )}
 
                                 {viewMode === "grid" && (
                                     <div className="flex items-center justify-between gap-3 border-t pt-4">
                                         <div className="text-muted-foreground text-sm">
-                                            Showing {visibleClasses.length} {visibleClasses.length === 1 ? "class" : "classes"}
-                                            {shouldUseLocalSearchResults ? ` (from ${classes.total} total)` : ""}
+                                            Showing {filteredClasses.length} {filteredClasses.length === 1 ? "class" : "classes"}
                                         </div>
                                     </div>
                                 )}
@@ -1100,7 +1013,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             open={isFiltersOpen}
                             onOpenChange={setIsFiltersOpen}
                             filters={{ ...filters, search }}
-                            handleFilterChange={handleFilterChange}
+                            handleFilterChange={() => {}}
                             options={options}
                             hasActiveFilters={hasActiveFilters}
                             clearAll={clearAll}

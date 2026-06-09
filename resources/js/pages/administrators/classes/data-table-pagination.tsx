@@ -29,7 +29,12 @@ export function DataTablePagination<TData>({ table, isLoading = false, paginatio
                     </>
                 ) : (
                     <>
-                        {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                        Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{" "}
+                        {Math.min(
+                            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                            table.getFilteredRowModel().rows.length,
+                        )}{" "}
+                        of {table.getFilteredRowModel().rows.length} row(s)
                     </>
                 )}
             </div>

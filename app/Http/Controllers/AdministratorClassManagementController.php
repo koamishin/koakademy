@@ -96,141 +96,11 @@ final class AdministratorClassManagementController extends Controller
                 'shsTrack',
                 'shsStrand',
             ])
-            ->withCount('class_enrollments');
+            ->withCount('class_enrollments')
+            ->orderByDesc('id');
 
-        if (is_string($filters['search']) && $filters['search'] !== '') {
-            $term = $filters['search'];
-            $like = '%'.$term.'%';
-
-            $classesQuery->where(function ($nested) use ($like): void {
-                $nested->whereRaw('LOWER(subject_code) LIKE LOWER(?)', [$like])
-                    ->orWhereRaw('LOWER(section) LIKE LOWER(?)', [$like])
-                    ->orWhereRaw('LOWER(school_year) LIKE LOWER(?)', [$like])
-                    ->orWhereRaw("LOWER(CONCAT(subject_code, ' - ', section)) LIKE LOWER(?)", [$like])
-                    ->orWhereHas('Subject', function ($subjectQuery) use ($like): void {
-                        $subjectQuery->whereRaw('LOWER(code) LIKE LOWER(?)', [$like])
-                            ->orWhereRaw('LOWER(title) LIKE LOWER(?)', [$like]);
-                    })
-                    ->orWhereHas('SubjectByCodeFallback', function ($subjectQuery) use ($like): void {
-                        $subjectQuery->whereRaw('LOWER(code) LIKE LOWER(?)', [$like])
-                            ->orWhereRaw('LOWER(title) LIKE LOWER(?)', [$like]);
-                    })
-                    ->orWhereHas('ShsSubject', function ($subjectQuery) use ($like): void {
-                        $subjectQuery->whereRaw('LOWER(code) LIKE LOWER(?)', [$like])
-                            ->orWhereRaw('LOWER(title) LIKE LOWER(?)', [$like]);
-                    });
-            });
-        }
-
-        if (is_string($filters['classification']) && $filters['classification'] !== '' && $filters['classification'] !== 'all') {
-            $classesQuery->where('classification', $filters['classification']);
-        }
-
-        if (is_int($filters['course_id'])) {
-            $courseId = $filters['course_id'];
-
-            $classesQuery
-                ->where('classification', 'college')
-                ->whereRaw('(
-                    EXISTS (
-                        SELECT 1 FROM subject
-                        WHERE subject.id = classes.subject_id
-                        AND subject.course_id = ?
-                    )
-                    OR (
-                        subject_ids IS NOT NULL
-                        AND EXISTS (
-                            SELECT 1 FROM subject, jsonb_array_elements_text(classes.subject_ids::jsonb) AS subject_id
-                            WHERE subject.id = subject_id::bigint
-                            AND subject.course_id = ?
-                        )
-                    )
-                )', [$courseId, $courseId]);
-        }
-
-        if (is_int($filters['shs_track_id'])) {
-            $classesQuery->where('classification', 'shs')->where('shs_track_id', $filters['shs_track_id']);
-        }
-
-        if (is_int($filters['shs_strand_id'])) {
-            $classesQuery->where('classification', 'shs')->where('shs_strand_id', $filters['shs_strand_id']);
-        }
-
-        if (is_string($filters['subject_code']) && $filters['subject_code'] !== '') {
-            $subjectCode = $filters['subject_code'];
-
-            $classesQuery->where(function ($builder) use ($subjectCode): void {
-                $builder
-                    ->where('subject_code', $subjectCode)
-                    ->orWhereHas('Subject', fn ($query) => $query->where('code', $subjectCode))
-                    ->orWhereHas('SubjectByCodeFallback', fn ($query) => $query->where('code', $subjectCode))
-                    ->orWhereHas('ShsSubject', fn ($query) => $query->where('code', $subjectCode));
-            });
-        }
-
-        if (is_int($filters['room_id'])) {
-            $roomId = $filters['room_id'];
-
-            $classesQuery->whereRaw('(
-                room_id = ?
-                OR EXISTS (
-                    SELECT 1 FROM schedule
-                    WHERE schedule.class_id = classes.id
-                    AND schedule.room_id = ?
-                    AND schedule.deleted_at IS NULL
-                )
-            )', [$roomId, $roomId]);
-        }
-
-        if (is_string($filters['faculty_id']) && $filters['faculty_id'] !== '') {
-            $classesQuery->where('faculty_id', $filters['faculty_id']);
-        }
-
-        if (is_int($filters['academic_year'])) {
-            $classesQuery->where('classification', 'college')->where('academic_year', $filters['academic_year']);
-        }
-
-        if (is_string($filters['grade_level']) && $filters['grade_level'] !== '') {
-            $classesQuery->where('classification', 'shs')->where('grade_level', $filters['grade_level']);
-        }
-
-        if (is_string($filters['semester']) && $filters['semester'] !== '') {
-            $classesQuery->where('semester', $filters['semester']);
-        }
-
-        $enrollmentCountSubquery = '(SELECT count(*) FROM class_enrollments WHERE class_enrollments.class_id = classes.id AND class_enrollments.deleted_at IS NULL)';
-
-        if ($filters['available_slots'] === true) {
-            $classesQuery->whereRaw("maximum_slots > $enrollmentCountSubquery");
-        }
-
-        if (is_bool($filters['fully_enrolled'])) {
-            if ($filters['fully_enrolled']) {
-                $classesQuery->whereRaw("maximum_slots <= $enrollmentCountSubquery");
-            } else {
-                $classesQuery->whereRaw("maximum_slots > $enrollmentCountSubquery");
-            }
-        }
-
-        $classesQuery = match ($sort) {
-            'record_title' => $classesQuery->orderBy('subject_code', $direction)->orderBy('section', $direction),
-            'faculty' => $classesQuery
-                ->leftJoin('faculties', 'classes.faculty_id', '=', 'faculties.id')
-                ->select('classes.*')
-                ->orderBy('faculties.last_name', $direction)
-                ->orderBy('faculties.first_name', $direction),
-            'period' => $classesQuery->orderBy('school_year', $direction)->orderBy('semester', $direction),
-            'enrollment' => $classesQuery->orderBy('class_enrollments_count', $direction),
-            default => $classesQuery->orderBy('created_at', $direction),
-        };
-
-        /** @var LengthAwarePaginator $classes */
-        $classes = $classesQuery
-            ->orderByDesc('id')
-            ->paginate($perPage)
-            ->withQueryString();
-
-        $classes->through(function (Classes $class) use ($courseCodeById): array {
+        // Fetch all classes for client-side filtering/sorting/pagination
+        $classes = $classesQuery->get()->map(function (Classes $class) use ($courseCodeById): array {
             $subject = $class->subjects->first();
 
             if (! $subject) {
@@ -267,7 +137,7 @@ final class AdministratorClassManagementController extends Controller
                     'edit_url' => route('filament.admin.resources.classes.edit', $class),
                 ],
             ];
-        });
+        })->values();
 
         $selectedClass = null;
         $selectedId = $this->nullableInt($request->input('selected'));
@@ -287,10 +157,8 @@ final class AdministratorClassManagementController extends Controller
             'classes' => $classes,
             'selected_class' => fn (): ?array => $selectedClass,
             'filters' => [
-                ...$filters,
-                'per_page' => $perPage,
-                'sort' => $sort,
-                'direction' => $direction,
+                'search' => null,
+                'classification' => null,
             ],
             'options' => fn (): array => [
                 'classifications' => [

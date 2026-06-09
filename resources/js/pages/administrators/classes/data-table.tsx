@@ -41,14 +41,9 @@ interface DataTableProps<TData, TValue> {
     isLoading?: boolean;
 }
 
-export function DataTable<TData, TValue>({
-    columns,
-    data,
-    pagination,
-    filters = {},
-    routeName = "administrators.classes.index",
-    isLoading = false,
-}: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ columns, data, pagination, filters = {}, routeName, isLoading = false }: DataTableProps<TData, TValue>) {
+    const isServerSide = !!routeName;
+
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -59,6 +54,8 @@ export function DataTable<TData, TValue>({
 
     const visitTable = React.useCallback(
         (query: InertiaGetPayload) => {
+            if (!routeName) return;
+
             router.cancelAll();
 
             router.get(route(routeName), query, {
@@ -74,63 +71,71 @@ export function DataTable<TData, TValue>({
     );
 
     React.useEffect(() => {
+        if (!isServerSide) return;
+
         const urlParams = new URLSearchParams(window.location.search);
         const sort = urlParams.get("sort");
         const direction = urlParams.get("direction");
         if (sort) {
             setSorting([{ id: sort, desc: direction === "desc" }]);
         }
-    }, []);
+    }, [isServerSide]);
 
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        manualPagination: !!pagination,
-        manualSorting: !!pagination,
+        manualPagination: isServerSide,
+        manualSorting: isServerSide,
         pageCount: pagination?.last_page ?? -1,
         getPaginationRowModel: getPaginationRowModel(),
-        onSortingChange: (updater) => {
-            const newSorting = typeof updater === "function" ? updater(sorting) : updater;
-            setSorting(newSorting);
+        onSortingChange: isServerSide
+            ? (updater) => {
+                  const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+                  setSorting(newSorting);
 
-            if (newSorting.length > 0) {
-                const { id, desc } = newSorting[0];
-                visitTable({ ...filters, sort: id, direction: desc ? "desc" : "asc", page: 1 });
-            } else {
-                visitTable({ ...filters, sort: null, direction: null, page: 1 });
-            }
-        },
+                  if (newSorting.length > 0) {
+                      const { id, desc } = newSorting[0];
+                      visitTable({ ...filters, sort: id, direction: desc ? "desc" : "asc", page: 1 });
+                  } else {
+                      visitTable({ ...filters, sort: null, direction: null, page: 1 });
+                  }
+              }
+            : setSorting,
         getSortedRowModel: getSortedRowModel(),
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
-        onPaginationChange: (updater) => {
-            const currentPaginationState = {
-                pageIndex: pagination ? pagination.current_page - 1 : 0,
-                pageSize: pagination ? pagination.per_page : 10,
-            };
+        onPaginationChange: isServerSide
+            ? (updater) => {
+                  const currentPaginationState = {
+                      pageIndex: pagination ? pagination.current_page - 1 : 0,
+                      pageSize: pagination ? pagination.per_page : 10,
+                  };
 
-            const nextState = typeof updater === "function" ? updater(currentPaginationState) : updater;
+                  const nextState = typeof updater === "function" ? updater(currentPaginationState) : updater;
 
-            if (nextState.pageIndex !== currentPaginationState.pageIndex || nextState.pageSize !== currentPaginationState.pageSize) {
-                visitTable({
-                    ...filters,
-                    page: nextState.pageIndex + 1,
-                    per_page: nextState.pageSize,
-                });
-            }
-        },
+                  if (nextState.pageIndex !== currentPaginationState.pageIndex || nextState.pageSize !== currentPaginationState.pageSize) {
+                      visitTable({
+                          ...filters,
+                          page: nextState.pageIndex + 1,
+                          per_page: nextState.pageSize,
+                      });
+                  }
+              }
+            : undefined,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
-            pagination: {
-                pageIndex: pagination ? pagination.current_page - 1 : 0,
-                pageSize: pagination ? pagination.per_page : 10,
-            },
+            ...(isServerSide && {
+                pagination: {
+                    pageIndex: pagination ? pagination.current_page - 1 : 0,
+                    pageSize: pagination ? pagination.per_page : 10,
+                },
+            }),
         },
     });
 
