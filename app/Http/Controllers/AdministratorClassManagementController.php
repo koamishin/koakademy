@@ -631,32 +631,31 @@ final class AdministratorClassManagementController extends Controller
                 : Storage::url($bannerPath);
         }
 
-        /** @var LengthAwarePaginator $enrollments */
+        // Fetch all enrollments for this class (client-side filtering/sorting/pagination)
         $enrollments = $class->class_enrollments()
             ->with([
                 'student:id,student_id,first_name,last_name,course_id,academic_year',
                 'student.course:id,code',
             ])
             ->latest('created_at')
-            ->paginate(25)
-            ->withQueryString();
-
-        $enrollments = $enrollments->through(fn ($enrollment): array => [
-            'id' => $enrollment->id,
-            'student' => $enrollment->student ? [
-                'id' => $enrollment->student->id,
-                'student_id' => $enrollment->student->student_id,
-                'name' => $enrollment->student->full_name,
-                'course' => $enrollment->student->course?->code,
-                'academic_year' => $enrollment->student->academic_year,
-            ] : null,
-            'status' => $enrollment->status,
-            'prelim_grade' => $enrollment->prelim_grade,
-            'midterm_grade' => $enrollment->midterm_grade,
-            'finals_grade' => $enrollment->finals_grade,
-            'total_average' => $enrollment->total_average,
-            'remarks' => $enrollment->remarks,
-        ]);
+            ->get()
+            ->map(fn ($enrollment): array => [
+                'id' => $enrollment->id,
+                'student' => $enrollment->student ? [
+                    'id' => $enrollment->student->id,
+                    'student_id' => $enrollment->student->student_id,
+                    'name' => $enrollment->student->full_name,
+                    'course' => $enrollment->student->course?->code,
+                    'academic_year' => $enrollment->student->academic_year,
+                ] : null,
+                'status' => $enrollment->status,
+                'prelim_grade' => $enrollment->prelim_grade,
+                'midterm_grade' => $enrollment->midterm_grade,
+                'finals_grade' => $enrollment->finals_grade,
+                'total_average' => $enrollment->total_average,
+                'remarks' => $enrollment->remarks,
+            ])
+            ->values();
 
         // Fetch occupied schedules for all rooms in the current period to display conflicts
         $currentSemester = $generalSettingsService->getCurrentSemester();

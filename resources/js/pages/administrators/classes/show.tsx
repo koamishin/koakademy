@@ -12,7 +12,6 @@ import {
     ContextMenuSubTrigger,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { DataTable } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -20,14 +19,22 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { User } from "@/types/user";
 import { DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { Head, Link, useForm } from "@inertiajs/react";
-import { ColumnDef } from "@tanstack/react-table";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+    getSortedRowModel,
+    SortingState,
+    useReactTable,
+} from "@tanstack/react-table";
 import { format, parse, set } from "date-fns";
 import {
     AlertCircle,
@@ -37,19 +44,18 @@ import {
     Calendar as CalendarIcon,
     CheckCircle2,
     ChevronLeft,
+    ChevronRight,
     Clock,
     FileSpreadsheet,
     FileText,
     GraduationCap,
-    Layers,
     LayoutDashboard,
     ListTodo,
     MapPin,
     MoreHorizontal,
-    Palette,
     Pencil,
     Plus,
-    Settings2,
+    Search,
     Trash2,
     Users,
 } from "lucide-react";
@@ -154,14 +160,7 @@ type EnrollmentRow = {
     } | null;
 };
 
-type EnrollmentPaginator = {
-    data: EnrollmentRow[];
-    prev_page_url: string | null;
-    next_page_url: string | null;
-    total: number;
-    from: number;
-    to: number;
-};
+type EnrollmentPaginator = EnrollmentRow[];
 
 type RoomOption = {
     id: number;
@@ -1234,20 +1233,20 @@ export default function AdministratorClassShow({
     const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
     const [moveStudentDialogOpen, setMoveStudentDialogOpen] = useState(false);
     const [studentToMove, setStudentToMove] = useState<EnrollmentRow | null>(null);
+    const [enrollmentSearch, setEnrollmentSearch] = useState("");
+    const [enrollmentSorting, setEnrollmentSorting] = useState<SortingState>([]);
     const enrollmentStatusTone = enrollmentTone(classItem.students_count, classItem.maximum_slots);
 
     const columns = useMemo<ColumnDef<EnrollmentRow>[]>(
         () => [
             {
-                accessorKey: "student.name",
-                header: ({ column }) => {
-                    return (
-                        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4 font-bold">
-                            Student
-                            <ArrowUpDown className="ml-2 h-4 w-4" />
-                        </Button>
-                    );
-                },
+                accessorKey: "studentName",
+                header: ({ column }) => (
+                    <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4 font-bold">
+                        Student
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
                 cell: ({ row }) => (
                     <div className="flex items-center gap-3">
                         <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full text-xs font-extrabold">
@@ -1259,10 +1258,31 @@ export default function AdministratorClassShow({
                         </div>
                     </div>
                 ),
+                sortingFn: (rowA, rowB) => {
+                    const nameA = rowA.original.student?.name ?? "";
+                    const nameB = rowB.original.student?.name ?? "";
+                    return nameA.localeCompare(nameB);
+                },
+                filterFn: (row, _columnId, filterValue: string) => {
+                    const search = filterValue.toLowerCase();
+                    const student = row.original.student;
+                    if (!student) return false;
+                    return (
+                        student.name.toLowerCase().includes(search) ||
+                        String(student.student_id ?? "")
+                            .toLowerCase()
+                            .includes(search)
+                    );
+                },
             },
             {
-                accessorKey: "student.course",
-                header: "Course & Year",
+                accessorKey: "courseYear",
+                header: ({ column }) => (
+                    <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4 font-bold">
+                        Course & Year
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
                 cell: ({ row }) => (
                     <div>
                         <div className="text-sm font-bold">{row.original.student?.course || "N/A"}</div>
@@ -1271,10 +1291,20 @@ export default function AdministratorClassShow({
                         </div>
                     </div>
                 ),
+                sortingFn: (rowA, rowB) => {
+                    const courseA = rowA.original.student?.course ?? "";
+                    const courseB = rowB.original.student?.course ?? "";
+                    return courseA.localeCompare(courseB);
+                },
             },
             {
                 accessorKey: "status",
-                header: "Status",
+                header: ({ column }) => (
+                    <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4 font-bold">
+                        Status
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                ),
                 cell: ({ row }) => (
                     <Badge
                         variant={row.original.status ? "default" : "secondary"}
@@ -1283,6 +1313,11 @@ export default function AdministratorClassShow({
                         {row.original.status ? "Active" : "Inactive"}
                     </Badge>
                 ),
+                sortingFn: (rowA, rowB) => {
+                    const statusA = rowA.original.status ? 1 : 0;
+                    const statusB = rowB.original.status ? 1 : 0;
+                    return statusA - statusB;
+                },
             },
             {
                 accessorKey: "total_average",
@@ -1296,42 +1331,74 @@ export default function AdministratorClassShow({
                 ),
                 cell: ({ row }) => (
                     <div className="pr-6 text-right font-mono font-bold">
-                        {row.original.total_average ? row.original.total_average.toFixed(2) : "—"}
+                        {row.original.total_average ? row.original.total_average.toFixed(2) : "\u2014"}
                     </div>
                 ),
+                sortingFn: (rowA, rowB) => {
+                    const a = rowA.original.total_average ?? -1;
+                    const b = rowB.original.total_average ?? -1;
+                    return a - b;
+                },
             },
             {
                 id: "actions",
-                cell: ({ row }) => {
-                    return (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-xl">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        setStudentToMove(row.original);
-                                        setMoveStudentDialogOpen(true);
-                                    }}
-                                    className="cursor-pointer"
-                                >
-                                    <ArrowRightLeft className="mr-2 h-4 w-4" />
-                                    Move to Section
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    );
-                },
+                cell: ({ row }) => (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    setStudentToMove(row.original);
+                                    setMoveStudentDialogOpen(true);
+                                }}
+                                className="cursor-pointer"
+                            >
+                                <ArrowRightLeft className="mr-2 h-4 w-4" />
+                                Move to Section
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ),
             },
         ],
         [],
     );
 
+    const table = useReactTable({
+        data: useMemo(() => {
+            if (!enrollmentSearch) return enrollments;
+            const search = enrollmentSearch.toLowerCase();
+            return enrollments.filter((row) => {
+                const student = row.student;
+                if (!student) return false;
+                return (
+                    student.name.toLowerCase().includes(search) ||
+                    String(student.student_id ?? "")
+                        .toLowerCase()
+                        .includes(search) ||
+                    (student.course ?? "").toLowerCase().includes(search)
+                );
+            });
+        }, [enrollments, enrollmentSearch]),
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        onSortingChange: setEnrollmentSorting,
+        state: {
+            sorting: enrollmentSorting,
+        },
+        initialState: {
+            pagination: { pageSize: 25 },
+        },
+    });
     const scheduleEntriesByDay = scheduleDayOrder.map((dayKey) => ({
         key: dayKey,
         label: dayKey.charAt(0).toUpperCase() + dayKey.slice(1),
@@ -1464,15 +1531,14 @@ export default function AdministratorClassShow({
                                     </div>
 
                                     <div>
-                                        <h1 className="text-foreground text-4xl font-black tracking-tight sm:text-5xl drop-shadow-sm">{classItem.record_title}</h1>
+                                        <h1 className="text-foreground text-4xl font-black tracking-tight drop-shadow-sm sm:text-5xl">
+                                            {classItem.record_title}
+                                        </h1>
                                         <div className="mt-4 flex flex-wrap items-center gap-2">
                                             <Badge variant="default" className="px-3 py-1 text-sm font-bold shadow-sm">
                                                 {classItem.subject_code}
                                             </Badge>
-                                            <Badge
-                                                variant="secondary"
-                                                className="px-3 py-1 text-sm font-bold shadow-sm"
-                                            >
+                                            <Badge variant="secondary" className="px-3 py-1 text-sm font-bold shadow-sm">
                                                 SEC {classItem.section}
                                             </Badge>
                                             <Badge variant="outline" className="px-3 py-1 text-sm font-bold">
@@ -1484,17 +1550,27 @@ export default function AdministratorClassShow({
 
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                                     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                                        <Button size="lg" onClick={() => setScheduleDialogOpen(true)} className="flex-1 shadow-sm sm:flex-none font-bold">
+                                        <Button
+                                            size="lg"
+                                            onClick={() => setScheduleDialogOpen(true)}
+                                            className="flex-1 font-bold shadow-sm sm:flex-none"
+                                        >
                                             <CalendarIcon className="mr-2 h-5 w-5" />
                                             Manage Schedule
                                         </Button>
-                                        <Button size="lg" asChild variant="secondary" className="flex-1 shadow-sm sm:flex-none font-bold">
+                                        <Button size="lg" asChild variant="secondary" className="flex-1 font-bold shadow-sm sm:flex-none">
                                             <Link href={route("administrators.classes.edit", { class: classItem.id })}>
                                                 <Pencil className="mr-2 h-5 w-5" />
                                                 Edit Class
                                             </Link>
                                         </Button>
-                                        <Button size="icon" asChild variant="secondary" className="h-11 w-11 shrink-0 shadow-sm" title="Open in Filament">
+                                        <Button
+                                            size="icon"
+                                            asChild
+                                            variant="secondary"
+                                            className="h-11 w-11 shrink-0 shadow-sm"
+                                            title="Open in Filament"
+                                        >
                                             <a href={classItem.filament?.view_url ?? "#"} target="_blank" rel="noreferrer">
                                                 <ArrowUpRight className="h-5 w-5" />
                                             </a>
@@ -1524,38 +1600,26 @@ export default function AdministratorClassShow({
 
                     {/* Main Content Area */}
                     <Tabs defaultValue="overview" className="w-full">
-                        <TabsList className="mb-8 flex h-auto w-full flex-wrap justify-start gap-2 p-1 sm:flex-nowrap sm:overflow-x-auto bg-muted">
-                            <TabsTrigger
-                                value="overview"
-                                className="px-6 py-2 text-sm font-bold transition-all"
-                            >
+                        <TabsList className="bg-muted mb-8 flex h-auto w-full flex-wrap justify-start gap-2 p-1 sm:flex-nowrap sm:overflow-x-auto">
+                            <TabsTrigger value="overview" className="px-6 py-2 text-sm font-bold transition-all">
                                 <LayoutDashboard className="mr-2 h-4 w-4" />
                                 Overview
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="schedule"
-                                className="px-6 py-2 text-sm font-bold transition-all"
-                            >
+                            <TabsTrigger value="schedule" className="px-6 py-2 text-sm font-bold transition-all">
                                 <Clock className="mr-2 h-4 w-4" />
                                 Schedule
                             </TabsTrigger>
-                            <TabsTrigger
-                                value="enrollments"
-                                className="px-6 py-2 text-sm font-bold transition-all"
-                            >
+                            <TabsTrigger value="enrollments" className="px-6 py-2 text-sm font-bold transition-all">
                                 <Users className="mr-2 h-4 w-4" />
                                 Students
-                                <Badge
-                                    variant="secondary"
-                                    className="ml-2 px-1.5 py-0.5 text-xs font-bold"
-                                >
-                                    {enrollments.total}
+                                <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs font-bold">
+                                    {enrollments.length}
                                 </Badge>
                             </TabsTrigger>
                         </TabsList>
 
                         {/* OVERVIEW TAB */}
-                        <TabsContent value="overview" className="m-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <TabsContent value="overview" className="animate-in fade-in slide-in-from-bottom-4 m-0 space-y-6 duration-500">
                             {/* Stats Overview */}
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                                 <StatCard
@@ -1570,9 +1634,11 @@ export default function AdministratorClassShow({
                                               : "Over capacity"
                                     }
                                     colorClass={
-                                        enrollmentStatusTone === "destructive" ? "bg-destructive/15 text-destructive" :
-                                        enrollmentStatusTone === "warning" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
-                                        "bg-primary/10 text-primary"
+                                        enrollmentStatusTone === "destructive"
+                                            ? "bg-destructive/15 text-destructive"
+                                            : enrollmentStatusTone === "warning"
+                                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                                              : "bg-primary/10 text-primary"
                                     }
                                     className={enrollmentStatusTone === "destructive" ? "border-destructive/50" : ""}
                                 />
@@ -1591,7 +1657,9 @@ export default function AdministratorClassShow({
                                 <StatCard
                                     icon={GraduationCap}
                                     label="Fill Rate"
-                                    value={classItem.maximum_slots ? `${Math.round((classItem.students_count / classItem.maximum_slots) * 100)}%` : "N/A"}
+                                    value={
+                                        classItem.maximum_slots ? `${Math.round((classItem.students_count / classItem.maximum_slots) * 100)}%` : "N/A"
+                                    }
                                     subtext="Of maximum capacity"
                                 />
                             </div>
@@ -1600,78 +1668,93 @@ export default function AdministratorClassShow({
                                 {/* Instructor Card */}
                                 <Card className="flex flex-col justify-between shadow-sm transition-all hover:shadow-md">
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                            <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                        <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                                            <span className="bg-primary/10 text-primary rounded-lg p-1.5">
                                                 <GraduationCap className="h-5 w-5" />
                                             </span>
                                             Course Instructor
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="pt-4 pb-8 flex flex-col items-center text-center">
+                                    <CardContent className="flex flex-col items-center pt-4 pb-8 text-center">
                                         {classItem.faculty ? (
                                             <>
                                                 <div className="relative mb-4">
-                                                    <div className="absolute -inset-1 rounded-full bg-primary/20 blur-md"></div>
-                                                    <Avatar className="relative h-24 w-24 border-4 border-background shadow-sm">
+                                                    <div className="bg-primary/20 absolute -inset-1 rounded-full blur-md"></div>
+                                                    <Avatar className="border-background relative h-24 w-24 border-4 shadow-sm">
                                                         <AvatarImage src={classItem.faculty.avatar_url ?? undefined} />
-                                                        <AvatarFallback className="text-3xl font-black bg-primary/10 text-primary">{classItem.faculty.name.charAt(0)}</AvatarFallback>
+                                                        <AvatarFallback className="bg-primary/10 text-primary text-3xl font-black">
+                                                            {classItem.faculty.name.charAt(0)}
+                                                        </AvatarFallback>
                                                     </Avatar>
                                                 </div>
                                                 <h3 className="text-2xl font-extrabold tracking-tight">{classItem.faculty.name}</h3>
-                                                <p className="text-muted-foreground text-sm font-bold mt-2 break-all bg-muted/50 px-3 py-1 rounded-full">{classItem.faculty.email}</p>
-                                                
-                                                <div className="mt-8 flex w-full justify-around bg-muted/30 p-4 rounded-xl shadow-sm border border-border/50">
+                                                <p className="text-muted-foreground bg-muted/50 mt-2 rounded-full px-3 py-1 text-sm font-bold break-all">
+                                                    {classItem.faculty.email}
+                                                </p>
+
+                                                <div className="bg-muted/30 border-border/50 mt-8 flex w-full justify-around rounded-xl border p-4 shadow-sm">
                                                     <div className="text-center">
-                                                        <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase mb-1">Role</div>
-                                                        <div className="text-sm font-extrabold text-foreground">Faculty</div>
+                                                        <div className="text-muted-foreground mb-1 text-[10px] font-bold tracking-wider uppercase">
+                                                            Role
+                                                        </div>
+                                                        <div className="text-foreground text-sm font-extrabold">Faculty</div>
                                                     </div>
-                                                    <div className="w-px bg-border"></div>
+                                                    <div className="bg-border w-px"></div>
                                                     <div className="text-center">
-                                                        <div className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase mb-1">Status</div>
-                                                        <div className="text-xs font-black text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400 px-2 py-0.5 rounded-md uppercase tracking-wide">Active</div>
+                                                        <div className="text-muted-foreground mb-1 text-[10px] font-bold tracking-wider uppercase">
+                                                            Status
+                                                        </div>
+                                                        <div className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-black tracking-wide text-emerald-700 uppercase dark:bg-emerald-900/40 dark:text-emerald-400">
+                                                            Active
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </>
                                         ) : (
                                             <div className="flex h-full flex-col items-center justify-center py-8">
-                                                <div className="bg-muted p-4 rounded-full mb-4">
-                                                    <Users className="h-10 w-10 text-muted-foreground opacity-50" />
+                                                <div className="bg-muted mb-4 rounded-full p-4">
+                                                    <Users className="text-muted-foreground h-10 w-10 opacity-50" />
                                                 </div>
-                                                <p className="font-extrabold text-lg">No instructor assigned</p>
-                                                <p className="text-muted-foreground text-sm mt-1 font-medium">Update this class in the admin panel to assign someone.</p>
+                                                <p className="text-lg font-extrabold">No instructor assigned</p>
+                                                <p className="text-muted-foreground mt-1 text-sm font-medium">
+                                                    Update this class in the admin panel to assign someone.
+                                                </p>
                                             </div>
                                         )}
                                     </CardContent>
                                 </Card>
 
                                 {/* Features and Tags */}
-                                <div className="lg:col-span-2 space-y-6">
-                                    <Card className="shadow-sm overflow-hidden h-full flex flex-col transition-all hover:shadow-md">
+                                <div className="space-y-6 lg:col-span-2">
+                                    <Card className="flex h-full flex-col overflow-hidden shadow-sm transition-all hover:shadow-md">
                                         <CardHeader className="bg-muted/10 border-b px-8 py-6">
                                             <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                                <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                                <span className="bg-primary/10 text-primary rounded-lg p-1.5">
                                                     <FileText className="h-5 w-5" />
                                                 </span>
                                                 Class Configuration & Tags
                                             </CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-8 flex-1 flex flex-col gap-8">
-                                            
+                                        <CardContent className="flex flex-1 flex-col gap-8 p-8">
                                             {/* Subjects & Courses */}
                                             <div>
-                                                <h4 className="text-xs font-extrabold text-muted-foreground tracking-widest uppercase mb-4">Subjects & Associated Courses</h4>
+                                                <h4 className="text-muted-foreground mb-4 text-xs font-extrabold tracking-widest uppercase">
+                                                    Subjects & Associated Courses
+                                                </h4>
                                                 <div className="flex flex-wrap gap-2">
                                                     {classItem.subjects?.length ? (
                                                         classItem.subjects.map((s) => (
-                                                            <Badge key={s} variant="outline" className="font-bold px-3 py-1.5 text-sm">
+                                                            <Badge key={s} variant="outline" className="px-3 py-1.5 text-sm font-bold">
                                                                 {s}
                                                             </Badge>
                                                         ))
                                                     ) : (
-                                                        <span className="text-muted-foreground text-sm font-bold bg-muted/50 px-4 py-2 rounded-xl">No subjects listed</span>
+                                                        <span className="text-muted-foreground bg-muted/50 rounded-xl px-4 py-2 text-sm font-bold">
+                                                            No subjects listed
+                                                        </span>
                                                     )}
                                                     {splitBadges(classItem.associated_courses).map((c) => (
-                                                        <Badge key={c} variant="secondary" className="font-bold px-3 py-1.5 text-sm">
+                                                        <Badge key={c} variant="secondary" className="px-3 py-1.5 text-sm font-bold">
                                                             {c}
                                                         </Badge>
                                                     ))}
@@ -1682,24 +1765,29 @@ export default function AdministratorClassShow({
 
                                             {/* Capabilities */}
                                             <div>
-                                                <h4 className="text-xs font-extrabold text-muted-foreground tracking-widest uppercase mb-4">Active Capabilities</h4>
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                <h4 className="text-muted-foreground mb-4 text-xs font-extrabold tracking-widest uppercase">
+                                                    Active Capabilities
+                                                </h4>
+                                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                                     {featureBadges.map((feature) => (
-                                                        <div 
-                                                            key={feature.key} 
-                                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
-                                                                feature.enabled 
-                                                                ? "bg-primary/5 border-primary/20 text-primary shadow-sm" 
-                                                                : "bg-muted/20 border-dashed text-muted-foreground opacity-70"
+                                                        <div
+                                                            key={feature.key}
+                                                            className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
+                                                                feature.enabled
+                                                                    ? "bg-primary/5 border-primary/20 text-primary shadow-sm"
+                                                                    : "bg-muted/20 text-muted-foreground border-dashed opacity-70"
                                                             }`}
                                                         >
-                                                            {feature.enabled ? <CheckCircle2 className="h-5 w-5 text-primary shrink-0" /> : <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/30 shrink-0" />}
-                                                            <span className="text-sm font-bold leading-tight">{feature.label}</span>
+                                                            {feature.enabled ? (
+                                                                <CheckCircle2 className="text-primary h-5 w-5 shrink-0" />
+                                                            ) : (
+                                                                <div className="border-muted-foreground/30 h-5 w-5 shrink-0 rounded-full border-2" />
+                                                            )}
+                                                            <span className="text-sm leading-tight font-bold">{feature.label}</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </div>
-                                            
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -1707,39 +1795,43 @@ export default function AdministratorClassShow({
                         </TabsContent>
 
                         {/* SCHEDULE TAB */}
-                        <TabsContent value="schedule" className="m-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <TabsContent value="schedule" className="animate-in fade-in slide-in-from-bottom-4 m-0 space-y-6 duration-500">
                             <Tabs defaultValue="matrix" className="w-full">
-                                <Card className="shadow-sm overflow-hidden transition-all hover:shadow-md">
+                                <Card className="overflow-hidden shadow-sm transition-all hover:shadow-md">
                                     <CardHeader className="bg-muted/10 border-b px-8 py-5">
                                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="space-y-1">
                                                 <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                                    <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                                    <span className="bg-primary/10 text-primary rounded-lg p-1.5">
                                                         <Clock className="h-5 w-5" />
                                                     </span>
                                                     {classItem.record_title} Timetable
                                                 </CardTitle>
-                                                <CardDescription className="font-medium ml-11">Visual overview of the weekly schedule</CardDescription>
+                                                <CardDescription className="ml-11 font-medium">
+                                                    Visual overview of the weekly schedule
+                                                </CardDescription>
                                             </div>
-                                            
-                                            <TabsList className="h-11 p-1 rounded-xl bg-background shadow-sm border">
-                                                <TabsTrigger value="matrix" className="h-9 rounded-lg text-sm font-bold px-6">
+
+                                            <TabsList className="bg-background h-11 rounded-xl border p-1 shadow-sm">
+                                                <TabsTrigger value="matrix" className="h-9 rounded-lg px-6 text-sm font-bold">
                                                     Grid View
                                                 </TabsTrigger>
-                                                <TabsTrigger value="list" className="h-9 rounded-lg text-sm font-bold px-6">
+                                                <TabsTrigger value="list" className="h-9 rounded-lg px-6 text-sm font-bold">
                                                     List View
                                                 </TabsTrigger>
                                             </TabsList>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <TabsContent value="matrix" className="m-0 p-0 animate-in fade-in">
+                                        <TabsContent value="matrix" className="animate-in fade-in m-0 p-0">
                                             {scheduleEntriesExist && timetableWindow ? (
                                                 <ScrollArea className="w-full whitespace-nowrap">
                                                     <div className="bg-background min-w-[800px] p-6">
                                                         {/* Header Row */}
                                                         <div className="grid grid-cols-[70px_1fr] border-b-2">
-                                                            <div className="text-muted-foreground border-r p-3 text-xs font-extrabold tracking-wider uppercase">Time</div>
+                                                            <div className="text-muted-foreground border-r p-3 text-xs font-extrabold tracking-wider uppercase">
+                                                                Time
+                                                            </div>
                                                             <div className="grid grid-cols-7">
                                                                 {timetableBlocksByDay.map((day) => (
                                                                     <div key={day.key} className="border-r p-3 text-center last:border-r-0">
@@ -1755,8 +1847,7 @@ export default function AdministratorClassShow({
                                                             <div className="bg-muted/5 relative border-r" style={{ height: timetableHeight }}>
                                                                 {timetableHours.map((minutes) => {
                                                                     const top =
-                                                                        ((minutes - timetableWindow.startMinutes) /
-                                                                            timetableWindow.slotMinutes) *
+                                                                        ((minutes - timetableWindow.startMinutes) / timetableWindow.slotMinutes) *
                                                                         timetableWindow.slotHeight;
                                                                     return (
                                                                         <div
@@ -1779,8 +1870,7 @@ export default function AdministratorClassShow({
                                                                 <div className="pointer-events-none absolute inset-0 z-0">
                                                                     {timetableHours.map((minutes) => {
                                                                         const top =
-                                                                            ((minutes - timetableWindow.startMinutes) /
-                                                                                timetableWindow.slotMinutes) *
+                                                                            ((minutes - timetableWindow.startMinutes) / timetableWindow.slotMinutes) *
                                                                             timetableWindow.slotHeight;
                                                                         return (
                                                                             <div
@@ -1847,12 +1937,21 @@ export default function AdministratorClassShow({
                                                                                     </TooltipTrigger>
                                                                                     <TooltipContent className="rounded-xl p-3 shadow-xl">
                                                                                         <div className="text-sm">
-                                                                                            <div className="font-extrabold text-base mb-1">{day.label}</div>
-                                                                                            <div className="font-medium"><Clock className="inline mr-1 h-3 w-3" /> {block.timeRange}</div>
-                                                                                            <div className="font-medium mt-1"><MapPin className="inline mr-1 h-3 w-3" /> {block.roomName}</div>
+                                                                                            <div className="mb-1 text-base font-extrabold">
+                                                                                                {day.label}
+                                                                                            </div>
+                                                                                            <div className="font-medium">
+                                                                                                <Clock className="mr-1 inline h-3 w-3" />{" "}
+                                                                                                {block.timeRange}
+                                                                                            </div>
+                                                                                            <div className="mt-1 font-medium">
+                                                                                                <MapPin className="mr-1 inline h-3 w-3" />{" "}
+                                                                                                {block.roomName}
+                                                                                            </div>
                                                                                             {block.hasConflict && (
-                                                                                                <div className="text-destructive mt-2 font-bold bg-destructive/10 p-1.5 rounded-lg flex items-center gap-1">
-                                                                                                    <AlertCircle className="h-4 w-4" /> Conflict Detected
+                                                                                                <div className="text-destructive bg-destructive/10 mt-2 flex items-center gap-1 rounded-lg p-1.5 font-bold">
+                                                                                                    <AlertCircle className="h-4 w-4" /> Conflict
+                                                                                                    Detected
                                                                                                 </div>
                                                                                             )}
                                                                                         </div>
@@ -1869,23 +1968,23 @@ export default function AdministratorClassShow({
                                                 </ScrollArea>
                                             ) : (
                                                 <div className="text-muted-foreground flex h-64 flex-col items-center justify-center text-sm">
-                                                    <div className="bg-muted p-4 rounded-full mb-4">
+                                                    <div className="bg-muted mb-4 rounded-full p-4">
                                                         <CalendarIcon className="h-10 w-10 opacity-50" />
                                                     </div>
-                                                    <p className="font-bold text-lg text-foreground">No schedule configured</p>
+                                                    <p className="text-foreground text-lg font-bold">No schedule configured</p>
                                                     <p className="mt-1">Click 'Manage Schedule' to add class sessions.</p>
                                                 </div>
                                             )}
                                         </TabsContent>
 
-                                        <TabsContent value="list" className="m-0 p-0 animate-in fade-in">
-                                            <div className="divide-y divide-border/50">
+                                        <TabsContent value="list" className="animate-in fade-in m-0 p-0">
+                                            <div className="divide-border/50 divide-y">
                                                 {scheduleEntriesByDay.filter((d) => d.entries.length > 0).length === 0 ? (
                                                     <div className="text-muted-foreground flex h-64 flex-col items-center justify-center text-sm">
-                                                        <div className="bg-muted p-4 rounded-full mb-4">
+                                                        <div className="bg-muted mb-4 rounded-full p-4">
                                                             <ListTodo className="h-10 w-10 opacity-50" />
                                                         </div>
-                                                        <p className="font-bold text-lg text-foreground">No schedule configured</p>
+                                                        <p className="text-foreground text-lg font-bold">No schedule configured</p>
                                                     </div>
                                                 ) : (
                                                     scheduleEntriesByDay.map((day) => {
@@ -1893,27 +1992,32 @@ export default function AdministratorClassShow({
                                                         return (
                                                             <div
                                                                 key={day.key}
-                                                                className="hover:bg-muted/10 transition-colors flex flex-col gap-4 p-6 sm:flex-row sm:items-center"
+                                                                className="hover:bg-muted/10 flex flex-col gap-4 p-6 transition-colors sm:flex-row sm:items-center"
                                                             >
                                                                 <div className="w-32 flex-shrink-0">
-                                                                    <span className="text-base font-extrabold uppercase tracking-wide">{day.label}</span>
+                                                                    <span className="text-base font-extrabold tracking-wide uppercase">
+                                                                        {day.label}
+                                                                    </span>
                                                                 </div>
-                                                                <div className="flex-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                                                <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                                                     {day.entries.map((entry, i) => (
                                                                         <div
                                                                             key={i}
                                                                             className="bg-background flex flex-col gap-2 rounded-2xl border p-4 text-sm shadow-sm"
                                                                         >
-                                                                            <div className="flex items-center gap-2 font-bold text-primary">
+                                                                            <div className="text-primary flex items-center gap-2 font-bold">
                                                                                 <Clock className="h-4 w-4" />
                                                                                 <span>{entry.time_range}</span>
                                                                             </div>
-                                                                            <div className="flex items-center gap-2 font-semibold text-muted-foreground">
+                                                                            <div className="text-muted-foreground flex items-center gap-2 font-semibold">
                                                                                 <MapPin className="h-4 w-4" />
                                                                                 <span>{entry.room.name}</span>
                                                                             </div>
                                                                             {entry.has_conflict && (
-                                                                                <Badge variant="destructive" className="mt-2 self-start rounded-lg px-2 py-0.5">
+                                                                                <Badge
+                                                                                    variant="destructive"
+                                                                                    className="mt-2 self-start rounded-lg px-2 py-0.5"
+                                                                                >
                                                                                     Conflict
                                                                                 </Badge>
                                                                             )}
@@ -1932,25 +2036,34 @@ export default function AdministratorClassShow({
                         </TabsContent>
 
                         {/* ENROLLMENTS TAB */}
-                        <TabsContent value="enrollments" className="m-0 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <Card className="shadow-sm overflow-hidden transition-all hover:shadow-md">
-                                <CardHeader className="bg-muted/10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b px-8 py-6">
+                        <TabsContent value="enrollments" className="animate-in fade-in slide-in-from-bottom-4 m-0 space-y-6 duration-500">
+                            <Card className="overflow-hidden shadow-sm transition-all hover:shadow-md">
+                                <CardHeader className="bg-muted/10 flex flex-col gap-4 border-b px-8 py-6 sm:flex-row sm:items-center sm:justify-between">
                                     <div className="space-y-1">
                                         <CardTitle className="flex items-center gap-3 text-lg font-bold">
-                                            <span className="bg-primary/10 p-1.5 rounded-lg text-primary">
+                                            <span className="bg-primary/10 text-primary rounded-lg p-1.5">
                                                 <Users className="h-5 w-5" />
                                             </span>
                                             {classItem.record_title} Students
                                         </CardTitle>
-                                        <CardDescription className="font-medium ml-11">
+                                        <CardDescription className="ml-11 font-medium">
                                             {classItem.students_count} enrolled / {classItem.maximum_slots || "∞"} capacity
                                         </CardDescription>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <div className="relative">
+                                            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                            <Input
+                                                placeholder="Search by name, ID, or course..."
+                                                value={enrollmentSearch}
+                                                onChange={(e) => setEnrollmentSearch(e.target.value)}
+                                                className="h-10 w-full pl-10 sm:w-[260px] lg:w-[320px]"
+                                            />
+                                        </div>
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-10 gap-2 shadow-sm font-bold"
+                                            className="h-10 gap-2 font-bold shadow-sm"
                                             onClick={() =>
                                                 window.open(
                                                     route("administrators.classes.export-student-list", {
@@ -1967,7 +2080,7 @@ export default function AdministratorClassShow({
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-10 gap-2 shadow-sm font-bold"
+                                            className="h-10 gap-2 font-bold shadow-sm"
                                             onClick={() =>
                                                 window.open(
                                                     route("administrators.classes.export-student-list", {
@@ -1978,34 +2091,105 @@ export default function AdministratorClassShow({
                                                 )
                                             }
                                         >
-                                            <FileText className="h-4 w-4 text-destructive" />
+                                            <FileText className="text-destructive h-4 w-4" />
                                             <span className="hidden sm:inline">Export PDF</span>
                                         </Button>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="border-b p-0 [&_.p-4]:px-8">
-                                    <DataTable columns={columns} data={enrollments.data} />
+                                <CardContent className="border-b p-0">
+                                    <Table>
+                                        <TableHeader>
+                                            {table.getHeaderGroups().map((headerGroup) => (
+                                                <TableRow key={headerGroup.id}>
+                                                    {headerGroup.headers.map((header) => (
+                                                        <TableHead key={header.id} className="px-6">
+                                                            {header.isPlaceholder
+                                                                ? null
+                                                                : typeof header.column.columnDef.header === "function"
+                                                                  ? header.column.columnDef.header(header.getContext())
+                                                                  : header.column.columnDef.header}
+                                                        </TableHead>
+                                                    ))}
+                                                </TableRow>
+                                            ))}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {table.getRowModel().rows?.length ? (
+                                                table.getRowModel().rows.map((row) => (
+                                                    <TableRow key={row.id} className="hover:bg-muted/50 transition-colors">
+                                                        {row.getVisibleCells().map((cell) => (
+                                                            <TableCell key={cell.id} className="px-6">
+                                                                {typeof cell.column.columnDef.cell === "function"
+                                                                    ? cell.column.columnDef.cell(cell.getContext())
+                                                                    : cell.getValue()}
+                                                            </TableCell>
+                                                        ))}
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={columns.length} className="h-32 text-center">
+                                                        <p className="font-medium">No students found</p>
+                                                        <p className="text-muted-foreground text-sm">
+                                                            {enrollmentSearch ? "Try adjusting your search." : "No students enrolled yet."}
+                                                        </p>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
                                 </CardContent>
-                                {enrollments.total > enrollments.data.length && (
-                                    <div className="bg-muted/5 flex justify-center p-6">
-                                        <div className="flex gap-2">
-                                            {enrollments.prev_page_url && (
-                                                <Button variant="outline" size="sm" asChild className="font-bold">
-                                                    <Link href={enrollments.prev_page_url} preserveState>
-                                                        Previous
-                                                    </Link>
-                                                </Button>
-                                            )}
-                                            {enrollments.next_page_url && (
-                                                <Button variant="outline" size="sm" asChild className="font-bold">
-                                                    <Link href={enrollments.next_page_url} preserveState>
-                                                        Next
-                                                    </Link>
-                                                </Button>
-                                            )}
+                                <div className="bg-muted/5 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="text-muted-foreground text-sm">
+                                        Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{" "}
+                                        {Math.min(
+                                            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                                            table.getFilteredRowModel().rows.length,
+                                        )}{" "}
+                                        of {table.getFilteredRowModel().rows.length} students
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Select
+                                            value={String(table.getState().pagination.pageSize)}
+                                            onValueChange={(value) => table.setPageSize(Number(value))}
+                                        >
+                                            <SelectTrigger className="h-9 w-[80px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent side="top">
+                                                {[10, 25, 50, 75, 100].map((size) => (
+                                                    <SelectItem key={size} value={String(size)}>
+                                                        {size}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <span className="text-muted-foreground text-xs">per page</span>
+                                        <div className="ml-4 flex items-center gap-1">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-9 w-9 p-0"
+                                                disabled={!table.getCanPreviousPage()}
+                                                onClick={() => table.previousPage()}
+                                            >
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </Button>
+                                            <span className="text-muted-foreground min-w-[80px] text-center text-xs">
+                                                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-9 w-9 p-0"
+                                                disabled={!table.getCanNextPage()}
+                                                onClick={() => table.nextPage()}
+                                            >
+                                                <ChevronRight className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </div>
-                                )}
+                                </div>
                             </Card>
                         </TabsContent>
                     </Tabs>
