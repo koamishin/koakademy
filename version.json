@@ -1,14 +1,14 @@
 {
-  "version": "1.7.5-dev.0.8",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.0.8",
-  "commit": "7f243235b96957e1e4e1095355487ca4045ff46b",
+  "version": "1.7.5-dev.1.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.7.5-dev.1.0",
+  "commit": "2901f6921939d992f4139600fbbedd1a8ff742a7",
   "branch": "master",
-  "timestamp": "2026-06-09T07:08:05Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27189668667",
-  "release_type": "chore",
+  "timestamp": "2026-06-09T09:26:25Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27196533632",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.7.5-dev.0.8 - refactor: Remove Browsershot as headless browser PDF option",
-    "previous": "1.7.5-dev.0.7"
+    "current": "Version 1.7.5-dev.1.0 - feat(classes): implement client-side filtering and sorting for admin",
+    "previous": "1.7.5-dev.0.8"
   },
   "metadata": {
     "author": "yukazakiri",
