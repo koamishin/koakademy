@@ -202,87 +202,19 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->count();
 
         $search = request('search');
-        $sort = request('sort', 'created_at');
-        $direction = request('direction', 'desc');
-        $perPage = request('per_page', 10);
         $statusFilter = request('status_filter', 'all');
         $departmentFilter = request('department_filter', 'all');
         $yearLevelFilter = request('year_level_filter', 'all');
-
-        // Normalize per_page
-        if ($perPage === 'all') {
-            $perPage = 100000;
-        } else {
-            $perPage = (int) $perPage;
-            if ($perPage <= 0) {
-                $perPage = 10;
-            }
-        }
 
         $enrollments = fn () => StudentEnrollment::query()
             ->withTrashed()
             ->where('student_enrollment.school_year', $currentSchoolYearString)
             ->where('student_enrollment.semester', $currentSemester)
-            ->when($search, function ($query, $search): void {
-                $query->where(function ($q) use ($search): void {
-                    $q->whereExists(function ($subquery) use ($search): void {
-                        $subquery->select(DB::raw(1))
-                            ->from('students')
-                            ->whereRaw('CAST(NULLIF(student_enrollment.student_id, \'\') AS BIGINT) = students.id')
-                            ->where(function ($studentQ) use ($search): void {
-                                $studentQ->where('first_name', 'like', "%{$search}%")
-                                    ->orWhere('last_name', 'like', "%{$search}%")
-                                    ->orWhere('middle_name', 'like', "%{$search}%")
-                                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"])
-                                    ->orWhere('student_id', 'like', "%{$search}%");
-                            });
-                    })->orWhere(function ($q) use ($search): void {
-                        $q->whereExists(function ($subquery) use ($search): void {
-                            $subquery->select(DB::raw(1))
-                                ->from('courses')
-                                ->whereRaw('CAST(NULLIF(CAST(student_enrollment.course_id AS TEXT), \'\') AS BIGINT) = courses.id')
-                                ->where('code', 'like', "%{$search}%");
-                        });
-                    });
-                });
-            })
-            ->when($statusFilter !== 'all', function ($query) use ($statusFilter): void {
-                if ($statusFilter === 'trashed') {
-                    $query->onlyTrashed();
-                } elseif ($statusFilter === 'active') {
-                    $query->whereNull('student_enrollment.deleted_at');
-                } else {
-                    $query->where('student_enrollment.status', $statusFilter);
-                }
-            })
-            ->when($departmentFilter !== 'all', function ($query) use ($departmentFilter): void {
-                $query->whereExists(function ($subquery) use ($departmentFilter): void {
-                    $subquery->select(DB::raw(1))
-                        ->from('courses')
-                        ->leftJoin('departments', 'courses.department_id', '=', 'departments.id')
-                        ->whereRaw('CAST(NULLIF(CAST(student_enrollment.course_id AS TEXT), \'\') AS BIGINT) = courses.id')
-                        ->whereRaw('TRIM(departments.code) = ?', [mb_trim($departmentFilter)]);
-                });
-            })
-            ->when($yearLevelFilter !== 'all', function ($query) use ($yearLevelFilter): void {
-                $query->where('student_enrollment.academic_year', (int) $yearLevelFilter);
-            })
             ->with(['student.Course', 'course.department', 'studentTuition'])
             ->withCount('subjectsEnrolled')
-            ->when($sort === 'student_name', function ($query) use ($direction): void {
-                $query->leftJoin('students', DB::raw('CAST(NULLIF(student_enrollment.student_id, \'\') AS BIGINT)'), '=', 'students.id')
-                    ->orderBy('students.last_name', $direction)
-                    ->orderBy('students.first_name', $direction)
-                    ->select('student_enrollment.*');
-            }, function ($query) use ($sort, $direction): void {
-                // Handle default sorting or specific columns
-                if (in_array($sort, ['created_at', 'status', 'school_year', 'semester'])) {
-                    $query->orderBy('student_enrollment.'.$sort, $direction);
-                } else {
-                    $query->orderBy('student_enrollment.created_at', 'desc');
-                }
-            })
-            ->paginate($perPage)
+            ->orderByDesc('student_enrollment.created_at')
+            ->orderByDesc('student_enrollment.id')
+            ->paginate(100000, ['*'], 'page', 1)
             ->withQueryString()
             ->through(fn (StudentEnrollment $enrollment): array => [
                 'id' => $enrollment->id,
@@ -336,7 +268,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             'flash' => session('flash'),
             'filters' => [
                 'search' => $search,
-                'per_page' => request('per_page', 10),
+                'per_page' => request('per_page', 'all'),
                 'status_filter' => $statusFilter,
                 'department_filter' => $departmentFilter,
                 'year_level_filter' => $yearLevelFilter,

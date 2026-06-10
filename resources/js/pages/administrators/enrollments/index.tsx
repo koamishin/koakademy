@@ -1,14 +1,15 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import PTabs10 from "@/components/p-tabs-10";
+import { Filters, type Filter as FilterType, type FilterFieldConfig } from "@/components/reui/filters";
 import { SemesterSelector } from "@/components/semester-selector";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ComboboxOption } from "@/components/ui/combobox";
 import { Head, Link, router, usePage } from "@inertiajs/react";
-import { ChevronRight, CreditCard, Settings2, UserPlus, Users } from "lucide-react";
+import { Building2, ChevronRight, CreditCard, Filter, GraduationCap, RotateCcw, Settings2, UserPlus, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useDebouncedCallback } from "use-debounce";
 import { route } from "ziggy-js";
 import { EnrollmentAnalyticsSection } from "./analytics-section";
 import { createColumns, type EnrollmentRow } from "./columns";
@@ -17,7 +18,108 @@ import { EnrollmentsCard } from "./enrollments-card";
 import { ReportsSection } from "./reports-section";
 import type { Branding, BulkReportFilters, EnrollmentManagementProps, ReportFilters } from "./types";
 
-type InertiaGetPayload = NonNullable<Parameters<typeof router.get>[1]>;
+function createInitialEnrollmentFilters(filters: EnrollmentManagementProps["filters"]): FilterType[] {
+    const initialFilters: FilterType[] = [];
+
+    if (filters.status_filter && filters.status_filter !== "all") {
+        initialFilters.push({ id: "status_filter", field: "status_filter", operator: "is", values: [filters.status_filter] });
+    }
+
+    if (filters.department_filter && filters.department_filter !== "all") {
+        initialFilters.push({ id: "department_filter", field: "department_filter", operator: "is", values: [filters.department_filter] });
+    }
+
+    if (filters.year_level_filter && filters.year_level_filter !== "all") {
+        initialFilters.push({ id: "year_level_filter", field: "year_level_filter", operator: "is", values: [filters.year_level_filter] });
+    }
+
+    return initialFilters;
+}
+
+function getActiveFilterValue(filters: FilterType[], field: string): string {
+    const value = filters.find((filter) => filter.field === field)?.values[0];
+
+    return value === undefined || value === null ? "all" : String(value);
+}
+
+function upsertSingleFilter(filters: FilterType[], field: string, value: string): FilterType[] {
+    const nextFilters = filters.filter((filter) => filter.field !== field);
+
+    if (value === "all") {
+        return nextFilters;
+    }
+
+    return [...nextFilters, { id: field, field, operator: "is", values: [value] }];
+}
+
+function enrollmentMatchesSearch(enrollment: EnrollmentRow, searchTerm: string): boolean {
+    return [
+        enrollment.student_name,
+        enrollment.student_id === null ? null : String(enrollment.student_id),
+        enrollment.course,
+        enrollment.department,
+        enrollment.status,
+        enrollment.school_year,
+        enrollment.semester === null ? null : `Semester ${enrollment.semester}`,
+        enrollment.academic_year === null ? null : `Year ${enrollment.academic_year}`,
+    ]
+        .filter((value): value is string => value !== null && value !== undefined)
+        .some((value) => value.toLowerCase().includes(searchTerm));
+}
+
+function enrollmentMatchesFilters(enrollment: EnrollmentRow, activeFilters: FilterType[]): boolean {
+    return activeFilters.every((filter) => {
+        const value = filter.values[0];
+
+        if (value === undefined || value === null) {
+            return true;
+        }
+
+        const filterValue = String(value);
+
+        if (filter.field === "status_filter") {
+            if (filterValue === "active") {
+                return !enrollment.is_trashed;
+            }
+
+            if (filterValue === "trashed") {
+                return !!enrollment.is_trashed;
+            }
+
+            return enrollment.status === filterValue;
+        }
+
+        if (filter.field === "department_filter") {
+            return enrollment.department === filterValue;
+        }
+
+        if (filter.field === "year_level_filter") {
+            return String(enrollment.academic_year ?? "") === filterValue;
+        }
+
+        return true;
+    });
+}
+
+function sortEnrollments(enrollments: EnrollmentRow[], sortOption: string): EnrollmentRow[] {
+    const [sort = "created_at", direction = "desc"] = sortOption.split(":");
+    const multiplier = direction === "asc" ? 1 : -1;
+
+    return [...enrollments].sort((a, b) => {
+        if (sort === "student_name") {
+            return (a.student_name ?? "").localeCompare(b.student_name ?? "") * multiplier;
+        }
+
+        if (sort === "tuition") {
+            return ((a.tuition?.overall ?? 0) - (b.tuition?.overall ?? 0)) * multiplier;
+        }
+
+        const aTime = a.created_at ? Date.parse(a.created_at) : 0;
+        const bTime = b.created_at ? Date.parse(b.created_at) : 0;
+
+        return (aTime - bTime) * multiplier;
+    });
+}
 
 export default function AdministratorEnrollmentsIndex({
     user,
@@ -40,13 +142,9 @@ export default function AdministratorEnrollmentsIndex({
         }).format(value);
     };
 
-    const [isSearching, setIsSearching] = useState(false);
-
-    // Enrollment filters
     const [enrollmentSearch, setEnrollmentSearch] = useState(filters.search || "");
-    const [statusFilter, setStatusFilter] = useState<string>(filters.status_filter || "all");
-    const [departmentFilter, setDepartmentFilter] = useState<string>(filters.department_filter || "all");
-    const [yearLevelFilter, setYearLevelFilter] = useState<string>(filters.year_level_filter || "all");
+    const [activeFilters, setActiveFilters] = useState<FilterType[]>(() => createInitialEnrollmentFilters(filters));
+    const [sortOption, setSortOption] = useState("created_at:desc");
 
     // Delete/restore dialog states for enrollments
     const [deleteEnrollment, setDeleteEnrollment] = useState<EnrollmentRow | null>(null);
@@ -81,102 +179,51 @@ export default function AdministratorEnrollmentsIndex({
     const [availableCourses, setAvailableCourses] = useState<{ id: number; code: string; title: string; department: string; label: string }[]>([]);
     const [isLoadingFilterOptions, setIsLoadingFilterOptions] = useState(false);
 
-    // Sync local state with filters prop when it changes (e.g. after navigation)
     useEffect(() => {
         setEnrollmentSearch(filters.search || "");
-        setStatusFilter(filters.status_filter || "all");
-        setDepartmentFilter(filters.department_filter || "all");
-        setYearLevelFilter(filters.year_level_filter || "all");
+        setActiveFilters(createInitialEnrollmentFilters(filters));
     }, [filters.search, filters.status_filter, filters.department_filter, filters.year_level_filter]);
-
-    const visitEnrollments = useCallback((query: InertiaGetPayload) => {
-        router.cancelAll();
-
-        router.get(route("administrators.enrollments.index"), query, {
-            preserveState: true,
-            replace: true,
-            preserveScroll: true,
-            only: ["enrollments", "filters"],
-            onStart: () => setIsSearching(true),
-            onFinish: () => setIsSearching(false),
-        });
-    }, []);
-
-    const applyFilters = useCallback(
-        (overrides: InertiaGetPayload = {}) => {
-            visitEnrollments({
-                ...filters,
-                search: enrollmentSearch || undefined,
-                status_filter: statusFilter !== "all" ? statusFilter : undefined,
-                department_filter: departmentFilter !== "all" ? departmentFilter : undefined,
-                year_level_filter: yearLevelFilter !== "all" ? yearLevelFilter : undefined,
-                page: 1,
-                ...overrides,
-            });
-        },
-        [departmentFilter, enrollmentSearch, filters, statusFilter, visitEnrollments, yearLevelFilter],
-    );
-
-    const handleEnrollmentSearch = useDebouncedCallback((term: string) => {
-        applyFilters({ search: term || undefined });
-    }, 150);
 
     const handleEnrollmentSearchChange = (value: string) => {
         setEnrollmentSearch(value);
-        handleEnrollmentSearch(value);
-    };
-
-    const handleStatusFilterChange = (value: string) => {
-        setStatusFilter(value);
-        applyFilters({ status_filter: value });
     };
 
     const handleDepartmentFilterChange = (value: string) => {
-        setDepartmentFilter(value);
-        applyFilters({ department_filter: value });
-    };
-
-    const handleYearLevelFilterChange = (value: string) => {
-        setYearLevelFilter(value);
-        applyFilters({ year_level_filter: value });
+        setActiveFilters((currentFilters) => upsertSingleFilter(currentFilters, "department_filter", value));
     };
 
     const clearFilters = () => {
         setEnrollmentSearch("");
-        setStatusFilter("all");
-        setDepartmentFilter("all");
-        setYearLevelFilter("all");
-        visitEnrollments({
-            currentSemester: filters.currentSemester,
-            currentSchoolYear: filters.currentSchoolYear,
-        });
+        setActiveFilters([]);
+        setSortOption("created_at:desc");
     };
 
-    const hasActiveFilters = enrollmentSearch || statusFilter !== "all" || departmentFilter !== "all" || yearLevelFilter !== "all";
+    const departmentFilter = getActiveFilterValue(activeFilters, "department_filter");
+    const hasActiveFilters = enrollmentSearch.trim() !== "" || activeFilters.length > 0 || sortOption !== "created_at:desc";
 
-    // Ensure enrollments data is always an array
     const enrollmentsData = Array.isArray(enrollments?.data) ? enrollments.data : [];
     const enrollmentsTotal = enrollments?.total ?? 0;
-    const enrollmentPagination = {
-        current_page: enrollments?.current_page ?? 1,
-        last_page: enrollments?.last_page ?? 1,
-        per_page: enrollments?.per_page ?? 10,
-        total: enrollmentsTotal,
-        next_page_url: enrollments?.next_page_url ?? null,
-        prev_page_url: enrollments?.prev_page_url ?? null,
-        from: enrollments?.from ?? 0,
-        to: enrollments?.to ?? 0,
-    };
+
+    const visibleEnrollments = useMemo(() => {
+        const searchTerm = enrollmentSearch.trim().toLowerCase();
+        const filteredEnrollments = enrollmentsData.filter((enrollment) => {
+            const matchesSearch = searchTerm === "" || enrollmentMatchesSearch(enrollment, searchTerm);
+
+            return matchesSearch && enrollmentMatchesFilters(enrollment, activeFilters);
+        });
+
+        return sortEnrollments(filteredEnrollments, sortOption);
+    }, [activeFilters, enrollmentSearch, enrollmentsData, sortOption]);
 
     const stats = useMemo(() => {
-        const totalTuition = enrollmentsData.reduce((sum, e) => sum + (e.tuition?.overall || 0), 0);
+        const totalTuition = visibleEnrollments.reduce((sum, e) => sum + (e.tuition?.overall || 0), 0);
 
         return {
             applicants: applicantsCount,
-            enrolled: enrollmentsTotal,
+            enrolled: visibleEnrollments.length,
             tuition: totalTuition,
         };
-    }, [applicantsCount, enrollmentsData, enrollmentsTotal]);
+    }, [applicantsCount, visibleEnrollments]);
 
     const handleEnrollmentClick = (enrollment: EnrollmentRow) => {
         router.visit(route("administrators.enrollments.show", enrollment.id));
@@ -403,6 +450,51 @@ export default function AdministratorEnrollmentsIndex({
         })),
     ];
 
+    const filterFields: FilterFieldConfig[] = useMemo(
+        () => [
+            {
+                key: "status_filter",
+                label: "Status",
+                type: "select",
+                icon: <Users className="h-4 w-4" />,
+                options: [
+                    { value: "active", label: "Active records", icon: <Users className="text-muted-foreground h-4 w-4" /> },
+                    { value: "trashed", label: "Deleted records", icon: <Users className="text-muted-foreground h-4 w-4" /> },
+                    ...enrollment_pipeline.status_options.map((option) => ({
+                        value: option.value,
+                        label: option.label,
+                        icon: <Users className="text-muted-foreground h-4 w-4" />,
+                    })),
+                ],
+            },
+            {
+                key: "department_filter",
+                label: "Department",
+                type: "select",
+                icon: <Building2 className="h-4 w-4" />,
+                options: departmentTabs
+                    .filter((department) => department.value !== "all")
+                    .map((department) => ({
+                        value: department.value,
+                        label: department.label,
+                        icon: <Building2 className="text-muted-foreground h-4 w-4" />,
+                    })),
+            },
+            {
+                key: "year_level_filter",
+                label: "Year Level",
+                type: "select",
+                icon: <GraduationCap className="h-4 w-4" />,
+                options: [1, 2, 3, 4].map((yearLevel) => ({
+                    value: String(yearLevel),
+                    label: `Year ${yearLevel}`,
+                    icon: <GraduationCap className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+        ],
+        [departmentTabs, enrollment_pipeline.status_options],
+    );
+
     return (
         <AdminLayout user={user} title="Enrollments">
             <Head title="Administrators • Enrollments" />
@@ -536,22 +628,41 @@ export default function AdministratorEnrollmentsIndex({
                                 filament={filament}
                                 enrollmentsTotal={enrollmentsTotal}
                                 enrollmentSearch={enrollmentSearch}
-                                statusFilter={statusFilter}
-                                departmentFilter={departmentFilter}
-                                yearLevelFilter={yearLevelFilter}
                                 hasActiveFilters={!!hasActiveFilters}
-                                isSearching={isSearching}
-                                enrollmentsData={enrollmentsData}
+                                enrollmentsData={visibleEnrollments}
                                 enrollmentColumns={enrollmentColumns}
-                                pagination={enrollmentPagination}
-                                filters={filters}
-                                analytics={analytics}
-                                statusOptions={enrollment_pipeline.status_options}
+                                sortOption={sortOption}
+                                filterControl={
+                                    <Filters
+                                        fields={filterFields}
+                                        filters={activeFilters}
+                                        onChange={setActiveFilters}
+                                        trigger={
+                                            <Button variant="outline" className="relative gap-2" size="sm">
+                                                <Filter className="h-4 w-4" />
+                                                Filters
+                                                {activeFilters.length > 0 && (
+                                                    <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5 text-xs">
+                                                        {activeFilters.length}
+                                                    </Badge>
+                                                )}
+                                            </Button>
+                                        }
+                                    />
+                                }
+                                resetControl={
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={clearFilters}
+                                        className="text-muted-foreground hover:text-foreground h-8 px-2"
+                                    >
+                                        <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                                        Reset
+                                    </Button>
+                                }
                                 onSearchChange={handleEnrollmentSearchChange}
-                                onStatusFilterChange={handleStatusFilterChange}
-                                onDepartmentFilterChange={handleDepartmentFilterChange}
-                                onYearLevelFilterChange={handleYearLevelFilterChange}
-                                onClearFilters={clearFilters}
+                                onSortChange={setSortOption}
                                 onRowClick={handleEnrollmentClick}
                             />
                         </div>
@@ -566,8 +677,8 @@ export default function AdministratorEnrollmentsIndex({
                         analytics={analytics}
                         filters={filters}
                         stats={stats}
-                        enrollmentsData={enrollmentsData}
-                        enrollmentsTotal={enrollmentsTotal}
+                        enrollmentsData={visibleEnrollments}
+                        enrollmentsTotal={visibleEnrollments.length}
                         formatMoney={formatMoney}
                     />
 

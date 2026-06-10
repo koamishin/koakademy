@@ -1,15 +1,18 @@
 import {
     ColumnDef,
+    ColumnFiltersState,
     SortingState,
     VisibilityState,
     flexRender,
     getCoreRowModel,
+    getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
 import * as React from "react";
 
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { Button } from "@/components/ui/button";
@@ -51,13 +54,16 @@ export function DataTable<TData, TValue>({
     data,
     pagination,
     filters = {},
-    routeName = "administrators.enrollments.index",
+    routeName,
     dataKey,
     isLoading = false,
     onRowClick,
     selectionActions,
 }: DataTableProps<TData, TValue>) {
+    const isServerSide = !!routeName && !!pagination;
+
     const [sorting, setSorting] = React.useState<SortingState>([]);
+    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
     const [internalLoading, setInternalLoading] = React.useState(false);
@@ -67,6 +73,8 @@ export function DataTable<TData, TValue>({
 
     const visitTable = React.useCallback(
         (url: string, query: InertiaGetPayload = {}) => {
+            if (!routeName) return;
+
             router.cancelAll();
 
             router.get(url, query, {
@@ -78,53 +86,59 @@ export function DataTable<TData, TValue>({
                 onFinish: () => setInternalLoading(false),
             });
         },
-        [dataKey],
+        [dataKey, routeName],
     );
 
     // Initialize sorting from URL if present
     React.useEffect(() => {
+        if (!isServerSide) return;
+
         const urlParams = new URLSearchParams(window.location.search);
         const sort = urlParams.get("sort");
         const direction = urlParams.get("direction");
         if (sort) {
             setSorting([{ id: sort, desc: direction === "desc" }]);
         }
-    }, []);
+    }, [isServerSide]);
 
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        // Server-provided enrollment/applicant pages should not be paginated or sorted again in the browser.
-        manualPagination: !!pagination,
-        manualSorting: !!pagination,
+        manualPagination: isServerSide,
+        manualSorting: isServerSide,
         pageCount: pagination?.last_page ?? -1,
         getPaginationRowModel: getPaginationRowModel(),
-        onSortingChange: (updater) => {
-            const newSorting = typeof updater === "function" ? updater(sorting) : updater;
-            setSorting(newSorting);
+        onSortingChange: isServerSide
+            ? (updater) => {
+                  const newSorting = typeof updater === "function" ? updater(sorting) : updater;
+                  setSorting(newSorting);
 
-            // Trigger server-side sort
-            if (newSorting.length > 0) {
-                const { id, desc } = newSorting[0];
-                visitTable(route(routeName), { ...filters, sort: id, direction: desc ? "desc" : "asc", page: 1 });
-            } else {
-                // Reset sort
-                visitTable(route(routeName), { ...filters, sort: null, direction: null, page: 1 });
-            }
-        },
+                  if (newSorting.length > 0) {
+                      const { id, desc } = newSorting[0];
+                      visitTable(route(routeName), { ...filters, sort: id, direction: desc ? "desc" : "asc", page: 1 });
+                  } else {
+                      visitTable(route(routeName), { ...filters, sort: null, direction: null, page: 1 });
+                  }
+              }
+            : setSorting,
         getSortedRowModel: getSortedRowModel(),
+        onColumnFiltersChange: setColumnFilters,
+        getFilteredRowModel: getFilteredRowModel(),
 
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
         state: {
             sorting,
+            columnFilters,
             columnVisibility,
             rowSelection,
-            pagination: {
-                pageIndex: pagination ? pagination.current_page - 1 : 0,
-                pageSize: pagination ? pagination.per_page : 10,
-            },
+            ...(isServerSide && {
+                pagination: {
+                    pageIndex: pagination ? pagination.current_page - 1 : 0,
+                    pageSize: pagination ? pagination.per_page : 10,
+                },
+            }),
         },
     });
 
@@ -140,8 +154,16 @@ export function DataTable<TData, TValue>({
 
     // Handle page size change
     const onPageSizeChange = (value: string) => {
+        if (!routeName) return;
+
         visitTable(route(routeName), { ...filters, per_page: value, page: 1 });
     };
+
+    const firstVisibleRow = table.getFilteredRowModel().rows.length === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1;
+    const lastVisibleRow = Math.min(
+        (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+        table.getFilteredRowModel().rows.length,
+    );
 
     return (
         <div>
@@ -212,6 +234,22 @@ export function DataTable<TData, TValue>({
                                 })}
                             </TableRow>
                         ))}
+                        {!isServerSide && (
+                            <TableRow>
+                                {table.getHeaderGroups()[0].headers.map((header) => (
+                                    <TableHead key={`filter-${header.id}`} className="pb-2">
+                                        {header.column.getCanFilter() && header.column.id !== "select" && header.column.id !== "actions" ? (
+                                            <Input
+                                                placeholder={`Filter ${header.column.id.replace(/_/g, " ")}...`}
+                                                value={(header.column.getFilterValue() as string) ?? ""}
+                                                onChange={(e) => header.column.setFilterValue(e.target.value)}
+                                                className="h-8 text-xs"
+                                            />
+                                        ) : null}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        )}
                     </TableHeader>
                     <TableBody className={cn(showLoading && !showSkeleton && "opacity-60 transition-opacity")}>
                         {showSkeleton ? (
@@ -231,7 +269,19 @@ export function DataTable<TData, TValue>({
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
                                     className={cn("animate-in fade-in-0 duration-300", onRowClick && "hover:bg-muted/50 cursor-pointer")}
-                                    onClick={() => onRowClick?.(row.original)}
+                                    onClick={(event) => {
+                                        const target = event.target as HTMLElement;
+                                        if (
+                                            target.closest("button") ||
+                                            target.closest('[role="checkbox"]') ||
+                                            target.closest("a") ||
+                                            target.closest('[role="menu"]')
+                                        ) {
+                                            return;
+                                        }
+
+                                        onRowClick?.(row.original);
+                                    }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
@@ -263,7 +313,7 @@ export function DataTable<TData, TValue>({
                         </>
                     ) : (
                         <>
-                            {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                            Showing {firstVisibleRow} to {lastVisibleRow} of {table.getFilteredRowModel().rows.length} row(s)
                         </>
                     )}
                 </div>
