@@ -1,18 +1,18 @@
 {
-  "version": "1.8.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0",
-  "commit": "ff5c209b8e446bc402b574de9db86385c57e88d1",
+  "version": "1.8.0-dev.0.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.0.1",
+  "commit": "59241f94d7a2e330e787ed8ab8207905664aba0d",
   "branch": "master",
-  "timestamp": "2026-06-09T09:42:45Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27197416381",
-  "release_type": "official",
+  "timestamp": "2026-06-10T01:38:41Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27247164889",
+  "release_type": "chore",
   "changelog": {
-    "current": "Version 1.8.0 - manual release",
-    "previous": "1.7.5-dev.1.0"
+    "current": "Version 1.8.0-dev.0.1 - refactor(enrollments): move filtering, search, and sorting to",
+    "previous": "1.8.0"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Manual Official Release",
+    "workflow": "Auto Pre-release and Docker Tag",
     "repository": "yukazakiri/koakademy"
   }
 }
