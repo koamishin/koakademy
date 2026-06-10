@@ -443,6 +443,7 @@ final class AdministratorSystemManagementController extends Controller
             'theme_color' => 'nullable|string|max:50',
             'currency' => 'nullable|string|in:PHP,USD',
             'auth_layout' => 'nullable|string|in:card,split,minimal',
+            'default_country_code' => 'nullable|string|max:10',
             'logo' => 'nullable|file|mimes:jpeg,png,gif,webp,svg|max:5120',
         ]);
 
@@ -467,6 +468,7 @@ final class AdministratorSystemManagementController extends Controller
         $siteSettings->theme_color = $validated['theme_color'] ?? null;
         $siteSettings->currency = $validated['currency'] ?? null;
         $siteSettings->auth_layout = $validated['auth_layout'] ?? 'split';
+        $siteSettings->default_country_code = $validated['default_country_code'] ?? null;
         $siteSettings->save();
 
         return Redirect::back()->with('success', 'Brand settings updated successfully. Logo has been converted for all formats — favicon, PWA icons, and OG image.');
@@ -911,6 +913,7 @@ final class AdministratorSystemManagementController extends Controller
                 'theme_color' => $this->siteSettings->theme_color,
                 'currency' => $this->siteSettings->currency,
                 'auth_layout' => $this->siteSettings->getAuthLayout(),
+                'default_country_code' => $this->siteSettings->getDefaultCountryCode(),
                 'logo' => $this->siteSettings->getLogo(),
                 'favicon' => $this->siteSettings->getFavicon(),
             ],

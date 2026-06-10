@@ -29,6 +29,8 @@ final class SiteSettings extends Settings
 
     private const string DEFAULT_TAGLINE = 'Your Campus, Your Connection';
 
+    private const string DEFAULT_COUNTRY_CODE = '+63';
+
     // Core site identity
     public ?string $name = null;
 
@@ -68,6 +70,9 @@ final class SiteSettings extends Settings
     public ?string $currency = null;
 
     public ?string $auth_layout = self::DEFAULT_AUTH_LAYOUT;
+
+    // Regional defaults
+    public ?string $default_country_code = null;
 
     // Portal-specific settings
     public ?string $portal_name = null;
@@ -140,6 +145,14 @@ final class SiteSettings extends Settings
     public function getAuthLayout(): string
     {
         return $this->auth_layout ?? self::DEFAULT_AUTH_LAYOUT;
+    }
+
+    /**
+     * Get the default country calling code with fallback.
+     */
+    public function getDefaultCountryCode(): string
+    {
+        return $this->default_country_code ?? self::DEFAULT_COUNTRY_CODE;
     }
 
     /**
@@ -217,6 +230,7 @@ final class SiteSettings extends Settings
             'themeColor' => $this->getThemeColor(),
             'currency' => $this->getCurrency(),
             'authLayout' => $this->getAuthLayout(),
+            'defaultCountryCode' => $this->getDefaultCountryCode(),
             'logo' => $this->getLogo(),
             'favicon' => $this->getFavicon(),
         ];

@@ -38,6 +38,9 @@
 @import "./themes/slack.css";
 @import "./themes/vs-code.css";
 @import "./themes/caffeine.css";
+@import "./themes/claude.css";
+@import "./themes/japan-blues.css";
+@import "./themes/bain-design-system.css";
 
 @source "../views";
 @source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";

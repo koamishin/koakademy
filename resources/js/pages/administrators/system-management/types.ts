@@ -243,6 +243,7 @@ export interface BrandingSettings {
     theme_color: string | null;
     currency: string | null;
     auth_layout: "card" | "split" | "minimal" | null;
+    default_country_code: string | null;
     logo: string | null;
     favicon: string | null;
 }

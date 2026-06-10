@@ -12,13 +12,12 @@ import {
 } from "@tanstack/react-table";
 import * as React from "react";
 
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 import { router } from "@inertiajs/react";
+import type { ReactNode } from "react";
 import { DataTablePagination } from "./data-table-pagination";
-import { DataTableViewOptions } from "./data-table-view-options";
 
 declare let route: (name: string, params?: Record<string, unknown> | string | number) => string;
 
@@ -40,9 +39,18 @@ interface DataTableProps<TData, TValue> {
     filters?: Record<string, unknown>;
     routeName?: string;
     isLoading?: boolean;
+    toolbar?: ReactNode;
 }
 
-export function DataTable<TData, TValue>({ columns, data, pagination, filters = {}, routeName, isLoading = false }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({
+    columns,
+    data,
+    pagination,
+    filters = {},
+    routeName,
+    isLoading = false,
+    toolbar,
+}: DataTableProps<TData, TValue>) {
     const isServerSide = !!routeName;
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -142,10 +150,10 @@ export function DataTable<TData, TValue>({ columns, data, pagination, filters = 
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <DataTableViewOptions table={table} />
-            </div>
             <div className="relative overflow-hidden rounded-lg border">
+                {toolbar ? (
+                    <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">{toolbar}</div>
+                ) : null}
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -157,22 +165,6 @@ export function DataTable<TData, TValue>({ columns, data, pagination, filters = 
                                 ))}
                             </TableRow>
                         ))}
-                        {!isServerSide && (
-                            <TableRow>
-                                {table.getHeaderGroups()[0].headers.map((header) => (
-                                    <TableHead key={`filter-${header.id}`} className="pb-2">
-                                        {header.column.getCanFilter() && header.column.id !== "select" && header.column.id !== "actions" ? (
-                                            <Input
-                                                placeholder={`Filter ${header.column.id.replace(/_/g, " ")}...`}
-                                                value={(header.column.getFilterValue() as string) ?? ""}
-                                                onChange={(e) => header.column.setFilterValue(e.target.value)}
-                                                className="h-8 text-xs"
-                                            />
-                                        ) : null}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        )}
                     </TableHeader>
                     <TableBody className={cn(showLoading && "opacity-60 transition-opacity")}>
                         {table.getRowModel().rows?.length ? (

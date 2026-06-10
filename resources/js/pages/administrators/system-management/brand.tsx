@@ -9,7 +9,22 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useForm } from "@inertiajs/react";
-import { Building2, Check, Columns2, ImageIcon, Loader2, Mail, Paintbrush, Phone, RectangleHorizontal, Save, Sparkles, SquareDashed, Type, WandSparkles } from "lucide-react";
+import {
+    Building2,
+    Check,
+    Columns2,
+    ImageIcon,
+    Loader2,
+    Mail,
+    Paintbrush,
+    Phone,
+    RectangleHorizontal,
+    Save,
+    Sparkles,
+    SquareDashed,
+    Type,
+    WandSparkles,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { submitSystemForm } from "./form-submit";
@@ -29,6 +44,7 @@ interface BrandFormData {
     theme_color: string;
     currency: string;
     auth_layout: "card" | "split" | "minimal";
+    default_country_code: string;
     logo: File | null;
 }
 
@@ -46,6 +62,7 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
         theme_color: branding?.theme_color || "#0f172a",
         currency: branding?.currency || "PHP",
         auth_layout: branding?.auth_layout || "split",
+        default_country_code: branding?.default_country_code || "+63",
         logo: null,
     });
 
@@ -90,7 +107,7 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
         >
             <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
                 <div className="space-y-5">
-                    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+                    <Card className="border-primary/20 from-primary/5 via-background to-background bg-gradient-to-br">
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
@@ -130,7 +147,12 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="app_name">Portal Name</Label>
-                                    <Input id="app_name" value={brandForm.data.app_name} onChange={(e) => brandForm.setData("app_name", e.target.value)} placeholder="Example: KoAkademy Portal" />
+                                    <Input
+                                        id="app_name"
+                                        value={brandForm.data.app_name}
+                                        onChange={(e) => brandForm.setData("app_name", e.target.value)}
+                                        placeholder="Example: KoAkademy Portal"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="app_short_name">Short Name</Label>
@@ -173,7 +195,9 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                                     <img src={currentLogo} alt="Logo preview" className="h-14 w-14 rounded-md border object-contain p-1" />
                                     <div>
                                         <p className="font-medium">Click to upload or replace your logo</p>
-                                        <p className="text-muted-foreground text-xs">PNG, JPG, SVG, GIF, or WebP (max 5MB). Favicon and app icons are auto-generated.</p>
+                                        <p className="text-muted-foreground text-xs">
+                                            PNG, JPG, SVG, GIF, or WebP (max 5MB). Favicon and app icons are auto-generated.
+                                        </p>
                                     </div>
                                 </div>
                             </button>
@@ -210,7 +234,12 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                                             onChange={(e) => brandForm.setData("theme_color", e.target.value)}
                                         />
                                     </div>
-                                    <Input id="theme_color" value={primaryColor} onChange={(e) => brandForm.setData("theme_color", e.target.value)} className="w-32 font-mono uppercase" />
+                                    <Input
+                                        id="theme_color"
+                                        value={primaryColor}
+                                        onChange={(e) => brandForm.setData("theme_color", e.target.value)}
+                                        className="w-32 font-mono uppercase"
+                                    />
                                 </div>
                             </div>
                         </CardContent>
@@ -225,7 +254,9 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                             <CardDescription>Pick the layout your users see when signing in.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <p className="text-muted-foreground text-sm">Tip for non-technical admins: choose the preview that looks closest to how you want login to feel.</p>
+                            <p className="text-muted-foreground text-sm">
+                                Tip for non-technical admins: choose the preview that looks closest to how you want login to feel.
+                            </p>
                             <RadioGroup
                                 value={brandForm.data.auth_layout}
                                 onValueChange={(value) => brandForm.setData("auth_layout", value as "card" | "split" | "minimal")}
@@ -289,7 +320,9 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                                             <div className="mb-1 flex items-center gap-1.5">
                                                 {option.key === "card" ? <SquareDashed className="text-muted-foreground h-3.5 w-3.5" /> : null}
                                                 {option.key === "split" ? <Columns2 className="text-muted-foreground h-3.5 w-3.5" /> : null}
-                                                {option.key === "minimal" ? <RectangleHorizontal className="text-muted-foreground h-3.5 w-3.5" /> : null}
+                                                {option.key === "minimal" ? (
+                                                    <RectangleHorizontal className="text-muted-foreground h-3.5 w-3.5" />
+                                                ) : null}
                                                 <p className="text-sm font-medium">{option.title}</p>
                                             </div>
                                             <p className="text-muted-foreground text-xs">{option.desc}</p>
@@ -362,7 +395,12 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                                         <Phone className="h-4 w-4" />
                                         Support Phone
                                     </Label>
-                                    <Input id="support_phone" value={brandForm.data.support_phone} onChange={(e) => brandForm.setData("support_phone", e.target.value)} placeholder="+63 912 345 6789" />
+                                    <Input
+                                        id="support_phone"
+                                        value={brandForm.data.support_phone}
+                                        onChange={(e) => brandForm.setData("support_phone", e.target.value)}
+                                        placeholder="+63 912 345 6789"
+                                    />
                                 </div>
                             </div>
 
@@ -389,12 +427,112 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                                     </Select>
                                 </div>
                             </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="default_country_code">Default Country Code</Label>
+                                    <Select
+                                        value={brandForm.data.default_country_code}
+                                        onValueChange={(value) => brandForm.setData("default_country_code", value)}
+                                    >
+                                        <SelectTrigger id="default_country_code">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="+1">+1 (US/CA)</SelectItem>
+                                            <SelectItem value="+7">+7 (RU)</SelectItem>
+                                            <SelectItem value="+20">+20 (EG)</SelectItem>
+                                            <SelectItem value="+27">+27 (ZA)</SelectItem>
+                                            <SelectItem value="+30">+30 (GR)</SelectItem>
+                                            <SelectItem value="+31">+31 (NL)</SelectItem>
+                                            <SelectItem value="+32">+32 (BE)</SelectItem>
+                                            <SelectItem value="+33">+33 (FR)</SelectItem>
+                                            <SelectItem value="+34">+34 (ES)</SelectItem>
+                                            <SelectItem value="+39">+39 (IT)</SelectItem>
+                                            <SelectItem value="+40">+40 (RO)</SelectItem>
+                                            <SelectItem value="+41">+41 (CH)</SelectItem>
+                                            <SelectItem value="+44">+44 (UK)</SelectItem>
+                                            <SelectItem value="+45">+45 (DK)</SelectItem>
+                                            <SelectItem value="+46">+46 (SE)</SelectItem>
+                                            <SelectItem value="+47">+47 (NO)</SelectItem>
+                                            <SelectItem value="+48">+48 (PL)</SelectItem>
+                                            <SelectItem value="+49">+49 (DE)</SelectItem>
+                                            <SelectItem value="+52">+52 (MX)</SelectItem>
+                                            <SelectItem value="+54">+54 (AR)</SelectItem>
+                                            <SelectItem value="+55">+55 (BR)</SelectItem>
+                                            <SelectItem value="+57">+57 (CO)</SelectItem>
+                                            <SelectItem value="+60">+60 (MY)</SelectItem>
+                                            <SelectItem value="+61">+61 (AU)</SelectItem>
+                                            <SelectItem value="+62">+62 (ID)</SelectItem>
+                                            <SelectItem value="+63">+63 (PH)</SelectItem>
+                                            <SelectItem value="+64">+64 (NZ)</SelectItem>
+                                            <SelectItem value="+65">+65 (SG)</SelectItem>
+                                            <SelectItem value="+66">+66 (TH)</SelectItem>
+                                            <SelectItem value="+81">+81 (JP)</SelectItem>
+                                            <SelectItem value="+82">+82 (KR)</SelectItem>
+                                            <SelectItem value="+84">+84 (VN)</SelectItem>
+                                            <SelectItem value="+86">+86 (CN)</SelectItem>
+                                            <SelectItem value="+90">+90 (TR)</SelectItem>
+                                            <SelectItem value="+91">+91 (IN)</SelectItem>
+                                            <SelectItem value="+92">+92 (PK)</SelectItem>
+                                            <SelectItem value="+94">+94 (LK)</SelectItem>
+                                            <SelectItem value="+95">+95 (MM)</SelectItem>
+                                            <SelectItem value="+212">+212 (MA)</SelectItem>
+                                            <SelectItem value="+234">+234 (NG)</SelectItem>
+                                            <SelectItem value="+254">+254 (KE)</SelectItem>
+                                            <SelectItem value="+351">+351 (PT)</SelectItem>
+                                            <SelectItem value="+352">+352 (LU)</SelectItem>
+                                            <SelectItem value="+353">+353 (IE)</SelectItem>
+                                            <SelectItem value="+354">+354 (IS)</SelectItem>
+                                            <SelectItem value="+355">+355 (AL)</SelectItem>
+                                            <SelectItem value="+356">+356 (MT)</SelectItem>
+                                            <SelectItem value="+357">+357 (CY)</SelectItem>
+                                            <SelectItem value="+358">+358 (FI)</SelectItem>
+                                            <SelectItem value="+359">+359 (BG)</SelectItem>
+                                            <SelectItem value="+370">+370 (LT)</SelectItem>
+                                            <SelectItem value="+371">+371 (LV)</SelectItem>
+                                            <SelectItem value="+372">+372 (EE)</SelectItem>
+                                            <SelectItem value="+373">+373 (MD)</SelectItem>
+                                            <SelectItem value="+374">+374 (AM)</SelectItem>
+                                            <SelectItem value="+375">+375 (BY)</SelectItem>
+                                            <SelectItem value="+380">+380 (UA)</SelectItem>
+                                            <SelectItem value="+381">+381 (RS)</SelectItem>
+                                            <SelectItem value="+385">+385 (HR)</SelectItem>
+                                            <SelectItem value="+386">+386 (SI)</SelectItem>
+                                            <SelectItem value="+420">+420 (CZ)</SelectItem>
+                                            <SelectItem value="+421">+421 (SK)</SelectItem>
+                                            <SelectItem value="+852">+852 (HK)</SelectItem>
+                                            <SelectItem value="+880">+880 (BD)</SelectItem>
+                                            <SelectItem value="+886">+886 (TW)</SelectItem>
+                                            <SelectItem value="+960">+960 (MV)</SelectItem>
+                                            <SelectItem value="+961">+961 (LB)</SelectItem>
+                                            <SelectItem value="+962">+962 (JO)</SelectItem>
+                                            <SelectItem value="+964">+964 (IQ)</SelectItem>
+                                            <SelectItem value="+965">+965 (KW)</SelectItem>
+                                            <SelectItem value="+966">+966 (SA)</SelectItem>
+                                            <SelectItem value="+968">+968 (OM)</SelectItem>
+                                            <SelectItem value="+971">+971 (AE)</SelectItem>
+                                            <SelectItem value="+972">+972 (IL)</SelectItem>
+                                            <SelectItem value="+973">+973 (BH)</SelectItem>
+                                            <SelectItem value="+974">+974 (QA)</SelectItem>
+                                            <SelectItem value="+975">+975 (BT)</SelectItem>
+                                            <SelectItem value="+976">+976 (MN)</SelectItem>
+                                            <SelectItem value="+977">+977 (NP)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-muted-foreground text-xs">
+                                        Used as the default country code in phone number fields across the system.
+                                    </p>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
 
-                    <div className="sticky bottom-4 z-10 rounded-xl border bg-background/95 p-3 backdrop-blur">
+                    <div className="bg-background/95 sticky bottom-4 z-10 rounded-xl border p-3 backdrop-blur">
                         <div className="flex items-center justify-between gap-3">
-                            <p className="text-muted-foreground text-sm">{isDirty ? "You have changes waiting to be saved." : "No pending changes."}</p>
+                            <p className="text-muted-foreground text-sm">
+                                {isDirty ? "You have changes waiting to be saved." : "No pending changes."}
+                            </p>
                             <Button onClick={handleSave} disabled={brandForm.processing || !isDirty}>
                                 {brandForm.processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Save Changes
@@ -413,7 +551,7 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                             <div className="p-4" style={{ backgroundColor: primaryColor }}>
                                 <div className="rounded-lg border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
                                     <div className="mb-2 flex items-center justify-center">
-                                        <img src={currentLogo} alt="Preview logo" className="h-10 w-10 rounded bg-white p-1 object-contain" />
+                                        <img src={currentLogo} alt="Preview logo" className="h-10 w-10 rounded bg-white object-contain p-1" />
                                     </div>
                                     <p className="truncate text-center text-sm font-semibold text-white">{displayName}</p>
                                     <p className="truncate text-center text-xs text-white/80">{displayTagline}</p>
@@ -424,9 +562,14 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                                     <img src={currentLogo} alt="Preview mini logo" className="h-5 w-5 rounded object-contain" />
                                     <span className="truncate text-sm font-medium">{displayShortName}</span>
                                 </div>
-                                <p className="text-muted-foreground text-xs">Login layout: <span className="text-foreground font-medium capitalize">{brandForm.data.auth_layout}</span></p>
+                                <p className="text-muted-foreground text-xs">
+                                    Login layout: <span className="text-foreground font-medium capitalize">{brandForm.data.auth_layout}</span>
+                                </p>
                                 <Separator />
-                                <p className="text-muted-foreground text-xs">Support: {[brandForm.data.support_email, brandForm.data.support_phone].filter(Boolean).join(" • ") || "Not set yet"}</p>
+                                <p className="text-muted-foreground text-xs">
+                                    Support:{" "}
+                                    {[brandForm.data.support_email, brandForm.data.support_phone].filter(Boolean).join(" • ") || "Not set yet"}
+                                </p>
                             </div>
                         </CardContent>
                     </Card>

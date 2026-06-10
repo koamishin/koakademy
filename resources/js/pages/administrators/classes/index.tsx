@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { MultiSelect as SearchableMultiSelect } from "@/components/ui/multi-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,12 +25,15 @@ import {
     GitCompare,
     GraduationCap,
     Layers,
+    LayoutGrid,
+    List,
     ListTodo,
     MapPin,
     Palette,
     Pencil,
     Plus,
     RotateCcw,
+    Search,
     Settings2,
     Trash2,
     Users,
@@ -41,7 +45,6 @@ import { ClassRow, getColumns } from "./columns";
 import { ClassCard } from "./components/class-card";
 import { ClassCompareDialog } from "./components/class-compare-dialog";
 import { ClassStats } from "./components/class-stats";
-import { ClassToolbar } from "./components/class-toolbar";
 import { DeleteClassDialog } from "./components/delete-class-dialog";
 import { DataTable } from "./data-table";
 
@@ -390,35 +393,66 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     const [subjectCodeTouched, setSubjectCodeTouched] = React.useState(false);
 
     const filteredClasses = React.useMemo(() => {
-        const searchTerm = search.trim().toLowerCase();
+        let result = classes;
 
-        if (searchTerm === "") {
-            return classes;
+        // Apply search filter
+        const searchTerm = search.trim().toLowerCase();
+        if (searchTerm !== "") {
+            result = result.filter((classRow) =>
+                [
+                    classRow.record_title,
+                    classRow.subject_code,
+                    classRow.subject_title,
+                    classRow.section,
+                    classRow.school_year,
+                    String(classRow.semester ?? ""),
+                    classRow.classification,
+                    classRow.faculty,
+                    classRow.shs_track,
+                    classRow.shs_strand,
+                ]
+                    .filter((value): value is string => value !== null && value !== undefined)
+                    .some((value) => value.toLowerCase().includes(searchTerm)),
+            );
         }
 
-        return classes.filter((classRow) =>
-            [
-                classRow.record_title,
-                classRow.subject_code,
-                classRow.subject_title,
-                classRow.section,
-                classRow.school_year,
-                String(classRow.semester ?? ""),
-                classRow.classification,
-                classRow.faculty,
-                classRow.shs_track,
-                classRow.shs_strand,
-            ]
-                .filter((value): value is string => value !== null && value !== undefined)
-                .some((value) => value.toLowerCase().includes(searchTerm)),
-        );
-    }, [classes, search]);
+        // Apply active filters
+        for (const filter of activeFilters) {
+            const values = Array.isArray(filter.values) ? filter.values : [filter.values];
+            if (values.length === 0) continue;
 
-    const hasLocalSearch = search.trim() !== "";
-    const serverSearch = filters.search ?? "";
-    const isServerSearchCurrent = search.trim() === serverSearch.trim();
-    const shouldUseLocalSearchResults = hasLocalSearch && !isServerSearchCurrent;
-    const visibleClasses = shouldUseLocalSearchResults ? filteredClasses : classes;
+            result = result.filter((classRow) => {
+                switch (filter.field) {
+                    case "classification":
+                        return values.includes(classRow.classification);
+                    case "semester":
+                        return values.some((v) => String(classRow.semester) === String(v));
+                    case "academic_year":
+                        return values.some((v) => String(classRow.school_year) === String(v));
+                    case "available_slots":
+                        return values.includes("true")
+                            ? classRow.maximum_slots > classRow.students_count
+                            : classRow.maximum_slots <= classRow.students_count;
+                    case "fully_enrolled":
+                        return values.includes("true")
+                            ? classRow.students_count >= classRow.maximum_slots
+                            : classRow.students_count < classRow.maximum_slots;
+                    default:
+                        return true;
+                }
+            });
+        }
+
+        return result;
+    }, [classes, search, activeFilters]);
+
+    const visibleClasses = filteredClasses;
+
+    // Debounced server sync for full pagination and ID-based filters
+    React.useEffect(() => {
+        refreshClasses(search, activeFilters);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, activeFilters]);
 
     const parseSortOption = (value: string): { sort: string; direction: "asc" | "desc" } => {
         const [sort = "created_at", direction = "desc"] = value.split(":");
@@ -500,36 +534,16 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
 
     const handleFiltersChange = (newFilters: FilterType[]) => {
         setActiveFilters(newFilters);
-
-        router.get(route("administrators.classes.index"), buildFilterParams(search, newFilters), {
-            only: ["classes", "filters"],
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
     };
 
     const clearFilters = () => {
         setSearch("");
         setActiveFilters([]);
-
-        router.get(route("administrators.classes.index"), buildFilterParams("", []), {
-            only: ["classes", "filters"],
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
     };
 
     const handleSortChange = (value: string) => {
         setSortOption(value);
-
-        router.get(route("administrators.classes.index"), buildFilterParams(search, activeFilters, value), {
-            only: ["classes", "filters"],
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        refreshClasses(search, activeFilters, value);
     };
 
     const filterFields: FilterFieldConfig[] = React.useMemo(
@@ -1080,6 +1094,90 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 const filteredStatsTotalStudents = visibleClasses.reduce((acc, curr) => acc + curr.students_count, 0);
                 const filteredStatsTotalClasses = visibleClasses.length;
 
+                const toolbarContent = (
+                    <>
+                        <div className="relative max-w-md flex-1">
+                            <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
+                            <Input
+                                placeholder="Search classes..."
+                                className="bg-background pl-8"
+                                value={search}
+                                onChange={(event) => {
+                                    setSearch(event.target.value);
+                                }}
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Select value={sortOption} onValueChange={handleSortChange}>
+                                <SelectTrigger className="h-8 w-[180px]">
+                                    <SelectValue placeholder="Sort classes" />
+                                </SelectTrigger>
+                                <SelectContent align="end">
+                                    <SelectItem value="created_at:desc">Latest added</SelectItem>
+                                    <SelectItem value="created_at:asc">Oldest added</SelectItem>
+                                    <SelectItem value="record_title:asc">Class A-Z</SelectItem>
+                                    <SelectItem value="record_title:desc">Class Z-A</SelectItem>
+                                    <SelectItem value="students_count:desc">Most enrolled</SelectItem>
+                                    <SelectItem value="students_count:asc">Least enrolled</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            <Filters
+                                fields={filterFields}
+                                filters={activeFilters}
+                                onChange={handleFiltersChange}
+                                trigger={
+                                    <Button variant="outline" className="relative gap-2" size="sm">
+                                        <Filter className="h-4 w-4" />
+                                        Filters
+                                        {activeFilters.length > 0 && (
+                                            <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5 text-xs">
+                                                {activeFilters.length}
+                                            </Badge>
+                                        )}
+                                    </Button>
+                                }
+                            />
+
+                            {activeFilters.length > 0 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearFilters}
+                                    className="text-muted-foreground hover:text-foreground h-8 px-2"
+                                >
+                                    <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                                    Reset
+                                </Button>
+                            )}
+
+                            <Separator orientation="vertical" className="mx-1 h-8" />
+
+                            <div className="flex items-center rounded-md border p-0.5">
+                                <Button
+                                    variant={viewMode === "grid" ? "secondary" : "ghost"}
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => setViewMode("grid")}
+                                    title="Grid view"
+                                >
+                                    <LayoutGrid className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => setViewMode("list")}
+                                    title="List view"
+                                >
+                                    <List className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    </>
+                );
+
                 return (
                     <div className="flex flex-col gap-6">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1102,51 +1200,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                 </Button>
                             </div>
                         </div>
-
                         <ClassStats totalClasses={filteredStatsTotalClasses} totalStudents={filteredStatsTotalStudents} />
-                        <ClassToolbar
-                            search={search}
-                            onSearchChange={(nextSearch) => {
-                                setSearch(nextSearch);
-                                refreshClasses(nextSearch, activeFilters);
-                            }}
-                            sortOption={sortOption}
-                            onSortChange={handleSortChange}
-                            activeFiltersCount={activeFilters.length}
-                            filterControl={
-                                <Filters
-                                    fields={filterFields}
-                                    filters={activeFilters}
-                                    onChange={handleFiltersChange}
-                                    trigger={
-                                        <Button variant="outline" className="relative gap-2" size="sm">
-                                            <Filter className="h-4 w-4" />
-                                            Filters
-                                            {activeFilters.length > 0 && (
-                                                <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5 text-xs">
-                                                    {activeFilters.length}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    }
-                                />
-                            }
-                            resetControl={
-                                activeFilters.length > 0 ? (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={clearFilters}
-                                        className="text-muted-foreground hover:text-foreground h-8 px-2"
-                                    >
-                                        <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                                        Reset
-                                    </Button>
-                                ) : null
-                            }
-                            viewMode={viewMode}
-                            onViewModeChange={setViewMode}
-                        />
 
                         {visibleClasses.length === 0 ? (
                             <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center">
@@ -1164,24 +1218,29 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                         ) : (
                             <>
                                 {viewMode === "grid" ? (
-                                    <div className="animate-in fade-in slide-in-from-bottom-4 grid gap-4 duration-500 md:grid-cols-2 2xl:grid-cols-3">
-                                        {visibleClasses.map((row) => (
-                                            <ClassCard
-                                                key={row.id}
-                                                classRow={row}
-                                                onManage={openManage}
-                                                onEdit={openEdit}
-                                                onDelete={confirmDelete}
-                                                onCopy={(id) => {
-                                                    setCopySourceId(id);
-                                                    setCopySection("A");
-                                                    setIsCopyOpen(true);
-                                                }}
-                                            />
-                                        ))}
+                                    <div className="animate-in fade-in slide-in-from-bottom-4 overflow-hidden rounded-lg border duration-500">
+                                        <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                            {toolbarContent}
+                                        </div>
+                                        <div className="grid gap-4 p-4 md:grid-cols-2 2xl:grid-cols-3">
+                                            {visibleClasses.map((row) => (
+                                                <ClassCard
+                                                    key={row.id}
+                                                    classRow={row}
+                                                    onManage={openManage}
+                                                    onEdit={openEdit}
+                                                    onDelete={confirmDelete}
+                                                    onCopy={(id) => {
+                                                        setCopySourceId(id);
+                                                        setCopySection("A");
+                                                        setIsCopyOpen(true);
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
                                 ) : (
-                                    <DataTable columns={columns} data={visibleClasses} />
+                                    <DataTable columns={columns} data={visibleClasses} toolbar={toolbarContent} />
                                 )}
 
                                 {viewMode === "grid" && (

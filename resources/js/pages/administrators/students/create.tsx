@@ -5,28 +5,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import {
     ArrowLeft,
     Banknote,
     BookOpen,
     Briefcase,
     Calendar,
+    Camera,
     ChevronDown,
     Copy,
+    Download,
     Eye,
     FilePlus2,
     GraduationCap,
     Hash,
+    ImageUp,
     Loader2,
     Mail,
     MapPin,
+    PenLine,
     Phone,
     RefreshCw,
     School,
@@ -36,6 +44,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { CreateSignatureDialog } from "./components/create-signature-dialog";
 declare const route: (name: string, params?: Record<string, unknown>) => string;
 
 interface Option {
@@ -85,6 +94,8 @@ interface StudentCreateForm {
     birth_date: string;
     age: string;
     email: string;
+    picture_1x1: File | null;
+    signature: File | null;
     phone: string;
     civil_status: string;
     nationality: string;
@@ -228,6 +239,8 @@ const BLANK_FORM: StudentCreateForm = {
     birth_date: "",
     age: "",
     email: "",
+    picture_1x1: null,
+    signature: null,
     phone: "",
     civil_status: "single",
     nationality: "filipino",
@@ -323,15 +336,6 @@ function capitalizeWords(value: string): string {
     return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function formatPhoneNumber(value: string): string {
-    const digits = value.replace(/\D/g, "");
-    if (digits.length === 0) return "";
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-    if (digits.length <= 10) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
-    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)} ${digits.slice(10, 14)}`;
-}
-
 export default function AdministratorStudentCreate({ user, options }: CreateStudentProps) {
     const [previewId, setPreviewId] = useState<number | null>(null);
     const [isGeneratingId, setIsGeneratingId] = useState(false);
@@ -341,9 +345,94 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         ...BLANK_FORM,
         income_bracket_mode: options.default_income_mode || BLANK_FORM.income_bracket_mode,
     });
+    const { branding } = usePage().props as { branding?: { defaultCountryCode?: string } };
 
     const formRef = useRef<HTMLFormElement>(null);
     const submitActionRef = useRef("view");
+
+    const flags = useFeatureFlags();
+    const pictureInputRef = useRef<HTMLInputElement>(null);
+    const [profilePreview, setProfilePreview] = useState<string | null>(null);
+    const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+    const [isDragOverPicture, setIsDragOverPicture] = useState(false);
+    const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
+
+    const handlePictureFile = useCallback(
+        (file: File) => {
+            if (!file.type.startsWith("image/")) {
+                toast.error("Please select a valid image file.");
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error("Image must be smaller than 5MB.");
+                return;
+            }
+            setData("picture_1x1", file);
+            setProfilePreview(URL.createObjectURL(file));
+        },
+        [setData],
+    );
+
+    const handlePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        handlePictureFile(file);
+    };
+
+    const handlePictureDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOverPicture(true);
+    };
+    const handlePictureDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOverPicture(false);
+    };
+    const handlePictureDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOverPicture(false);
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        handlePictureFile(file);
+    };
+
+    const clearPicture = () => {
+        setData("picture_1x1", null);
+        if (profilePreview) {
+            URL.revokeObjectURL(profilePreview);
+        }
+        setProfilePreview(null);
+        if (pictureInputRef.current) pictureInputRef.current.value = "";
+    };
+
+    const clearSignature = () => {
+        setData("signature", null);
+        if (signaturePreview) {
+            URL.revokeObjectURL(signaturePreview);
+        }
+        setSignaturePreview(null);
+    };
+
+    const getDownloadFilename = (prefix: string) => {
+        const id = data.student_id || "student";
+        return `${id}-${prefix}.jpg`;
+    };
+
+    const downloadPreview = (previewUrl: string, filename: string) => {
+        const link = document.createElement("a");
+        link.href = previewUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleSignatureSave = (file: File, previewUrl: string) => {
+        if (signaturePreview) {
+            URL.revokeObjectURL(signaturePreview);
+        }
+        setData("signature", file);
+        setSignaturePreview(previewUrl);
+    };
 
     useEffect(() => {
         const errorKeys = Object.keys(errors);
@@ -559,6 +648,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         }));
 
         post(route("administrators.students.store"), {
+            forceFormData: true,
             onSuccess: () => {
                 toast.success("Student created successfully");
             },
@@ -794,24 +884,35 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     <Input id="age" value={data.age} readOnly className="bg-muted" />
                                 </div>
 
-                                <div className="space-y-2">
+                                <Field>
                                     <Label htmlFor="email" className="flex items-center gap-1.5">
-                                        <Mail className="h-3.5 w-3.5" />
                                         Email
                                     </Label>
-                                    <Input id="email" type="email" value={data.email} onChange={(event) => setData("email", event.target.value)} />
+                                    <InputGroup>
+                                        <InputGroupInput
+                                            id="email"
+                                            type="email"
+                                            placeholder="student@example.com"
+                                            value={data.email}
+                                            onChange={(event) => setData("email", event.target.value)}
+                                        />
+                                        <InputGroupAddon align="inline-end">
+                                            <Mail className="h-4 w-4" />
+                                        </InputGroupAddon>
+                                    </InputGroup>
                                     {fieldError("email")}
-                                </div>
+                                </Field>
 
                                 <div className="space-y-2">
                                     <Label htmlFor="phone" className="flex items-center gap-1.5">
                                         <Phone className="h-3.5 w-3.5" />
                                         Phone
                                     </Label>
-                                    <Input
+                                    <PhoneInput
                                         id="phone"
                                         value={data.phone}
-                                        onChange={(event) => setData("phone", formatPhoneNumber(event.target.value))}
+                                        onChange={(value) => setData("phone", value)}
+                                        defaultCountryCode={branding?.defaultCountryCode}
                                     />
                                 </div>
 
@@ -1661,10 +1762,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="emergency_contact_phone">Guardian Phone</Label>
-                                        <Input
+                                        <PhoneInput
                                             id="emergency_contact_phone"
                                             value={data.emergency_contact_phone}
-                                            onChange={(event) => setData("emergency_contact_phone", formatPhoneNumber(event.target.value))}
+                                            onChange={(value) => setData("emergency_contact_phone", value)}
+                                            defaultCountryCode={branding?.defaultCountryCode}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1707,21 +1809,28 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="father_contact">Father Contact</Label>
-                                            <Input
+                                            <PhoneInput
                                                 id="father_contact"
                                                 value={data.father_contact}
-                                                onChange={(event) => setData("father_contact", formatPhoneNumber(event.target.value))}
+                                                onChange={(value) => setData("father_contact", value)}
+                                                defaultCountryCode={branding?.defaultCountryCode}
                                             />
                                         </div>
-                                        <div className="space-y-2">
+                                        <Field>
                                             <Label htmlFor="father_email">Father Email</Label>
-                                            <Input
-                                                id="father_email"
-                                                type="email"
-                                                value={data.father_email}
-                                                onChange={(event) => setData("father_email", event.target.value)}
-                                            />
-                                        </div>
+                                            <InputGroup>
+                                                <InputGroupInput
+                                                    id="father_email"
+                                                    type="email"
+                                                    placeholder="father@example.com"
+                                                    value={data.father_email}
+                                                    onChange={(event) => setData("father_email", event.target.value)}
+                                                />
+                                                <InputGroupAddon align="inline-end">
+                                                    <Mail className="h-4 w-4" />
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                        </Field>
                                         <div className="space-y-2">
                                             <Label htmlFor="mother_occupation">Mother Occupation</Label>
                                             <AutocompleteInput
@@ -1733,30 +1842,43 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="mother_contact">Mother Contact</Label>
-                                            <Input
+                                            <PhoneInput
                                                 id="mother_contact"
                                                 value={data.mother_contact}
-                                                onChange={(event) => setData("mother_contact", formatPhoneNumber(event.target.value))}
+                                                onChange={(value) => setData("mother_contact", value)}
+                                                defaultCountryCode={branding?.defaultCountryCode}
                                             />
                                         </div>
-                                        <div className="space-y-2">
+                                        <Field>
                                             <Label htmlFor="mother_email">Mother Email</Label>
-                                            <Input
-                                                id="mother_email"
-                                                type="email"
-                                                value={data.mother_email}
-                                                onChange={(event) => setData("mother_email", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
+                                            <InputGroup>
+                                                <InputGroupInput
+                                                    id="mother_email"
+                                                    type="email"
+                                                    placeholder="mother@example.com"
+                                                    value={data.mother_email}
+                                                    onChange={(event) => setData("mother_email", event.target.value)}
+                                                />
+                                                <InputGroupAddon align="inline-end">
+                                                    <Mail className="h-4 w-4" />
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                        </Field>
+                                        <Field>
                                             <Label htmlFor="guardian_email">Guardian Email</Label>
-                                            <Input
-                                                id="guardian_email"
-                                                type="email"
-                                                value={data.guardian_email}
-                                                onChange={(event) => setData("guardian_email", event.target.value)}
-                                            />
-                                        </div>
+                                            <InputGroup>
+                                                <InputGroupInput
+                                                    id="guardian_email"
+                                                    type="email"
+                                                    placeholder="guardian@example.com"
+                                                    value={data.guardian_email}
+                                                    onChange={(event) => setData("guardian_email", event.target.value)}
+                                                />
+                                                <InputGroupAddon align="inline-end">
+                                                    <Mail className="h-4 w-4" />
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                        </Field>
                                         <div className="space-y-2 md:col-span-2">
                                             <Label htmlFor="family_address">Family Address</Label>
                                             <Textarea
@@ -1770,6 +1892,131 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 </CardContent>
                             )}
                         </Card>
+                    </div>
+
+                    {/* Right sidebar: Picture & Signature */}
+                    <div className="space-y-6">
+                        {flags.studentAvatarUpload && (
+                            <Card className="overflow-hidden">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-base">Profile Picture</CardTitle>
+                                    <p className="text-muted-foreground text-xs">Upload 1x1 photo</p>
+                                </CardHeader>
+                                <CardContent className="flex flex-col items-center gap-4">
+                                    <input type="file" ref={pictureInputRef} className="hidden" accept="image/*" onChange={handlePictureChange} />
+                                    <div
+                                        onDragOver={handlePictureDragOver}
+                                        onDragLeave={handlePictureDragLeave}
+                                        onDrop={handlePictureDrop}
+                                        onClick={() => pictureInputRef.current?.click()}
+                                        className={cn(
+                                            "group relative flex h-36 w-36 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-full border-2 border-dashed transition-all",
+                                            isDragOverPicture
+                                                ? "border-primary bg-primary/10"
+                                                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
+                                        )}
+                                    >
+                                        {profilePreview ? (
+                                            <>
+                                                <img src={profilePreview} alt="Profile preview" className="h-full w-full object-cover" />
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                                    <Camera className="h-6 w-6 text-white" />
+                                                    <span className="text-[10px] font-medium text-white">Change</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-muted-foreground flex flex-col items-center gap-2">
+                                                {isDragOverPicture ? <ImageUp className="text-primary h-8 w-8" /> : <Camera className="h-8 w-8" />}
+                                                <span className="text-xs font-medium">{isDragOverPicture ? "Drop here" : "Click or drag"}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {profilePreview && (
+                                        <div className="flex gap-2">
+                                            <Button type="button" variant="outline" size="sm" onClick={() => pictureInputRef.current?.click()}>
+                                                <Camera className="mr-1 h-3.5 w-3.5" />
+                                                Change
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => downloadPreview(profilePreview, getDownloadFilename("photo"))}
+                                            >
+                                                <Download className="mr-1 h-3.5 w-3.5" />
+                                                Download
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={clearPicture}
+                                                className="text-destructive text-xs"
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {flags.studentSignaturePad && (
+                            <Card className="overflow-hidden">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-base">Signature</CardTitle>
+                                    <p className="text-muted-foreground text-xs">Draw or upload e-signature</p>
+                                </CardHeader>
+                                <CardContent className="flex flex-col items-center gap-4">
+                                    {signaturePreview ? (
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="bg-muted/20 flex h-20 w-full min-w-[180px] items-center justify-center rounded-lg border p-2">
+                                                <img
+                                                    src={signaturePreview}
+                                                    alt="Signature preview"
+                                                    className="h-full max-w-full object-contain dark:invert"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button type="button" variant="outline" size="sm" onClick={() => setIsSignatureDialogOpen(true)}>
+                                                    <PenLine className="mr-1 h-3.5 w-3.5" />
+                                                    Change
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => downloadPreview(signaturePreview!, getDownloadFilename("signature"))}
+                                                >
+                                                    <Download className="mr-1 h-3.5 w-3.5" />
+                                                    Download
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={clearSignature}
+                                                    className="text-destructive text-xs"
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="bg-muted/30 border-muted-foreground/25 flex h-20 w-full max-w-[220px] items-center justify-center rounded-lg border-2 border-dashed">
+                                                <PenLine className="text-muted-foreground/40 h-8 w-8" />
+                                            </div>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => setIsSignatureDialogOpen(true)}>
+                                                <PenLine className="mr-1 h-3.5 w-3.5" />
+                                                Add Signature
+                                            </Button>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+                        <CreateSignatureDialog open={isSignatureDialogOpen} onOpenChange={setIsSignatureDialogOpen} onSave={handleSignatureSave} />
                     </div>
                 </div>
 

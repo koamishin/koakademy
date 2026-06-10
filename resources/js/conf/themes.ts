@@ -8,7 +8,10 @@ export type ColorTheme =
     | "ghibli-studio"
     | "slack"
     | "vs-code"
-    | "caffeine";
+    | "caffeine"
+    | "claude"
+    | "japan-blues"
+    | "bain-design-system";
 
 export interface ThemeConfig {
     id: ColorTheme;
@@ -109,6 +112,39 @@ export const themes: ThemeConfig[] = [
             primary: "oklch(0.4341 0.0392 41.9938)",
             secondary: "oklch(0.9200 0.0651 74.3695)",
             accent: "oklch(0.9310 0 0)",
+        },
+    },
+    {
+        id: "claude",
+        name: "Claude",
+        description: "Imported from tweakcn.",
+        font: "ui-sans-serif",
+        colors: {
+            primary: "oklch(0.6171 0.1375 39.0427)",
+            secondary: "oklch(0.9245 0.0138 92.9892)",
+            accent: "oklch(0.9245 0.0138 92.9892)",
+        },
+    },
+    {
+        id: "japan-blues",
+        name: "Japan Blues",
+        description: "Imported from tweakcn.",
+        font: "ui-sans-serif",
+        colors: {
+            primary: "oklch(0.7040 0.0400 256.7880)",
+            secondary: "oklch(0.8690 0.0220 252.8940)",
+            accent: "oklch(0.9245 0.0138 92.9892)",
+        },
+    },
+    {
+        id: "bain-design-system",
+        name: "Bain Design System",
+        description: "Imported from tweakcn.",
+        font: "Inter",
+        colors: {
+            primary: "oklch(0.5405 0.2217 29.1470)",
+            secondary: "oklch(0.3818 0.0050 106.6339)",
+            accent: "oklch(0.9599 0.0042 56.3742)",
         },
     },
 ];

@@ -56,6 +56,7 @@ env:
 jobs:
   prepare:
     runs-on: ubuntu-24.04
+    if: github.event.repository.fork == false
     outputs:
       version: ${{ steps.prepare.outputs.version }}
       tag: ${{ steps.prepare.outputs.tag }}
@@ -124,7 +125,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-24.04
     needs: prepare
-    if: needs.prepare.result == 'success'
+    if: github.event.repository.fork == false && needs.prepare.result == 'success'
 
     steps:
       - name: Checkout repository
@@ -189,7 +190,7 @@ jobs:
   create-release:
     runs-on: ubuntu-24.04
     needs: [prepare, build-and-push]
-    if: needs.build-and-push.result == 'success'
+    if: github.event.repository.fork == false && needs.build-and-push.result == 'success'
 
     steps:
       - name: Checkout repository
@@ -407,7 +408,7 @@ jobs:
   update-version:
     runs-on: ubuntu-24.04
     needs: [prepare, build-and-push, create-release]
-    if: always() && needs.build-and-push.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') && needs.prepare.outputs.update_version_file == 'true'
+    if: github.event.repository.fork == false && always() && needs.build-and-push.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') && needs.prepare.outputs.update_version_file == 'true'
 
     steps:
       - name: Checkout repository
@@ -494,7 +495,7 @@ jobs:
   notify:
     runs-on: ubuntu-24.04
     needs: [prepare, build-and-push, create-release, update-version]
-    if: always()
+    if: github.event.repository.fork == false && always()
     env:
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 

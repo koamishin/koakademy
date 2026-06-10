@@ -112,7 +112,7 @@ jobs:
   analyze-commit:
     runs-on: ubuntu-24.04
     needs: optimize_ci
-    if: github.actor != 'github-actions[bot]' && needs.optimize_ci.outputs.skip == 'false'
+    if: github.event.repository.fork == false && github.actor != 'github-actions[bot]' && needs.optimize_ci.outputs.skip == 'false'
     outputs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
@@ -255,7 +255,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-24.04
     needs: analyze-commit
-    if: always() && needs.analyze-commit.result == 'success'
+    if: github.event.repository.fork == false && always() && needs.analyze-commit.result == 'success'
 
     steps:
       - name: Checkout repository
@@ -320,7 +320,7 @@ jobs:
   create-release:
     runs-on: ubuntu-24.04
     needs: [analyze-commit, build-and-push]
-    if: needs.build-and-push.result == 'success' && needs.analyze-commit.outputs.should_release == 'true'
+    if: github.event.repository.fork == false && needs.build-and-push.result == 'success' && needs.analyze-commit.outputs.should_release == 'true'
 
     steps:
       - name: Checkout repository
@@ -409,7 +409,7 @@ jobs:
   update-version:
     runs-on: ubuntu-24.04
     needs: [analyze-commit, build-and-push, create-release]
-    if: always() && needs.analyze-commit.result == 'success' && needs.build-and-push.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
+    if: github.event.repository.fork == false && always() && needs.analyze-commit.result == 'success' && needs.build-and-push.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped')
 
     steps:
       - name: Checkout repository
@@ -498,7 +498,7 @@ jobs:
   notify:
     runs-on: ubuntu-24.04
     needs: [analyze-commit, build-and-push, create-release, update-version, optimize_ci]
-    if: always() && needs.optimize_ci.outputs.skip == 'false'
+    if: github.event.repository.fork == false && always() && needs.optimize_ci.outputs.skip == 'false'
     env:
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 

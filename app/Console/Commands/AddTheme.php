@@ -211,14 +211,14 @@ final class AddTheme extends Command
         $messages = [];
         $content = File::get($this->themesConfigPath);
 
-        // 1. Update ColorTheme type definition
-        $colorThemePattern = '/export type ColorTheme = ([^\n]+)/';
+        // 1. Update ColorTheme type definition (multi-line)
+        $colorThemePattern = '/export type ColorTheme =\s*\n((?:\s*\|\s*"[^"]+"\n?)+);/';
         if (preg_match($colorThemePattern, $content, $matches)) {
             $existingTypes = $matches[1];
             if (! str_contains($existingTypes, "\"{$themeId}\"")) {
-                // Add the new theme type
-                $newTypes = mb_rtrim($existingTypes)." | \"{$themeId}\"";
-                $content = preg_replace($colorThemePattern, "export type ColorTheme = {$newTypes}", $content);
+                // Add the new theme type before the semicolon
+                $newBlock = $existingTypes."\n    | \"{$themeId}\"";
+                $content = preg_replace($colorThemePattern, "export type ColorTheme =\n{$newBlock};", $content);
             }
         }
 
@@ -248,8 +248,8 @@ final class AddTheme extends Command
             primary: "{$primary}",
             secondary: "{$secondary}",
             accent: "{$accent}",
-        }
-    }
+        },
+    },
 EOT;
 
         if (! Str::contains($content, "id: \"{$themeId}\"")) {
@@ -260,7 +260,9 @@ EOT;
                 $afterClosing = mb_substr((string) $content, $closingBracketPos);
                 $beforeClosing = mb_rtrim($beforeClosing);
 
-                $content = $beforeClosing.",\n".$newThemeConfig."\n".$afterClosing;
+                // Only add a comma if the last char isn't already one (avoids double-comma sparse array hole)
+                $separator = str_ends_with($beforeClosing, ',') ? "\n" : ",\n";
+                $content = $beforeClosing.$separator.$newThemeConfig."\n".$afterClosing;
                 File::put($this->themesConfigPath, $content);
                 $messages[] = 'Updated themes.ts';
             }

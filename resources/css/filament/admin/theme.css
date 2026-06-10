@@ -8,6 +8,44 @@
 @source '../**/*.js';
 @source '../views';
 
+/* Filament v5 form input styling overrides.
+   Filament's compiled .fi-input-wrp uses a 1px box-shadow ring with 20%
+   white/black opacity for its border, and .fi-input uses hard-coded
+   --gray-950 (near-black) text + transparent background. On the Bain dark
+   theme (page is oklch 0.2308, near-black) this makes text invisible and
+   the field border too faint to see. Re-attach visible borders and use
+   the shadcn foreground token for input text. The shadcn theme variables
+   themselves stay untouched. */
+.fi-input-wrp {
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+}
+
+.fi-input-wrp:focus-within {
+    border-color: var(--primary) !important;
+    box-shadow:
+        0 0 0 2px color-mix(in oklab, var(--primary) 20%, transparent),
+        0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+}
+
+.fi-input-wrp.fi-invalid {
+    border-color: var(--destructive) !important;
+    box-shadow:
+        0 0 0 2px color-mix(in oklab, var(--destructive) 20%, transparent),
+        0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+}
+
+.fi-input,
+.fi-input.input,
+input.fi-input {
+    color: var(--foreground) !important;
+}
+
+input.fi-input::placeholder {
+    color: var(--muted-foreground) !important;
+    opacity: 1;
+}
+
 /* Custom Calendar Styling for Better UX */
 /* Calendar Container */
 .fi-wi-calendar {
