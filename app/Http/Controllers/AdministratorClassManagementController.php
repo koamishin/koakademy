@@ -615,15 +615,27 @@ final class AdministratorClassManagementController extends Controller
         }
 
         // Fetch all enrollments for this class (client-side filtering/sorting/pagination)
-        $enrollments = $class->class_enrollments()
+        $classEnrollments = $class->class_enrollments()
             ->with([
                 'student:id,student_id,first_name,last_name,course_id,academic_year',
                 'student.course:id,code',
             ])
             ->latest('created_at')
-            ->get()
+            ->get();
+
+        // Map student IDs to their StudentEnrollment IDs for the current semester/school year
+        $studentIds = $classEnrollments->pluck('student_id')->filter()->unique();
+        $studentEnrollmentIds = \App\Models\StudentEnrollment::whereIn('student_id', $studentIds)
+            ->where('semester', $class->semester)
+            ->where('school_year', $class->school_year)
+            ->pluck('id', 'student_id');
+
+        $enrollments = $classEnrollments
             ->map(fn ($enrollment): array => [
                 'id' => $enrollment->id,
+                'student_enrollment_id' => $enrollment->student_id
+                    ? ($studentEnrollmentIds[$enrollment->student_id] ?? null)
+                    : null,
                 'student' => $enrollment->student ? [
                     'id' => $enrollment->student->id,
                     'student_id' => $enrollment->student->student_id,

@@ -25,7 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { User } from "@/types/user";
 import { DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
-import { Head, Link, useForm } from "@inertiajs/react";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 import {
     ColumnDef,
     getCoreRowModel,
@@ -46,6 +46,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Clock,
+    ExternalLink,
     FileSpreadsheet,
     FileText,
     GraduationCap,
@@ -145,6 +146,7 @@ type ClassShowData = {
 
 type EnrollmentRow = {
     id: number;
+    student_enrollment_id: number | null;
     status: boolean | null;
     prelim_grade: number | null;
     midterm_grade: number | null;
@@ -1352,6 +1354,17 @@ export default function AdministratorClassShow({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            {row.original.student_enrollment_id && (
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        router.get(route("administrators.enrollments.show", row.original.student_enrollment_id!));
+                                    }}
+                                    className="cursor-pointer"
+                                >
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    View Enrollment
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                                 onClick={() => {
                                     setStudentToMove(row.original);
