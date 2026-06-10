@@ -1,14 +1,14 @@
 {
-  "version": "1.8.0-dev.0.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.0.1",
-  "commit": "59241f94d7a2e330e787ed8ab8207905664aba0d",
+  "version": "1.8.0-dev.1.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.1.0",
+  "commit": "1189fd66979d95d566bf4ab084b3c57ec3fd6845",
   "branch": "master",
-  "timestamp": "2026-06-10T01:38:41Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27247164889",
-  "release_type": "chore",
+  "timestamp": "2026-06-10T04:33:50Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27253248093",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.8.0-dev.0.1 - refactor(enrollments): move filtering, search, and sorting to",
-    "previous": "1.8.0"
+    "current": "Version 1.8.0-dev.1.0 - feat(enrollment): add class change notification system",
+    "previous": "1.8.0-dev.0.1"
   },
   "metadata": {
     "author": "yukazakiri",
