@@ -84,8 +84,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - pgsql
-      - redis
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
       - koakademy-storage:/app/storage
     networks:
@@ -103,6 +105,12 @@ services:
       - koakademy-pgsql:/var/lib/postgresql
     networks:
       - koakademy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U koakademy -d koakademy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
@@ -112,6 +120,12 @@ services:
       - koakademy-redis:/data
     networks:
       - koakademy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   koakademy-storage:
@@ -226,10 +240,14 @@ services:
     env_file:
       - .env
     depends_on:
-      - pgsql
-      - redis
-      - meilisearch
-      - gotenberg
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
     volumes:
       - koakademy-storage:/app/storage
     networks:
@@ -247,6 +265,12 @@ services:
       - koakademy-pgsql:/var/lib/postgresql
     networks:
       - koakademy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U koakademy -d koakademy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
@@ -256,17 +280,30 @@ services:
       - koakademy-redis:/data
     networks:
       - koakademy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   meilisearch:
     image: getmeili/meilisearch:v1.42
     container_name: koakademy-meilisearch
     restart: unless-stopped
     environment:
+      MEILI_MASTER_KEY: replace-with-strong-key
       MEILI_NO_ANALYTICS: "false"
     volumes:
       - koakademy-meilisearch:/meili_data
     networks:
       - koakademy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   gotenberg:
     image: gotenberg/gotenberg:8
@@ -286,16 +323,23 @@ networks:
     driver: bridge
 ```
 
-Add to your `.env`:
+Append these to your `.env`:
 
 ```ini
+# Search (Meilisearch)
 SCOUT_DRIVER=meilisearch
 MEILISEARCH_HOST=http://meilisearch:7700
+MEILISEARCH_KEY=replace-with-strong-key
 
+# PDF rendering (Gotenberg)
 LARAVEL_PDF_DRIVER=gotenberg
 LARAVEL_PDF_PRODUCTION_DRIVER=gotenberg
 GOTENBERG_URL=http://gotenberg:3000
 ```
+
+:::caution
+`MEILI_MASTER_KEY` in the compose service and `MEILISEARCH_KEY` in `.env` must be the same value. Without a master key, Meilisearch runs in development mode and exposes all API endpoints without authentication — never do this in production.
+:::
 
 :::note
 The `app` container runs FrankenPHP, Horizon, Pulse, and Nightwatch together via Supervisor when `QUEUE_CONNECTION=redis`. You do **not** need separate `horizon` or `pulse` containers unless you are horizontally scaling workers across multiple hosts.
@@ -344,6 +388,70 @@ The KoAkademy image supports different container modes via the `CONTAINER_MODE` 
 | Docker Hub | `yukazaki/koakademy:latest` |
 | GitHub Container Registry | `ghcr.io/yukazakiri/koakademy` |
 | Dev (latest unstable) | `yukazaki/koakademy:dev-latest` |
+
+## Health Checks
+
+The KoAkademy image includes a built-in `HEALTHCHECK` instruction that runs every second after a 5-second start period. The health check adapts to the active `CONTAINER_MODE`:
+
+| Mode | Health Check |
+|---|---|
+| `http` | Runs `php artisan octane:status` — verifies the Octane server is accepting requests |
+| `horizon` | Runs `php artisan horizon:status` — verifies the Horizon process is active |
+| `scheduler` | Checks that the Supercronic process is running via Supervisor |
+| `nightwatch` | Checks that the Nightwatch agent is running via Supervisor |
+| `worker` | Checks that the queue worker is running via Supervisor |
+
+### HTTP Health Endpoint
+
+The image also exposes a lightweight `/health` endpoint at the application level:
+
+```bash
+curl -s http://localhost:8000/health
+# {"status":"ok","timestamp":"2026-06-10T12:00:00+00:00"}
+```
+
+This endpoint is used internally by the container's startup logic (`is_http_url_reachable`) to detect when Octane is ready to serve traffic — for example, before dispatching post-start Scout indexing jobs.
+
+### Checking Health Status
+
+View the health status of all containers:
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}"
+```
+
+Inspect a specific container's health log:
+
+```bash
+docker inspect --format='{{json .State.Health}}' koakademy-app | python3 -m json.tool
+```
+
+### Customizing Health Check Parameters
+
+Override the defaults if your workload needs a longer startup period:
+
+```yaml
+services:
+  app:
+    image: yukazaki/koakademy:latest
+    healthcheck:
+      test: ["CMD", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+```
+
+### Health Check Environment Variables
+
+The health check honors these environment variables from your `.env`:
+
+| Variable | Default | Description |
+|---|---|---|
+| `CONTAINER_MODE` | `http` | Determines which health check strategy to use |
+| `CONNECTION_MAX_TRIES` | `30` | Retries for database/Redis connectivity checks during startup |
+| `CONNECTION_RETRY_SLEEP` | `1` | Seconds between connection retries |
+| `SERVICE_CONNECT_TIMEOUT` | `2` | Timeout in seconds for service connectivity checks |
 
 ## Rolling Updates
 

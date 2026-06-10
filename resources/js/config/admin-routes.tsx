@@ -297,14 +297,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // ============================================
     {
         id: "admin-students",
-        title: "Student Records",
+        title: "Student Directory",
         icon: <IconUser className="size-4" />,
         link: "/administrators/students",
         section: "student_services",
         requiredPermission: "ViewAny:Student",
         subs: [
             {
-                title: "All Students",
+                title: "Students",
                 link: "/administrators/students",
                 icon: <IconUsers className="size-4" />,
             },
@@ -325,19 +325,19 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-enrollments",
-        title: "Enrollment Management",
+        title: "Admisions",
         icon: <IconChecklist className="size-4" />,
         link: "/administrators/enrollments",
         section: "student_services",
         requiredPermission: "ViewAny:StudentEnrollment",
         subs: [
             {
-                title: "Enrolled Students",
+                title: "Enrollments",
                 link: "/administrators/enrollments",
                 icon: <IconUsers className="size-4" />,
             },
             {
-                title: "New Applicants",
+                title: "Applicants",
                 link: "/administrators/enrollments/applicants",
                 icon: <IconUserPlus className="size-4" />,
             },

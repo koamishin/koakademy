@@ -5,6 +5,25 @@ description: Fix common issues during installation and development.
 
 ## Docker
 
+### Container health check fails (unhealthy)
+
+If `docker ps` shows the app container as `unhealthy`, inspect the health log:
+
+```bash
+docker inspect --format='{{json .State.Health}}' koakademy-app | python3 -m json.tool
+```
+
+Common causes by container mode:
+
+| Mode | Cause | Fix |
+|---|---|---|
+| `http` | Octane server not started or crashed | Check logs: `docker logs koakademy-app --tail 100` |
+| `http` | Octane taking too long to boot | Increase `start_period` in Compose healthcheck config |
+| `horizon` | Horizon process not running | Verify `QUEUE_CONNECTION=redis` and Redis is reachable |
+| `scheduler` | Supercronic process crashed | Check Supervisor logs: `docker exec koakademy-app supervisorctl status` |
+| `nightwatch` | Nightwatch agent not running | Verify Nightwatch is enabled and configured |
+| `worker` | Worker command undefined or crashed | Set `WORKER_COMMAND` environment variable |
+
 ### Pulse crashes with `SIGSEGV (core dumped)`
 
 If your logs show `pulse` repeatedly exiting with `SIGSEGV`, the cause is almost always the **PHP 8.5 nightly image** used in the pre-built container. PHP 8.5 is still in development and is prone to segfaults, especially when extensions like `redis`, `opcache`, or `gd` are loaded.

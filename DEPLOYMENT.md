@@ -106,9 +106,22 @@ docker exec -it koakademy-app php artisan make:filament-user
 Useful commands after deployment:
 
 ```bash
-docker ps
+# Check container status including health
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# Inspect health check details
+docker inspect --format='{{json .State.Health}}' koakademy-app | python3 -m json.tool
+
+# View recent container logs
 docker logs koakademy-app --tail=200
+
+# Lightweight application health endpoint
+docker exec koakademy-app curl -s http://localhost:8000/health
+
+# Octane process status
 docker exec koakademy-app php artisan octane:status
+
+# Full system overview
 docker exec koakademy-app php artisan about
 ```
 

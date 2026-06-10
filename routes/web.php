@@ -288,6 +288,9 @@ Route::get('/id-card/verify/{token}', [DigitalIdCardController::class, 'verify']
 // Public Changelog (accessible without authentication)
 Route::get('/changelog', App\Http\Controllers\ChangelogController::class)->name('changelog');
 
+// Docker health check endpoint (used by HEALTHCHECK instruction and service discovery)
+Route::get('/health', fn () => response()->json(['status' => 'ok', 'timestamp' => now()->toIso8601String()]))->name('health');
+
 Route::middleware(['auth'])->group(function () {
     // Generic Social Auth Routes
     Route::get('/integrations/{provider}/connect', [App\Http\Controllers\SocialAuthController::class, 'connect'])->name('social.connect');

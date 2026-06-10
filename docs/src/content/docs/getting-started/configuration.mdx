@@ -243,6 +243,10 @@ MEILISEARCH_HOST=http://127.0.0.1:7700
 MEILISEARCH_KEY=your-master-key
 ```
 
+:::caution
+For production, always set a `MEILISEARCH_KEY` and configure the same key as `MEILI_MASTER_KEY` on the Meilisearch container. Without a master key, Meilisearch runs in development mode and exposes all API endpoints without authentication.
+:::
+
 ## Branding
 
 Runtime branding is loaded from database settings, not compiled into the image. After your first deploy, visit the admin panel to customize:
@@ -255,13 +259,28 @@ Runtime branding is loaded from database settings, not compiled into the image. 
 ## Health Checks
 
 ```bash
+# Application-level health endpoint (lightweight, no DB)
+curl -s http://localhost:8000/health
+
+# Comprehensive system info
 php artisan about
+
+# Route inventory
 php artisan route:list --except-vendor
 ```
 
 For Docker production containers:
 
 ```bash
+# Container health status (uses built-in HEALTHCHECK)
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# Detailed health log
+docker inspect --format='{{json .State.Health}}' koakademy-app | python3 -m json.tool
+
+# Octane process check
 docker exec koakademy-app php artisan octane:status
+
+# Full system overview
 docker exec koakademy-app php artisan about
 ```
