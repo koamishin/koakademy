@@ -92,6 +92,12 @@ services:
       - koakademy-storage:/app/storage
     networks:
       - koakademy
+    healthcheck:
+      test: ["CMD", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   pgsql:
     image: postgres:18-alpine
@@ -158,9 +164,6 @@ APP_DEBUG=false
 APP_URL=http://localhost:8000
 APP_KEY=   # leave empty for now; we will generate it below
 
-ADMIN_HOST=admin.localhost
-PORTAL_HOST=localhost
-
 DB_CONNECTION=pgsql
 DB_HOST=pgsql
 DB_PORT=5432
@@ -184,8 +187,12 @@ OCTANE_HOST=0.0.0.0
 OCTANE_PORT=8000
 ```
 
-:::caution
-`ADMIN_HOST` and `PORTAL_HOST` are used for domain-based routing in production. If you are evaluating on `localhost`, keep them simple or update your `/etc/hosts` file to match.
+:::note
+`ADMIN_HOST` and `PORTAL_HOST` are domain-based routing values. Both default to `localhost` when not set, so the app works immediately at `http://localhost:8000`. Set them explicitly when deploying to a real domain.
+:::
+
+:::note
+`ADMIN_HOST` and `PORTAL_HOST` are used when you deploy to a real domain (e.g. `portal.yourschool.edu`). Both default to `localhost` when not set, so the app works immediately at `http://localhost:8000`.
 :::
 
 Generate an app key and add it to `.env`:
@@ -252,6 +259,12 @@ services:
       - koakademy-storage:/app/storage
     networks:
       - koakademy
+    healthcheck:
+      test: ["CMD", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   pgsql:
     image: postgres:18-alpine

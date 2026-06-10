@@ -1,31 +1,210 @@
 ---
 title: Installation
-description: Install KoAkademy on macOS, Linux, or Windows — with SQLite by default and optional Docker services.
+description: Deploy KoAkademy for self-hosted production, or set up a local development environment for contributing.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-KoAkademy supports multiple local development setups. The default setup uses **SQLite**, `database` cache, `sync` queues, and `log` mail, so you can run the app without Docker, Redis, Mailpit, PostgreSQL, or MySQL.
+KoAkademy is built to be **self-hosted**. The primary installation path uses the pre-built Docker image with Docker Compose — production-ready in under 10 minutes. If you want to contribute code, local development paths are available below.
 
-| Method | Docker Required | Default Database | Best For |
-|---|---|---|---|
-| [Laravel Herd](#laravel-herd) | No | SQLite | macOS or Windows — zero-config `.test` domains |
-| [Native / Manual](#native-manual) | No | SQLite | Linux, macOS, or full-control setups |
-| [Docker / Sail](#docker--laravel-sail) | Yes | PostgreSQL in Compose | Reproducible contributor environment |
-| [Quick PHP Server](#quick-php-server) | No | SQLite | Trying the app quickly |
-| [XAMPP / WAMP](#xampp--wamp) | No | MySQL | Windows traditional Apache stack |
-
-:::note
-Docker is optional for local development. If Docker is installed and running, the Windows setup script will ask whether you want to start optional services such as PostgreSQL, MySQL, Redis, or Mailpit using `docker run`.
-:::
+| Path | Best For | Time |
+|---|---|---|
+| [Docker Compose](#self-hosted-production) | Production self-hosting | 10 minutes |
+| [Laravel Herd](#local-development) | macOS / Windows development | 5 minutes |
+| [Native / Manual](#native-manual) | Linux or full-control dev setups | 15 minutes |
+| [Docker Sail](#docker--laravel-sail) | Isolated contributor environment | 10 minutes |
 
 ---
 
-## Laravel Herd
+## Self-Hosted (Production)
+
+The recommended way to run KoAkademy in production is with Docker Compose using the pre-built image. No PHP, Composer, or Node.js required on the host — just Docker.
+
+### Prerequisites
+
+| Tool | Version |
+|---|---|
+| Docker | 24+ |
+| Docker Compose | v2 |
+
+### 1. Create `docker-compose.yml`
+
+```yaml
+services:
+  app:
+    image: yukazaki/koakademy:latest
+    container_name: koakademy-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      pgsql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - koakademy-storage:/app/storage
+    networks:
+      - koakademy
+    healthcheck:
+      test: ["CMD", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  pgsql:
+    image: postgres:18-alpine
+    container_name: koakademy-pgsql
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: koakademy
+      POSTGRES_USER: koakademy
+      POSTGRES_PASSWORD: replace-with-strong-password
+    volumes:
+      - koakademy-pgsql:/var/lib/postgresql
+    networks:
+      - koakademy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U koakademy -d koakademy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: koakademy-redis
+    restart: unless-stopped
+    volumes:
+      - koakademy-redis:/data
+    networks:
+      - koakademy
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  koakademy-storage:
+  koakademy-pgsql:
+  koakademy-redis:
+
+networks:
+  koakademy:
+    driver: bridge
+```
+
+### 2. Create Your `.env` File
+
+Copy the production example and customize it:
+
+```bash
+cp .env.production.example .env
+```
+
+The essential variables to set:
+
+```ini
+APP_NAME="KoAkademy"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=http://localhost:8000
+APP_KEY=   # generate in the next step
+
+DB_CONNECTION=pgsql
+DB_HOST=pgsql
+DB_PORT=5432
+DB_DATABASE=koakademy
+DB_USERNAME=koakademy
+DB_PASSWORD=replace-with-strong-password
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+MAIL_MAILER=log   # switch to smtp for real email
+MAIL_FROM_ADDRESS=noreply@koakademy.edu
+MAIL_FROM_NAME="${APP_NAME}"
+
+OCTANE_SERVER=frankenphp
+OCTANE_HOST=0.0.0.0
+OCTANE_PORT=8000
+```
+
+:::note
+`PORTAL_HOST` and `ADMIN_HOST` default to `localhost` if not set, so the app works immediately on `http://localhost:8000`. Set them explicitly when deploying to a real domain (e.g. `portal.yourschool.edu`).
+:::
+
+### 3. Generate an App Key
+
+```bash
+docker run --rm \
+  -e APP_KEY=base64:000000000000000000000000000000000000000000= \
+  yukazaki/koakademy:latest \
+  php artisan key:generate --show
+```
+
+Copy the output into `APP_KEY=` in your `.env`.
+
+### 4. Start the Stack
+
+```bash
+docker compose up -d
+```
+
+Migrations run automatically on first start. Check that everything is healthy:
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}"
+docker logs koakademy-app --tail=50
+```
+
+### 5. Create an Admin User
+
+```bash
+docker exec -it koakademy-app php artisan make:filament-user
+```
+
+Follow the prompts to create your first administrator.
+
+### 6. Verify Everything Works
+
+```bash
+# Health endpoint
+curl -s http://localhost:8000/health
+
+# Octane status
+docker exec koakademy-app php artisan octane:status
+
+# Full system overview
+docker exec koakademy-app php artisan about
+```
+
+Your KoAkademy instance is now running. Visit `http://localhost:8000`.
+
+### Adding More Services
+
+Need full-text search or PDF rendering? See [Docker Deployment](/getting-started/docker#production-compose-with-all-services) for the complete Compose file with Meilisearch and Gotenberg.
+
+---
+
+## Local Development
+
+These paths are for developers who want to contribute to KoAkademy, build modules, or run the app without Docker.
+
+### Laravel Herd
 
 [Laravel Herd](https://herd.laravel.com/) is the fastest non-Docker path on **macOS** and **Windows**. Herd provides PHP, Composer, Node, SSL, and automatic `.test` domain resolution.
 
-### Windows Automated Setup
+**Windows automated setup:**
 
 ```powershell "Windows PowerShell"
 git clone https://github.com/yukazakiri/koakademy.git
@@ -33,73 +212,9 @@ cd koakademy
 .\scripts\dev-setup.ps1
 ```
 
-The setup script now works like this:
+The script sets up SQLite by default, installs dependencies, generates an app key, runs migrations, and builds frontend assets. If Docker is running, it can optionally start PostgreSQL, MySQL, Redis, or Mailpit.
 
-1. Checks PHP, Composer, Node, npm, and Herd.
-2. Creates `.env` from `.env.example`.
-3. Uses **SQLite by default**.
-4. Checks if Docker is installed and running.
-5. If Docker is running, prompts for optional services:
-   - PostgreSQL via `postgres:17-alpine`
-   - MySQL via `mysql:8.4`
-   - Redis via `redis:7-alpine`
-   - Mailpit via `axllent/mailpit:latest`
-6. Updates `.env` to use `127.0.0.1` for any selected Docker service.
-7. Installs Composer and npm dependencies.
-8. Generates `APP_KEY`, runs migrations, and builds frontend assets.
-
-Common options:
-
-```powershell
-.\scripts\dev-setup.ps1 -SkipMigrations
-.\scripts\dev-setup.ps1 -SkipNpm
-```
-
-### Windows Defaults
-
-If you press Enter through all prompts, the app will use:
-
-```ini
-DB_CONNECTION=sqlite
-DB_DATABASE=database/database.sqlite
-CACHE_STORE=database
-QUEUE_CONNECTION=sync
-MAIL_MAILER=log
-```
-
-No Docker services are started by default.
-
-### Optional Docker Services on Windows
-
-If Docker Desktop is running, choose optional services during setup:
-
-| Prompt Choice | Container | Port | `.env` Host |
-|---|---|---|---|
-| `pgsql` | `koakademy-pgsql` | `5432` | `127.0.0.1` |
-| `mysql` | `koakademy-mysql` | `3306` | `127.0.0.1` |
-| Redis `yes` | `koakademy-redis` | `6379` | `127.0.0.1` |
-| Mailpit `yes` | `koakademy-mailpit` | `1025`, `8025` | `127.0.0.1` |
-
-Generated container commands are equivalent to:
-
-```powershell
-# PostgreSQL
-docker run -d --name koakademy-pgsql `
-  -p 5432:5432 `
-  -e POSTGRES_DB=koakademy `
-  -e POSTGRES_USER=koakademy `
-  -e POSTGRES_PASSWORD=koakademy `
-  -v koakademy-pgsql:/var/lib/postgresql `
-  postgres:17-alpine
-
-# Redis
-docker run -d --name koakademy-redis -p 6379:6379 -v koakademy-redis:/data redis:7-alpine
-
-# Mailpit
-docker run -d --name koakademy-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
-```
-
-### macOS with Herd
+**macOS manual setup:**
 
 ```bash "Terminal"
 git clone https://github.com/yukazakiri/koakademy.git
@@ -115,46 +230,11 @@ npm run build
 npm run dev
 ```
 
-Herd will automatically serve the project at a `.test` domain when the project is inside one of Herd's configured directories.
+Herd automatically serves the project at a `.test` domain.
 
-If you want PostgreSQL instead of SQLite on macOS, you can use Homebrew:
+### Native / Manual
 
-```bash
-brew install postgresql@17
-brew services start postgresql@17
-createdb koakademy
-```
-
-Then update `.env`:
-
-```ini
-DB_CONNECTION=pgsql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_DATABASE=koakademy
-DB_USERNAME=your_mac_username
-DB_PASSWORD=
-```
-
----
-
-## Native / Manual
-
-Use this path when you do not want Docker and do not want Laravel Herd.
-
-### Minimum Requirements
-
-| Tool | Version |
-|---|---|
-| PHP | 8.4+ with SQLite extension |
-| Composer | 2.x |
-| Node.js | 22+ |
-| npm | bundled with Node |
-| Git | latest |
-
-### Universal SQLite Setup
-
-This works on macOS, Linux, and Windows as long as PHP has SQLite enabled:
+Works on any OS with PHP 8.4+, Composer, and Node.js 22+. Uses SQLite by default.
 
 ```bash "Terminal"
 git clone https://github.com/yukazakiri/koakademy.git
@@ -170,36 +250,11 @@ npm run build
 php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-Visit `http://localhost:8000`.
+Visit `http://localhost:8000`. To switch to PostgreSQL, see [Configuration](/getting-started/configuration#database-configuration).
 
-:::tip
-SQLite is the recommended default for local development. You can switch to PostgreSQL or MySQL later by updating `.env` and rerunning migrations.
-:::
+### Docker / Laravel Sail
 
-### Linux Native Script
-
-For Linux without Docker, use the native setup script:
-
-```bash
-./scripts/dev-setup-local.sh
-```
-
-Options:
-
-```bash
-./scripts/dev-setup-local.sh --skip-ssl
-./scripts/dev-setup-local.sh --skip-hosts
-./scripts/dev-setup-local.sh --skip-db
-./scripts/dev-setup-local.sh --force-db-reconfig
-```
-
-The script can install PHP, Composer, Bun/npm, PostgreSQL, mkcert, and Nginx depending on your distribution.
-
----
-
-## Docker / Laravel Sail
-
-Use this path if you want a fully containerized development stack.
+A fully containerized development stack with PostgreSQL, Redis, and Mailpit.
 
 ```bash "Terminal"
 git clone https://github.com/yukazakiri/koakademy.git
@@ -213,7 +268,7 @@ vendor/bin/sail artisan migrate
 vendor/bin/sail npm run dev
 ```
 
-Sail uses service names inside Docker, so `.env` values should point to Compose services:
+Use service names inside Docker (not `127.0.0.1`):
 
 ```ini
 DB_CONNECTION=pgsql
@@ -226,161 +281,24 @@ REDIS_HOST=redis
 MAIL_HOST=mailpit
 ```
 
-:::caution
-Do not use `127.0.0.1` for services inside Sail containers. Use service names such as `pgsql`, `redis`, and `mailpit`.
-:::
-
 ---
 
-## Quick PHP Server
-
-This is the fastest non-Docker evaluation path:
-
-```bash
-composer install --no-dev
-cp .env.example .env
-touch database/database.sqlite
-php artisan key:generate
-php artisan migrate
-npm install
-npm run build
-php artisan serve
-```
-
-This uses:
-
-```ini
-DB_CONNECTION=sqlite
-CACHE_STORE=database
-QUEUE_CONNECTION=sync
-MAIL_MAILER=log
-```
-
----
-
-## XAMPP / WAMP
-
-For Windows users who prefer Apache and MySQL:
-
-1. Install XAMPP or WAMP with PHP 8.4.
-2. Clone the repository into your web root.
-3. Run:
-
-```powershell
-composer install
-npm install
-copy .env.example .env
-php artisan key:generate
-```
-
-4. Create a MySQL database named `koakademy`.
-5. Update `.env`:
-
-```ini
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=koakademy
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-6. Run:
-
-```powershell
-php artisan migrate
-npm run build
-```
-
-7. Point Apache to `public/`.
-
----
-
-## Optional Services Without Compose
-
-If you are not using Sail but want optional local services, run them one by one:
-
-### PostgreSQL
-
-```bash
-docker run -d --name koakademy-pgsql \
-  -p 5432:5432 \
-  -e POSTGRES_DB=koakademy \
-  -e POSTGRES_USER=koakademy \
-  -e POSTGRES_PASSWORD=koakademy \
-  -v koakademy-pgsql:/var/lib/postgresql \
-  postgres:17-alpine
-```
-
-```ini
-DB_CONNECTION=pgsql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_DATABASE=koakademy
-DB_USERNAME=koakademy
-DB_PASSWORD=koakademy
-```
-
-### MySQL
-
-```bash
-docker run -d --name koakademy-mysql \
-  -p 3306:3306 \
-  -e MYSQL_DATABASE=koakademy \
-  -e MYSQL_USER=koakademy \
-  -e MYSQL_PASSWORD=koakademy \
-  -e MYSQL_ROOT_PASSWORD=root \
-  -v koakademy-mysql:/var/lib/mysql \
-  mysql:8.4
-```
-
-```ini
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=koakademy
-DB_USERNAME=koakademy
-DB_PASSWORD=koakademy
-```
-
-### Redis
-
-```bash
-docker run -d --name koakademy-redis -p 6379:6379 -v koakademy-redis:/data redis:7-alpine
-```
-
-```ini
-REDIS_HOST=127.0.0.1
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-```
-
-### Mailpit
-
-```bash
-docker run -d --name koakademy-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:latest
-```
-
-```ini
-MAIL_MAILER=smtp
-MAIL_HOST=127.0.0.1
-MAIL_PORT=1025
-MAIL_USERNAME=null
-MAIL_PASSWORD=null
-MAIL_ENCRYPTION=null
-```
-
-Mailpit UI: `http://localhost:8025`.
-
----
-
-## Post-Install Steps
+## Post-Install
 
 Create your first admin user:
 
-```bash
-php artisan make:filament-user
-```
+<Tabs>
+  <TabItem label="Docker">
+    ```bash
+    docker exec -it koakademy-app php artisan make:filament-user
+    ```
+  </TabItem>
+  <TabItem label="Local">
+    ```bash
+    php artisan make:filament-user
+    ```
+  </TabItem>
+</Tabs>
 
 Run verification:
 

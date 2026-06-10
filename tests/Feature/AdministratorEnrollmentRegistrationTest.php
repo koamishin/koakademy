@@ -12,7 +12,7 @@ function portalUrlForPublicEnrollment(string $path): string
 {
     $normalized = str_starts_with($path, '/') ? $path : "/{$path}";
 
-    return 'http://'.env('PORTAL_HOST', 'portal.koakademy.test').$normalized;
+    return 'http://'.config('app.portal_host').$normalized;
 }
 
 it('allows guests to open the online enrollment form', function (): void {

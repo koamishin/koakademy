@@ -28,7 +28,7 @@ Route::post('/passkeys/login', [App\Http\Controllers\PasskeyAuthController::clas
 | Portal Domain Routes
 |--------------------------------------------------------------------------
 */
-Route::domain(config('app.portal_host', 'portal.koakademy.test'))->group(function () {
+Route::domain(config('app.portal_host'))->group(function () {
 
     // Helper function for building faculty portal data (legacy support)
     if (! function_exists('build_faculty_portal_data')) {

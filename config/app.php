@@ -96,7 +96,7 @@ return [
     |
     */
 
-    'portal_host' => env('PORTAL_HOST', 'portal.koakademy.test'),
+    'portal_host' => env('PORTAL_HOST', 'localhost'),
 
     /*
     |--------------------------------------------------------------------------
@@ -107,7 +107,7 @@ return [
     |
     */
 
-    'admin_host' => env('ADMIN_HOST', 'admin.koakademy.test'),
+    'admin_host' => env('ADMIN_HOST', 'localhost'),
 
     /*
     |--------------------------------------------------------------------------

@@ -63,7 +63,7 @@ final class AdministratorEnrollmentManagementController extends Controller
         $workflowSetupRequired = ! $this->enrollmentPipelineService->hasWorkflowSetup();
         if ($workflowSetupRequired) {
             $scheme = request()->getScheme();
-            $adminHost = (string) config('app.admin_host', 'admin.koakademy.test');
+            $adminHost = (string) config('app.admin_host');
             $filamentBaseUrl = sprintf('%s://%s/admin/student-enrollments', $scheme, $adminHost);
 
             return Inertia::render('administrators/enrollments/index', [
@@ -239,7 +239,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             ]);
 
         $scheme = request()->getScheme();
-        $adminHost = (string) config('app.admin_host', 'admin.koakademy.test');
+        $adminHost = (string) config('app.admin_host');
         $filamentBaseUrl = sprintf('%s://%s/admin/student-enrollments', $scheme, $adminHost);
 
         return Inertia::render('administrators/enrollments/index', [

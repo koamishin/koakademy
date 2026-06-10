@@ -437,7 +437,7 @@ final class MigrateToStudent extends Notification implements ShouldQueue
             // (e.g., very early queue worker boot). Build the URL manually
             // using the configured portal host so the email still links
             // somewhere sensible.
-            $portalHost = (string) config('app.portal_host', 'portal.koakademy.test');
+            $portalHost = (string) config('app.portal_host');
             $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
             $query = http_build_query($params);
 

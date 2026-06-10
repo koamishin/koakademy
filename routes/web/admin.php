@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 |
 */
 
-Route::domain(config('app.admin_host', 'admin.koakademy.test'))->group(function () {
+Route::domain(config('app.admin_host'))->group(function () {
     Route::get('/', function () {
         return redirect('/admin');
     });

@@ -25,17 +25,17 @@
 
         // Detect current domain and select appropriate settings
         $currentHost = request()->getHost();
-        $portalHost = env('PORTAL_HOST', 'portal.' . parse_url(config('app.url'), PHP_URL_HOST));
+        $portalHost = (string) config('app.portal_host');
         $isPortalDomain = str_contains($currentHost, $portalHost);
 
         // Check if we're on a documentation page
         $isDocsPage = request()->is('docs/*') || request()->is('api-docs');
-        
+
         // Get page-specific data from Inertia shared props (set by docs controller)
         $pageTitle = \Inertia\Inertia::getShared('page_title');
         $pageDescription = \Inertia\Inertia::getShared('page_description');
         $pageOgImage = \Inertia\Inertia::getShared('page_og_image');
-        
+
         // Use page-specific data if on docs page, otherwise use site defaults
         if ($isDocsPage && $pageTitle) {
             $metaTitle = $pageTitle;
@@ -50,7 +50,7 @@
             $metaDescription = $isPortalDomain
                 ? ($siteSettings->portal_description ?: $siteSettings->description)
                 : $siteSettings->description;
-                
+
             // Use portal-specific OG image if on portal domain
             if ($isPortalDomain && $siteSettings->portal_og_image) {
                 $ogImage = $resolveAssetUrl($siteSettings->portal_og_image);
@@ -63,10 +63,10 @@
 
         // Generate proper URLs for R2-stored files
         $faviconUrl = $resolveAssetUrl($siteSettings->favicon);
-        
+
         // Current URL for canonical and OG
         $currentUrl = url()->current();
-        
+
         // Get configurable locale
         $locale = config('app.locale', 'en');
         $ogLocale = str_replace('_', '-', $locale);
@@ -86,7 +86,7 @@
     <title inertia>{{ $metaTitle }}</title>
     <meta name="title" content="{{ $metaTitle }}">
     <meta name="description" content="{{ $metaDescription }}">
-    
+
     {{-- Open Graph / Facebook --}}
     <meta property="og:site_name" content="{{ $siteSettings->getAppName() }}">
     <meta property="og:title" content="{{ $metaTitle }}">
@@ -99,7 +99,7 @@
         <meta property="og:image:height" content="630">
     @endif
     <meta property="og:locale" content="{{ $ogLocale }}">
-    
+
     {{-- Twitter Card --}}
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="{{ $siteSettings->getAppName() }}">
@@ -108,7 +108,7 @@
     @if($ogImage)
         <meta name="twitter:image" content="{{ $ogImage }}">
     @endif
-    
+
     {{-- Canonical URL --}}
     <link rel="canonical" href="{{ $currentUrl }}">
 

@@ -46,7 +46,7 @@ expect()->extend('toBeOne', function () {
 
 function portalHostForAdministrators(): string
 {
-    return env('PORTAL_HOST', 'portal.koakademy.test');
+    return (string) config('app.portal_host');
 }
 
 function portalUrlForAdministrators(string $path): string

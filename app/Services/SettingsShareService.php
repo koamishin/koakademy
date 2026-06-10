@@ -69,7 +69,7 @@ final readonly class SettingsShareService
     public function isPortalDomain(Request $request): bool
     {
         $currentHost = mb_strtolower($request->getHost());
-        $portalHost = $this->normalizeHost((string) config('app.portal_host', 'portal.koakademy.test'));
+        $portalHost = $this->normalizeHost((string) config('app.portal_host'));
 
         if ($portalHost === '') {
             return false;
