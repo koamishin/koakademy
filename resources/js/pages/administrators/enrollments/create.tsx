@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -274,6 +275,8 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             : [],
     );
     const [submitting, setSubmitting] = useState(false);
+    const [notifyStudent, setNotifyStudent] = useState(false);
+    const [changeReason, setChangeReason] = useState("");
 
     // Refs for debouncing
     const studentSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -572,6 +575,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             discount: parseInt(discount),
             downpayment,
             additional_fees: fees,
+            ...(isEdit && { notify_student: notifyStudent, change_reason: changeReason }),
         };
 
         const options = {
@@ -754,7 +758,8 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                                         <div className="min-w-0 flex-1">
                                                                             <div className="truncate font-medium">{student.full_name}</div>
                                                                             <div className="text-muted-foreground text-xs">
-                                                                                ID: {student.student_id ?? student.id} | {student.course_code || "No Course"}
+                                                                                ID: {student.student_id ?? student.id} |{" "}
+                                                                                {student.course_code || "No Course"}
                                                                             </div>
                                                                         </div>
                                                                         {selectedStudent?.id === student.id && (
@@ -1358,6 +1363,40 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                     <p className="text-muted-foreground text-xs">
                                         This downpayment is only counted as paid after cashier verification.
                                     </p>
+
+                                    {/* Notify Student - Edit Mode Only */}
+                                    {isEdit && (
+                                        <>
+                                            <Separator />
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <Switch id="notify-student" checked={notifyStudent} onCheckedChange={setNotifyStudent} />
+                                                    <Label htmlFor="notify-student" className="cursor-pointer text-sm font-medium">
+                                                        Notify student of changes
+                                                    </Label>
+                                                </div>
+                                                {notifyStudent && (
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="change-reason" className="text-xs">
+                                                            Reason for change
+                                                        </Label>
+                                                        <Textarea
+                                                            id="change-reason"
+                                                            placeholder="e.g., Section reassignment due to class size balancing"
+                                                            value={changeReason}
+                                                            onChange={(e) => setChangeReason(e.target.value)}
+                                                            rows={3}
+                                                            className="resize-none text-sm"
+                                                        />
+                                                        <p className="text-muted-foreground text-xs">
+                                                            An email with the updated class schedule and assessment PDF will be sent to{" "}
+                                                            {selectedStudent?.email || "the student"}.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
 
                                     {/* Submit Button */}
                                     <Button

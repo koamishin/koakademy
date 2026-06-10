@@ -9,6 +9,7 @@ use App\Exports\EnrollmentReportExport;
 use App\Jobs\GenerateAssessmentPdfJob;
 use App\Jobs\GenerateBulkAssessmentsJob;
 use App\Jobs\GenerateEnrollmentReportPreviewPdfJob;
+use App\Jobs\SendClassChangeNotificationJob;
 use App\Models\ClassEnrollment;
 use App\Models\Classes;
 use App\Models\Resource;
@@ -34,6 +35,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -1037,6 +1039,25 @@ final class AdministratorEnrollmentManagementController extends Controller
 
         $subjectsWithClasses = $this->subjectsWithClassesForEnrollment($enrollment);
 
+        // Resolve class_id from class_enrollments when subject_enrollment.class_id is null.
+        // This handles cases where the student was enrolled in classes (ClassEnrollment)
+        // but the subject_enrollment records weren't updated with the class_id.
+        $classEnrollments = ClassEnrollment::query()
+            ->where('student_id', $enrollment->student_id)
+            ->with('class')
+            ->get();
+
+        /** @var array<int, int> $subjectClassMap */
+        $subjectClassMap = [];
+        foreach ($classEnrollments as $ce) {
+            $class = $ce->class;
+            if ($class && ! empty($class->subject_ids) && is_array($class->subject_ids)) {
+                foreach ($class->subject_ids as $subId) {
+                    $subjectClassMap[(int) $subId] = (int) $ce->class_id;
+                }
+            }
+        }
+
         $tuition = $enrollment->studentTuition;
 
         return Inertia::render('administrators/enrollments/edit', [
@@ -1076,7 +1097,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                     'subject_id' => $subjectEnrollment->subject_id,
                     'subject_code' => $subjectEnrollment->subject?->code ?? '',
                     'subject_title' => $subjectEnrollment->subject?->title ?? '',
-                    'class_id' => $subjectEnrollment->class_id,
+                    'class_id' => $subjectEnrollment->class_id ?? $subjectClassMap[$subjectEnrollment->subject_id] ?? null,
                     'is_modular' => (bool) $subjectEnrollment->is_modular,
                     'exclude_from_tuition' => (bool) $subjectEnrollment->exclude_from_tuition,
                     'lecture_units' => $subjectEnrollment->enrolled_lecture_units ?? ($subjectEnrollment->subject?->lecture ?? 0),
@@ -1120,6 +1141,8 @@ final class AdministratorEnrollmentManagementController extends Controller
             'additional_fees' => ['nullable', 'array'],
             'additional_fees.*.fee_name' => ['required_with:additional_fees', 'string'],
             'additional_fees.*.amount' => ['required_with:additional_fees', 'numeric', 'min:0'],
+            'notify_student' => ['nullable', 'boolean'],
+            'change_reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
         if ((int) $validated['student_id'] !== (int) $enrollment->student_id) {
@@ -1127,7 +1150,10 @@ final class AdministratorEnrollmentManagementController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($validated, $enrollment): void {
+            /** @var array<int, array{subject_code: string, subject_title: string, old_class_id: int|null, new_class_id: int|null, old_section: string, new_section: string}> $classChanges */
+            $classChanges = [];
+
+            DB::transaction(function () use ($validated, $enrollment, &$classChanges): void {
                 $enrollment->update([
                     'semester' => $validated['semester'],
                     'academic_year' => $validated['academic_year'],
@@ -1161,6 +1187,19 @@ final class AdministratorEnrollmentManagementController extends Controller
                             continue;
                         }
                         $previousClassId = $existingSubject->class_id;
+
+                        // Track class change for notification
+                        if ($previousClassId !== $incomingClassId) {
+                            $subjectModel = $existingSubject->subject;
+                            $classChanges[] = [
+                                'subject_code' => $subjectModel?->code ?? '',
+                                'subject_title' => $subjectModel?->title ?? '',
+                                'old_class_id' => $previousClassId,
+                                'new_class_id' => $incomingClassId,
+                                'old_section' => '',
+                                'new_section' => '',
+                            ];
+                        }
 
                         $existingSubject->update($payload);
 
@@ -1245,6 +1284,22 @@ final class AdministratorEnrollmentManagementController extends Controller
                     $validated['additional_fees'] ?? []
                 );
             });
+
+            // Dispatch class change notification if requested
+            $shouldNotify = $validated['notify_student'] ?? false;
+            if ($shouldNotify && ! empty($classChanges) && $enrollment->student?->email) {
+                SendClassChangeNotificationJob::dispatch(
+                    $enrollment,
+                    $classChanges,
+                    $validated['change_reason'] ?? ''
+                );
+
+                Log::info('Class change notification job dispatched.', [
+                    'enrollment_id' => $enrollment->id,
+                    'student_email' => $enrollment->student->email,
+                    'changes_count' => count($classChanges),
+                ]);
+            }
 
             return redirect()
                 ->route('administrators.enrollments.show', $enrollment->id)
