@@ -21,6 +21,7 @@ import {
     BookOpen,
     CalendarIcon,
     Filter,
+    GitCompare,
     GraduationCap,
     Layers,
     ListTodo,
@@ -38,6 +39,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { route } from "ziggy-js";
 import { ClassRow, getColumns } from "./columns";
 import { ClassCard } from "./components/class-card";
+import { ClassCompareDialog } from "./components/class-compare-dialog";
 import { ClassStats } from "./components/class-stats";
 import { ClassToolbar } from "./components/class-toolbar";
 import { DeleteClassDialog } from "./components/delete-class-dialog";
@@ -374,6 +376,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     const [copySourceId, setCopySourceId] = React.useState<number | null>(null);
     const [copySection, setCopySection] = React.useState("A");
     const [pendingDelete, setPendingDelete] = React.useState<ClassRow | null>(null);
+    const [isCompareOpen, setIsCompareOpen] = React.useState(false);
 
     const [collegeSubjectOptions, setCollegeSubjectOptions] = React.useState<{ id: number; label: string; code: string; title: string }[]>([]);
     const [collegeSubjectsLoading, setCollegeSubjectsLoading] = React.useState(false);
@@ -1085,6 +1088,11 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                 <p className="text-muted-foreground text-sm">Manage classes, track enrollment, and organize schedules.</p>
                             </div>
                             <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setIsCompareOpen(true)}>
+                                    <GitCompare className="mr-1.5 h-4 w-4" />
+                                    <span className="hidden sm:inline">Compare</span>
+                                    <span className="sm:hidden">Cmp</span>
+                                </Button>
                                 <Button asChild size="sm">
                                     <Link href={route("administrators.classes.create")}>
                                         <Plus className="mr-1.5 h-4 w-4" />
@@ -1974,6 +1982,12 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
+
+            <ClassCompareDialog
+                open={isCompareOpen}
+                onOpenChange={setIsCompareOpen}
+                classes={classes.map((c) => ({ id: c.id, record_title: c.record_title, subject_code: c.subject_code, section: c.section }))}
+            />
         </AdminLayout>
     );
 }

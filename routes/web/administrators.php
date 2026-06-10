@@ -245,6 +245,14 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/classes', [AdministratorClassManagementController::class, 'index'])->name('classes.index');
         Route::get('/classes/create', [AdministratorClassManagementController::class, 'create'])->name('classes.create');
         Route::post('/classes', [AdministratorClassManagementController::class, 'store'])->name('classes.store');
+
+        // Static routes — must come before /classes/{class} to avoid route parameter conflicts
+        Route::get('/classes/compare', [AdministratorClassManagementController::class, 'compare'])->name('classes.compare');
+        Route::get('/classes/options/subjects', [AdministratorClassManagementController::class, 'subjectOptions'])->name('classes.options.subjects');
+        Route::get('/classes/options/shs-strands', [AdministratorClassManagementController::class, 'shsStrandOptions'])->name('classes.options.shs-strands');
+        Route::get('/classes/options/shs-subjects', [AdministratorClassManagementController::class, 'shsSubjectOptions'])->name('classes.options.shs-subjects');
+
+        // Parameterized routes
         Route::get('/classes/{class}/edit', [AdministratorClassManagementController::class, 'edit'])->name('classes.edit');
         Route::patch('/classes/{class}', [AdministratorClassManagementController::class, 'update'])->name('classes.update');
         Route::delete('/classes/{class}', [AdministratorClassManagementController::class, 'destroy'])->name('classes.destroy');
@@ -253,10 +261,6 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/classes/{class}', [AdministratorClassManagementController::class, 'show'])->name('classes.show');
         Route::get('/classes/{class}/export-student-list', [AdministratorClassManagementController::class, 'exportStudentList'])->name('classes.export-student-list');
         Route::post('/classes/{class}/move-student', [AdministratorClassManagementController::class, 'moveStudent'])->name('classes.move-student');
-
-        Route::get('/classes/options/subjects', [AdministratorClassManagementController::class, 'subjectOptions'])->name('classes.options.subjects');
-        Route::get('/classes/options/shs-strands', [AdministratorClassManagementController::class, 'shsStrandOptions'])->name('classes.options.shs-strands');
-        Route::get('/classes/options/shs-subjects', [AdministratorClassManagementController::class, 'shsSubjectOptions'])->name('classes.options.shs-subjects');
 
         // Curriculum & Program Management
         Route::get('/curriculum', [AdministratorCurriculumManagementController::class, 'index'])->name('curriculum.index');
