@@ -357,7 +357,7 @@ jobs:
           🐳 **Docker Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}
           🐳 **Docker Alias:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-latest
 
-          ## 📋 Changes
+          ## 📋 What's Changed
           ${CHANGELOG}
 
           ## 🎯 Latest Commit
