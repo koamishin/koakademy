@@ -30,19 +30,60 @@ FAMILY="unknown"
 DOCKER_GROUP_UPDATED=false
 DOCKER_USE_SUDO=false
 
-# Load environment variables if they exist
 ENV_FILE="$PROJECT_ROOT/.env"
-if [ -f "$ENV_FILE" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    . "$ENV_FILE"
-    set +a
-fi
 
-# Determine main domain from env or fallback
-PORTAL_HOST=${PORTAL_HOST:-portal.dccp.test}
-ADMIN_HOST=${ADMIN_HOST:-admin.dccp.test}
-MAILPIT_HOST=${MAILPIT_HOST:-mailpit.local.test}
+read_env_value() {
+    local key="$1"
+    local default_value="$2"
+    local value=""
+
+    if [ -f "$ENV_FILE" ]; then
+        value=$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}=" "$ENV_FILE" 2>/dev/null | tail -n 1 | sed -E "s/^[[:space:]]*(export[[:space:]]+)?${key}=//" | sed -E 's/[[:space:]]+$//' || true)
+        value=${value%$'\r'}
+        value=${value%\"}
+        value=${value#\"}
+        value=${value%\'}
+        value=${value#\'}
+    fi
+
+    if [ -n "$value" ]; then
+        echo "$value"
+    else
+        echo "$default_value"
+    fi
+}
+
+repair_env_file_syntax() {
+    if [ ! -f "$ENV_FILE" ]; then
+        return 0
+    fi
+
+    if ! grep -qEv '^[[:space:]]*($|#|[A-Za-z_][A-Za-z0-9_]*=|export[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=)' "$ENV_FILE" 2>/dev/null; then
+        return 0
+    fi
+
+    local backup_file="${ENV_FILE}.backup.$(date +%Y%m%d%H%M%S)"
+    local temp_file="${ENV_FILE}.tmp"
+
+    warn "Found invalid .env lines that can break Sail/Docker Compose"
+    info "Creating backup: $backup_file"
+    cp "$ENV_FILE" "$backup_file"
+
+    awk '
+        /^[[:space:]]*$/ || /^[[:space:]]*#/ || /^[A-Za-z_][A-Za-z0-9_]*=/ || /^export[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=/ { print; next }
+        { print "# " $0 }
+    ' "$ENV_FILE" > "$temp_file"
+    mv "$temp_file" "$ENV_FILE"
+
+    success "Invalid .env lines were commented out"
+}
+
+# Determine main domain and service ports from env or fallback without sourcing .env
+PORTAL_HOST=$(read_env_value PORTAL_HOST portal.dccp.test)
+ADMIN_HOST=$(read_env_value ADMIN_HOST admin.dccp.test)
+MAILPIT_HOST=$(read_env_value MAILPIT_HOST mailpit.local.test)
+LARAVEL_INTERNAL_PORT=$(read_env_value LARAVEL_INTERNAL_PORT 80)
+TRAEFIK_APP_UPSTREAM=$(read_env_value TRAEFIK_APP_UPSTREAM "http://laravel:${LARAVEL_INTERNAL_PORT}")
 
 # Extract base domain from PORTAL_HOST
 BASE_DOMAIN=$(echo "$PORTAL_HOST" | sed 's/^[^.]*\.//')
@@ -396,6 +437,8 @@ else
     success ".env file already exists"
 fi
 
+repair_env_file_syntax
+
 if [[ "$FRESH" == true ]]; then
     fresh_cleanup
 fi
@@ -588,7 +631,7 @@ http:
     app:
       loadBalancer:
         servers:
-          - url: "http://laravel:80"
+          - url: "${TRAEFIK_APP_UPSTREAM}"
     mailpit:
       loadBalancer:
         servers:
@@ -611,6 +654,7 @@ tls:
         keyFile: /etc/traefik/certs/${KEY_FILE}
 EOF
         success "Traefik configuration updated with .env domains"
+        info "Laravel upstream: ${TRAEFIK_APP_UPSTREAM}"
 
 else
     info "Skipping SSL certificate setup (--skip-ssl flag set)"
@@ -706,10 +750,10 @@ echo ""
 
 echo -e "${CYAN}Next Steps:${NC}"
 echo "  1. Review and configure .env file as needed"
-echo "  2. Run migrations: php artisan migrate"
-echo "  3. Seed the database: php artisan seed"
-echo "  4. Start Vite dev server: npm run dev"
-echo "  5. Start Laravel: php artisan octane:start (in another terminal)"
+echo "  2. Run migrations: vendor/bin/sail artisan migrate"
+echo "  3. Seed the database: vendor/bin/sail artisan db:seed"
+echo "  4. Start Vite dev server: vendor/bin/sail npm run dev"
+echo "  5. Laravel is served automatically by Sail on internal port ${LARAVEL_INTERNAL_PORT}"
 echo ""
 
 echo ""

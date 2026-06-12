@@ -13,7 +13,7 @@
     ],
     "license": "AGPL-3.0-or-later",
     "require": {
-        "php": ">=8.4 <8.5",
+        "php": ">=8.5 <8.6",
         "achyutn/filament-log-viewer": "^2.0",
         "alizharb/filament-activity-log": "^1.0",
         "alizharb/filament-modular-luncher": "^1.0",
@@ -59,7 +59,7 @@
         "laravel/telescope": "^5.12",
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.12",
-        "maatwebsite/excel": "^3.1",
+        "maatwebsite/excel": "4.x-dev",
         "mansoor/filament-versionable": "5.x-dev",
         "marcelweidum/filament-passkeys": "4.0",
         "meilisearch/meilisearch-php": "^1.16",
