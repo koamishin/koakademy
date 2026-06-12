@@ -1,4 +1,3 @@
-import { FieldGroup } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { router } from "@inertiajs/react";
 
@@ -83,7 +82,7 @@ export function SemesterSelector({
     }));
 
     return (
-        <FieldGroup className="flex items-center gap-3">
+        <div className="flex items-center gap-3">
             <Select items={semesterItems} value={currentSemesterValue} onValueChange={handleSemesterChange}>
                 <SelectTrigger className="h-8 w-[140px]">
                     <SelectValue placeholder="Select Semester" />
@@ -113,6 +112,6 @@ export function SemesterSelector({
                     </SelectGroup>
                 </SelectContent>
             </Select>
-        </FieldGroup>
+        </div>
     );
 }
