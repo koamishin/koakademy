@@ -1,14 +1,14 @@
 {
-  "version": "1.8.0-dev.1.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.1.3",
-  "commit": "51fcabb82129d9d0e39fe44050511886ffaad938",
+  "version": "1.8.0-dev.2.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.2.0",
+  "commit": "8bf8bfb0a204bc08339eb068900624453a7fd4e2",
   "branch": "master",
-  "timestamp": "2026-06-12T09:10:06Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27406046562",
-  "release_type": "patch",
+  "timestamp": "2026-06-12T11:07:12Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27411612480",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.8.0-dev.1.3 - Extract duplicated passkey config into reusable trait",
-    "previous": "1.8.0-dev.1.2"
+    "current": "Version 1.8.0-dev.2.0 - feat(select): add fruit selection example",
+    "previous": "1.8.0-dev.1.3"
   },
   "metadata": {
     "author": "yukazakiri",
