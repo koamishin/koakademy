@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\ConfiguresPasskeysForRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,8 @@ use Webauthn\PublicKeyCredentialRequestOptions;
 
 final class PasskeyAuthController extends Controller
 {
+    use ConfiguresPasskeysForRequest;
+
     private const VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.verification_options';
 
     public function generateAuthenticationOptions(Request $request, GenerateVerificationOptions $generate): JsonResponse
@@ -86,14 +89,6 @@ final class PasskeyAuthController extends Controller
         } catch (Throwable $exception) {
             return response()->json(['error' => 'Passkey verification failed: '.$exception->getMessage()], 400);
         }
-    }
-
-    private function configurePasskeysForRequest(Request $request): void
-    {
-        config([
-            'passkeys.relying_party_id' => $request->getHost(),
-            'passkeys.allowed_origins' => [$request->getSchemeAndHttpHost()],
-        ]);
     }
 
     private function credentialFromRequest(Request $request): PublicKeyCredential

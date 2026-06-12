@@ -8,6 +8,8 @@ import { Eye, EyeOff, GraduationCap, Key, Loader2, Lock, Mail, ShieldCheck, User
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+declare const route: (name: string, params?: Record<string, unknown>) => string;
+
 // Helper to check if WebAuthn is supported
 const isWebAuthnSupported = () => {
     return !!(window.PublicKeyCredential && navigator.credentials);
@@ -182,7 +184,6 @@ export function LoginForm({
                 toast.error("Passkey verification failed.");
             }
         } catch (error: any) {
-            console.error("Passkey Error:", error);
             if (error.response?.data?.error) {
                 toast.error(error.response.data.error);
             } else if (error.name === "NotAllowedError") {
@@ -191,6 +192,7 @@ export function LoginForm({
             } else if (error.name === "InvalidStateError") {
                 toast.error("No passkey found. Please sign in with your password.");
             } else {
+                console.error("Passkey Error:", error);
                 toast.error("Failed to login with passkey. Please try again.");
             }
         } finally {

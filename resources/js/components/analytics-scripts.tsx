@@ -17,7 +17,7 @@ declare global {
     }
 }
 
-interface AnalyticsPageProps {
+interface AnalyticsPageProps extends Record<string, unknown> {
     analytics?: AnalyticsConfig;
 }
 
@@ -304,10 +304,34 @@ function resetAnalyticsGlobals(): void {
         return;
     }
 
-    delete window.gtag;
-    delete window.op;
-    delete window.umami;
-    delete window.dataLayer;
+    resetWindowProperty("gtag", undefined);
+    resetWindowProperty("op", undefined);
+    resetWindowProperty("umami", undefined);
+    resetWindowProperty("dataLayer", []);
+}
+
+function resetWindowProperty(key: "gtag" | "op" | "umami" | "dataLayer", fallback: unknown): void {
+    try {
+        if (Reflect.deleteProperty(window, key)) {
+            return;
+        }
+    } catch {
+        // Some injected analytics scripts define non-configurable globals.
+    }
+
+    try {
+        Object.defineProperty(window, key, {
+            configurable: true,
+            writable: true,
+            value: fallback,
+        });
+    } catch {
+        try {
+            (window as unknown as Record<string, unknown>)[key] = fallback;
+        } catch {
+            // If the property is also non-writable, leave the provider global in place.
+        }
+    }
 }
 
 function escapeInlineScriptValue(value: string): string {

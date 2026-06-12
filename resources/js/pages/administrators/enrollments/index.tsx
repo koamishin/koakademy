@@ -1,9 +1,9 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import PTabs10 from "@/components/p-tabs-10";
-import { Filters, type Filter as FilterType, type FilterFieldConfig } from "@/components/reui/filters";
+import { Filters, type FilterFieldConfig, type Filter as FilterType } from "@/components/reui/filters";
 import { SemesterSelector } from "@/components/semester-selector";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ComboboxOption } from "@/components/ui/combobox";
 import { Head, Link, router, usePage } from "@inertiajs/react";
@@ -509,21 +509,25 @@ export default function AdministratorEnrollmentsIndex({
                         </p>
                     </div>
                     {workflow_setup_required ? (
-                        <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
-                            <Link href={route("administrators.system-management.index")}>
-                                <Settings2 className="mr-2 h-4 w-4" />
-                                Configure Workflow
-                            </Link>
-                        </Button>
+                        <Link
+                            href={route("administrators.system-management.index")}
+                            className={buttonVariants({ className: "bg-primary text-primary-foreground hover:bg-primary/90 gap-2" })}
+                        >
+                            <Settings2 className="h-4 w-4" />
+                            Configure Workflow
+                        </Link>
                     ) : (
                         <div className="flex items-center gap-3">
                             <SemesterSelector {...filters} />
-                            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 hidden sm:flex">
-                                <Link href={route("administrators.enrollments.create")}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    New Enrollment
-                                </Link>
-                            </Button>
+                            <Link
+                                href={route("administrators.enrollments.create")}
+                                className={buttonVariants({
+                                    className: "bg-primary text-primary-foreground hover:bg-primary/90 hidden gap-2 sm:flex",
+                                })}
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                New Enrollment
+                            </Link>
                         </div>
                     )}
                 </div>
@@ -540,12 +544,10 @@ export default function AdministratorEnrollmentsIndex({
                             <p className="text-muted-foreground text-sm">
                                 Define at least one step, choose entry/completion steps, and assign allowed roles before using enrollment tools.
                             </p>
-                            <Button asChild>
-                                <Link href={route("administrators.system-management.index")}>
-                                    <Settings2 className="mr-2 h-4 w-4" />
-                                    Open System Management
-                                </Link>
-                            </Button>
+                            <Link href={route("administrators.system-management.index")} className={buttonVariants({ className: "gap-2" })}>
+                                <Settings2 className="h-4 w-4" />
+                                Open System Management
+                            </Link>
                         </CardContent>
                     </Card>
                 ) : (

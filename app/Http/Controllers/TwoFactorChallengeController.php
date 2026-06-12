@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Filament\Auth\MultiFactor\SecurityAwareAppAuthentication;
 use App\Filament\Auth\MultiFactor\SecurityAwareEmailAuthentication;
 use App\Models\User;
+use App\Support\ConfiguresPasskeysForRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,8 @@ use Webauthn\PublicKeyCredentialRequestOptions;
 
 final class TwoFactorChallengeController extends Controller
 {
+    use ConfiguresPasskeysForRequest;
+
     private const VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.two_factor_verification_options';
 
     public function __construct(
@@ -225,14 +228,6 @@ final class TwoFactorChallengeController extends Controller
                 : '/dashboard';
 
         return redirect()->intended($defaultRedirect);
-    }
-
-    private function configurePasskeysForRequest(Request $request): void
-    {
-        config([
-            'passkeys.relying_party_id' => $request->getHost(),
-            'passkeys.allowed_origins' => [$request->getSchemeAndHttpHost()],
-        ]);
     }
 
     private function credentialFromRequest(Request $request): PublicKeyCredential

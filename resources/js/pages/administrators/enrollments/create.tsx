@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -650,12 +650,13 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                     {displaySchoolYear} - Semester {displaySemester}
                                 </p>
                             </div>
-                            <Button variant="outline" asChild>
-                                <Link href={route("administrators.enrollments.index")}>
-                                    <ArrowLeft className="mr-2 h-4 w-4" />
-                                    Back
-                                </Link>
-                            </Button>
+                            <Link
+                                href={route("administrators.enrollments.index")}
+                                className={buttonVariants({ variant: "outline", className: "gap-2" })}
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Back
+                            </Link>
                         </div>
 
                         {/* Flash Messages */}
@@ -781,7 +782,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                     <div className="grid grid-cols-2 gap-4 pt-2">
                                         <div className="space-y-2">
                                             <Label>Semester</Label>
-                                            <Select value={semester} onValueChange={setSemester}>
+                                            <Select value={semester} onValueChange={(value) => value && setSemester(value)}>
                                                 <SelectTrigger>
                                                     <SelectValue />
                                                 </SelectTrigger>
@@ -793,7 +794,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                         </div>
                                         <div className="space-y-2">
                                             <Label>Year Level</Label>
-                                            <Select value={academicYear} onValueChange={setAcademicYear}>
+                                            <Select value={academicYear} onValueChange={(value) => value && setAcademicYear(value)}>
                                                 <SelectTrigger>
                                                     <SelectValue />
                                                 </SelectTrigger>
@@ -977,11 +978,15 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                             ) : subject.section_options.length > 0 ? (
                                                                 <Select
                                                                     value={subject.class_id?.toString() ?? "none"}
-                                                                    onValueChange={(val) =>
+                                                                    onValueChange={(val) => {
+                                                                        if (val === null) {
+                                                                            return;
+                                                                        }
+
                                                                         updateSubject(subject.subject_id, {
                                                                             class_id: val === "none" ? null : parseInt(val),
-                                                                        })
-                                                                    }
+                                                                        });
+                                                                    }}
                                                                 >
                                                                     <SelectTrigger className="h-9 w-[190px]">
                                                                         <SelectValue placeholder="Select section" />
@@ -1273,7 +1278,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                     {/* Discount */}
                                     <div className="space-y-2">
                                         <Label className="text-xs">Discount</Label>
-                                        <Select value={discount} onValueChange={setDiscount}>
+                                        <Select value={discount} onValueChange={(value) => value && setDiscount(value)}>
                                             <SelectTrigger className="h-9">
                                                 <SelectValue />
                                             </SelectTrigger>

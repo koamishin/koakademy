@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Support\ConfiguresPasskeysForRequest;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -22,6 +23,8 @@ use Webauthn\PublicKeyCredentialCreationOptions;
 
 final class PasskeyController extends Controller
 {
+    use ConfiguresPasskeysForRequest;
+
     private const REGISTRATION_OPTIONS_SESSION_KEY = 'passkey.registration_options';
 
     public function generateRegistrationOptions(Request $request, GenerateRegistrationOptions $generate): JsonResponse
@@ -104,14 +107,6 @@ final class PasskeyController extends Controller
         abort_unless($user instanceof Authenticatable && $user instanceof PasskeyUser, 403);
 
         return $user;
-    }
-
-    private function configurePasskeysForRequest(Request $request): void
-    {
-        config([
-            'passkeys.relying_party_id' => $request->getHost(),
-            'passkeys.allowed_origins' => [$request->getSchemeAndHttpHost()],
-        ]);
     }
 
     private function credentialFromRequest(Request $request): PublicKeyCredential
