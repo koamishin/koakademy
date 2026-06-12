@@ -1,4 +1,4 @@
-import { Field, FieldGroup } from "@/components/ui/field";
+import { FieldGroup } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { router } from "@inertiajs/react";
 
@@ -84,39 +84,35 @@ export function SemesterSelector({
 
     return (
         <FieldGroup className="flex items-center gap-3">
-            <Field orientation="responsive">
-                <Select items={semesterItems} value={currentSemesterValue} onValueChange={handleSemesterChange}>
-                    <SelectTrigger className="h-8 w-[140px]">
-                        <SelectValue placeholder="Select Semester" />
-                    </SelectTrigger>
-                    <SelectContent alignItemWithTrigger={false}>
-                        <SelectGroup>
-                            {semesterItems.map((item) => (
-                                <SelectItem key={item.value} value={item.value}>
-                                    {item.label}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
-            </Field>
+            <Select items={semesterItems} value={currentSemesterValue} onValueChange={handleSemesterChange}>
+                <SelectTrigger className="h-8 w-[140px]">
+                    <SelectValue placeholder="Select Semester" />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                    <SelectGroup>
+                        {semesterItems.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                                {item.label}
+                            </SelectItem>
+                        ))}
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
 
-            <Field orientation="responsive">
-                <Select items={schoolYearItems} value={currentSchoolYearValue} onValueChange={handleSchoolYearChange}>
-                    <SelectTrigger className="h-8 w-[140px]">
-                        <SelectValue placeholder="Select School Year" />
-                    </SelectTrigger>
-                    <SelectContent alignItemWithTrigger={false}>
-                        <SelectGroup>
-                            {schoolYearItems.map((item) => (
-                                <SelectItem key={item.value} value={item.value}>
-                                    {item.label}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
-            </Field>
+            <Select items={schoolYearItems} value={currentSchoolYearValue} onValueChange={handleSchoolYearChange}>
+                <SelectTrigger className="h-8 w-[140px]">
+                    <SelectValue placeholder="Select School Year" />
+                </SelectTrigger>
+                <SelectContent alignItemWithTrigger={false}>
+                    <SelectGroup>
+                        {schoolYearItems.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                                {item.label}
+                            </SelectItem>
+                        ))}
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
         </FieldGroup>
     );
 }
