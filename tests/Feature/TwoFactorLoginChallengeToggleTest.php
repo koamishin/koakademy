@@ -7,6 +7,7 @@ use App\Filament\Auth\MultiFactor\SecurityAwareAppAuthentication;
 use App\Filament\Auth\MultiFactor\SecurityAwareEmailAuthentication;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
+use Inertia\Testing\AssertableInertia;
 
 it('requires a two factor challenge when configured credentials are active for login', function (): void {
     $user = User::factory()->create([
@@ -21,6 +22,26 @@ it('requires a two factor challenge when configured credentials are active for l
     $response->assertRedirect(route('two-factor.login'));
     $response->assertSessionHas('auth.2fa.id', $user->id);
     $this->assertGuest();
+});
+
+it('renders the two factor challenge page without registered passkeys', function (): void {
+    $user = User::factory()->create([
+        'app_authentication_secret' => 'authenticator-secret',
+    ]);
+
+    $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ])->assertRedirect(route('two-factor.login'));
+
+    $this->get(route('two-factor.login'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('auth/two-factor-challenge', false)
+            ->where('has_app_auth', true)
+            ->where('has_email_auth', false)
+            ->where('has_passkeys', false)
+        );
 });
 
 it('skips two factor login challenges when the security toggle is disabled', function (): void {

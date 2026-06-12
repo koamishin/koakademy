@@ -155,11 +155,9 @@ export const columns: ColumnDef<DocumentStudent>[] = [
 
             return (
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-full justify-start text-xs">
-                            <FileText className="mr-2 h-3 w-3" />
-                            View {submittedDocs.length} Document{submittedDocs.length !== 1 ? "s" : ""}
-                        </Button>
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="h-8 w-full justify-start text-xs" />}>
+                        <FileText className="mr-2 h-3 w-3" />
+                        View {submittedDocs.length} Document{submittedDocs.length !== 1 ? "s" : ""}
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-64">
                         <DropdownMenuLabel>Submitted Documents</DropdownMenuLabel>
@@ -183,31 +181,19 @@ export const columns: ColumnDef<DocumentStudent>[] = [
 
             return (
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                    <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0" />}>
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(student.student_id))}>Copy Student ID</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Link
-                                href={route("administrators.students.documents.index", student.id) as string}
-                                className="flex w-full cursor-pointer items-center"
-                            >
-                                <Eye className="mr-2 h-4 w-4" /> Manage Documents
-                            </Link>
+                        <DropdownMenuItem render={<Link href={route("administrators.students.documents.index", student.id) as string} />}>
+                            <Eye className="mr-2 h-4 w-4" /> Manage Documents
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link
-                                href={route("administrators.students.show", student.id) as string}
-                                className="flex w-full cursor-pointer items-center"
-                            >
-                                <FileText className="mr-2 h-4 w-4" /> View Student
-                            </Link>
+                        <DropdownMenuItem render={<Link href={route("administrators.students.show", student.id) as string} />}>
+                            <FileText className="mr-2 h-4 w-4" /> View Student
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

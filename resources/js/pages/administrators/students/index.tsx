@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -258,7 +258,11 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
         });
     };
 
-    const handleSortChange = (value: string) => {
+    const handleSortChange = (value: string | null) => {
+        if (!value) {
+            return;
+        }
+
         setSortOption(value);
         router.get(route("administrators.students.index"), buildFilterParams(search, activeFilters, value), {
             only: ["students", "filters"],
@@ -472,12 +476,10 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                             <p className="text-muted-foreground">Manage and monitor student records, enrollment, and status.</p>
                         </div>
                         <div className="flex gap-2">
-                            <Button asChild className="gap-2">
-                                <Link href={route("administrators.students.create")}>
-                                    <Plus className="h-4 w-4" />
-                                    Create Student
-                                </Link>
-                            </Button>
+                            <Link href={route("administrators.students.create")} className={buttonVariants({ className: "gap-2" })}>
+                                <Plus className="h-4 w-4" />
+                                Create Student
+                            </Link>
                         </div>
                     </div>
 
@@ -674,18 +676,19 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                                                 </div>
                                             </CardContent>
                                             <CardFooter className="flex gap-2 pt-0">
-                                                <Button asChild variant="outline" size="sm" className="w-full">
-                                                    <Link href={route("administrators.students.show", row.id)}>View</Link>
-                                                </Button>
+                                                <Link
+                                                    href={route("administrators.students.show", row.id)}
+                                                    className={buttonVariants({ variant: "outline", size: "sm", className: "w-full" })}
+                                                >
+                                                    View
+                                                </Link>
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
+                                                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8" />}>
+                                                        <MoreHorizontal className="h-4 w-4" />
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={route("administrators.students.edit", row.id)}>Edit</Link>
+                                                        <DropdownMenuItem render={<Link href={route("administrators.students.edit", row.id)} />}>
+                                                            Edit
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -731,7 +734,8 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                             Soft Delete Student?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            <strong className="text-foreground">{softDeleteTarget?.name}</strong> will be moved to trash and hidden from default views. You can restore them later from the "Trashed" filter.
+                            <strong className="text-foreground">{softDeleteTarget?.name}</strong> will be moved to trash and hidden from default
+                            views. You can restore them later from the "Trashed" filter.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -751,12 +755,14 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
             <AlertDialog open={!!forceDeleteTarget} onOpenChange={(open) => !open && !deleting && setForceDeleteTarget(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                        <AlertDialogTitle className="text-destructive flex items-center gap-2">
                             <Zap className="h-5 w-5" />
                             Permanently Delete Student?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently erase <strong className="text-foreground">{forceDeleteTarget?.name}</strong> along with all enrollments, tuition, transactions, clearances, and contact data. This action <strong className="text-foreground">cannot be undone</strong>.
+                            This will permanently erase <strong className="text-foreground">{forceDeleteTarget?.name}</strong> along with all
+                            enrollments, tuition, transactions, clearances, and contact data. This action{" "}
+                            <strong className="text-foreground">cannot be undone</strong>.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="space-y-2">
@@ -794,7 +800,8 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                             Restore Student?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            <strong className="text-foreground">{restoreTarget?.name}</strong> will be restored and reappear in the active students list.
+                            <strong className="text-foreground">{restoreTarget?.name}</strong> will be restored and reappear in the active students
+                            list.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

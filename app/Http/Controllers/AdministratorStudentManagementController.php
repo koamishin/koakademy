@@ -1117,8 +1117,11 @@ final class AdministratorStudentManagementController extends Controller
             'family_address' => ['student_parents_info', 'family_address'],
             // StudentEducationInfo fields
             'elementary_school' => ['student_education_info', 'elementary_school'],
+            'elementary_school_address' => ['student_education_info', 'elementary_school_address'],
             'junior_high_school_name' => ['student_education_info', 'junior_high_school_name'],
+            'junior_high_school_address' => ['student_education_info', 'junior_high_school_address'],
             'senior_high_name' => ['student_education_info', 'senior_high_school_name'],
+            'senior_high_address' => ['student_education_info', 'senior_high_address'],
             'college_school' => ['student_education_info', 'college_school'],
             'college_course' => ['student_education_info', 'college_course'],
             'vocational_school' => ['student_education_info', 'vocational_school'],
@@ -2456,13 +2459,26 @@ final class AdministratorStudentManagementController extends Controller
             'scholarship_types' => collect(ScholarshipType::cases())->map(fn ($s): array => ['value' => $s->value, 'label' => $s->getLabel()])->values()->all(),
             'employment_statuses' => collect(EmploymentStatus::cases())->map(fn ($s): array => ['value' => $s->value, 'label' => $s->getLabel()])->values()->all(),
             'attrition_categories' => collect(AttritionCategory::cases())->map(fn ($s): array => ['value' => $s->value, 'label' => $s->getLabel()])->values()->all(),
-            'courses' => Course::all(['id', 'code', 'title', 'is_active'])
+            'courses' => Course::with('department:id,code,name,is_active')
+                ->get(['id', 'code', 'title', 'is_active', 'department_id'])
                 ->sortBy([['is_active', 'desc'], ['code', 'asc']])
-                ->map(fn ($c): array => [
-                    'value' => $c->id,
-                    'label' => $c->code.' - '.$c->title.($c->is_active ? '' : ' (Inactive)'),
-                    'is_active' => $c->is_active,
-                ])
+                ->groupBy(fn (Course $course): string => $course->department?->code ?? 'UNASSIGNED')
+                ->sortKeys()
+                ->map(function ($courses, string $departmentCode): array {
+                    $department = $courses->first()->department;
+                    $label = $department
+                        ? "{$department->code} — {$department->name}".($department->is_active ? '' : ' (Inactive)')
+                        : 'Unassigned';
+
+                    return [
+                        'label' => $label,
+                        'items' => $courses->map(fn (Course $c): array => [
+                            'value' => $c->id,
+                            'label' => $c->code.' - '.$c->title.($c->is_active ? '' : ' (Inactive)'),
+                            'is_active' => $c->is_active,
+                        ])->values()->all(),
+                    ];
+                })
                 ->values()
                 ->all(),
             'shs_strands' => ShsStrand::all(['id', 'strand_name'])->map(fn ($s): array => ['value' => $s->id, 'label' => $s->strand_name])->all(),

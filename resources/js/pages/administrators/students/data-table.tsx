@@ -34,7 +34,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { router } from "@inertiajs/react";
-import { CheckCircle, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, GraduationCap, Loader2, Mail, Settings2, Trash2, Zap } from "lucide-react";
+import {
+    CheckCircle,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    GraduationCap,
+    Loader2,
+    Mail,
+    Settings2,
+    Trash2,
+    Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 
 declare let route: any;
@@ -161,7 +173,11 @@ export function DataTable<TData, TValue>({
         }
     };
 
-    const handlePerPageChange = (value: string) => {
+    const handlePerPageChange = (value: string | null) => {
+        if (!value) {
+            return;
+        }
+
         router.get(
             route(routeName),
             { ...filters, per_page: value, page: 1 },
@@ -347,11 +363,11 @@ export function DataTable<TData, TValue>({
                     </Badge>
                     {bulkActions?.statusOptions?.length ? (
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2" disabled={!hasSelection || isSubmitting}>
-                                    <GraduationCap className="h-4 w-4" />
-                                    Change Status
-                                </Button>
+                            <DropdownMenuTrigger
+                                render={<Button variant="outline" size="sm" className="gap-2" disabled={!hasSelection || isSubmitting} />}
+                            >
+                                <GraduationCap className="h-4 w-4" />
+                                Change Status
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start">
                                 {bulkActions.statusOptions.map((option) => (
@@ -363,11 +379,11 @@ export function DataTable<TData, TValue>({
                         </DropdownMenu>
                     ) : null}
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2" disabled={!hasSelection || isSubmitting}>
-                                <CheckCircle className="h-4 w-4" />
-                                Update Clearance
-                            </Button>
+                        <DropdownMenuTrigger
+                            render={<Button variant="outline" size="sm" className="gap-2" disabled={!hasSelection || isSubmitting} />}
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                            Update Clearance
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                             <DropdownMenuItem onClick={() => handleBulkClearanceSubmit("cleared")}>Mark as Cleared</DropdownMenuItem>
@@ -413,11 +429,9 @@ export function DataTable<TData, TValue>({
                         </div>
                     )}
                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="ml-auto">
-                                <Settings2 className="mr-2 h-4 w-4" />
-                                View
-                            </Button>
+                        <DropdownMenuTrigger render={<Button variant="outline" className="ml-auto" />}>
+                            <Settings2 className="mr-2 h-4 w-4" />
+                            View
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             {table
@@ -497,12 +511,14 @@ export function DataTable<TData, TValue>({
             <AlertDialog open={forceDeleteDialogOpen} onOpenChange={(open) => !isSubmitting && setForceDeleteDialogOpen(open)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                        <AlertDialogTitle className="text-destructive flex items-center gap-2">
                             <Zap className="h-5 w-5" />
                             Permanently Delete {selectedCount} Student{selectedCount === 1 ? "" : "s"}?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently erase all {selectedCount} selected student record{selectedCount === 1 ? "" : "s"} along with their enrollments, tuition, transactions, clearances, and contact data. This action <span className="font-semibold text-foreground">cannot be undone</span>.
+                            This will permanently erase all {selectedCount} selected student record{selectedCount === 1 ? "" : "s"} along with their
+                            enrollments, tuition, transactions, clearances, and contact data. This action{" "}
+                            <span className="text-foreground font-semibold">cannot be undone</span>.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="space-y-2">

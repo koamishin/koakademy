@@ -40,6 +40,7 @@ use App\Features\Toggles\StudentSignaturePad;
 use App\Features\Toggles\StudentTuition;
 use App\Filament\Handlers\ExportFailureHandler;
 use App\Filament\Plugins\Widgets\PennantFeatureAdoptionWidget;
+use App\Models\Passkey;
 use App\Models\User;
 use App\Services\ChangelogService;
 use App\Services\GeneralSettingsService;

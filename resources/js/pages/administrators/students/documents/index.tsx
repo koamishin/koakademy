@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -211,11 +211,13 @@ export default function StudentDocuments({ auth, student, fixed_documents, dynam
 
             <div className="flex flex-col gap-6 p-6">
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" asChild>
-                        <Link href={route("administrators.students.show", student.id)}>
-                            <ChevronLeft className="h-4 w-4" />
-                        </Link>
-                    </Button>
+                    <Link
+                        href={route("administrators.students.show", student.id)}
+                        className={buttonVariants({ variant: "outline", size: "icon" })}
+                        aria-label="Back to student"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Link>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Student Documents</h1>
                         <p className="text-muted-foreground">
@@ -274,15 +276,14 @@ export default function StudentDocuments({ auth, student, fixed_documents, dynam
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
                                                             {hasFile && (
-                                                                <Button variant="outline" size="sm" asChild>
-                                                                    <a
-                                                                        href={fixed_documents[doc.key]}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                    >
-                                                                        View
-                                                                    </a>
-                                                                </Button>
+                                                                <a
+                                                                    href={fixed_documents[doc.key]}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                                                                >
+                                                                    View
+                                                                </a>
                                                             )}
                                                             <UploadFixedDialog
                                                                 student={student}
@@ -343,11 +344,15 @@ export default function StudentDocuments({ auth, student, fixed_documents, dynam
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-2">
-                                                            <Button variant="ghost" size="icon" asChild>
-                                                                <a href={`/storage/${doc.file_path}`} target="_blank" rel="noopener noreferrer">
-                                                                    <FileText className="h-4 w-4" />
-                                                                </a>
-                                                            </Button>
+                                                            <a
+                                                                href={`/storage/${doc.file_path}`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={buttonVariants({ variant: "ghost", size: "icon" })}
+                                                                aria-label="View document"
+                                                            >
+                                                                <FileText className="h-4 w-4" />
+                                                            </a>
                                                             <DeleteDynamicDialog student={student} resource={doc} />
                                                         </div>
                                                     </TableCell>

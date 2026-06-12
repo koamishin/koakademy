@@ -9,12 +9,18 @@ export function ThemeToggle() {
 
     return (
         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="hover:bg-accent hover:text-accent-foreground h-9 w-9 px-0 transition-all duration-200">
-                    <IconSun className="text-foreground h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all duration-300 dark:scale-0 dark:-rotate-90" />
-                    <IconMoon className="text-foreground absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all duration-300 dark:scale-100 dark:rotate-0" />
-                    <span className="sr-only">Toggle theme</span>
-                </Button>
+            <DropdownMenuTrigger
+                render={
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:bg-accent hover:text-accent-foreground h-9 w-9 px-0 transition-all duration-200"
+                    />
+                }
+            >
+                <IconSun className="text-foreground h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all duration-300 dark:scale-0 dark:-rotate-90" />
+                <IconMoon className="text-foreground absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all duration-300 dark:scale-100 dark:rotate-0" />
+                <span className="sr-only">Toggle theme</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="transition-all duration-200">
                 <DropdownMenuItem onClick={(e) => setThemeWithViewTransition("light", e)} className="cursor-pointer transition-colors duration-200">

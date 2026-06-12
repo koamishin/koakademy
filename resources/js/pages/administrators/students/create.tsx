@@ -1,17 +1,21 @@
 import AdminLayout from "@/components/administrators/admin-layout";
+import { Badge as BadgeOptional } from "@/components/reui/badge";
+import type { BadgeProps } from "@/components/reui/badge";
+import { AutocompleteFieldInput } from "@/components/ui/autocomplete-field-input";
 import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -30,6 +34,7 @@ import {
     FilePlus2,
     GraduationCap,
     Hash,
+    HelpCircleIcon,
     ImageUp,
     Loader2,
     Mail,
@@ -53,6 +58,11 @@ interface Option {
     is_active?: boolean;
 }
 
+interface CourseGroup {
+    label: string;
+    items: ReadonlyArray<Option>;
+}
+
 interface IncomeBracketOption {
     value: string;
     label: string;
@@ -72,7 +82,7 @@ interface CreateStudentProps {
         scholarship_types: Option[];
         employment_statuses: Option[];
         attrition_categories: Option[];
-        courses: Option[];
+        courses: CourseGroup[];
         shs_strands: Option[];
         religions: Option[];
         regions: Option[];
@@ -210,21 +220,19 @@ const RELATIONSHIP_OPTIONS = [
     { value: "other", label: "Other" },
 ];
 
-const ETHNICITY_OPTIONS = [
-    { value: "tagalog", label: "Tagalog" },
-    { value: "cebuano", label: "Cebuano" },
-    { value: "ilocano", label: "Ilocano" },
-    { value: "hiligaynon", label: "Hiligaynon (Ilonggo)" },
-    { value: "bicolano", label: "Bicolano" },
-    { value: "waray", label: "Waray" },
-    { value: "kapampangan", label: "Kapampangan" },
-    { value: "pangasinense", label: "Pangasinense" },
-    { value: "bisaya", label: "Bisaya" },
-    { value: "maranao", label: "Maranao" },
-    { value: "tausug", label: "Tausug" },
-    { value: "maguindanao", label: "Maguindanao" },
-    { value: "other", label: "Other" },
-];
+const STATUS_VARIANT_MAP: Record<string, BadgeProps["variant"]> = {
+    applicant: "warning-outline",
+    enrolled: "success-outline",
+    on_leave: "warning-outline",
+    withdrawn: "destructive-outline",
+    dropped: "destructive-outline",
+    graduated: "primary-outline",
+    transferred: "focus-outline",
+};
+
+function getStatusVariant(statusValue: string): BadgeProps["variant"] {
+    return STATUS_VARIANT_MAP[statusValue] ?? "outline";
+}
 
 const BLANK_FORM: StudentCreateForm = {
     student_type: "college",
@@ -323,14 +331,6 @@ const BLANK_FORM: StudentCreateForm = {
     dropout_date: "",
     submit_action: "view",
 };
-
-function requiredLabel(label: string) {
-    return (
-        <>
-            {label} <span className="text-destructive">*</span>
-        </>
-    );
-}
 
 function capitalizeWords(value: string): string {
     return value.replace(/\b\w/g, (char) => char.toUpperCase());
@@ -496,9 +496,21 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
 
     const fieldError = (field: keyof StudentCreateForm) => (errors[field] ? <p className="text-destructive text-sm">{errors[field]}</p> : null);
 
+    const setSelectData =
+        <K extends keyof StudentCreateForm>(field: K) =>
+        (value: string | null) => {
+            if (value === null) {
+                return;
+            }
+
+            setData(field, value as never);
+        };
+
     const selectedIncomeMode = useMemo(() => {
         return options.income_modes.find((mode) => mode.value === data.income_bracket_mode) ?? options.income_modes[0] ?? null;
     }, [options.income_modes, data.income_bracket_mode]);
+
+    const flatCourses = useMemo<ReadonlyArray<Option>>(() => options.courses.flatMap((group) => group.items), [options.courses]);
 
     const activeIncomeBrackets = selectedIncomeMode?.brackets ?? [];
 
@@ -664,1386 +676,48 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         <AdminLayout user={user} title="Create Student">
             <Head title="Administrators - Create Student" />
 
-            <form ref={formRef} onSubmit={submit} className="mx-auto max-w-6xl space-y-6 pb-10">
-                <div className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight">Create Student</h1>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                            <Badge variant="secondary">{isSHS ? "Senior High" : "College / Program"}</Badge>
-                            {!isSHS && data.student_id && <Badge variant="outline">ID {data.student_id}</Badge>}
-                            <span className="text-muted-foreground text-xs">
-                                {filledRequired}/{requiredFields.length} req. fields
-                            </span>
-                        </div>
-                        <div className="bg-secondary mt-2 h-1.5 w-full max-w-xs rounded-full">
-                            <div className="bg-primary h-1.5 rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }} />
-                        </div>
-                    </div>
-                    <div className="flex gap-2">
-                        <Button asChild variant="outline">
-                            <Link href={route("administrators.students.index")}>
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back
-                            </Link>
-                        </Button>
-                        <div className="flex gap-1">
-                            <Button type="button" disabled={processing} onClick={() => submitWithAction("view")}>
-                                {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
-                                {processing ? "Creating..." : "Submit & View"}
-                            </Button>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button type="button" variant="outline" size="icon" disabled={processing} aria-label="More create actions">
-                                        <ChevronDown className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-64">
-                                    <DropdownMenuItem onClick={() => submitWithAction("view")} className="cursor-pointer">
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        Submit and View the record
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => submitWithAction("create_another")} className="cursor-pointer">
-                                        <UserPlus className="mr-2 h-4 w-4" />
-                                        Submit and create another one
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => submitWithAction("create_enrollment")} className="cursor-pointer">
-                                        <FilePlus2 className="mr-2 h-4 w-4" />
-                                        Submit and create an enrollment
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    </div>
-                </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <UserIcon className="text-primary h-5 w-5" />
-                            Student Record
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-5 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(180px,0.7fr)_minmax(220px,0.9fr)]">
-                        <div className="space-y-2 md:col-span-2 xl:col-span-1">
-                            <Label>{requiredLabel("Student Type")}</Label>
-                            <div className="flex flex-wrap gap-2">
-                                {options.types.map((type) => (
-                                    <Button
-                                        key={type.value}
-                                        type="button"
-                                        variant={data.student_type === type.value ? "default" : "outline"}
-                                        onClick={() => setData("student_type", type.value.toString())}
-                                        className="h-auto min-h-9 flex-1 basis-[9.5rem] px-3 py-2 text-center leading-snug whitespace-normal"
-                                    >
-                                        {type.label}
-                                    </Button>
-                                ))}
+            <TooltipProvider>
+                <form ref={formRef} onSubmit={submit} className="mx-auto max-w-6xl space-y-6 pb-10">
+                    <div className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h1 className="text-2xl font-semibold tracking-tight">Create Student</h1>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                                <Badge variant="secondary">{isSHS ? "Senior High" : "College / Program"}</Badge>
+                                {!isSHS && data.student_id && <Badge variant="outline">ID {data.student_id}</Badge>}
+                                <span className="text-muted-foreground text-xs">
+                                    {filledRequired}/{requiredFields.length} req. fields
+                                </span>
                             </div>
-                            {fieldError("student_type")}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="status">{requiredLabel("Status")}</Label>
-                            <Select value={data.status} onValueChange={(value) => setData("status", value)}>
-                                <SelectTrigger id="status">
-                                    <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {options.statuses.map((status) => (
-                                        <SelectItem key={status.value} value={status.value.toString()}>
-                                            {status.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {fieldError("status")}
-                        </div>
-
-                        {!isSHS ? (
-                            <div className="space-y-2">
-                                <Label htmlFor="student_id" className="flex items-center gap-1.5">
-                                    <Hash className="h-3.5 w-3.5" />
-                                    {requiredLabel("Student ID")}
-                                </Label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        id="student_id"
-                                        value={data.student_id}
-                                        onChange={(event) => setData("student_id", event.target.value)}
-                                        placeholder="6-digit ID"
-                                        className="font-mono"
-                                    />
-                                    <Button type="button" variant="outline" size="icon" onClick={fetchGeneratedId} disabled={isGeneratingId}>
-                                        <RefreshCw className={cn("h-4 w-4", isGeneratingId && "animate-spin")} />
-                                    </Button>
-                                </div>
-                                {idGenerationError && <p className="text-destructive text-sm">{idGenerationError}</p>}
-                                {fieldError("student_id")}
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                <Label htmlFor="lrn" className="flex items-center gap-1.5">
-                                    <Hash className="h-3.5 w-3.5" />
-                                    {requiredLabel("LRN")}
-                                </Label>
-                                <Input
-                                    id="lrn"
-                                    value={data.lrn}
-                                    onChange={(event) => setData("lrn", event.target.value)}
-                                    placeholder="Learner Reference Number"
-                                    className="font-mono"
-                                />
-                                {fieldError("lrn")}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <GraduationCap className="text-primary h-5 w-5" />
-                                    Required Information
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="grid gap-5 md:grid-cols-2">
-                                <div className="grid gap-4 md:col-span-2 md:grid-cols-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="first_name">{requiredLabel("First Name")}</Label>
-                                        <Input
-                                            id="first_name"
-                                            value={data.first_name}
-                                            onChange={(event) => setData("first_name", event.target.value)}
-                                            onBlur={(event) => setData("first_name", capitalizeWords(event.target.value))}
-                                        />
-                                        {fieldError("first_name")}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="middle_name">Middle Name</Label>
-                                        <Input
-                                            id="middle_name"
-                                            value={data.middle_name}
-                                            onChange={(event) => setData("middle_name", event.target.value)}
-                                            onBlur={(event) => setData("middle_name", capitalizeWords(event.target.value))}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="last_name">{requiredLabel("Last Name")}</Label>
-                                        <Input
-                                            id="last_name"
-                                            value={data.last_name}
-                                            onChange={(event) => setData("last_name", event.target.value)}
-                                            onBlur={(event) => setData("last_name", capitalizeWords(event.target.value))}
-                                        />
-                                        {fieldError("last_name")}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="suffix">Suffix</Label>
-                                        <Input
-                                            id="suffix"
-                                            value={data.suffix}
-                                            onChange={(event) => setData("suffix", event.target.value.toUpperCase())}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="gender">{requiredLabel("Gender")}</Label>
-                                    <Select value={data.gender} onValueChange={(value) => setData("gender", value)}>
-                                        <SelectTrigger id="gender">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="male">Male</SelectItem>
-                                            <SelectItem value="female">Female</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {fieldError("gender")}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="birth_date" className="flex items-center gap-1.5">
-                                        <Calendar className="h-3.5 w-3.5" />
-                                        {requiredLabel("Birth Date")}
-                                    </Label>
-                                    <Input
-                                        id="birth_date"
-                                        type="date"
-                                        value={data.birth_date}
-                                        onChange={(event) => setData("birth_date", event.target.value)}
-                                        max={new Date().toISOString().split("T")[0]}
-                                    />
-                                    {fieldError("birth_date")}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="age">Age</Label>
-                                    <Input id="age" value={data.age} readOnly className="bg-muted" />
-                                </div>
-
-                                <Field>
-                                    <Label htmlFor="email" className="flex items-center gap-1.5">
-                                        Email
-                                    </Label>
-                                    <InputGroup>
-                                        <InputGroupInput
-                                            id="email"
-                                            type="email"
-                                            placeholder="student@example.com"
-                                            value={data.email}
-                                            onChange={(event) => setData("email", event.target.value)}
-                                        />
-                                        <InputGroupAddon align="inline-end">
-                                            <Mail className="h-4 w-4" />
-                                        </InputGroupAddon>
-                                    </InputGroup>
-                                    {fieldError("email")}
-                                </Field>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone" className="flex items-center gap-1.5">
-                                        <Phone className="h-3.5 w-3.5" />
-                                        Phone
-                                    </Label>
-                                    <PhoneInput
-                                        id="phone"
-                                        value={data.phone}
-                                        onChange={(value) => setData("phone", value)}
-                                        defaultCountryCode={branding?.defaultCountryCode}
-                                    />
-                                </div>
-
-                                <div className="space-y-2 md:col-span-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="current_address" className="flex items-center gap-1.5">
-                                            <MapPin className="h-3.5 w-3.5" />
-                                            Current Address
-                                        </Label>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setData("current_address", data.permanent_address)}
-                                            disabled={!data.permanent_address}
-                                            className="h-auto px-2 py-1 text-xs"
-                                        >
-                                            <Copy className="mr-1 h-3 w-3" />
-                                            Same as Permanent
-                                        </Button>
-                                    </div>
-                                    <Textarea
-                                        id="current_address"
-                                        value={data.current_address}
-                                        onChange={(event) => setData("current_address", event.target.value)}
-                                        rows={3}
-                                    />
-                                </div>
-                                <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="permanent_address">Permanent Address</Label>
-                                    <Textarea
-                                        id="permanent_address"
-                                        value={data.permanent_address}
-                                        onChange={(event) => setData("permanent_address", event.target.value)}
-                                        rows={3}
-                                    />
-                                </div>
-
-                                {!isSHS ? (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="course_id" className="flex items-center gap-1.5">
-                                            <BookOpen className="h-3.5 w-3.5" />
-                                            {requiredLabel("Course")}
-                                        </Label>
-                                        <Select value={data.course_id} onValueChange={(value) => setData("course_id", value)}>
-                                            <SelectTrigger id="course_id">
-                                                <SelectValue placeholder="Select course" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {options.courses.map((course) => (
-                                                    <SelectItem
-                                                        key={course.value}
-                                                        value={course.value.toString()}
-                                                        disabled={course.is_active === false}
-                                                    >
-                                                        {course.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {fieldError("course_id")}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="shs_strand_id" className="flex items-center gap-1.5">
-                                            <BookOpen className="h-3.5 w-3.5" />
-                                            {requiredLabel("SHS Strand")}
-                                        </Label>
-                                        <Select value={data.shs_strand_id} onValueChange={(value) => setData("shs_strand_id", value)}>
-                                            <SelectTrigger id="shs_strand_id">
-                                                <SelectValue placeholder="Select strand" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {options.shs_strands.map((strand) => (
-                                                    <SelectItem key={strand.value} value={strand.value.toString()}>
-                                                        {strand.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {fieldError("shs_strand_id")}
-                                    </div>
-                                )}
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="academic_year">{requiredLabel(isSHS ? "Grade Level" : "Year Level")}</Label>
-                                    <Select value={data.academic_year} onValueChange={(value) => setData("academic_year", value)}>
-                                        <SelectTrigger id="academic_year">
-                                            <SelectValue placeholder="Select level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {yearLevelOptions.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {fieldError("academic_year")}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("family")}>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2 text-lg">
-                                        <School className="text-primary h-5 w-5" />
-                                        Family, Personal, and Education
-                                    </CardTitle>
-                                    <ChevronDown
-                                        className={cn(
-                                            "text-muted-foreground h-5 w-5 transition-transform duration-200",
-                                            collapsedSections.family && "-rotate-90",
-                                        )}
-                                    />
-                                </div>
-                            </CardHeader>
-                            {!collapsedSections.family && (
-                                <CardContent className="grid gap-5 md:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="fathers_name">Father's Name</Label>
-                                        <AutocompleteInput
-                                            id="fathers_name"
-                                            value={data.fathers_name}
-                                            onChange={(value: string) => setData("fathers_name", value)}
-                                            fieldName="fathers_name"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="mothers_name">Mother's Name</Label>
-                                        <AutocompleteInput
-                                            id="mothers_name"
-                                            value={data.mothers_name}
-                                            onChange={(value: string) => setData("mothers_name", value)}
-                                            fieldName="mothers_name"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="birthplace">Birthplace</Label>
-                                        <AutocompleteInput
-                                            id="birthplace"
-                                            value={data.birthplace}
-                                            onChange={(value: string) => setData("birthplace", value)}
-                                            fieldName="birthplace"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="civil_status">Civil Status</Label>
-                                        <Select value={data.civil_status} onValueChange={(value) => setData("civil_status", value)}>
-                                            <SelectTrigger id="civil_status">
-                                                <SelectValue placeholder="Select status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {CIVIL_STATUS_OPTIONS.map((status) => (
-                                                    <SelectItem key={status.value} value={status.value}>
-                                                        {status.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="nationality">Nationality</Label>
-                                        <Select
-                                            value={data.nationality}
-                                            onValueChange={(value) => {
-                                                setData("nationality", value);
-                                                setData("citizenship", value);
-                                            }}
-                                        >
-                                            <SelectTrigger id="nationality">
-                                                <SelectValue placeholder="Select nationality" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {NATIONALITY_OPTIONS.map((nationality) => (
-                                                    <SelectItem key={nationality.value} value={nationality.value}>
-                                                        {nationality.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="citizenship">Citizenship</Label>
-                                        <Input
-                                            id="citizenship"
-                                            value={data.citizenship}
-                                            onChange={(event) => setData("citizenship", event.target.value)}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="religion">Religion</Label>
-                                        <AutocompleteInput
-                                            id="religion"
-                                            value={data.religion}
-                                            onChange={(value: string) => setData("religion", value)}
-                                            fieldName="religion"
-                                            placeholder="Type or choose a religion"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="height">Height</Label>
-                                        <Input
-                                            id="height"
-                                            value={data.height}
-                                            onChange={(event) => setData("height", event.target.value)}
-                                            placeholder="e.g. 170"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="weight">Weight</Label>
-                                        <Input
-                                            id="weight"
-                                            value={data.weight}
-                                            onChange={(event) => setData("weight", event.target.value)}
-                                            placeholder="e.g. 60"
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-3">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="elementary_school">Elementary School</Label>
-                                            <AutocompleteInput
-                                                id="elementary_school"
-                                                value={data.elementary_school}
-                                                onChange={(value: string) => setData("elementary_school", value)}
-                                                fieldName="elementary_school"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="elementary_graduate_year">Elementary Year</Label>
-                                            <Input
-                                                id="elementary_graduate_year"
-                                                type="number"
-                                                min={1900}
-                                                max={new Date().getFullYear()}
-                                                value={data.elementary_graduate_year}
-                                                onChange={(event) => setData("elementary_graduate_year", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="elementary_school_address">Elementary Address</Label>
-                                            <Input
-                                                id="elementary_school_address"
-                                                value={data.elementary_school_address}
-                                                onChange={(event) => setData("elementary_school_address", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="junior_high_school_name">Junior High School</Label>
-                                            <AutocompleteInput
-                                                id="junior_high_school_name"
-                                                value={data.junior_high_school_name}
-                                                onChange={(value: string) => setData("junior_high_school_name", value)}
-                                                fieldName="junior_high_school_name"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="junior_high_graduation_year">Junior High Year</Label>
-                                            <Input
-                                                id="junior_high_graduation_year"
-                                                type="number"
-                                                min={1900}
-                                                max={new Date().getFullYear()}
-                                                value={data.junior_high_graduation_year}
-                                                onChange={(event) => setData("junior_high_graduation_year", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="junior_high_school_address">Junior High Address</Label>
-                                            <Input
-                                                id="junior_high_school_address"
-                                                value={data.junior_high_school_address}
-                                                onChange={(event) => setData("junior_high_school_address", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="senior_high_name">Senior High School</Label>
-                                            <AutocompleteInput
-                                                id="senior_high_name"
-                                                value={data.senior_high_name}
-                                                onChange={(value: string) => setData("senior_high_name", value)}
-                                                fieldName="senior_high_name"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="senior_high_graduate_year">Senior High Year</Label>
-                                            <Input
-                                                id="senior_high_graduate_year"
-                                                type="number"
-                                                min={1900}
-                                                max={new Date().getFullYear()}
-                                                value={data.senior_high_graduate_year}
-                                                onChange={(event) => setData("senior_high_graduate_year", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="senior_high_address">Senior High Address</Label>
-                                            <Input
-                                                id="senior_high_address"
-                                                value={data.senior_high_address}
-                                                onChange={(event) => setData("senior_high_address", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="college_school">College School (if transferee)</Label>
-                                            <AutocompleteInput
-                                                id="college_school"
-                                                value={data.college_school}
-                                                onChange={(value: string) => setData("college_school", value)}
-                                                fieldName="college_school"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="college_course">College Course</Label>
-                                            <AutocompleteInput
-                                                id="college_course"
-                                                value={data.college_course}
-                                                onChange={(value: string) => setData("college_course", value)}
-                                                fieldName="college_course"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="college_year_graduated">College Year Graduated</Label>
-                                            <Input
-                                                id="college_year_graduated"
-                                                type="number"
-                                                min={1900}
-                                                max={new Date().getFullYear()}
-                                                value={data.college_year_graduated}
-                                                onChange={(event) => setData("college_year_graduated", event.target.value)}
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="vocational_school">Vocational School</Label>
-                                            <AutocompleteInput
-                                                id="vocational_school"
-                                                value={data.vocational_school}
-                                                onChange={(value: string) => setData("vocational_school", value)}
-                                                fieldName="vocational_school"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="vocational_course">Vocational Course</Label>
-                                            <AutocompleteInput
-                                                id="vocational_course"
-                                                value={data.vocational_course}
-                                                onChange={(value: string) => setData("vocational_course", value)}
-                                                fieldName="vocational_course"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="vocational_year_graduated">Vocational Year Graduated</Label>
-                                            <Input
-                                                id="vocational_year_graduated"
-                                                type="number"
-                                                min={1900}
-                                                max={new Date().getFullYear()}
-                                                value={data.vocational_year_graduated}
-                                                onChange={(event) => setData("vocational_year_graduated", event.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            )}
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("reporting")}>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2 text-lg">
-                                        <Banknote className="text-primary h-5 w-5" />
-                                        Reporting Details
-                                    </CardTitle>
-                                    <ChevronDown
-                                        className={cn(
-                                            "text-muted-foreground h-5 w-5 transition-transform duration-200",
-                                            collapsedSections.reporting && "-rotate-90",
-                                        )}
-                                    />
-                                </div>
-                            </CardHeader>
-                            {!collapsedSections.reporting && (
-                                <CardContent className="grid gap-5 md:grid-cols-2">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="region_of_origin">Region of Origin</Label>
-                                        <Select value={data.region_of_origin} onValueChange={(value) => setData("region_of_origin", value)}>
-                                            <SelectTrigger id="region_of_origin">
-                                                <SelectValue placeholder="Select region" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {options.regions.map((region) => (
-                                                    <SelectItem key={region.value} value={region.value.toString()}>
-                                                        {region.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="ethnicity">Ethnicity</Label>
-                                        <Select value={data.ethnicity} onValueChange={(value) => setData("ethnicity", value)}>
-                                            <SelectTrigger id="ethnicity">
-                                                <SelectValue placeholder="Select ethnicity" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {ETHNICITY_OPTIONS.map((option) => (
-                                                    <SelectItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="province_of_origin">Province of Origin</Label>
-                                        <AutocompleteInput
-                                            id="province_of_origin"
-                                            value={data.province_of_origin}
-                                            onChange={(value: string) => setData("province_of_origin", value)}
-                                            fieldName="province_of_origin"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="city_of_origin">City of Origin</Label>
-                                        <AutocompleteInput
-                                            id="city_of_origin"
-                                            value={data.city_of_origin}
-                                            onChange={(value: string) => setData("city_of_origin", value)}
-                                            fieldName="city_of_origin"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3 rounded-md border p-3 md:col-span-2">
-                                        <Checkbox
-                                            id="is_indigenous_person"
-                                            checked={data.is_indigenous_person}
-                                            onCheckedChange={(checked) => setData("is_indigenous_person", checked === true)}
-                                        />
-                                        <Label htmlFor="is_indigenous_person" className="cursor-pointer">
-                                            Indigenous Person
-                                        </Label>
-                                    </div>
-                                    {data.is_indigenous_person && (
-                                        <div className="space-y-2 md:col-span-2">
-                                            <Label htmlFor="indigenous_group">Indigenous Group</Label>
-                                            <Input
-                                                id="indigenous_group"
-                                                value={data.indigenous_group}
-                                                onChange={(event) => setData("indigenous_group", event.target.value)}
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
-                                        <div className="flex items-center gap-2 rounded-md border p-3">
-                                            <Checkbox
-                                                id="is_pwd"
-                                                checked={data.is_pwd}
-                                                onCheckedChange={(checked) => setData("is_pwd", checked === true)}
-                                            />
-                                            <Label htmlFor="is_pwd" className="cursor-pointer">
-                                                PWD
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-md border p-3">
-                                            <Checkbox
-                                                id="is_solo_parent"
-                                                checked={data.is_solo_parent}
-                                                onCheckedChange={(checked) => setData("is_solo_parent", checked === true)}
-                                            />
-                                            <Label htmlFor="is_solo_parent" className="cursor-pointer">
-                                                Solo Parent
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-md border p-3">
-                                            <Checkbox
-                                                id="is_senior_citizen"
-                                                checked={data.is_senior_citizen}
-                                                onCheckedChange={(checked) => setData("is_senior_citizen", checked === true)}
-                                            />
-                                            <Label htmlFor="is_senior_citizen" className="cursor-pointer">
-                                                Senior Citizen
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-md border p-3">
-                                            <Checkbox
-                                                id="is_magna_carta"
-                                                checked={data.is_magna_carta}
-                                                onCheckedChange={(checked) => setData("is_magna_carta", checked === true)}
-                                            />
-                                            <Label htmlFor="is_magna_carta" className="cursor-pointer">
-                                                Magna Carta
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-md border p-3">
-                                            <Checkbox
-                                                id="is_underprivileged"
-                                                checked={data.is_underprivileged}
-                                                onCheckedChange={(checked) => setData("is_underprivileged", checked === true)}
-                                            />
-                                            <Label htmlFor="is_underprivileged" className="cursor-pointer">
-                                                Underprivileged
-                                            </Label>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-md border p-3">
-                                            <Checkbox
-                                                id="is_first_generation"
-                                                checked={data.is_first_generation}
-                                                onCheckedChange={(checked) => setData("is_first_generation", checked === true)}
-                                            />
-                                            <Label htmlFor="is_first_generation" className="cursor-pointer">
-                                                First Generation
-                                            </Label>
-                                        </div>
-                                    </div>
-                                    {data.is_pwd && (
-                                        <div className="space-y-2 md:col-span-2">
-                                            <Label htmlFor="pwd_type">PWD Type</Label>
-                                            <Input
-                                                id="pwd_type"
-                                                value={data.pwd_type}
-                                                onChange={(event) => setData("pwd_type", event.target.value)}
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-2">
-                                        <div className="space-y-1 md:col-span-2">
-                                            <h3 className="font-medium">Family Income</h3>
-                                            <p className="text-muted-foreground text-sm">
-                                                Set income basis first, then choose one shared family range or separate father and mother ranges.
-                                            </p>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="income_bracket_mode">Income Basis</Label>
-                                            <Select value={data.income_bracket_mode} onValueChange={(value) => setData("income_bracket_mode", value)}>
-                                                <SelectTrigger id="income_bracket_mode">
-                                                    <SelectValue placeholder="Select income basis" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {options.income_modes.map((mode) => (
-                                                        <SelectItem key={mode.value} value={mode.value}>
-                                                            {mode.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="flex items-center gap-2 rounded-md border p-3">
-                                            <Checkbox
-                                                id="use_same_parent_income"
-                                                checked={data.use_same_parent_income}
-                                                onCheckedChange={(checked) => setData("use_same_parent_income", checked === true)}
-                                            />
-                                            <Label htmlFor="use_same_parent_income" className="cursor-pointer">
-                                                Father and mother have the same income bracket
-                                            </Label>
-                                        </div>
-                                        {data.use_same_parent_income ? (
-                                            <div className="space-y-2 md:col-span-2">
-                                                <Label htmlFor="family_income_bracket">Family Income Bracket</Label>
-                                                <Select
-                                                    value={data.family_income_bracket}
-                                                    onValueChange={(value) => setData("family_income_bracket", value)}
-                                                >
-                                                    <SelectTrigger id="family_income_bracket">
-                                                        <SelectValue placeholder="Select income range..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {activeIncomeBrackets.map((bracket) => (
-                                                            <SelectItem key={bracket.value} value={bracket.value}>
-                                                                {bracket.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="father_income_bracket">Father Income Bracket</Label>
-                                                    <Select
-                                                        value={data.father_income_bracket}
-                                                        onValueChange={(value) => setData("father_income_bracket", value)}
-                                                    >
-                                                        <SelectTrigger id="father_income_bracket">
-                                                            <SelectValue placeholder="Select income range..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {activeIncomeBrackets.map((bracket) => (
-                                                                <SelectItem key={bracket.value} value={bracket.value}>
-                                                                    {bracket.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label htmlFor="mother_income_bracket">Mother Income Bracket</Label>
-                                                    <Select
-                                                        value={data.mother_income_bracket}
-                                                        onValueChange={(value) => setData("mother_income_bracket", value)}
-                                                    >
-                                                        <SelectTrigger id="mother_income_bracket">
-                                                            <SelectValue placeholder="Select income range..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {activeIncomeBrackets.map((bracket) => (
-                                                                <SelectItem key={bracket.value} value={bracket.value}>
-                                                                    {bracket.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="scholarship_type">Scholarship</Label>
-                                        <Select value={data.scholarship_type} onValueChange={(value) => setData("scholarship_type", value)}>
-                                            <SelectTrigger id="scholarship_type">
-                                                <SelectValue placeholder="Select scholarship" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {options.scholarship_types.map((type) => (
-                                                    <SelectItem key={type.value} value={type.value.toString()}>
-                                                        {type.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    {data.scholarship_type !== "none" && (
-                                        <div className="space-y-2">
-                                            <Label htmlFor="scholarship_details">Scholarship Details</Label>
-                                            <Textarea
-                                                id="scholarship_details"
-                                                value={data.scholarship_details}
-                                                onChange={(event) => setData("scholarship_details", event.target.value)}
-                                                rows={2}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {isGraduated && (
-                                        <div className="grid gap-5 border-t pt-5 md:col-span-2 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="employment_status" className="flex items-center gap-1.5">
-                                                    <Briefcase className="h-3.5 w-3.5" />
-                                                    Employment Status
-                                                </Label>
-                                                <Select value={data.employment_status} onValueChange={(value) => setData("employment_status", value)}>
-                                                    <SelectTrigger id="employment_status">
-                                                        <SelectValue placeholder="Select status" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {options.employment_statuses.map((status) => (
-                                                            <SelectItem key={status.value} value={status.value.toString()}>
-                                                                {status.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            {showEmployment && (
-                                                <>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="employer_name">Employer</Label>
-                                                        <AutocompleteInput
-                                                            id="employer_name"
-                                                            value={data.employer_name}
-                                                            onChange={(value: string) => setData("employer_name", value)}
-                                                            fieldName="employer_name"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="job_position">Position</Label>
-                                                        <AutocompleteInput
-                                                            id="job_position"
-                                                            value={data.job_position}
-                                                            onChange={(value: string) => setData("job_position", value)}
-                                                            fieldName="job_position"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor="employment_date">Employment Date</Label>
-                                                        <Input
-                                                            id="employment_date"
-                                                            type="date"
-                                                            value={data.employment_date}
-                                                            onChange={(event) => setData("employment_date", event.target.value)}
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center gap-3 rounded-md border p-3">
-                                                        <Checkbox
-                                                            id="employed_by_institution"
-                                                            checked={data.employed_by_institution}
-                                                            onCheckedChange={(checked) => setData("employed_by_institution", checked === true)}
-                                                        />
-                                                        <Label htmlFor="employed_by_institution" className="cursor-pointer">
-                                                            Employed by this institution
-                                                        </Label>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {isWithdrawn && (
-                                        <div className="grid gap-5 border-t pt-5 md:col-span-2 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="attrition_category">Attrition Category</Label>
-                                                <Select
-                                                    value={data.attrition_category}
-                                                    onValueChange={(value) => setData("attrition_category", value)}
-                                                >
-                                                    <SelectTrigger id="attrition_category">
-                                                        <SelectValue placeholder="Select category" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {options.attrition_categories.map((category) => (
-                                                            <SelectItem key={category.value} value={category.value.toString()}>
-                                                                {category.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="withdrawal_date">Withdrawal Date</Label>
-                                                <Input
-                                                    id="withdrawal_date"
-                                                    type="date"
-                                                    value={data.withdrawal_date}
-                                                    onChange={(event) => setData("withdrawal_date", event.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="dropout_date">Dropout Date</Label>
-                                                <Input
-                                                    id="dropout_date"
-                                                    type="date"
-                                                    value={data.dropout_date}
-                                                    onChange={(event) => setData("dropout_date", event.target.value)}
-                                                />
-                                            </div>
-                                            <div className="space-y-2 md:col-span-2">
-                                                <Label htmlFor="withdrawal_reason">Withdrawal Reason</Label>
-                                                <Textarea
-                                                    id="withdrawal_reason"
-                                                    value={data.withdrawal_reason}
-                                                    onChange={(event) => setData("withdrawal_reason", event.target.value)}
-                                                    rows={3}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="remarks">Remarks</Label>
-                                        <Textarea
-                                            id="remarks"
-                                            value={data.remarks}
-                                            onChange={(event) => setData("remarks", event.target.value)}
-                                            rows={3}
-                                        />
-                                    </div>
-                                </CardContent>
-                            )}
-                        </Card>
-                    </div>
-
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("contact")}>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="flex items-center gap-2 text-lg">
-                                        <Phone className="text-primary h-5 w-5" />
-                                        Contact and Address
-                                    </CardTitle>
-                                    <ChevronDown
-                                        className={cn(
-                                            "text-muted-foreground h-5 w-5 transition-transform duration-200",
-                                            collapsedSections.contact && "-rotate-90",
-                                        )}
-                                    />
-                                </div>
-                            </CardHeader>
-                            {!collapsedSections.contact && (
-                                <CardContent className="space-y-5">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="personal_contact">Student Contact</Label>
-                                        <Input
-                                            id="personal_contact"
-                                            value={data.personal_contact}
-                                            readOnly
-                                            className="bg-muted text-muted-foreground"
-                                        />
-                                        <p className="text-muted-foreground text-xs">Auto-filled from Phone above</p>
-                                    </div>
-                                    <div className="grid gap-3 md:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="facebook_contact">Facebook</Label>
-                                            <Input
-                                                id="facebook_contact"
-                                                value={data.facebook_contact}
-                                                onChange={(event) => setData("facebook_contact", event.target.value)}
-                                                placeholder="facebook.com/username"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="instagram">Instagram</Label>
-                                            <Input
-                                                id="instagram"
-                                                value={data.instagram}
-                                                onChange={(event) => setData("instagram", event.target.value)}
-                                                placeholder="@username"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="twitter">Twitter/X</Label>
-                                            <Input
-                                                id="twitter"
-                                                value={data.twitter}
-                                                onChange={(event) => setData("twitter", event.target.value)}
-                                                placeholder="@username"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="linkedin">LinkedIn</Label>
-                                            <Input
-                                                id="linkedin"
-                                                value={data.linkedin}
-                                                onChange={(event) => setData("linkedin", event.target.value)}
-                                                placeholder="linkedin.com/in/username"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="emergency_contact_name">Guardian Name</Label>
-                                        <AutocompleteInput
-                                            id="emergency_contact_name"
-                                            value={data.emergency_contact_name}
-                                            onChange={(value: string) => setData("emergency_contact_name", value)}
-                                            fieldName="emergency_contact_name"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="emergency_contact_phone">Guardian Phone</Label>
-                                        <PhoneInput
-                                            id="emergency_contact_phone"
-                                            value={data.emergency_contact_phone}
-                                            onChange={(value) => setData("emergency_contact_phone", value)}
-                                            defaultCountryCode={branding?.defaultCountryCode}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="emergency_contact_relationship">Guardian Relationship</Label>
-                                        <Select
-                                            value={data.emergency_contact_relationship}
-                                            onValueChange={(value) => setData("emergency_contact_relationship", value)}
-                                        >
-                                            <SelectTrigger id="emergency_contact_relationship">
-                                                <SelectValue placeholder="Select relationship" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {RELATIONSHIP_OPTIONS.map((option) => (
-                                                    <SelectItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-muted-foreground text-xs">Also used as the applicant guardian relationship.</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="emergency_contact_address">Guardian Address</Label>
-                                        <Textarea
-                                            id="emergency_contact_address"
-                                            value={data.emergency_contact_address}
-                                            onChange={(event) => setData("emergency_contact_address", event.target.value)}
-                                            rows={2}
-                                        />
-                                    </div>
-                                    <div className="grid gap-3 border-t pt-4 md:grid-cols-2">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="father_occupation">Father Occupation</Label>
-                                            <AutocompleteInput
-                                                id="father_occupation"
-                                                value={data.father_occupation}
-                                                onChange={(value: string) => setData("father_occupation", value)}
-                                                fieldName="father_occupation"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="father_contact">Father Contact</Label>
-                                            <PhoneInput
-                                                id="father_contact"
-                                                value={data.father_contact}
-                                                onChange={(value) => setData("father_contact", value)}
-                                                defaultCountryCode={branding?.defaultCountryCode}
-                                            />
-                                        </div>
-                                        <Field>
-                                            <Label htmlFor="father_email">Father Email</Label>
-                                            <InputGroup>
-                                                <InputGroupInput
-                                                    id="father_email"
-                                                    type="email"
-                                                    placeholder="father@example.com"
-                                                    value={data.father_email}
-                                                    onChange={(event) => setData("father_email", event.target.value)}
-                                                />
-                                                <InputGroupAddon align="inline-end">
-                                                    <Mail className="h-4 w-4" />
-                                                </InputGroupAddon>
-                                            </InputGroup>
-                                        </Field>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="mother_occupation">Mother Occupation</Label>
-                                            <AutocompleteInput
-                                                id="mother_occupation"
-                                                value={data.mother_occupation}
-                                                onChange={(value: string) => setData("mother_occupation", value)}
-                                                fieldName="mother_occupation"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="mother_contact">Mother Contact</Label>
-                                            <PhoneInput
-                                                id="mother_contact"
-                                                value={data.mother_contact}
-                                                onChange={(value) => setData("mother_contact", value)}
-                                                defaultCountryCode={branding?.defaultCountryCode}
-                                            />
-                                        </div>
-                                        <Field>
-                                            <Label htmlFor="mother_email">Mother Email</Label>
-                                            <InputGroup>
-                                                <InputGroupInput
-                                                    id="mother_email"
-                                                    type="email"
-                                                    placeholder="mother@example.com"
-                                                    value={data.mother_email}
-                                                    onChange={(event) => setData("mother_email", event.target.value)}
-                                                />
-                                                <InputGroupAddon align="inline-end">
-                                                    <Mail className="h-4 w-4" />
-                                                </InputGroupAddon>
-                                            </InputGroup>
-                                        </Field>
-                                        <Field>
-                                            <Label htmlFor="guardian_email">Guardian Email</Label>
-                                            <InputGroup>
-                                                <InputGroupInput
-                                                    id="guardian_email"
-                                                    type="email"
-                                                    placeholder="guardian@example.com"
-                                                    value={data.guardian_email}
-                                                    onChange={(event) => setData("guardian_email", event.target.value)}
-                                                />
-                                                <InputGroupAddon align="inline-end">
-                                                    <Mail className="h-4 w-4" />
-                                                </InputGroupAddon>
-                                            </InputGroup>
-                                        </Field>
-                                        <div className="space-y-2 md:col-span-2">
-                                            <Label htmlFor="family_address">Family Address</Label>
-                                            <Textarea
-                                                id="family_address"
-                                                value={data.family_address}
-                                                onChange={(event) => setData("family_address", event.target.value)}
-                                                rows={2}
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            )}
-                        </Card>
-                    </div>
-
-                    {/* Right sidebar: Picture & Signature */}
-                    <div className="space-y-6">
-                        {flags.studentAvatarUpload && (
-                            <Card className="overflow-hidden">
-                                <CardHeader className="pb-3">
-                                    <CardTitle className="text-base">Profile Picture</CardTitle>
-                                    <p className="text-muted-foreground text-xs">Upload 1x1 photo</p>
-                                </CardHeader>
-                                <CardContent className="flex flex-col items-center gap-4">
-                                    <input type="file" ref={pictureInputRef} className="hidden" accept="image/*" onChange={handlePictureChange} />
-                                    <div
-                                        onDragOver={handlePictureDragOver}
-                                        onDragLeave={handlePictureDragLeave}
-                                        onDrop={handlePictureDrop}
-                                        onClick={() => pictureInputRef.current?.click()}
-                                        className={cn(
-                                            "group relative flex h-36 w-36 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-full border-2 border-dashed transition-all",
-                                            isDragOverPicture
-                                                ? "border-primary bg-primary/10"
-                                                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
-                                        )}
-                                    >
-                                        {profilePreview ? (
-                                            <>
-                                                <img src={profilePreview} alt="Profile preview" className="h-full w-full object-cover" />
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                                                    <Camera className="h-6 w-6 text-white" />
-                                                    <span className="text-[10px] font-medium text-white">Change</span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="text-muted-foreground flex flex-col items-center gap-2">
-                                                {isDragOverPicture ? <ImageUp className="text-primary h-8 w-8" /> : <Camera className="h-8 w-8" />}
-                                                <span className="text-xs font-medium">{isDragOverPicture ? "Drop here" : "Click or drag"}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {profilePreview && (
-                                        <div className="flex gap-2">
-                                            <Button type="button" variant="outline" size="sm" onClick={() => pictureInputRef.current?.click()}>
-                                                <Camera className="mr-1 h-3.5 w-3.5" />
-                                                Change
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => downloadPreview(profilePreview, getDownloadFilename("photo"))}
-                                            >
-                                                <Download className="mr-1 h-3.5 w-3.5" />
-                                                Download
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={clearPicture}
-                                                className="text-destructive text-xs"
-                                            >
-                                                Remove
-                                            </Button>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {flags.studentSignaturePad && (
-                            <Card className="overflow-hidden">
-                                <CardHeader className="pb-3">
-                                    <CardTitle className="text-base">Signature</CardTitle>
-                                    <p className="text-muted-foreground text-xs">Draw or upload e-signature</p>
-                                </CardHeader>
-                                <CardContent className="flex flex-col items-center gap-4">
-                                    {signaturePreview ? (
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="bg-muted/20 flex h-20 w-full min-w-[180px] items-center justify-center rounded-lg border p-2">
-                                                <img
-                                                    src={signaturePreview}
-                                                    alt="Signature preview"
-                                                    className="h-full max-w-full object-contain dark:invert"
-                                                />
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <Button type="button" variant="outline" size="sm" onClick={() => setIsSignatureDialogOpen(true)}>
-                                                    <PenLine className="mr-1 h-3.5 w-3.5" />
-                                                    Change
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => downloadPreview(signaturePreview!, getDownloadFilename("signature"))}
-                                                >
-                                                    <Download className="mr-1 h-3.5 w-3.5" />
-                                                    Download
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={clearSignature}
-                                                    className="text-destructive text-xs"
-                                                >
-                                                    Remove
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="bg-muted/30 border-muted-foreground/25 flex h-20 w-full max-w-[220px] items-center justify-center rounded-lg border-2 border-dashed">
-                                                <PenLine className="text-muted-foreground/40 h-8 w-8" />
-                                            </div>
-                                            <Button type="button" variant="outline" size="sm" onClick={() => setIsSignatureDialogOpen(true)}>
-                                                <PenLine className="mr-1 h-3.5 w-3.5" />
-                                                Add Signature
-                                            </Button>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-                        <CreateSignatureDialog open={isSignatureDialogOpen} onOpenChange={setIsSignatureDialogOpen} onSave={handleSignatureSave} />
-                    </div>
-                </div>
-
-                {/* Sticky bottom bar */}
-                <div className="bg-background/95 sticky bottom-0 z-10 -mx-4 -mb-6 border-t px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
-                    <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 text-sm">
-                            <span className="text-muted-foreground hidden sm:inline">
-                                {filledRequired}/{requiredFields.length} required fields complete
-                            </span>
-                            <div className="bg-secondary h-1.5 w-24 rounded-full sm:w-32">
+                            <div className="bg-secondary mt-2 h-1.5 w-full max-w-xs rounded-full">
                                 <div className="bg-primary h-1.5 rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }} />
                             </div>
-                            <span className="text-xs font-medium tabular-nums">{progressPercent}%</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground hidden text-xs lg:inline">Ctrl+Enter to submit</span>
+                        <div className="flex gap-2">
+                            <Link
+                                href={route("administrators.students.index")}
+                                className={buttonVariants({ variant: "outline", className: "gap-2" })}
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Back
+                            </Link>
                             <div className="flex gap-1">
                                 <Button type="button" disabled={processing} onClick={() => submitWithAction("view")}>
                                     {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
                                     {processing ? "Creating..." : "Submit & View"}
                                 </Button>
                                 <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button type="button" variant="outline" size="icon" disabled={processing} aria-label="More create actions">
-                                            <ChevronDown className="h-4 w-4" />
-                                        </Button>
+                                    <DropdownMenuTrigger
+                                        render={
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                disabled={processing}
+                                                aria-label="More create actions"
+                                            />
+                                        }
+                                    >
+                                        <ChevronDown className="h-4 w-4" />
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-64">
                                         <DropdownMenuItem onClick={() => submitWithAction("view")} className="cursor-pointer">
@@ -2064,8 +738,1860 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                             </div>
                         </div>
                     </div>
-                </div>
-            </form>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <UserIcon className="text-primary h-5 w-5" />
+                                Student Record
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid gap-5 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(180px,0.7fr)_minmax(220px,0.9fr)]">
+                            <div className="space-y-2 md:col-span-2 xl:col-span-1">
+                                <div className="flex items-center gap-2">
+                                    <Label>
+                                        Student Type <span className="text-destructive">*</span>
+                                    </Label>
+                                    <Tooltip>
+                                        <TooltipTrigger className="inline-flex items-center">
+                                            <HelpCircleIcon className="text-muted-foreground size-3.5" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            Choose the education level this student belongs to. Affects available fields and validation rules.
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {options.types.map((type) => (
+                                        <Button
+                                            key={type.value}
+                                            type="button"
+                                            variant={data.student_type === type.value ? "default" : "outline"}
+                                            onClick={() => setData("student_type", type.value.toString())}
+                                            className="h-auto min-h-9 flex-1 basis-[9.5rem] px-3 py-2 text-center leading-snug whitespace-normal"
+                                        >
+                                            {type.label}
+                                        </Button>
+                                    ))}
+                                </div>
+                                {fieldError("student_type")}
+                            </div>
+
+                            <Field>
+                                <FieldLabel htmlFor="status">
+                                    Status <span className="text-destructive">*</span>
+                                </FieldLabel>
+                                <Select value={data.status} onValueChange={setSelectData("status")}>
+                                    <SelectTrigger id="status">
+                                        <SelectValue>
+                                            {(selectedValue: string) => {
+                                                const statusObj = options.statuses.find(
+                                                    (s) => s.value.toString() === selectedValue,
+                                                );
+                                                if (!statusObj) {
+                                                    return (
+                                                        <span className="text-muted-foreground">
+                                                            Select status
+                                                        </span>
+                                                    );
+                                                }
+                                                return (
+                                                    <BadgeOptional
+                                                        variant={getStatusVariant(
+                                                            statusObj.value.toString(),
+                                                        )}
+                                                    >
+                                                        {statusObj.label}
+                                                    </BadgeOptional>
+                                                );
+                                            }}
+                                        </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent alignItemWithTrigger={false}>
+                                        {options.statuses.map((status) => (
+                                            <SelectItem
+                                                key={status.value}
+                                                value={status.value.toString()}
+                                            >
+                                                <BadgeOptional
+                                                    variant={getStatusVariant(
+                                                        status.value.toString(),
+                                                    )}
+                                                >
+                                                    {status.label}
+                                                </BadgeOptional>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {fieldError("status")}
+                            </Field>
+
+                            {!isSHS ? (
+                                <Field>
+                                    <div className="flex items-center gap-2">
+                                        <FieldLabel htmlFor="student_id">
+                                            <Hash className="mr-1 inline h-3.5 w-3.5" />
+                                            Student ID <span className="text-destructive">*</span>
+                                        </FieldLabel>
+                                        <Tooltip>
+                                            <TooltipTrigger className="inline-flex items-center">
+                                                <HelpCircleIcon className="text-muted-foreground size-3.5" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                Unique numeric identifier for the student. Click the refresh icon to auto-generate the next available
+                                                ID.
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="student_id"
+                                            value={data.student_id}
+                                            onChange={(event) => setData("student_id", event.target.value)}
+                                            placeholder="6-digit ID"
+                                            className="font-mono"
+                                        />
+                                        <Button type="button" variant="outline" size="icon" onClick={fetchGeneratedId} disabled={isGeneratingId}>
+                                            <RefreshCw className={cn("h-4 w-4", isGeneratingId && "animate-spin")} />
+                                        </Button>
+                                    </div>
+                                    {idGenerationError && <p className="text-destructive text-sm">{idGenerationError}</p>}
+                                    {fieldError("student_id")}
+                                </Field>
+                            ) : (
+                                <Field>
+                                    <div className="flex items-center gap-2">
+                                        <FieldLabel htmlFor="lrn">
+                                            <Hash className="mr-1 inline h-3.5 w-3.5" />
+                                            LRN <span className="text-destructive">*</span>
+                                        </FieldLabel>
+                                        <Tooltip>
+                                            <TooltipTrigger className="inline-flex items-center">
+                                                <HelpCircleIcon className="text-muted-foreground size-3.5" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>Learner Reference Number assigned by the Department of Education.</TooltipContent>
+                                        </Tooltip>
+                                    </div>
+                                    <Input
+                                        id="lrn"
+                                        value={data.lrn}
+                                        onChange={(event) => setData("lrn", event.target.value)}
+                                        placeholder="Learner Reference Number"
+                                        className="font-mono"
+                                    />
+                                    {fieldError("lrn")}
+                                </Field>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+                        <div className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <GraduationCap className="text-primary h-5 w-5" />
+                                        Required Information
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid gap-5 md:grid-cols-2">
+                                    <div className="grid gap-4 md:col-span-2 md:grid-cols-4">
+                                        <Field>
+                                            <FieldLabel htmlFor="first_name">
+                                                First Name <span className="text-destructive">*</span>
+                                            </FieldLabel>
+                                            <Input
+                                                id="first_name"
+                                                value={data.first_name}
+                                                onChange={(event) => setData("first_name", event.target.value)}
+                                                onBlur={(event) => setData("first_name", capitalizeWords(event.target.value))}
+                                            />
+                                            {fieldError("first_name")}
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="middle_name">Middle Name</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Input
+                                                id="middle_name"
+                                                value={data.middle_name}
+                                                onChange={(event) => setData("middle_name", event.target.value)}
+                                                onBlur={(event) => setData("middle_name", capitalizeWords(event.target.value))}
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <FieldLabel htmlFor="last_name">
+                                                Last Name <span className="text-destructive">*</span>
+                                            </FieldLabel>
+                                            <Input
+                                                id="last_name"
+                                                value={data.last_name}
+                                                onChange={(event) => setData("last_name", event.target.value)}
+                                                onBlur={(event) => setData("last_name", capitalizeWords(event.target.value))}
+                                            />
+                                            {fieldError("last_name")}
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="suffix">Suffix</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Input
+                                                id="suffix"
+                                                value={data.suffix}
+                                                onChange={(event) => setData("suffix", event.target.value.toUpperCase())}
+                                            />
+                                        </Field>
+                                    </div>
+
+                                    <Field>
+                                        <FieldLabel htmlFor="gender">
+                                            Gender <span className="text-destructive">*</span>
+                                        </FieldLabel>
+                                        <Select value={data.gender} onValueChange={setSelectData("gender")}>
+                                            <SelectTrigger id="gender">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="male">Male</SelectItem>
+                                                <SelectItem value="female">Female</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {fieldError("gender")}
+                                    </Field>
+
+                                    <Field>
+                                        <div className="flex items-center gap-2">
+                                            <FieldLabel htmlFor="birth_date">
+                                                <Calendar className="mr-1 inline h-3.5 w-3.5" />
+                                                Birth Date <span className="text-destructive">*</span>
+                                            </FieldLabel>
+                                            <Tooltip>
+                                                <TooltipTrigger className="inline-flex items-center">
+                                                    <HelpCircleIcon className="text-muted-foreground size-3.5" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>Date of birth. Used to compute age and verify enrollment eligibility.</TooltipContent>
+                                            </Tooltip>
+                                        </div>
+                                        <Input
+                                            id="birth_date"
+                                            type="date"
+                                            value={data.birth_date}
+                                            onChange={(event) => setData("birth_date", event.target.value)}
+                                            max={new Date().toISOString().split("T")[0]}
+                                        />
+                                        {fieldError("birth_date")}
+                                    </Field>
+
+                                    <Field>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <FieldLabel htmlFor="age">Age</FieldLabel>
+                                            <BadgeOptional variant="info-outline" size="sm">
+                                                Auto
+                                            </BadgeOptional>
+                                        </div>
+                                        <Input id="age" value={data.age} readOnly className="bg-muted" />
+                                    </Field>
+
+                                    <Field>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <FieldLabel htmlFor="email">Email</FieldLabel>
+                                            <BadgeOptional variant="warning-outline" size="sm">
+                                                Optional
+                                            </BadgeOptional>
+                                        </div>
+                                        <InputGroup>
+                                            <InputGroupInput
+                                                id="email"
+                                                type="email"
+                                                placeholder="student@example.com"
+                                                value={data.email}
+                                                onChange={(event) => setData("email", event.target.value)}
+                                            />
+                                            <InputGroupAddon align="inline-end">
+                                                <Mail className="h-4 w-4" />
+                                            </InputGroupAddon>
+                                        </InputGroup>
+                                        {fieldError("email")}
+                                    </Field>
+
+                                    <Field>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <FieldLabel htmlFor="phone">
+                                                <Phone className="mr-1 inline h-3.5 w-3.5" />
+                                                Phone
+                                            </FieldLabel>
+                                            <BadgeOptional variant="warning-outline" size="sm">
+                                                Optional
+                                            </BadgeOptional>
+                                        </div>
+                                        <PhoneInput
+                                            id="phone"
+                                            value={data.phone}
+                                            onChange={(value) => setData("phone", value)}
+                                            defaultCountryCode={branding?.defaultCountryCode}
+                                        />
+                                    </Field>
+
+                                    <div className="space-y-2 md:col-span-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Label htmlFor="current_address" className="flex items-center gap-1.5">
+                                                    <MapPin className="h-3.5 w-3.5" />
+                                                    Current Address
+                                                </Label>
+                                                <Tooltip>
+                                                    <TooltipTrigger className="inline-flex items-center">
+                                                        <HelpCircleIcon className="text-muted-foreground size-3.5" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        Where the student currently resides. May differ from the permanent home address.
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setData("current_address", data.permanent_address)}
+                                                disabled={!data.permanent_address}
+                                                className="h-auto px-2 py-1 text-xs"
+                                            >
+                                                <Copy className="mr-1 h-3 w-3" />
+                                                Same as Permanent
+                                            </Button>
+                                        </div>
+                                        <Textarea
+                                            id="current_address"
+                                            value={data.current_address}
+                                            onChange={(event) => setData("current_address", event.target.value)}
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="permanent_address" className="flex items-center gap-1.5">
+                                                <MapPin className="h-3.5 w-3.5" />
+                                                Permanent Address
+                                            </Label>
+                                            <BadgeOptional variant="warning-outline" size="sm">
+                                                Optional
+                                            </BadgeOptional>
+                                        </div>
+                                        <Textarea
+                                            id="permanent_address"
+                                            value={data.permanent_address}
+                                            onChange={(event) => setData("permanent_address", event.target.value)}
+                                            rows={3}
+                                        />
+                                    </div>
+
+                                    {!isSHS ? (
+                                        <Field>
+                                            <div className="flex items-center gap-2">
+                                                <FieldLabel htmlFor="course_id">
+                                                    <BookOpen className="mr-1 inline h-3.5 w-3.5" />
+                                                    Course <span className="text-destructive">*</span>
+                                                </FieldLabel>
+                                                <Tooltip>
+                                                    <TooltipTrigger className="inline-flex items-center">
+                                                        <HelpCircleIcon className="text-muted-foreground size-3.5" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        The degree program the student is enrolled in. Courses are grouped by department.
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </div>
+                                            <Select items={flatCourses} value={data.course_id} onValueChange={setSelectData("course_id")}>
+                                                <SelectTrigger id="course_id" className="w-full">
+                                                    <SelectValue placeholder="Select course" />
+                                                </SelectTrigger>
+                                                <SelectContent alignItemWithTrigger={false} className="w-(--anchor-width) max-w-2xl min-w-md">
+                                                    {options.courses.map((group, groupIndex) => (
+                                                        <SelectGroup key={group.label}>
+                                                            <SelectLabel>{group.label}</SelectLabel>
+                                                            {group.items.map((course) => (
+                                                                <SelectItem
+                                                                    key={course.value}
+                                                                    value={course.value.toString()}
+                                                                    disabled={course.is_active === false}
+                                                                >
+                                                                    {course.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                            {groupIndex < options.courses.length - 1 && <SelectSeparator />}
+                                                        </SelectGroup>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {fieldError("course_id")}
+                                        </Field>
+                                    ) : (
+                                        <Field>
+                                            <div className="flex items-center gap-2">
+                                                <FieldLabel htmlFor="shs_strand_id">
+                                                    <BookOpen className="mr-1 inline h-3.5 w-3.5" />
+                                                    SHS Strand <span className="text-destructive">*</span>
+                                                </FieldLabel>
+                                                <Tooltip>
+                                                    <TooltipTrigger className="inline-flex items-center">
+                                                        <HelpCircleIcon className="text-muted-foreground size-3.5" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        The senior high school track and strand the student is enrolled in.
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </div>
+                                            <Select value={data.shs_strand_id} onValueChange={setSelectData("shs_strand_id")}>
+                                                <SelectTrigger id="shs_strand_id">
+                                                    <SelectValue placeholder="Select strand" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {options.shs_strands.map((strand) => (
+                                                        <SelectItem key={strand.value} value={strand.value.toString()}>
+                                                            {strand.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {fieldError("shs_strand_id")}
+                                        </Field>
+                                    )}
+
+                                    <Field>
+                                        <FieldLabel htmlFor="academic_year">
+                                            {isSHS ? "Grade Level" : "Year Level"} <span className="text-destructive">*</span>
+                                        </FieldLabel>
+                                        <Select value={data.academic_year} onValueChange={setSelectData("academic_year")}>
+                                            <SelectTrigger id="academic_year">
+                                                <SelectValue placeholder="Select level" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {yearLevelOptions.map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {fieldError("academic_year")}
+                                    </Field>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("family")}>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="flex items-center gap-2 text-lg">
+                                            <School className="text-primary h-5 w-5" />
+                                            Family, Personal, and Education
+                                        </CardTitle>
+                                        <ChevronDown
+                                            className={cn(
+                                                "text-muted-foreground h-5 w-5 transition-transform duration-200",
+                                                collapsedSections.family && "-rotate-90",
+                                            )}
+                                        />
+                                    </div>
+                                </CardHeader>
+                                {!collapsedSections.family && (
+                                    <CardContent className="grid gap-5 md:grid-cols-2">
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="fathers_name">Father's Name</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteInput
+                                                id="fathers_name"
+                                                value={data.fathers_name}
+                                                onChange={(value: string) => setData("fathers_name", value)}
+                                                fieldName="fathers_name"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="mothers_name">Mother's Name</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteInput
+                                                id="mothers_name"
+                                                value={data.mothers_name}
+                                                onChange={(value: string) => setData("mothers_name", value)}
+                                                fieldName="mothers_name"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="birthplace">Birthplace</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteFieldInput
+                                                id="birthplace"
+                                                value={data.birthplace}
+                                                onChange={(value: string) => setData("birthplace", value)}
+                                                fieldName="birthplace"
+                                                placeholder="Type or pick a birthplace"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="civil_status">Civil Status</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Select value={data.civil_status} onValueChange={setSelectData("civil_status")}>
+                                                <SelectTrigger id="civil_status">
+                                                    <SelectValue placeholder="Select status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {CIVIL_STATUS_OPTIONS.map((status) => (
+                                                        <SelectItem key={status.value} value={status.value}>
+                                                            {status.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="nationality">Nationality</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Select
+                                                value={data.nationality}
+                                                onValueChange={(value) => {
+                                                    if (value === null) {
+                                                        return;
+                                                    }
+
+                                                    setData("nationality", value);
+                                                    setData("citizenship", value);
+                                                }}
+                                            >
+                                                <SelectTrigger id="nationality">
+                                                    <SelectValue placeholder="Select nationality" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {NATIONALITY_OPTIONS.map((nationality) => (
+                                                        <SelectItem key={nationality.value} value={nationality.value}>
+                                                            {nationality.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="citizenship">Citizenship</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Input
+                                                id="citizenship"
+                                                value={data.citizenship}
+                                                onChange={(event) => setData("citizenship", event.target.value)}
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="religion">Religion</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteFieldInput
+                                                id="religion"
+                                                value={data.religion}
+                                                onChange={(value: string) => setData("religion", value)}
+                                                fieldName="religion"
+                                                placeholder="Type or pick a religion"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="height">Height</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Input
+                                                id="height"
+                                                value={data.height}
+                                                onChange={(event) => setData("height", event.target.value)}
+                                                placeholder="e.g. 170"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="weight">Weight</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Input
+                                                id="weight"
+                                                value={data.weight}
+                                                onChange={(event) => setData("weight", event.target.value)}
+                                                placeholder="e.g. 60"
+                                            />
+                                        </Field>
+
+                                        <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-3">
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="elementary_school">Elementary School</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="elementary_school"
+                                                    value={data.elementary_school}
+                                                    onChange={(value: string) => setData("elementary_school", value)}
+                                                    fieldName="elementary_school"
+                                                    placeholder="Type or pick a school"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="elementary_graduate_year">Elementary Year</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="elementary_graduate_year"
+                                                    type="number"
+                                                    min={1900}
+                                                    max={new Date().getFullYear()}
+                                                    value={data.elementary_graduate_year}
+                                                    onChange={(event) => setData("elementary_graduate_year", event.target.value)}
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="elementary_school_address">Elementary Address</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="elementary_school_address"
+                                                    value={data.elementary_school_address}
+                                                    onChange={(value: string) => setData("elementary_school_address", value)}
+                                                    fieldName="elementary_school_address"
+                                                    placeholder="Type or pick a school address"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="junior_high_school_name">Junior High School</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="junior_high_school_name"
+                                                    value={data.junior_high_school_name}
+                                                    onChange={(value: string) => setData("junior_high_school_name", value)}
+                                                    fieldName="junior_high_school_name"
+                                                    placeholder="Type or pick a school"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="junior_high_graduation_year">Junior High Year</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="junior_high_graduation_year"
+                                                    type="number"
+                                                    min={1900}
+                                                    max={new Date().getFullYear()}
+                                                    value={data.junior_high_graduation_year}
+                                                    onChange={(event) => setData("junior_high_graduation_year", event.target.value)}
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="junior_high_school_address">Junior High Address</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="junior_high_school_address"
+                                                    value={data.junior_high_school_address}
+                                                    onChange={(value: string) => setData("junior_high_school_address", value)}
+                                                    fieldName="junior_high_school_address"
+                                                    placeholder="Type or pick a school address"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="senior_high_name">Senior High School</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="senior_high_name"
+                                                    value={data.senior_high_name}
+                                                    onChange={(value: string) => setData("senior_high_name", value)}
+                                                    fieldName="senior_high_name"
+                                                    placeholder="Type or pick a school"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="senior_high_graduate_year">Senior High Year</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="senior_high_graduate_year"
+                                                    type="number"
+                                                    min={1900}
+                                                    max={new Date().getFullYear()}
+                                                    value={data.senior_high_graduate_year}
+                                                    onChange={(event) => setData("senior_high_graduate_year", event.target.value)}
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="senior_high_address">Senior High Address</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="senior_high_address"
+                                                    value={data.senior_high_address}
+                                                    onChange={(value: string) => setData("senior_high_address", value)}
+                                                    fieldName="senior_high_address"
+                                                    placeholder="Type or pick a school address"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="college_school">College School (if transferee)</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="college_school"
+                                                    value={data.college_school}
+                                                    onChange={(value: string) => setData("college_school", value)}
+                                                    fieldName="college_school"
+                                                    placeholder="Type or pick a school"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="college_course">College Course</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="college_course"
+                                                    value={data.college_course}
+                                                    onChange={(value: string) => setData("college_course", value)}
+                                                    fieldName="college_course"
+                                                    placeholder="Type or pick a course"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="college_year_graduated">College Year Graduated</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="college_year_graduated"
+                                                    type="number"
+                                                    min={1900}
+                                                    max={new Date().getFullYear()}
+                                                    value={data.college_year_graduated}
+                                                    onChange={(event) => setData("college_year_graduated", event.target.value)}
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="vocational_school">Vocational School</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="vocational_school"
+                                                    value={data.vocational_school}
+                                                    onChange={(value: string) => setData("vocational_school", value)}
+                                                    fieldName="vocational_school"
+                                                    placeholder="Type or pick a school"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="vocational_course">Vocational Course</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteFieldInput
+                                                    id="vocational_course"
+                                                    value={data.vocational_course}
+                                                    onChange={(value: string) => setData("vocational_course", value)}
+                                                    fieldName="vocational_course"
+                                                    placeholder="Type or pick a course"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="vocational_year_graduated">Vocational Year Graduated</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="vocational_year_graduated"
+                                                    type="number"
+                                                    min={1900}
+                                                    max={new Date().getFullYear()}
+                                                    value={data.vocational_year_graduated}
+                                                    onChange={(event) => setData("vocational_year_graduated", event.target.value)}
+                                                />
+                                            </Field>
+                                        </div>
+                                    </CardContent>
+                                )}
+                            </Card>
+
+                            <Card>
+                                <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("reporting")}>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="flex items-center gap-2 text-lg">
+                                            <Banknote className="text-primary h-5 w-5" />
+                                            Reporting Details
+                                        </CardTitle>
+                                        <ChevronDown
+                                            className={cn(
+                                                "text-muted-foreground h-5 w-5 transition-transform duration-200",
+                                                collapsedSections.reporting && "-rotate-90",
+                                            )}
+                                        />
+                                    </div>
+                                </CardHeader>
+                                {!collapsedSections.reporting && (
+                                    <CardContent className="grid gap-5 md:grid-cols-2">
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="region_of_origin">Region of Origin</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Select value={data.region_of_origin} onValueChange={setSelectData("region_of_origin")}>
+                                                <SelectTrigger id="region_of_origin">
+                                                    <SelectValue placeholder="Select region" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {options.regions.map((region) => (
+                                                        <SelectItem key={region.value} value={region.value.toString()}>
+                                                            {region.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="ethnicity">Ethnicity</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteFieldInput
+                                                id="ethnicity"
+                                                value={data.ethnicity}
+                                                onChange={(value: string) => setData("ethnicity", value)}
+                                                fieldName="ethnicity"
+                                                placeholder="Type or pick an ethnicity"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="province_of_origin">Province of Origin</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteFieldInput
+                                                id="province_of_origin"
+                                                value={data.province_of_origin}
+                                                onChange={(value: string) => setData("province_of_origin", value)}
+                                                fieldName="province_of_origin"
+                                                placeholder="Type or pick a province"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="city_of_origin">City of Origin</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteFieldInput
+                                                id="city_of_origin"
+                                                value={data.city_of_origin}
+                                                onChange={(value: string) => setData("city_of_origin", value)}
+                                                fieldName="city_of_origin"
+                                                placeholder="Type or pick a city"
+                                            />
+                                        </Field>
+                                        <div className="flex items-center gap-3 rounded-md border p-3 md:col-span-2">
+                                            <Checkbox
+                                                id="is_indigenous_person"
+                                                checked={data.is_indigenous_person}
+                                                onCheckedChange={(checked) => setData("is_indigenous_person", checked === true)}
+                                            />
+                                            <Label htmlFor="is_indigenous_person" className="cursor-pointer">
+                                                Indigenous Person
+                                            </Label>
+                                        </div>
+                                        {data.is_indigenous_person && (
+                                            <div className="md:col-span-2">
+                                                <Field>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <FieldLabel htmlFor="indigenous_group">Indigenous Group</FieldLabel>
+                                                        <BadgeOptional variant="warning-outline" size="sm">
+                                                            Optional
+                                                        </BadgeOptional>
+                                                    </div>
+                                                    <Input
+                                                        id="indigenous_group"
+                                                        value={data.indigenous_group}
+                                                        onChange={(event) => setData("indigenous_group", event.target.value)}
+                                                    />
+                                                </Field>
+                                            </div>
+                                        )}
+                                        <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
+                                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                                <Checkbox
+                                                    id="is_pwd"
+                                                    checked={data.is_pwd}
+                                                    onCheckedChange={(checked) => setData("is_pwd", checked === true)}
+                                                />
+                                                <Label htmlFor="is_pwd" className="cursor-pointer">
+                                                    PWD
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                                <Checkbox
+                                                    id="is_solo_parent"
+                                                    checked={data.is_solo_parent}
+                                                    onCheckedChange={(checked) => setData("is_solo_parent", checked === true)}
+                                                />
+                                                <Label htmlFor="is_solo_parent" className="cursor-pointer">
+                                                    Solo Parent
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                                <Checkbox
+                                                    id="is_senior_citizen"
+                                                    checked={data.is_senior_citizen}
+                                                    onCheckedChange={(checked) => setData("is_senior_citizen", checked === true)}
+                                                />
+                                                <Label htmlFor="is_senior_citizen" className="cursor-pointer">
+                                                    Senior Citizen
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                                <Checkbox
+                                                    id="is_magna_carta"
+                                                    checked={data.is_magna_carta}
+                                                    onCheckedChange={(checked) => setData("is_magna_carta", checked === true)}
+                                                />
+                                                <Label htmlFor="is_magna_carta" className="cursor-pointer">
+                                                    Magna Carta
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                                <Checkbox
+                                                    id="is_underprivileged"
+                                                    checked={data.is_underprivileged}
+                                                    onCheckedChange={(checked) => setData("is_underprivileged", checked === true)}
+                                                />
+                                                <Label htmlFor="is_underprivileged" className="cursor-pointer">
+                                                    Underprivileged
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                                <Checkbox
+                                                    id="is_first_generation"
+                                                    checked={data.is_first_generation}
+                                                    onCheckedChange={(checked) => setData("is_first_generation", checked === true)}
+                                                />
+                                                <Label htmlFor="is_first_generation" className="cursor-pointer">
+                                                    First Generation
+                                                </Label>
+                                            </div>
+                                        </div>
+                                        {data.is_pwd && (
+                                            <div className="md:col-span-2">
+                                                <Field>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <FieldLabel htmlFor="pwd_type">PWD Type</FieldLabel>
+                                                        <BadgeOptional variant="warning-outline" size="sm">
+                                                            Optional
+                                                        </BadgeOptional>
+                                                    </div>
+                                                    <Input
+                                                        id="pwd_type"
+                                                        value={data.pwd_type}
+                                                        onChange={(event) => setData("pwd_type", event.target.value)}
+                                                    />
+                                                </Field>
+                                            </div>
+                                        )}
+                                        <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-2">
+                                            <div className="space-y-1 md:col-span-2">
+                                                <h3 className="font-medium">Family Income</h3>
+                                                <p className="text-muted-foreground text-sm">
+                                                    Set income basis first, then choose one shared family range or separate father and mother ranges.
+                                                </p>
+                                            </div>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="income_bracket_mode">Income Basis</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Select value={data.income_bracket_mode} onValueChange={setSelectData("income_bracket_mode")}>
+                                                    <SelectTrigger id="income_bracket_mode">
+                                                        <SelectValue placeholder="Select income basis" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {options.income_modes.map((mode) => (
+                                                            <SelectItem key={mode.value} value={mode.value}>
+                                                                {mode.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </Field>
+                                            <div className="flex items-center gap-2 rounded-md border p-3">
+                                                <Checkbox
+                                                    id="use_same_parent_income"
+                                                    checked={data.use_same_parent_income}
+                                                    onCheckedChange={(checked) => setData("use_same_parent_income", checked === true)}
+                                                />
+                                                <Label htmlFor="use_same_parent_income" className="cursor-pointer">
+                                                    Father and mother have the same income bracket
+                                                </Label>
+                                            </div>
+                                            {data.use_same_parent_income ? (
+                                                <div className="md:col-span-2">
+                                                    <Field>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <FieldLabel htmlFor="family_income_bracket">Family Income Bracket</FieldLabel>
+                                                            <BadgeOptional variant="warning-outline" size="sm">
+                                                                Optional
+                                                            </BadgeOptional>
+                                                        </div>
+                                                        <Select
+                                                            value={data.family_income_bracket}
+                                                            onValueChange={setSelectData("family_income_bracket")}
+                                                        >
+                                                            <SelectTrigger id="family_income_bracket">
+                                                                <SelectValue placeholder="Select income range..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {activeIncomeBrackets.map((bracket) => (
+                                                                    <SelectItem key={bracket.value} value={bracket.value}>
+                                                                        {bracket.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </Field>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <Field>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <FieldLabel htmlFor="father_income_bracket">Father Income Bracket</FieldLabel>
+                                                            <BadgeOptional variant="warning-outline" size="sm">
+                                                                Optional
+                                                            </BadgeOptional>
+                                                        </div>
+                                                        <Select
+                                                            value={data.father_income_bracket}
+                                                            onValueChange={setSelectData("father_income_bracket")}
+                                                        >
+                                                            <SelectTrigger id="father_income_bracket">
+                                                                <SelectValue placeholder="Select income range..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {activeIncomeBrackets.map((bracket) => (
+                                                                    <SelectItem key={bracket.value} value={bracket.value}>
+                                                                        {bracket.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </Field>
+                                                    <Field>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <FieldLabel htmlFor="mother_income_bracket">Mother Income Bracket</FieldLabel>
+                                                            <BadgeOptional variant="warning-outline" size="sm">
+                                                                Optional
+                                                            </BadgeOptional>
+                                                        </div>
+                                                        <Select
+                                                            value={data.mother_income_bracket}
+                                                            onValueChange={setSelectData("mother_income_bracket")}
+                                                        >
+                                                            <SelectTrigger id="mother_income_bracket">
+                                                                <SelectValue placeholder="Select income range..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {activeIncomeBrackets.map((bracket) => (
+                                                                    <SelectItem key={bracket.value} value={bracket.value}>
+                                                                        {bracket.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </Field>
+                                                </>
+                                            )}
+                                        </div>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="scholarship_type">Scholarship</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Select value={data.scholarship_type} onValueChange={setSelectData("scholarship_type")}>
+                                                <SelectTrigger id="scholarship_type">
+                                                    <SelectValue placeholder="Select scholarship" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {options.scholarship_types.map((type) => (
+                                                        <SelectItem key={type.value} value={type.value.toString()}>
+                                                            {type.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                        {data.scholarship_type !== "none" && (
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="scholarship_details">Scholarship Details</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Textarea
+                                                    id="scholarship_details"
+                                                    value={data.scholarship_details}
+                                                    onChange={(event) => setData("scholarship_details", event.target.value)}
+                                                    rows={2}
+                                                />
+                                            </Field>
+                                        )}
+
+                                        {isGraduated && (
+                                            <div className="grid gap-5 border-t pt-5 md:col-span-2 md:grid-cols-2">
+                                                <Field>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <FieldLabel htmlFor="employment_status">
+                                                            <Briefcase className="mr-1 inline h-3.5 w-3.5" />
+                                                            Employment Status
+                                                        </FieldLabel>
+                                                        <BadgeOptional variant="warning-outline" size="sm">
+                                                            Optional
+                                                        </BadgeOptional>
+                                                    </div>
+                                                    <Select value={data.employment_status} onValueChange={setSelectData("employment_status")}>
+                                                        <SelectTrigger id="employment_status">
+                                                            <SelectValue placeholder="Select status" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {options.employment_statuses.map((status) => (
+                                                                <SelectItem key={status.value} value={status.value.toString()}>
+                                                                    {status.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </Field>
+                                                {showEmployment && (
+                                                    <>
+                                                        <Field>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <FieldLabel htmlFor="employer_name">Employer</FieldLabel>
+                                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                                    Optional
+                                                                </BadgeOptional>
+                                                            </div>
+                                                            <AutocompleteInput
+                                                                id="employer_name"
+                                                                value={data.employer_name}
+                                                                onChange={(value: string) => setData("employer_name", value)}
+                                                                fieldName="employer_name"
+                                                            />
+                                                        </Field>
+                                                        <Field>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <FieldLabel htmlFor="job_position">Position</FieldLabel>
+                                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                                    Optional
+                                                                </BadgeOptional>
+                                                            </div>
+                                                            <AutocompleteInput
+                                                                id="job_position"
+                                                                value={data.job_position}
+                                                                onChange={(value: string) => setData("job_position", value)}
+                                                                fieldName="job_position"
+                                                            />
+                                                        </Field>
+                                                        <Field>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <FieldLabel htmlFor="employment_date">Employment Date</FieldLabel>
+                                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                                    Optional
+                                                                </BadgeOptional>
+                                                            </div>
+                                                            <Input
+                                                                id="employment_date"
+                                                                type="date"
+                                                                value={data.employment_date}
+                                                                onChange={(event) => setData("employment_date", event.target.value)}
+                                                            />
+                                                        </Field>
+                                                        <div className="flex items-center gap-3 rounded-md border p-3">
+                                                            <Checkbox
+                                                                id="employed_by_institution"
+                                                                checked={data.employed_by_institution}
+                                                                onCheckedChange={(checked) => setData("employed_by_institution", checked === true)}
+                                                            />
+                                                            <Label htmlFor="employed_by_institution" className="cursor-pointer">
+                                                                Employed by this institution
+                                                            </Label>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {isWithdrawn && (
+                                            <div className="grid gap-5 border-t pt-5 md:col-span-2 md:grid-cols-2">
+                                                <Field>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <FieldLabel htmlFor="attrition_category">Attrition Category</FieldLabel>
+                                                        <BadgeOptional variant="warning-outline" size="sm">
+                                                            Optional
+                                                        </BadgeOptional>
+                                                    </div>
+                                                    <Select value={data.attrition_category} onValueChange={setSelectData("attrition_category")}>
+                                                        <SelectTrigger id="attrition_category">
+                                                            <SelectValue placeholder="Select category" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {options.attrition_categories.map((category) => (
+                                                                <SelectItem key={category.value} value={category.value.toString()}>
+                                                                    {category.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </Field>
+                                                <Field>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <FieldLabel htmlFor="withdrawal_date">Withdrawal Date</FieldLabel>
+                                                        <BadgeOptional variant="warning-outline" size="sm">
+                                                            Optional
+                                                        </BadgeOptional>
+                                                    </div>
+                                                    <Input
+                                                        id="withdrawal_date"
+                                                        type="date"
+                                                        value={data.withdrawal_date}
+                                                        onChange={(event) => setData("withdrawal_date", event.target.value)}
+                                                    />
+                                                </Field>
+                                                <Field>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <FieldLabel htmlFor="dropout_date">Dropout Date</FieldLabel>
+                                                        <BadgeOptional variant="warning-outline" size="sm">
+                                                            Optional
+                                                        </BadgeOptional>
+                                                    </div>
+                                                    <Input
+                                                        id="dropout_date"
+                                                        type="date"
+                                                        value={data.dropout_date}
+                                                        onChange={(event) => setData("dropout_date", event.target.value)}
+                                                    />
+                                                </Field>
+                                                <div className="md:col-span-2">
+                                                    <Field>
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <FieldLabel htmlFor="withdrawal_reason">Withdrawal Reason</FieldLabel>
+                                                            <BadgeOptional variant="warning-outline" size="sm">
+                                                                Optional
+                                                            </BadgeOptional>
+                                                        </div>
+                                                        <Textarea
+                                                            id="withdrawal_reason"
+                                                            value={data.withdrawal_reason}
+                                                            onChange={(event) => setData("withdrawal_reason", event.target.value)}
+                                                            rows={3}
+                                                        />
+                                                    </Field>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="md:col-span-2">
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="remarks">Remarks</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Textarea
+                                                    id="remarks"
+                                                    value={data.remarks}
+                                                    onChange={(event) => setData("remarks", event.target.value)}
+                                                    rows={3}
+                                                />
+                                            </Field>
+                                        </div>
+                                    </CardContent>
+                                )}
+                            </Card>
+                        </div>
+
+                        <div className="space-y-6">
+                            <Card>
+                                <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("contact")}>
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="flex items-center gap-2 text-lg">
+                                            <Phone className="text-primary h-5 w-5" />
+                                            Contact and Address
+                                        </CardTitle>
+                                        <ChevronDown
+                                            className={cn(
+                                                "text-muted-foreground h-5 w-5 transition-transform duration-200",
+                                                collapsedSections.contact && "-rotate-90",
+                                            )}
+                                        />
+                                    </div>
+                                </CardHeader>
+                                {!collapsedSections.contact && (
+                                    <CardContent className="space-y-5">
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="personal_contact">Student Contact</FieldLabel>
+                                                <BadgeOptional variant="info-outline" size="sm">
+                                                    Auto
+                                                </BadgeOptional>
+                                            </div>
+                                            <Input
+                                                id="personal_contact"
+                                                value={data.personal_contact}
+                                                readOnly
+                                                className="bg-muted text-muted-foreground"
+                                            />
+                                            <FieldDescription>Auto-filled from Phone above</FieldDescription>
+                                        </Field>
+                                        <div className="grid gap-3 md:grid-cols-2">
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="facebook_contact">Facebook</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="facebook_contact"
+                                                    value={data.facebook_contact}
+                                                    onChange={(event) => setData("facebook_contact", event.target.value)}
+                                                    placeholder="facebook.com/username"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="instagram">Instagram</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="instagram"
+                                                    value={data.instagram}
+                                                    onChange={(event) => setData("instagram", event.target.value)}
+                                                    placeholder="@username"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="twitter">Twitter/X</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="twitter"
+                                                    value={data.twitter}
+                                                    onChange={(event) => setData("twitter", event.target.value)}
+                                                    placeholder="@username"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="linkedin">LinkedIn</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <Input
+                                                    id="linkedin"
+                                                    value={data.linkedin}
+                                                    onChange={(event) => setData("linkedin", event.target.value)}
+                                                    placeholder="linkedin.com/in/username"
+                                                />
+                                            </Field>
+                                        </div>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="emergency_contact_name">Guardian Name</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <AutocompleteInput
+                                                id="emergency_contact_name"
+                                                value={data.emergency_contact_name}
+                                                onChange={(value: string) => setData("emergency_contact_name", value)}
+                                                fieldName="emergency_contact_name"
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="emergency_contact_phone">
+                                                    <Phone className="mr-1 inline h-3.5 w-3.5" />
+                                                    Guardian Phone
+                                                </FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <PhoneInput
+                                                id="emergency_contact_phone"
+                                                value={data.emergency_contact_phone}
+                                                onChange={(value) => setData("emergency_contact_phone", value)}
+                                                defaultCountryCode={branding?.defaultCountryCode}
+                                            />
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="emergency_contact_relationship">Guardian Relationship</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Select
+                                                value={data.emergency_contact_relationship}
+                                                onValueChange={setSelectData("emergency_contact_relationship")}
+                                            >
+                                                <SelectTrigger id="emergency_contact_relationship">
+                                                    <SelectValue placeholder="Select relationship" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {RELATIONSHIP_OPTIONS.map((option) => (
+                                                        <SelectItem key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FieldDescription>Also used as the applicant guardian relationship.</FieldDescription>
+                                        </Field>
+                                        <Field>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <FieldLabel htmlFor="emergency_contact_address">Guardian Address</FieldLabel>
+                                                <BadgeOptional variant="warning-outline" size="sm">
+                                                    Optional
+                                                </BadgeOptional>
+                                            </div>
+                                            <Textarea
+                                                id="emergency_contact_address"
+                                                value={data.emergency_contact_address}
+                                                onChange={(event) => setData("emergency_contact_address", event.target.value)}
+                                                rows={2}
+                                            />
+                                        </Field>
+                                        <div className="grid gap-3 border-t pt-4 md:grid-cols-2">
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="father_occupation">Father Occupation</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteInput
+                                                    id="father_occupation"
+                                                    value={data.father_occupation}
+                                                    onChange={(value: string) => setData("father_occupation", value)}
+                                                    fieldName="father_occupation"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="father_contact">Father Contact</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <PhoneInput
+                                                    id="father_contact"
+                                                    value={data.father_contact}
+                                                    onChange={(value) => setData("father_contact", value)}
+                                                    defaultCountryCode={branding?.defaultCountryCode}
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="father_email">Father Email</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <InputGroup>
+                                                    <InputGroupInput
+                                                        id="father_email"
+                                                        type="email"
+                                                        placeholder="father@example.com"
+                                                        value={data.father_email}
+                                                        onChange={(event) => setData("father_email", event.target.value)}
+                                                    />
+                                                    <InputGroupAddon align="inline-end">
+                                                        <Mail className="h-4 w-4" />
+                                                    </InputGroupAddon>
+                                                </InputGroup>
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="mother_occupation">Mother Occupation</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <AutocompleteInput
+                                                    id="mother_occupation"
+                                                    value={data.mother_occupation}
+                                                    onChange={(value: string) => setData("mother_occupation", value)}
+                                                    fieldName="mother_occupation"
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="mother_contact">Mother Contact</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <PhoneInput
+                                                    id="mother_contact"
+                                                    value={data.mother_contact}
+                                                    onChange={(value) => setData("mother_contact", value)}
+                                                    defaultCountryCode={branding?.defaultCountryCode}
+                                                />
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="mother_email">Mother Email</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <InputGroup>
+                                                    <InputGroupInput
+                                                        id="mother_email"
+                                                        type="email"
+                                                        placeholder="mother@example.com"
+                                                        value={data.mother_email}
+                                                        onChange={(event) => setData("mother_email", event.target.value)}
+                                                    />
+                                                    <InputGroupAddon align="inline-end">
+                                                        <Mail className="h-4 w-4" />
+                                                    </InputGroupAddon>
+                                                </InputGroup>
+                                            </Field>
+                                            <Field>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <FieldLabel htmlFor="guardian_email">Guardian Email</FieldLabel>
+                                                    <BadgeOptional variant="warning-outline" size="sm">
+                                                        Optional
+                                                    </BadgeOptional>
+                                                </div>
+                                                <InputGroup>
+                                                    <InputGroupInput
+                                                        id="guardian_email"
+                                                        type="email"
+                                                        placeholder="guardian@example.com"
+                                                        value={data.guardian_email}
+                                                        onChange={(event) => setData("guardian_email", event.target.value)}
+                                                    />
+                                                    <InputGroupAddon align="inline-end">
+                                                        <Mail className="h-4 w-4" />
+                                                    </InputGroupAddon>
+                                                </InputGroup>
+                                            </Field>
+                                            <div className="md:col-span-2">
+                                                <Field>
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <FieldLabel htmlFor="family_address">Family Address</FieldLabel>
+                                                        <BadgeOptional variant="warning-outline" size="sm">
+                                                            Optional
+                                                        </BadgeOptional>
+                                                    </div>
+                                                    <Textarea
+                                                        id="family_address"
+                                                        value={data.family_address}
+                                                        onChange={(event) => setData("family_address", event.target.value)}
+                                                        rows={2}
+                                                    />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                )}
+                            </Card>
+                        </div>
+
+                        {/* Right sidebar: Picture & Signature */}
+                        <div className="space-y-6">
+                            {flags.studentAvatarUpload && (
+                                <Card className="overflow-hidden">
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base">Profile Picture</CardTitle>
+                                        <p className="text-muted-foreground text-xs">Upload 1x1 photo</p>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col items-center gap-4">
+                                        <input type="file" ref={pictureInputRef} className="hidden" accept="image/*" onChange={handlePictureChange} />
+                                        <div
+                                            onDragOver={handlePictureDragOver}
+                                            onDragLeave={handlePictureDragLeave}
+                                            onDrop={handlePictureDrop}
+                                            onClick={() => pictureInputRef.current?.click()}
+                                            className={cn(
+                                                "group relative flex h-36 w-36 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-full border-2 border-dashed transition-all",
+                                                isDragOverPicture
+                                                    ? "border-primary bg-primary/10"
+                                                    : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50",
+                                            )}
+                                        >
+                                            {profilePreview ? (
+                                                <>
+                                                    <img src={profilePreview} alt="Profile preview" className="h-full w-full object-cover" />
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                                                        <Camera className="h-6 w-6 text-white" />
+                                                        <span className="text-[10px] font-medium text-white">Change</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-muted-foreground flex flex-col items-center gap-2">
+                                                    {isDragOverPicture ? (
+                                                        <ImageUp className="text-primary h-8 w-8" />
+                                                    ) : (
+                                                        <Camera className="h-8 w-8" />
+                                                    )}
+                                                    <span className="text-xs font-medium">{isDragOverPicture ? "Drop here" : "Click or drag"}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {profilePreview && (
+                                            <div className="flex gap-2">
+                                                <Button type="button" variant="outline" size="sm" onClick={() => pictureInputRef.current?.click()}>
+                                                    <Camera className="mr-1 h-3.5 w-3.5" />
+                                                    Change
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => downloadPreview(profilePreview, getDownloadFilename("photo"))}
+                                                >
+                                                    <Download className="mr-1 h-3.5 w-3.5" />
+                                                    Download
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={clearPicture}
+                                                    className="text-destructive text-xs"
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {flags.studentSignaturePad && (
+                                <Card className="overflow-hidden">
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base">Signature</CardTitle>
+                                        <p className="text-muted-foreground text-xs">Draw or upload e-signature</p>
+                                    </CardHeader>
+                                    <CardContent className="flex flex-col items-center gap-4">
+                                        {signaturePreview ? (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="bg-muted/20 flex h-20 w-full min-w-[180px] items-center justify-center rounded-lg border p-2">
+                                                    <img
+                                                        src={signaturePreview}
+                                                        alt="Signature preview"
+                                                        className="h-full max-w-full object-contain dark:invert"
+                                                    />
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => setIsSignatureDialogOpen(true)}>
+                                                        <PenLine className="mr-1 h-3.5 w-3.5" />
+                                                        Change
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => downloadPreview(signaturePreview!, getDownloadFilename("signature"))}
+                                                    >
+                                                        <Download className="mr-1 h-3.5 w-3.5" />
+                                                        Download
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={clearSignature}
+                                                        className="text-destructive text-xs"
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="bg-muted/30 border-muted-foreground/25 flex h-20 w-full max-w-[220px] items-center justify-center rounded-lg border-2 border-dashed">
+                                                    <PenLine className="text-muted-foreground/40 h-8 w-8" />
+                                                </div>
+                                                <Button type="button" variant="outline" size="sm" onClick={() => setIsSignatureDialogOpen(true)}>
+                                                    <PenLine className="mr-1 h-3.5 w-3.5" />
+                                                    Add Signature
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+                            <CreateSignatureDialog
+                                open={isSignatureDialogOpen}
+                                onOpenChange={setIsSignatureDialogOpen}
+                                onSave={handleSignatureSave}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Sticky bottom bar */}
+                    <div className="bg-background/95 sticky bottom-0 z-10 -mx-4 -mb-6 border-t px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+                        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 text-sm">
+                                <span className="text-muted-foreground hidden sm:inline">
+                                    {filledRequired}/{requiredFields.length} required fields complete
+                                </span>
+                                <div className="bg-secondary h-1.5 w-24 rounded-full sm:w-32">
+                                    <div
+                                        className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                                        style={{ width: `${progressPercent}%` }}
+                                    />
+                                </div>
+                                <span className="text-xs font-medium tabular-nums">{progressPercent}%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground hidden text-xs lg:inline">Ctrl+Enter to submit</span>
+                                <div className="flex gap-1">
+                                    <Button type="button" disabled={processing} onClick={() => submitWithAction("view")}>
+                                        {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
+                                        {processing ? "Creating..." : "Submit & View"}
+                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger
+                                            render={
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    disabled={processing}
+                                                    aria-label="More create actions"
+                                                />
+                                            }
+                                        >
+                                            <ChevronDown className="h-4 w-4" />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-64">
+                                            <DropdownMenuItem onClick={() => submitWithAction("view")} className="cursor-pointer">
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                Submit and View the record
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => submitWithAction("create_another")} className="cursor-pointer">
+                                                <UserPlus className="mr-2 h-4 w-4" />
+                                                Submit and create another one
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => submitWithAction("create_enrollment")} className="cursor-pointer">
+                                                <FilePlus2 className="mr-2 h-4 w-4" />
+                                                Submit and create an enrollment
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </TooltipProvider>
         </AdminLayout>
     );
 }

@@ -1,13 +1,14 @@
 import AdminLayout from "@/components/administrators/admin-layout";
+import { AutocompleteFieldInput } from "@/components/ui/autocomplete-field-input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,7 @@ import {
     Trash2,
     User as UserIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 declare const route: (name: string, params?: unknown) => string;
@@ -43,6 +44,11 @@ interface Option {
     value: string | number;
     label: string;
     is_active?: boolean;
+}
+
+interface CourseGroup {
+    label: string;
+    items: Option[];
 }
 
 interface Student {
@@ -229,7 +235,7 @@ interface EditStudentProps {
     options: {
         types: Option[];
         statuses: Option[];
-        courses: Option[];
+        courses: CourseGroup[];
         shs_strands: Option[];
         scholarship_types: Option[];
         employment_statuses: Option[];
@@ -459,7 +465,22 @@ export default function AdministratorStudentEdit({ user, student, options, curre
         data.employment_status !== "unemployed" &&
         data.employment_status !== "further_study";
 
+    const flatCourses = useMemo<ReadonlyArray<{ value: string | number; label: string; is_active?: boolean }>>(
+        () => options.courses.flatMap((group) => group.items),
+        [options.courses],
+    );
+
     const fieldError = (field: keyof EditStudentForm) => (errors[field] ? <p className="text-destructive text-sm">{errors[field]}</p> : null);
+
+    const setSelectData =
+        <K extends keyof EditStudentForm>(field: K) =>
+        (value: string | null) => {
+            if (value === null) {
+                return;
+            }
+
+            setData(field, value as never);
+        };
 
     const yearLevelOptions = isSHS
         ? [
@@ -599,12 +620,13 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button asChild variant="outline">
-                            <Link href={route("administrators.students.show", student.id)}>
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Profile
-                            </Link>
-                        </Button>
+                        <Link
+                            href={route("administrators.students.show", student.id)}
+                            className={buttonVariants({ variant: "outline", className: "gap-2" })}
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Profile
+                        </Link>
                         <Button type="submit" disabled={processing}>
                             {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                             {processing ? "Saving..." : "Save"}
@@ -644,7 +666,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
 
                         <div className="space-y-2">
                             <Label htmlFor="status">{requiredLabel("Status")}</Label>
-                            <Select value={data.status} onValueChange={(value) => setData("status", value)}>
+                            <Select value={data.status} onValueChange={setSelectData("status")}>
                                 <SelectTrigger id="status">
                                     <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
@@ -739,7 +761,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
 
                                 <div className="space-y-2">
                                     <Label htmlFor="gender">{requiredLabel("Gender")}</Label>
-                                    <Select value={data.gender} onValueChange={(value) => setData("gender", value)}>
+                                    <Select value={data.gender} onValueChange={setSelectData("gender")}>
                                         <SelectTrigger id="gender">
                                             <SelectValue />
                                         </SelectTrigger>
@@ -794,19 +816,25 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                             <BookOpen className="h-3.5 w-3.5" />
                                             {requiredLabel("Course")}
                                         </Label>
-                                        <Select value={data.course_id} onValueChange={(value) => setData("course_id", value)}>
-                                            <SelectTrigger id="course_id">
+                                        <Select items={flatCourses} value={data.course_id} onValueChange={setSelectData("course_id")}>
+                                            <SelectTrigger id="course_id" className="w-full">
                                                 <SelectValue placeholder="Select course" />
                                             </SelectTrigger>
-                                            <SelectContent>
-                                                {options.courses.map((course) => (
-                                                    <SelectItem
-                                                        key={course.value}
-                                                        value={course.value.toString()}
-                                                        disabled={course.is_active === false && course.value.toString() !== data.course_id}
-                                                    >
-                                                        {course.label}
-                                                    </SelectItem>
+                                            <SelectContent alignItemWithTrigger={false} className="w-(--anchor-width) max-w-2xl min-w-md">
+                                                {options.courses.map((group, groupIndex) => (
+                                                    <SelectGroup key={group.label}>
+                                                        <SelectLabel>{group.label}</SelectLabel>
+                                                        {group.items.map((course) => (
+                                                            <SelectItem
+                                                                key={course.value}
+                                                                value={course.value.toString()}
+                                                                disabled={course.is_active === false && course.value.toString() !== data.course_id}
+                                                            >
+                                                                {course.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                        {groupIndex < options.courses.length - 1 && <SelectSeparator />}
+                                                    </SelectGroup>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -818,7 +846,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                             <BookOpen className="h-3.5 w-3.5" />
                                             {requiredLabel("SHS Strand")}
                                         </Label>
-                                        <Select value={data.shs_strand_id} onValueChange={(value) => setData("shs_strand_id", value)}>
+                                        <Select value={data.shs_strand_id} onValueChange={setSelectData("shs_strand_id")}>
                                             <SelectTrigger id="shs_strand_id">
                                                 <SelectValue placeholder="Select strand" />
                                             </SelectTrigger>
@@ -836,7 +864,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
 
                                 <div className="space-y-2">
                                     <Label htmlFor="academic_year">{requiredLabel(isSHS ? "Grade Level" : "Year Level")}</Label>
-                                    <Select value={data.academic_year} onValueChange={(value) => setData("academic_year", value)}>
+                                    <Select value={data.academic_year} onValueChange={setSelectData("academic_year")}>
                                         <SelectTrigger id="academic_year">
                                             <SelectValue placeholder="Select level" />
                                         </SelectTrigger>
@@ -971,11 +999,17 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="birthplace">Birthplace</Label>
-                                    <Input id="birthplace" value={data.birthplace} onChange={(event) => setData("birthplace", event.target.value)} />
+                                    <AutocompleteFieldInput
+                                        id="birthplace"
+                                        value={data.birthplace}
+                                        onChange={(value: string) => setData("birthplace", value)}
+                                        fieldName="birthplace"
+                                        placeholder="Type or pick a birthplace"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="civil_status">Civil Status</Label>
-                                    <Select value={data.civil_status} onValueChange={(value) => setData("civil_status", value)}>
+                                    <Select value={data.civil_status} onValueChange={setSelectData("civil_status")}>
                                         <SelectTrigger id="civil_status">
                                             <SelectValue placeholder="Select status" />
                                         </SelectTrigger>
@@ -993,6 +1027,10 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                     <Select
                                         value={data.nationality}
                                         onValueChange={(value) => {
+                                            if (value === null) {
+                                                return;
+                                            }
+
                                             setData("nationality", value);
                                             setData("citizenship", value);
                                         }}
@@ -1019,7 +1057,13 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="religion">Religion</Label>
-                                    <Input id="religion" value={data.religion} onChange={(event) => setData("religion", event.target.value)} />
+                                    <AutocompleteFieldInput
+                                        id="religion"
+                                        value={data.religion}
+                                        onChange={(value: string) => setData("religion", value)}
+                                        fieldName="religion"
+                                        placeholder="Type or pick a religion"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="height">Height</Label>
@@ -1033,10 +1077,12 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                 <div className="grid gap-4 border-t pt-5 md:col-span-2 md:grid-cols-3">
                                     <div className="space-y-2">
                                         <Label htmlFor="elementary_school">Elementary School</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="elementary_school"
                                             value={data.elementary_school}
-                                            onChange={(event) => setData("elementary_school", event.target.value)}
+                                            onChange={(value: string) => setData("elementary_school", value)}
+                                            fieldName="elementary_school"
+                                            placeholder="Type or pick a school"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1049,18 +1095,22 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="elementary_school_address">Elementary Address</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="elementary_school_address"
                                             value={data.elementary_school_address}
-                                            onChange={(event) => setData("elementary_school_address", event.target.value)}
+                                            onChange={(value: string) => setData("elementary_school_address", value)}
+                                            fieldName="elementary_school_address"
+                                            placeholder="Type or pick a school address"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="junior_high_school_name">Junior High School</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="junior_high_school_name"
                                             value={data.junior_high_school_name}
-                                            onChange={(event) => setData("junior_high_school_name", event.target.value)}
+                                            onChange={(value: string) => setData("junior_high_school_name", value)}
+                                            fieldName="junior_high_school_name"
+                                            placeholder="Type or pick a school"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1073,18 +1123,22 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="junior_high_school_address">Junior High Address</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="junior_high_school_address"
                                             value={data.junior_high_school_address}
-                                            onChange={(event) => setData("junior_high_school_address", event.target.value)}
+                                            onChange={(value: string) => setData("junior_high_school_address", value)}
+                                            fieldName="junior_high_school_address"
+                                            placeholder="Type or pick a school address"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="senior_high_name">Senior High School</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="senior_high_name"
                                             value={data.senior_high_name}
-                                            onChange={(event) => setData("senior_high_name", event.target.value)}
+                                            onChange={(value: string) => setData("senior_high_name", value)}
+                                            fieldName="senior_high_name"
+                                            placeholder="Type or pick a school"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1097,26 +1151,32 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="senior_high_address">Senior High Address</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="senior_high_address"
                                             value={data.senior_high_address}
-                                            onChange={(event) => setData("senior_high_address", event.target.value)}
+                                            onChange={(value: string) => setData("senior_high_address", value)}
+                                            fieldName="senior_high_address"
+                                            placeholder="Type or pick a school address"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="college_school">College School (if transferee)</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="college_school"
                                             value={data.college_school}
-                                            onChange={(event) => setData("college_school", event.target.value)}
+                                            onChange={(value: string) => setData("college_school", value)}
+                                            fieldName="college_school"
+                                            placeholder="Type or pick a school"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="college_course">College Course</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="college_course"
                                             value={data.college_course}
-                                            onChange={(event) => setData("college_course", event.target.value)}
+                                            onChange={(value: string) => setData("college_course", value)}
+                                            fieldName="college_course"
+                                            placeholder="Type or pick a course"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1129,18 +1189,22 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="vocational_school">Vocational School</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="vocational_school"
                                             value={data.vocational_school}
-                                            onChange={(event) => setData("vocational_school", event.target.value)}
+                                            onChange={(value: string) => setData("vocational_school", value)}
+                                            fieldName="vocational_school"
+                                            placeholder="Type or pick a school"
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="vocational_course">Vocational Course</Label>
-                                        <Input
+                                        <AutocompleteFieldInput
                                             id="vocational_course"
                                             value={data.vocational_course}
-                                            onChange={(event) => setData("vocational_course", event.target.value)}
+                                            onChange={(value: string) => setData("vocational_course", value)}
+                                            fieldName="vocational_course"
+                                            placeholder="Type or pick a course"
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -1165,7 +1229,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                             <CardContent className="grid gap-5 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="region_of_origin">Region of Origin</Label>
-                                    <Select value={data.region_of_origin} onValueChange={(value) => setData("region_of_origin", value)}>
+                                    <Select value={data.region_of_origin} onValueChange={setSelectData("region_of_origin")}>
                                         <SelectTrigger id="region_of_origin">
                                             <SelectValue placeholder="Select region" />
                                         </SelectTrigger>
@@ -1180,22 +1244,32 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="ethnicity">Ethnicity</Label>
-                                    <Input id="ethnicity" value={data.ethnicity} onChange={(event) => setData("ethnicity", event.target.value)} />
+                                    <AutocompleteFieldInput
+                                        id="ethnicity"
+                                        value={data.ethnicity}
+                                        onChange={(value: string) => setData("ethnicity", value)}
+                                        fieldName="ethnicity"
+                                        placeholder="Type or pick an ethnicity"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="province_of_origin">Province of Origin</Label>
-                                    <Input
+                                    <AutocompleteFieldInput
                                         id="province_of_origin"
                                         value={data.province_of_origin}
-                                        onChange={(event) => setData("province_of_origin", event.target.value)}
+                                        onChange={(value: string) => setData("province_of_origin", value)}
+                                        fieldName="province_of_origin"
+                                        placeholder="Type or pick a province"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="city_of_origin">City of Origin</Label>
-                                    <Input
+                                    <AutocompleteFieldInput
                                         id="city_of_origin"
                                         value={data.city_of_origin}
-                                        onChange={(event) => setData("city_of_origin", event.target.value)}
+                                        onChange={(value: string) => setData("city_of_origin", value)}
+                                        fieldName="city_of_origin"
+                                        placeholder="Type or pick a city"
                                     />
                                 </div>
                                 <div className="flex items-center gap-3 rounded-md border p-3 md:col-span-2">
@@ -1337,7 +1411,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="scholarship_type">Scholarship</Label>
-                                    <Select value={data.scholarship_type} onValueChange={(value) => setData("scholarship_type", value)}>
+                                    <Select value={data.scholarship_type} onValueChange={setSelectData("scholarship_type")}>
                                         <SelectTrigger id="scholarship_type">
                                             <SelectValue placeholder="Select scholarship" />
                                         </SelectTrigger>
@@ -1369,7 +1443,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                                 <Briefcase className="h-3.5 w-3.5" />
                                                 Employment Status
                                             </Label>
-                                            <Select value={data.employment_status} onValueChange={(value) => setData("employment_status", value)}>
+                                            <Select value={data.employment_status} onValueChange={setSelectData("employment_status")}>
                                                 <SelectTrigger id="employment_status">
                                                     <SelectValue placeholder="Select status" />
                                                 </SelectTrigger>
@@ -1428,7 +1502,7 @@ export default function AdministratorStudentEdit({ user, student, options, curre
                                     <div className="grid gap-5 border-t pt-5 md:col-span-2 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="attrition_category">Attrition Category</Label>
-                                            <Select value={data.attrition_category} onValueChange={(value) => setData("attrition_category", value)}>
+                                            <Select value={data.attrition_category} onValueChange={setSelectData("attrition_category")}>
                                                 <SelectTrigger id="attrition_category">
                                                     <SelectValue placeholder="Select category" />
                                                 </SelectTrigger>

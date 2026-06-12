@@ -10,11 +10,25 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link } from "@inertiajs/react";
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Check, CheckCircle, Copy, Eye, FileText, HelpCircle, MoreHorizontal, RotateCcw, Trash2, UserCheck, XCircle, Zap } from "lucide-react";
+import {
+    ArrowUpDown,
+    Check,
+    CheckCircle,
+    Copy,
+    Eye,
+    FileText,
+    HelpCircle,
+    MoreHorizontal,
+    RotateCcw,
+    Trash2,
+    UserCheck,
+    XCircle,
+    Zap,
+} from "lucide-react";
 import { useState } from "react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 declare let route: any;
 
@@ -114,20 +128,11 @@ export const columns: ColumnDef<Student>[] = [
             return (
                 <TooltipProvider delay={0}>
                     <Tooltip open={copied || undefined}>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="-ml-2 h-7 gap-1.5 px-2 font-mono text-xs"
-                                onClick={handleCopy}
-                            >
-                                {studentId}
-                                {copied ? (
-                                    <Check className="h-3.5 w-3.5 text-green-500" />
-                                ) : (
-                                    <Copy className="text-muted-foreground h-3.5 w-3.5" />
-                                )}
-                            </Button>
+                        <TooltipTrigger
+                            render={<Button variant="ghost" size="sm" className="-ml-2 h-7 gap-1.5 px-2 font-mono text-xs" onClick={handleCopy} />}
+                        >
+                            {studentId}
+                            {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="text-muted-foreground h-3.5 w-3.5" />}
                         </TooltipTrigger>
                         <TooltipContent side="top" sideOffset={4}>
                             {copied ? "Copied!" : "Copy ID"}
@@ -236,42 +241,27 @@ export const columns: ColumnDef<Student>[] = [
 
             return (
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                    <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0" />}>
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(student.student_id))}>Copy Student ID</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Link href={route("administrators.students.show", student.id)} className="flex w-full cursor-pointer items-center">
-                                <Eye className="mr-2 h-4 w-4" /> View Details
-                            </Link>
+                        <DropdownMenuItem render={<Link href={route("administrators.students.show", student.id)} />}>
+                            <Eye className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link href={route("administrators.students.edit", student.id)} className="flex w-full cursor-pointer items-center">
-                                <UserCheck className="mr-2 h-4 w-4" /> Edit Student
-                            </Link>
+                        <DropdownMenuItem render={<Link href={route("administrators.students.edit", student.id)} />}>
+                            <UserCheck className="mr-2 h-4 w-4" /> Edit Student
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <a
-                                href={student.filament.view_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex w-full cursor-pointer items-center opacity-70"
-                            >
-                                <FileText className="mr-2 h-4 w-4" /> View in Filament
-                            </a>
+                        <DropdownMenuItem render={<a href={student.filament.view_url} target="_blank" rel="noreferrer" />} className="opacity-70">
+                            <FileText className="mr-2 h-4 w-4" /> View in Filament
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         {student.deleted_at ? (
-                            <DropdownMenuItem
-                                onClick={() => (window as any).dispatchEvent(new CustomEvent("students:restore", { detail: student }))}
-                            >
+                            <DropdownMenuItem onClick={() => (window as any).dispatchEvent(new CustomEvent("students:restore", { detail: student }))}>
                                 <RotateCcw className="mr-2 h-4 w-4" /> Restore
                             </DropdownMenuItem>
                         ) : (

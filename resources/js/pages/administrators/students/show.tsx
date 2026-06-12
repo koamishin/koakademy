@@ -1,8 +1,4 @@
 import AdminLayout from "@/components/administrators/admin-layout";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -13,58 +9,23 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
-import {
-    AlertCircle,
-    ArrowRightLeft,
-    Banknote,
-    BookOpen,
-    Calendar as CalendarIcon,
-    CheckCircle,
-    ChevronDown,
-    Clock,
-    CreditCard,
-    FileText,
-    GraduationCap,
-    List as ListIcon,
-    Printer,
-    RotateCcw,
-    Settings,
-    ShieldCheck,
-    Trash2,
-    UserCog,
-    User as UserIcon,
-    XCircle,
-} from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { Cell, Legend, Pie, PieChart, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
 
-import { PrintScheduleDialog } from "./components/print-schedule-dialog";
-import { StudentDetailsCard } from "./components/student-details-card";
-import { StudentTabs } from "./components/student-tabs";
-import { StudentSidebar } from "./components/student-sidebar";
-import { StudentActionMenu } from "./components/student-action-menu";
-import { StudentDeleteDialogs } from "./components/student-delete-dialogs";
-import { SubjectEnrollmentDialog } from "./components/subject-enrollment-dialog";
 import { AcademicScheduleDashboard } from "./components/academic-schedule-dashboard";
+import { PrintScheduleDialog } from "./components/print-schedule-dialog";
+import { StudentActionMenu } from "./components/student-action-menu";
 import { StudentChecklistSection } from "./components/student-checklist-section";
-import type { ChecklistSubject, ChecklistHistoryRecord, ChecklistYearGroup } from "./types";
+import { StudentDeleteDialogs } from "./components/student-delete-dialogs";
+import { StudentDetailsCard } from "./components/student-details-card";
+import { StudentSidebar } from "./components/student-sidebar";
+import { StudentTabs } from "./components/student-tabs";
+import { SubjectEnrollmentDialog } from "./components/subject-enrollment-dialog";
+import type { ChecklistHistoryRecord, ChecklistSubject, ChecklistYearGroup } from "./types";
 
 import {
     ChangeCourseDialog,
@@ -75,7 +36,7 @@ import {
     UpdateStatusDialog,
     UpdateTuitionDialog,
 } from "./components/student-action-dialogs";
-import type { Branding, PrintOption, StudentDetail, StudentShowProps, SubjectEnrollmentFormData } from "./types";
+import type { Branding, PrintOption, StudentShowProps, SubjectEnrollmentFormData } from "./types";
 
 declare let route: any;
 
@@ -90,7 +51,6 @@ function classificationBadgeVariant(classification: string | null | undefined): 
 
     return "info-light";
 }
-
 
 export default function AdministratorStudentShow({ user, student, options }: StudentShowProps) {
     const { props } = usePage<{ branding?: Branding }>();
@@ -274,14 +234,14 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => !open && setIsDeleteDialogOpen(false)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                        <AlertDialogTitle className="text-destructive flex items-center gap-2">
                             <Trash2 className="h-5 w-5" />
                             Delete Subject Enrollment?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                             This will permanently remove the selected enrollment record for{" "}
-                            <strong className="text-foreground">{selectedSubject?.code}</strong> - {selectedSubject?.title}. This action
-                            cannot be undone.
+                            <strong className="text-foreground">{selectedSubject?.code}</strong> - {selectedSubject?.title}. This action cannot be
+                            undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -307,11 +267,7 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
             {actionDialog === "updateTuition" && <UpdateTuitionDialog open={true} onOpenChange={() => setActionDialog(null)} student={student} />}
             {actionDialog === "clearance" && <ManageClearanceDialog open={true} onOpenChange={() => setActionDialog(null)} student={student} />}
 
-            <StudentDeleteDialogs
-                student={student}
-                action={studentDeleteAction}
-                onClose={() => setStudentDeleteAction(null)}
-            />
+            <StudentDeleteDialogs student={student} action={studentDeleteAction} onClose={() => setStudentDeleteAction(null)} />
 
             <PrintScheduleDialog open={isPrintDialogOpen} onOpenChange={setIsPrintDialogOpen} student={student} initialOption={printDialogOption} />
 
@@ -335,9 +291,9 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
                     </div>
 
                     <div className="flex gap-2">
-                        <Button asChild variant="outline">
-                            <Link href={route("administrators.students.index")}>Back</Link>
-                        </Button>
+                        <Link href={route("administrators.students.index")} className={buttonVariants({ variant: "outline" })}>
+                            Back
+                        </Link>
 
                         <StudentActionMenu
                             student={student}
@@ -346,20 +302,19 @@ export default function AdministratorStudentShow({ user, student, options }: Stu
                             setDeleteAction={setStudentDeleteAction}
                         />
 
-                        <Button asChild variant="secondary">
-                            <Link href={route("administrators.students.documents.index", student.id)}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Manage Documents
-                            </Link>
-                        </Button>
-                        <Button asChild>
-                            <Link href={route("administrators.students.edit", student.id)}>Edit Student</Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                            <a href={student.filament.view_url} target="_blank" rel="noreferrer">
-                                Open in Filament
-                            </a>
-                        </Button>
+                        <Link
+                            href={route("administrators.students.documents.index", student.id)}
+                            className={buttonVariants({ variant: "secondary", className: "gap-2" })}
+                        >
+                            <FileText className="h-4 w-4" />
+                            Manage Documents
+                        </Link>
+                        <Link href={route("administrators.students.edit", student.id)} className={buttonVariants()}>
+                            Edit Student
+                        </Link>
+                        <a href={student.filament.view_url} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>
+                            Open in Filament
+                        </a>
                     </div>
                 </div>
 
