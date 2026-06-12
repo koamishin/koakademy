@@ -107,7 +107,13 @@ const audienceConfig = {
         dot: "bg-amber-500",
         bg: "bg-amber-500/8 text-amber-700 dark:text-amber-400",
     },
-};
+} as const;
+
+type AudienceKey = keyof typeof audienceConfig;
+
+function resolveAudience(audience: string | null | undefined) {
+    return audienceConfig[audience as AudienceKey] ?? audienceConfig.all;
+}
 
 export default function FeatureTogglesIndex({ auth, features: initialFeatures, filters }: Props) {
     const [search, setSearch] = useState(filters.search || "");
@@ -447,7 +453,8 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                     ) : (
                         <div className="divide-y overflow-hidden rounded-lg border">
                             {features.map((feature) => {
-                                const AudienceIcon = audienceConfig[feature.audience].icon;
+                                const audience = resolveAudience(feature.audience);
+                                const AudienceIcon = audience.icon;
                                 const isClassBased = feature.pennant_type === "class";
                                 const hasOverrides = feature.pennant_user_overrides_count > 0;
 
@@ -481,9 +488,9 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm font-medium leading-tight">{feature.name}</span>
-                                                <Badge variant="outline" className={cn("gap-1 text-[10px] font-medium", audienceConfig[feature.audience].bg)}>
+                                                <Badge variant="outline" className={cn("gap-1 text-[10px] font-medium", audience.bg)}>
                                                     <AudienceIcon className="h-2.5 w-2.5" />
-                                                    {audienceConfig[feature.audience].label}
+                                                    {audience.label}
                                                 </Badge>
                                                 {isClassBased && (
                                                     <Badge variant="secondary" className="gap-0.5 bg-blue-500/8 text-[10px] text-blue-600">
@@ -608,12 +615,12 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                         <>
                             <DialogHeader>
                                 <div className="mb-1 flex items-center gap-2">
-                                    <Badge variant="outline" className={cn("text-[10px]", audienceConfig[previewFeature.audience].bg)}>
+                                    <Badge variant="outline" className={cn("text-[10px]", resolveAudience(previewFeature.audience).bg)}>
                                         {(() => {
-                                            const Icon = audienceConfig[previewFeature.audience].icon;
+                                            const Icon = resolveAudience(previewFeature.audience).icon;
                                             return <Icon className="mr-1 h-2.5 w-2.5" />;
                                         })()}
-                                        {audienceConfig[previewFeature.audience].label}
+                                        {resolveAudience(previewFeature.audience).label}
                                     </Badge>
                                     {previewFeature.is_active ? (
                                         <Badge className="bg-emerald-500/10 text-[10px] text-emerald-600">Active</Badge>
