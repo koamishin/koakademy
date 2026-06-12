@@ -1,14 +1,14 @@
 {
-  "version": "1.8.0-dev.1.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.1.2",
-  "commit": "a337faa2805fcaff937a8323be89880d1ae4ea05",
+  "version": "1.8.0-dev.1.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.1.3",
+  "commit": "51fcabb82129d9d0e39fe44050511886ffaad938",
   "branch": "master",
-  "timestamp": "2026-06-12T08:33:12Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27404178891",
+  "timestamp": "2026-06-12T09:10:06Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27406046562",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.8.0-dev.1.2 - Add Autocomplete component to reui",
-    "previous": "1.8.0-dev.1.1"
+    "current": "Version 1.8.0-dev.1.3 - Extract duplicated passkey config into reusable trait",
+    "previous": "1.8.0-dev.1.2"
   },
   "metadata": {
     "author": "yukazakiri",
