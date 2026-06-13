@@ -733,12 +733,12 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
             {/* User Overrides Dialog */}
             <Dialog
                 open={!!overridesFeature}
-                onOpenChange={(open) =>
-                    !open &&
-                    { setOverridesFeature: setOverridesFeature(null), setOverriddenUsers: setOverriddenUsers([]) }.setOverridesFeature(
-                        open ? overridesFeature : null,
-                    )
-                }
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setOverridesFeature(null);
+                        setOverriddenUsers([]);
+                    }
+                }}
             >
                 <DialogContent className="max-h-[80vh] sm:max-w-lg">
                     {overridesFeature && (
