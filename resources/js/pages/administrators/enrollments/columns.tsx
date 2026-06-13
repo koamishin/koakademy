@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Link } from "@inertiajs/react";
 import { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, ArrowUpDown, Copy, Eye, FileText, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowUpDown, CalendarClock, Copy, Eye, FileText, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
 
 declare let route: any;
 
@@ -55,6 +55,49 @@ function formatMoney(value: number | null | undefined, currency: string = "PHP")
     return new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-PH", { style: "currency", currency: currency }).format(value);
 }
 
+function formatEnrollmentTimestamp(value: string | null): string {
+    if (!value) return "—";
+
+    const timestamp = new Date(value);
+
+    if (Number.isNaN(timestamp.getTime())) return "—";
+
+    const diffInMilliseconds = Date.now() - timestamp.getTime();
+    const diffInMinutes = Math.max(0, Math.floor(diffInMilliseconds / 60000));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInDays > 7) {
+        return new Intl.DateTimeFormat("en-PH", {
+            dateStyle: "medium",
+            timeStyle: "short",
+        }).format(timestamp);
+    }
+
+    if (diffInDays >= 1) {
+        return `last ${diffInDays} ${diffInDays === 1 ? "day" : "days"}`;
+    }
+
+    if (diffInHours >= 1) {
+        return `last ${diffInHours} ${diffInHours === 1 ? "hour" : "hours"}`;
+    }
+
+    return `last ${Math.max(1, diffInMinutes)} ${diffInMinutes === 1 ? "minute" : "minutes"}`;
+}
+
+function formatEnrollmentTimestampTitle(value: string | null): string | undefined {
+    if (!value) return undefined;
+
+    const timestamp = new Date(value);
+
+    if (Number.isNaN(timestamp.getTime())) return undefined;
+
+    return new Intl.DateTimeFormat("en-PH", {
+        dateStyle: "full",
+        timeStyle: "medium",
+    }).format(timestamp);
+}
+
 const getInitials = (name: string | null) => {
     if (!name) return "ST";
     return name
@@ -65,11 +108,7 @@ const getInitials = (name: string | null) => {
         .slice(0, 2);
 };
 
-export const createColumns = (
-    actions?: EnrollmentActions,
-    currency: string = "PHP",
-    pipeline?: PipelineDisplay,
-): ColumnDef<EnrollmentRow>[] => [
+export const createColumns = (actions?: EnrollmentActions, currency: string = "PHP", pipeline?: PipelineDisplay): ColumnDef<EnrollmentRow>[] => [
     {
         id: "select",
         header: ({ table }) => (
@@ -171,6 +210,27 @@ export const createColumns = (
                 <Badge variant="secondary" className={cn("font-medium", statusClass)}>
                     {status}
                 </Badge>
+            );
+        },
+    },
+    {
+        accessorKey: "created_at",
+        header: ({ column }) => {
+            return (
+                <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
+                    Timestamp
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            );
+        },
+        cell: ({ row }) => {
+            const createdAt = row.original.created_at;
+
+            return (
+                <div className="text-muted-foreground flex items-center gap-2 text-sm" title={formatEnrollmentTimestampTitle(createdAt)}>
+                    <CalendarClock className="h-4 w-4" />
+                    <span>{formatEnrollmentTimestamp(createdAt)}</span>
+                </div>
             );
         },
     },

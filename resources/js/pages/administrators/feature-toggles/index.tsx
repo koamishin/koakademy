@@ -18,22 +18,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 import { Head, router } from "@inertiajs/react";
-import {
-    Calendar,
-    Eye,
-    Filter,
-    FlaskConical,
-    Globe,
-    GraduationCap,
-    Layers,
-    Sparkles,
-    UserCog,
-    Users,
-    Zap,
-} from "lucide-react";
+import { Calendar, Eye, Filter, FlaskConical, Globe, GraduationCap, Layers, Sparkles, UserCog, Users, Zap } from "lucide-react";
 import { useCallback, useState } from "react";
-import { useDebouncedCallback } from "use-debounce";
 import { toast } from "sonner";
+import { useDebouncedCallback } from "use-debounce";
 
 interface OnboardingStepData {
     title: string;
@@ -54,7 +42,7 @@ interface OnboardingStep {
 interface FeatureToggle {
     key: string;
     name: string;
-    audience: "student" | "faculty" | "all";
+    audience: string;
     summary: string;
     badge: string;
     accent: string;
@@ -101,6 +89,12 @@ const audienceConfig = {
         dot: "bg-violet-500",
         bg: "bg-violet-500/8 text-violet-700 dark:text-violet-400",
     },
+    admin: {
+        label: "Administrators",
+        icon: UserCog,
+        dot: "bg-rose-500",
+        bg: "bg-rose-500/8 text-rose-700 dark:text-rose-400",
+    },
     all: {
         label: "Everyone",
         icon: Sparkles,
@@ -108,6 +102,15 @@ const audienceConfig = {
         bg: "bg-amber-500/8 text-amber-700 dark:text-amber-400",
     },
 };
+
+const defaultAudienceConfig = {
+    label: "Custom audience",
+    icon: Users,
+    dot: "bg-slate-500",
+    bg: "bg-slate-500/8 text-slate-700 dark:text-slate-400",
+};
+
+const getAudienceConfig = (audience: string) => audienceConfig[audience as keyof typeof audienceConfig] ?? defaultAudienceConfig;
 
 export default function FeatureTogglesIndex({ auth, features: initialFeatures, filters }: Props) {
     const [search, setSearch] = useState(filters.search || "");
@@ -134,13 +137,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
     const handleToggle = useCallback((feature: FeatureToggle) => {
         const newActive = !feature.is_active;
         // Optimistic: instantly flip the switch locally
-        setLocalFeatures((prev) =>
-            prev.map((f) =>
-                f.key === feature.key
-                    ? { ...f, is_active: newActive, pennant_global_state: newActive }
-                    : f,
-            ),
-        );
+        setLocalFeatures((prev) => prev.map((f) => (f.key === feature.key ? { ...f, is_active: newActive, pennant_global_state: newActive } : f)));
 
         router.post(
             route("administrators.feature-toggles.toggle", feature.key),
@@ -153,9 +150,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                 onError: () => {
                     // Roll back on error
                     setLocalFeatures((prev) =>
-                        prev.map((f) =>
-                            f.key === feature.key ? { ...f, is_active: !newActive, pennant_global_state: !newActive } : f,
-                        ),
+                        prev.map((f) => (f.key === feature.key ? { ...f, is_active: !newActive, pennant_global_state: !newActive } : f)),
                     );
                     toast.error("Failed to toggle feature");
                 },
@@ -181,94 +176,95 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
         }
     }, []);
 
-    const handleActivateForUser = useCallback((feature: FeatureToggle, userId: number) => {
-        // Optimistic: instantly show user in override list
-        setOverriddenUsers((prev) => {
-            const existing = prev.find((u) => u.id === userId);
-            if (existing) {
-                return prev.map((u) => (u.id === userId ? { ...u, is_active: true } : u));
-            }
-            return [...prev, { id: userId, name: `User #${userId}`, email: "", role: "", is_active: true }];
-        });
-        // Update override count
-        setLocalFeatures((prev) =>
-            prev.map((f) =>
-                f.key === feature.key ? { ...f, pennant_user_overrides_count: f.pennant_user_overrides_count + 1 } : f,
-            ),
-        );
+    const handleActivateForUser = useCallback(
+        (feature: FeatureToggle, userId: number) => {
+            // Optimistic: instantly show user in override list
+            setOverriddenUsers((prev) => {
+                const existing = prev.find((u) => u.id === userId);
+                if (existing) {
+                    return prev.map((u) => (u.id === userId ? { ...u, is_active: true } : u));
+                }
+                return [...prev, { id: userId, name: `User #${userId}`, email: "", role: "", is_active: true }];
+            });
+            // Update override count
+            setLocalFeatures((prev) =>
+                prev.map((f) => (f.key === feature.key ? { ...f, pennant_user_overrides_count: f.pennant_user_overrides_count + 1 } : f)),
+            );
 
-        router.post(
-            route("administrators.feature-toggles.activate-for-user", feature.key),
-            { user_id: userId },
-            {
-                preserveState: true,
-                onSuccess: () => {
-                    toast.success("Feature activated for user");
-                    if (overridesFeature) loadOverrides(overridesFeature);
+            router.post(
+                route("administrators.feature-toggles.activate-for-user", feature.key),
+                { user_id: userId },
+                {
+                    preserveState: true,
+                    onSuccess: () => {
+                        toast.success("Feature activated for user");
+                        if (overridesFeature) loadOverrides(overridesFeature);
+                    },
+                    onError: () => {
+                        // Roll back
+                        setOverriddenUsers((prev) => prev.filter((u) => u.id !== userId));
+                        setLocalFeatures((prev) =>
+                            prev.map((f) =>
+                                f.key === feature.key ? { ...f, pennant_user_overrides_count: Math.max(0, f.pennant_user_overrides_count - 1) } : f,
+                            ),
+                        );
+                        toast.error("Failed to activate for user");
+                    },
                 },
-                onError: () => {
-                    // Roll back
-                    setOverriddenUsers((prev) => prev.filter((u) => u.id !== userId));
-                    setLocalFeatures((prev) =>
-                        prev.map((f) =>
-                            f.key === feature.key ? { ...f, pennant_user_overrides_count: Math.max(0, f.pennant_user_overrides_count - 1) } : f,
-                        ),
-                    );
-                    toast.error("Failed to activate for user");
-                },
-            },
-        );
-    }, [overridesFeature, loadOverrides]);
+            );
+        },
+        [overridesFeature, loadOverrides],
+    );
 
-    const handleDeactivateForUser = useCallback((feature: FeatureToggle, userId: number) => {
-        // Optimistic: instantly flip user's state
-        setOverriddenUsers((prev) =>
-            prev.map((u) => (u.id === userId ? { ...u, is_active: false } : u)),
-        );
+    const handleDeactivateForUser = useCallback(
+        (feature: FeatureToggle, userId: number) => {
+            // Optimistic: instantly flip user's state
+            setOverriddenUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: false } : u)));
 
-        router.post(
-            route("administrators.feature-toggles.deactivate-for-user", feature.key),
-            { user_id: userId },
-            {
-                preserveState: true,
-                onSuccess: () => {
-                    toast.success("Feature deactivated for user");
-                    if (overridesFeature) loadOverrides(overridesFeature);
+            router.post(
+                route("administrators.feature-toggles.deactivate-for-user", feature.key),
+                { user_id: userId },
+                {
+                    preserveState: true,
+                    onSuccess: () => {
+                        toast.success("Feature deactivated for user");
+                        if (overridesFeature) loadOverrides(overridesFeature);
+                    },
+                    onError: () => {
+                        // Roll back
+                        setOverriddenUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, is_active: true } : u)));
+                        toast.error("Failed to deactivate for user");
+                    },
                 },
-                onError: () => {
-                    // Roll back
-                    setOverriddenUsers((prev) =>
-                        prev.map((u) => (u.id === userId ? { ...u, is_active: true } : u)),
-                    );
-                    toast.error("Failed to deactivate for user");
-                },
-            },
-        );
-    }, [overridesFeature, loadOverrides]);
+            );
+        },
+        [overridesFeature, loadOverrides],
+    );
 
-    const handlePurgeOverrides = useCallback((feature: FeatureToggle) => {
-        // Optimistic: instantly clear overrides
-        setOverriddenUsers([]);
-        setLocalFeatures((prev) =>
-            prev.map((f) => (f.key === feature.key ? { ...f, pennant_user_overrides_count: 0 } : f)),
-        );
+    const handlePurgeOverrides = useCallback(
+        (feature: FeatureToggle) => {
+            // Optimistic: instantly clear overrides
+            setOverriddenUsers([]);
+            setLocalFeatures((prev) => prev.map((f) => (f.key === feature.key ? { ...f, pennant_user_overrides_count: 0 } : f)));
 
-        router.post(
-            route("administrators.feature-toggles.purge-overrides", feature.key),
-            {},
-            {
-                preserveState: true,
-                onSuccess: () => {
-                    toast.success("All per-user overrides purged");
+            router.post(
+                route("administrators.feature-toggles.purge-overrides", feature.key),
+                {},
+                {
+                    preserveState: true,
+                    onSuccess: () => {
+                        toast.success("All per-user overrides purged");
+                    },
+                    onError: () => {
+                        // Reload to get accurate state
+                        if (overridesFeature) loadOverrides(overridesFeature);
+                        toast.error("Failed to purge overrides");
+                    },
                 },
-                onError: () => {
-                    // Reload to get accurate state
-                    if (overridesFeature) loadOverrides(overridesFeature);
-                    toast.error("Failed to purge overrides");
-                },
-            },
-        );
-    }, [overridesFeature, loadOverrides]);
+            );
+        },
+        [overridesFeature, loadOverrides],
+    );
 
     const activeFilterCount = Object.values(filters).filter(Boolean).length - (filters.search ? 1 : 0);
     const features = localFeatures;
@@ -291,7 +287,9 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                             </div>
                             <div>
                                 <h1 className="text-lg font-semibold tracking-tight">Feature Toggles</h1>
-                                <p className="text-muted-foreground text-xs">Pennant class-based features with per-user scoping, lottery rollouts, and A/B testing</p>
+                                <p className="text-muted-foreground text-xs">
+                                    Pennant class-based features with per-user scoping, lottery rollouts, and A/B testing
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -314,7 +312,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                 <Zap className="h-3.5 w-3.5 text-emerald-600" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold tabular-nums text-emerald-600">{activeCount}</p>
+                                <p className="text-sm font-semibold text-emerald-600 tabular-nums">{activeCount}</p>
                                 <p className="text-muted-foreground text-[10px] leading-none">Active</p>
                             </div>
                         </div>
@@ -332,7 +330,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                 <Globe className="h-3.5 w-3.5 text-blue-600" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold tabular-nums text-blue-600">{classBasedCount}</p>
+                                <p className="text-sm font-semibold text-blue-600 tabular-nums">{classBasedCount}</p>
                                 <p className="text-muted-foreground text-[10px] leading-none">Class-based</p>
                             </div>
                         </div>
@@ -341,7 +339,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                 <UserCog className="h-3.5 w-3.5 text-purple-600" />
                             </div>
                             <div>
-                                <p className="text-sm font-semibold tabular-nums text-purple-600">{overridesTotal}</p>
+                                <p className="text-sm font-semibold text-purple-600 tabular-nums">{overridesTotal}</p>
                                 <p className="text-muted-foreground text-[10px] leading-none">User overrides</p>
                             </div>
                         </div>
@@ -355,7 +353,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                             <Filter className="text-muted-foreground absolute top-2 left-2.5 h-3.5 w-3.5" />
                             <Input
                                 placeholder="Search by name or key..."
-                                className="bg-muted/50 h-8 rounded-md border-0 pl-8 text-xs shadow-none focus-visible:bg-background focus-visible:ring-1"
+                                className="bg-muted/50 focus-visible:bg-background h-8 rounded-md border-0 pl-8 text-xs shadow-none focus-visible:ring-1"
                                 value={search}
                                 onChange={(e) => {
                                     setSearch(e.target.value);
@@ -379,8 +377,9 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                             <DropdownMenuContent align="end" className="w-[180px]">
                                 <DropdownMenuLabel className="text-[10px]">Audience</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                {(["student", "faculty", "all"] as const).map((audience) => {
-                                    const Icon = audienceConfig[audience].icon;
+                                {(["student", "faculty", "admin", "all"] as const).map((audience) => {
+                                    const audienceDetails = getAudienceConfig(audience);
+                                    const Icon = audienceDetails.icon;
                                     return (
                                         <DropdownMenuCheckboxItem
                                             key={audience}
@@ -389,7 +388,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                             className="text-xs"
                                         >
                                             <Icon className="mr-1.5 h-3 w-3" />
-                                            {audienceConfig[audience].label}
+                                            {audienceDetails.label}
                                         </DropdownMenuCheckboxItem>
                                     );
                                 })}
@@ -447,7 +446,8 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                     ) : (
                         <div className="divide-y overflow-hidden rounded-lg border">
                             {features.map((feature) => {
-                                const AudienceIcon = audienceConfig[feature.audience].icon;
+                                const audienceDetails = getAudienceConfig(feature.audience);
+                                const AudienceIcon = audienceDetails.icon;
                                 const isClassBased = feature.pennant_type === "class";
                                 const hasOverrides = feature.pennant_user_overrides_count > 0;
 
@@ -455,7 +455,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                     <div
                                         key={feature.key}
                                         className={cn(
-                                            "group relative flex items-center gap-4 bg-background px-4 py-3 transition-colors hover:bg-muted/30",
+                                            "group bg-background hover:bg-muted/30 relative flex items-center gap-4 px-4 py-3 transition-colors",
                                             !feature.is_active && "opacity-50 hover:opacity-100",
                                         )}
                                     >
@@ -467,7 +467,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                                         <Switch
                                                             checked={feature.is_active}
                                                             onCheckedChange={() => handleToggle(feature)}
-                                                            className="data-[state=checked]:bg-emerald-500 data-[size=sm]"
+                                                            className="data-[size=sm] data-[state=checked]:bg-emerald-500"
                                                         />
                                                     </TooltipTrigger>
                                                     <TooltipContent side="left" className="text-xs">
@@ -480,10 +480,10 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                         {/* Feature info */}
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm font-medium leading-tight">{feature.name}</span>
-                                                <Badge variant="outline" className={cn("gap-1 text-[10px] font-medium", audienceConfig[feature.audience].bg)}>
+                                                <span className="text-sm leading-tight font-medium">{feature.name}</span>
+                                                <Badge variant="outline" className={cn("gap-1 text-[10px] font-medium", audienceDetails.bg)}>
                                                     <AudienceIcon className="h-2.5 w-2.5" />
-                                                    {audienceConfig[feature.audience].label}
+                                                    {audienceDetails.label}
                                                 </Badge>
                                                 {isClassBased && (
                                                     <Badge variant="secondary" className="gap-0.5 bg-blue-500/8 text-[10px] text-blue-600">
@@ -494,16 +494,17 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                                 {hasOverrides && (
                                                     <Badge variant="secondary" className="gap-0.5 bg-purple-500/8 text-[10px] text-purple-600">
                                                         <UserCog className="h-2.5 w-2.5" />
-                                                        {feature.pennant_user_overrides_count} override{feature.pennant_user_overrides_count !== 1 ? "s" : ""}
+                                                        {feature.pennant_user_overrides_count} override
+                                                        {feature.pennant_user_overrides_count !== 1 ? "s" : ""}
                                                     </Badge>
                                                 )}
                                             </div>
                                             <div className="mt-0.5 flex items-center gap-3">
-                                                <code className="text-muted-foreground text-[11px] font-mono">{feature.key}</code>
+                                                <code className="text-muted-foreground font-mono text-[11px]">{feature.key}</code>
                                                 {isClassBased && feature.pennant_class && (
                                                     <>
                                                         <span className="text-muted-foreground/30">→</span>
-                                                        <code className="text-muted-foreground/60 max-w-[200px] truncate text-[10px] font-mono">
+                                                        <code className="text-muted-foreground/60 max-w-[200px] truncate font-mono text-[10px]">
                                                             {feature.pennant_class.replace("App\\Features\\Toggles\\", "…\\")}
                                                         </code>
                                                     </>
@@ -523,13 +524,20 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <span className={cn("flex items-center gap-1", feature.pennant_global_state ? "text-emerald-600" : "text-muted-foreground/50")}>
+                                                            <span
+                                                                className={cn(
+                                                                    "flex items-center gap-1",
+                                                                    feature.pennant_global_state ? "text-emerald-600" : "text-muted-foreground/50",
+                                                                )}
+                                                            >
                                                                 <Globe className="h-3 w-3" />
                                                                 {feature.pennant_global_state ? "Global" : "Default"}
                                                             </span>
                                                         </TooltipTrigger>
                                                         <TooltipContent className="text-xs">
-                                                            {feature.pennant_global_state ? "Force-activated for everyone" : "Resolved per-scope via class"}
+                                                            {feature.pennant_global_state
+                                                                ? "Force-activated for everyone"
+                                                                : "Resolved per-scope via class"}
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
@@ -554,7 +562,12 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => loadOverrides(feature)}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-7 w-7"
+                                                                onClick={() => loadOverrides(feature)}
+                                                            >
                                                                 <UserCog className="h-3.5 w-3.5" />
                                                             </Button>
                                                         </TooltipTrigger>
@@ -584,7 +597,10 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                                                 User overrides
                                                             </DropdownMenuItem>
                                                             {hasOverrides && (
-                                                                <DropdownMenuItem onClick={() => handlePurgeOverrides(feature)} className="text-xs text-orange-600 focus:text-orange-600">
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handlePurgeOverrides(feature)}
+                                                                    className="text-xs text-orange-600 focus:text-orange-600"
+                                                                >
                                                                     Purge overrides
                                                                 </DropdownMenuItem>
                                                             )}
@@ -608,17 +624,23 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                         <>
                             <DialogHeader>
                                 <div className="mb-1 flex items-center gap-2">
-                                    <Badge variant="outline" className={cn("text-[10px]", audienceConfig[previewFeature.audience].bg)}>
-                                        {(() => {
-                                            const Icon = audienceConfig[previewFeature.audience].icon;
-                                            return <Icon className="mr-1 h-2.5 w-2.5" />;
-                                        })()}
-                                        {audienceConfig[previewFeature.audience].label}
-                                    </Badge>
+                                    {(() => {
+                                        const audienceDetails = getAudienceConfig(previewFeature.audience);
+                                        const Icon = audienceDetails.icon;
+
+                                        return (
+                                            <Badge variant="outline" className={cn("text-[10px]", audienceDetails.bg)}>
+                                                <Icon className="mr-1 h-2.5 w-2.5" />
+                                                {audienceDetails.label}
+                                            </Badge>
+                                        );
+                                    })()}
                                     {previewFeature.is_active ? (
                                         <Badge className="bg-emerald-500/10 text-[10px] text-emerald-600">Active</Badge>
                                     ) : (
-                                        <Badge variant="secondary" className="text-[10px]">Inactive</Badge>
+                                        <Badge variant="secondary" className="text-[10px]">
+                                            Inactive
+                                        </Badge>
                                     )}
                                     {previewFeature.pennant_type === "class" && (
                                         <Badge variant="secondary" className="gap-0.5 bg-blue-500/8 text-[10px] text-blue-600">
@@ -646,7 +668,9 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                     {previewFeature.pennant_class && (
                                         <div>
                                             <p className="text-muted-foreground mb-1 text-[10px] font-medium uppercase">Pennant Class</p>
-                                            <code className="bg-muted block truncate rounded px-2 py-1 font-mono text-[11px]">{previewFeature.pennant_class}</code>
+                                            <code className="bg-muted block truncate rounded px-2 py-1 font-mono text-[11px]">
+                                                {previewFeature.pennant_class}
+                                            </code>
                                         </div>
                                     )}
                                     {previewFeature.cta_url && (
@@ -659,7 +683,10 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                     )}
                                     <div>
                                         <p className="text-muted-foreground mb-1 text-[10px] font-medium uppercase">User Overrides</p>
-                                        <span className="text-xs">{previewFeature.pennant_user_overrides_count} user{previewFeature.pennant_user_overrides_count !== 1 ? "s" : ""} with overrides</span>
+                                        <span className="text-xs">
+                                            {previewFeature.pennant_user_overrides_count} user
+                                            {previewFeature.pennant_user_overrides_count !== 1 ? "s" : ""} with overrides
+                                        </span>
                                     </div>
                                 </div>
 
@@ -674,7 +701,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                                         {index + 1}
                                                     </div>
                                                     <div className="min-w-0 flex-1">
-                                                        <p className="text-xs font-medium leading-tight">{step.data.title}</p>
+                                                        <p className="text-xs leading-tight font-medium">{step.data.title}</p>
                                                         <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[11px]">{step.data.summary}</p>
                                                         {step.data.highlights && step.data.highlights.length > 0 && (
                                                             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -704,14 +731,23 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
             </Dialog>
 
             {/* User Overrides Dialog */}
-            <Dialog open={!!overridesFeature} onOpenChange={(open) => !open && { setOverridesFeature: setOverridesFeature(null), setOverriddenUsers: setOverriddenUsers([]) }.setOverridesFeature(open ? overridesFeature : null)}>
+            <Dialog
+                open={!!overridesFeature}
+                onOpenChange={(open) =>
+                    !open &&
+                    { setOverridesFeature: setOverridesFeature(null), setOverriddenUsers: setOverriddenUsers([]) }.setOverridesFeature(
+                        open ? overridesFeature : null,
+                    )
+                }
+            >
                 <DialogContent className="max-h-[80vh] sm:max-w-lg">
                     {overridesFeature && (
                         <>
                             <DialogHeader>
                                 <DialogTitle className="text-base">User Overrides — {overridesFeature.name}</DialogTitle>
                                 <DialogDescription className="text-xs">
-                                    Manage per-user feature flag overrides. Users listed here have explicit overrides that bypass the default resolution.
+                                    Manage per-user feature flag overrides. Users listed here have explicit overrides that bypass the default
+                                    resolution.
                                 </DialogDescription>
                             </DialogHeader>
 
@@ -763,14 +799,13 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                             <div key={user.id} className="flex items-center gap-3 px-3 py-2">
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-xs font-medium">{user.name}</p>
-                                                    <p className="text-muted-foreground text-[11px]">{user.email} · {user.role}</p>
+                                                    <p className="text-muted-foreground text-[11px]">
+                                                        {user.email} · {user.role}
+                                                    </p>
                                                 </div>
                                                 <Badge
                                                     variant={user.is_active ? "default" : "secondary"}
-                                                    className={cn(
-                                                        "text-[10px]",
-                                                        user.is_active && "bg-emerald-500/10 text-emerald-600",
-                                                    )}
+                                                    className={cn("text-[10px]", user.is_active && "bg-emerald-500/10 text-emerald-600")}
                                                 >
                                                     {user.is_active ? "Active" : "Inactive"}
                                                 </Badge>
@@ -785,10 +820,7 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                                                 : handleActivateForUser(overridesFeature, user.id)
                                                         }
                                                     >
-                                                        <Switch
-                                                            checked={user.is_active}
-                                                            className="data-[state=checked]:bg-emerald-500 scale-75"
-                                                        />
+                                                        <Switch checked={user.is_active} className="scale-75 data-[state=checked]:bg-emerald-500" />
                                                     </Button>
                                                 </div>
                                             </div>
@@ -808,7 +840,14 @@ export default function FeatureTogglesIndex({ auth, features: initialFeatures, f
                                         Purge All Overrides
                                     </Button>
                                 )}
-                                <Button variant="outline" size="sm" onClick={() => { setOverridesFeature(null); setOverriddenUsers([]); }}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        setOverridesFeature(null);
+                                        setOverriddenUsers([]);
+                                    }}
+                                >
                                     Close
                                 </Button>
                             </DialogFooter>
