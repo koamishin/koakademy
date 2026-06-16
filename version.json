@@ -1,18 +1,18 @@
 {
-  "version": "1.8.0-dev.2.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.8.0-dev.2.0",
-  "commit": "8bf8bfb0a204bc08339eb068900624453a7fd4e2",
+  "version": "1.9.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0",
+  "commit": "43c841e0285037c90c26d3c9fa8ad139f6166563",
   "branch": "master",
-  "timestamp": "2026-06-12T11:07:12Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27411612480",
-  "release_type": "feature",
+  "timestamp": "2026-06-16T14:46:54Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27625602377",
+  "release_type": "official",
   "changelog": {
-    "current": "Version 1.8.0-dev.2.0 - feat(select): add fruit selection example",
-    "previous": "1.8.0-dev.1.3"
+    "current": "Version 1.9.0 - manual release",
+    "previous": "1.8.0-dev.2.0"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Auto Pre-release and Docker Tag",
+    "workflow": "Manual Official Release",
     "repository": "yukazakiri/koakademy"
   }
 }
