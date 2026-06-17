@@ -1,18 +1,18 @@
 {
-  "version": "1.9.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0",
-  "commit": "43c841e0285037c90c26d3c9fa8ad139f6166563",
+  "version": "1.9.0-dev.0.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.0.1",
+  "commit": "fc351d942f7a098c2b2488fff14cb6153c97d975",
   "branch": "master",
-  "timestamp": "2026-06-16T14:46:54Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27625602377",
-  "release_type": "official",
+  "timestamp": "2026-06-17T04:16:33Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27665187583",
+  "release_type": "chore",
   "changelog": {
-    "current": "Version 1.9.0 - manual release",
-    "previous": "1.8.0-dev.2.0"
+    "current": "Version 1.9.0-dev.0.1 - chore(deps): update aws/aws-sdk-php and rebuild Filament assets",
+    "previous": "1.9.0"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Manual Official Release",
+    "workflow": "Auto Pre-release and Docker Tag",
     "repository": "yukazakiri/koakademy"
   }
 }
