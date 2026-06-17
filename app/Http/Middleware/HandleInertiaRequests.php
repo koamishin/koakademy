@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Laravel\Pennant\Feature;
 use Modules\Announcement\Services\AnnouncementDataService;
+use Override;
 
 final class HandleInertiaRequests extends Middleware
 {
@@ -28,6 +29,7 @@ final class HandleInertiaRequests extends Middleware
      *
      * @var string
      */
+    #[Override]
     protected $rootView = 'app';
 
     /**

@@ -28,9 +28,11 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Override;
 
 final class SubjectsRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'subjects';
 
     public function form(Schema $schema): Schema

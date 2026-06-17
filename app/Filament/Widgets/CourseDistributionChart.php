@@ -6,21 +6,29 @@ namespace App\Filament\Widgets;
 
 use App\Models\StudentEnrollment;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class CourseDistributionChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 3;
 
+    #[Override]
     protected ?string $heading = 'Course Distribution';
 
+    #[Override]
     protected ?string $description = 'Distribution of students by course program';
 
+    #[Override]
     protected string $color = 'success';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

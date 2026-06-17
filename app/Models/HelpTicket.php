@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 final class HelpTicket extends Model
 {
+    #[Override]
     protected $fillable = [
         'user_id',
         'type',
@@ -18,6 +20,7 @@ final class HelpTicket extends Model
         'attachments',
     ];
 
+    #[Override]
     protected $casts = [
         'attachments' => 'array',
     ];

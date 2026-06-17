@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 /**
  * @property-read StudentEnrollment|null $enrollment
@@ -24,6 +25,7 @@ final class AdditionalFee extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'enrollment_id',
         'fee_name',

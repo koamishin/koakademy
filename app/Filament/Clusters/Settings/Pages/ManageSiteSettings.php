@@ -15,17 +15,22 @@ use Filament\Pages\SettingsPage;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Override;
 
 final class ManageSiteSettings extends SettingsPage
 {
     use HasPageShield;
 
+    #[Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::GlobeAlt;
 
+    #[Override]
     protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::OutlinedGlobeAlt;
 
+    #[Override]
     protected static string $settings = SiteSettings::class;
 
+    #[Override]
     protected static ?string $cluster = SettingsCluster::class;
 
     /**

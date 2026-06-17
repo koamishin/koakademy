@@ -18,11 +18,13 @@ use Filament\Pages\Concerns\ExposesTableToWidgets;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use Override;
 
 final class ListStudentEnrollments extends ListRecords
 {
     use ExposesTableToWidgets;
 
+    #[Override]
     protected static string $resource = StudentEnrollmentResource::class;
 
     public function getTabs(): array

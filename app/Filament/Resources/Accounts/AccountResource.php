@@ -18,20 +18,27 @@ use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Override;
 use UnitEnum;
 
 final class AccountResource extends Resource
 {
+    #[Override]
     protected static ?string $model = Account::class;
 
+    #[Override]
     protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'name';
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Administration';
 
+    #[Override]
     protected static ?int $navigationSort = 2;
 
+    #[Override]
     protected static ?string $navigationLabel = 'Portal Accounts';
 
     public static function canViewAny(): bool

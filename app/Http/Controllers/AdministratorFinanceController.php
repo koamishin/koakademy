@@ -375,7 +375,7 @@ final class AdministratorFinanceController extends Controller
                             $tuitionPaymentsByRecord['current'] += $amount;
                         }
 
-                    } elseif ($item['type'] === 'fee' && ! empty($item['fee_key']) && array_key_exists($item['fee_key'], $settlements)) {
+                    } elseif ($item['type'] === 'fee' && ! empty($item['fee_key']) && array_key_exists((string) $item['fee_key'], $settlements)) {
                         // Map specific fee types to their corresponding keys in settlements
                         $settlements[$item['fee_key']] += $amount;
                     } else {
@@ -782,7 +782,7 @@ final class AdministratorFinanceController extends Controller
         $tuitions = $query->orderByDesc('total_balance')->get();
         $billing = app(EnrollmentBillingService::class);
 
-        $data = $tuitions->map(fn ($tuition): array => [
+        $data = $tuitions->map(fn (StudentTuition $tuition): array => [
             'id' => $tuition->id,
             'student_id' => $tuition->student?->student_id ?? 'N/A',
             'student_name' => $tuition->student?->full_name ?? 'N/A',
@@ -797,11 +797,11 @@ final class AdministratorFinanceController extends Controller
         ]);
 
         $totalCollectible = (float) $tuitions->sum('overall_tuition');
-        $totalCollected = (float) $tuitions->sum(fn ($tuition): float => $billing->totalPaid($tuition));
+        $totalCollected = (float) $tuitions->sum(fn (StudentTuition $tuition): float => $billing->totalPaid($tuition));
 
         $summary = [
             'total_students' => $tuitions->count(),
-            'total_outstanding' => $tuitions->sum(fn ($tuition): float => $billing->balanceDue($tuition)),
+            'total_outstanding' => $tuitions->sum(fn (StudentTuition $tuition): float => $billing->balanceDue($tuition)),
             'total_collectible' => $totalCollectible,
             'total_collected' => $totalCollected,
             'collection_rate' => $totalCollectible > 0

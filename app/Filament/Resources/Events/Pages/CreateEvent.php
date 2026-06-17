@@ -6,9 +6,11 @@ namespace App\Filament\Resources\Events\Pages;
 
 use App\Filament\Resources\Events\EventResource;
 use Filament\Resources\Pages\CreateRecord;
+use Override;
 
 final class CreateEvent extends CreateRecord
 {
+    #[Override]
     protected static string $resource = EventResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

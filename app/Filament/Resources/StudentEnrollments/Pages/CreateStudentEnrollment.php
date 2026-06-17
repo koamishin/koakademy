@@ -11,9 +11,11 @@ use App\Services\EnrollmentBillingService;
 use Exception;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Log;
+use Override;
 
 final class CreateStudentEnrollment extends CreateRecord
 {
+    #[Override]
     protected static string $resource = StudentEnrollmentResource::class;
 
     private array $tuitionData = [];

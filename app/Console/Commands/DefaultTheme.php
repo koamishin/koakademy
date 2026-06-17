@@ -8,6 +8,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Override;
 
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
@@ -20,6 +21,7 @@ final class DefaultTheme extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'theme:default {--update= : The URL of the theme JSON from tweakcn.com} {--reset : Reset the default theme to system originals}';
 
     /**
@@ -27,6 +29,7 @@ final class DefaultTheme extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Update the default theme from a JSON definition';
 
     private string $appCssPath;

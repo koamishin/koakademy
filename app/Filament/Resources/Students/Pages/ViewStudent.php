@@ -30,9 +30,11 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Facades\Auth;
 use Mansoor\FilamentVersionable\Page\RevisionsAction;
+use Override;
 
 final class ViewStudent extends ViewRecord
 {
+    #[Override]
     protected static string $resource = StudentResource::class;
 
     protected function getHeaderActions(): array

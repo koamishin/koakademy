@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Override;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
@@ -17,11 +18,13 @@ use function Laravel\Prompts\text;
 
 final class ImportTheme extends Command
 {
+    #[Override]
     protected $signature = 'theme:import
                             {url? : The URL to the theme JSON file (e.g. https://tweakcn.com/r/themes/vintage-paper.json)}
                             {--name= : Override the theme name}
                             {--description= : Custom description for the theme}';
 
+    #[Override]
     protected $description = 'Import a shadcn theme from a tweakcn.com JSON URL';
 
     private string $themesDir;

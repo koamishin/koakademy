@@ -12,13 +12,17 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Override;
 
 final class ClassesRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'classes';
 
+    #[Override]
     protected static ?string $title = 'Assigned Classes';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'subject_code';
 
     public function form(Schema $schema): Schema

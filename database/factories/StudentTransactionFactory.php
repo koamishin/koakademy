@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\StudentTransaction;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\StudentTransaction>
@@ -17,6 +18,7 @@ final class StudentTransactionFactory extends Factory
      *
      * @var string
      */
+    #[Override]
     protected $model = StudentTransaction::class;
 
     /**

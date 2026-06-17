@@ -24,18 +24,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Override;
 use UnitEnum;
 
 final class StudentEnrollmentResource extends Resource
 {
+    #[Override]
     protected static ?string $model = StudentEnrollment::class;
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Academics';
 
+    #[Override]
     protected static ?int $navigationSort = 3;
 
+    #[Override]
     protected static ?string $navigationLabel = 'Enrollments';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'student_id';
 
     public static function getGloballySearchableAttributes(): array

@@ -8,9 +8,11 @@ use App\Models\Students;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
+use Override;
 
 final class StudentsExporter extends Exporter
 {
+    #[Override]
     protected static ?string $model = Students::class;
 
     public static function getColumns(): array

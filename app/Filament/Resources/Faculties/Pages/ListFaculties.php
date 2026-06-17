@@ -7,9 +7,11 @@ namespace App\Filament\Resources\Faculties\Pages;
 use App\Filament\Resources\Faculties\FacultyResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Override;
 
 final class ListFaculties extends ListRecords
 {
+    #[Override]
     protected static string $resource = FacultyResource::class;
 
     protected function getHeaderActions(): array

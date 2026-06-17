@@ -21,11 +21,14 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Override;
 
 final class ClassesRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'Classes';
 
+    #[Override]
     protected static bool $isLazy = false;
 
     public function form(Schema $schema): Schema

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 /**
  * Class ShsStudent
@@ -32,8 +33,10 @@ final class ShsStudent extends Model
     use BelongsToSchool;
     use HasFactory;
 
+    #[Override]
     protected $table = 'shs_students';
 
+    #[Override]
     protected $fillable = [
         'student_lrn',
         'fullname',

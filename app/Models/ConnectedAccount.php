@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 final class ConnectedAccount extends Model
 {
+    #[Override]
     protected $fillable = [
         'user_id',
         'provider',
@@ -22,6 +24,7 @@ final class ConnectedAccount extends Model
         'expires_at',
     ];
 
+    #[Override]
     protected $casts = [
         'expires_at' => 'datetime',
     ];

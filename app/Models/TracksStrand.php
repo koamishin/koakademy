@@ -10,6 +10,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class TracksStrand
@@ -22,8 +23,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class TracksStrand extends Model
 {
+    #[Override]
     protected $table = 'tracks_strands';
 
+    #[Override]
     protected $fillable = [
         'code',
         'title',

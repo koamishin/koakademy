@@ -8,15 +8,20 @@ use App\Enums\StudentType;
 use App\Models\Student;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Override;
 
 final class StudentAnalyticsStatsOverview extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 11;
 
+    #[Override]
     protected ?string $heading = 'Student Type Analytics';
 
+    #[Override]
     protected ?string $description = 'Breakdown of students by enrollment type';
 
+    #[Override]
     protected ?string $pollingInterval = '30s';
 
     protected function getStats(): array

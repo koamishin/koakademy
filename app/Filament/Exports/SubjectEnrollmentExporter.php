@@ -8,9 +8,11 @@ use App\Models\SubjectEnrollment;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
+use Override;
 
 final class SubjectEnrollmentExporter extends Exporter
 {
+    #[Override]
     protected static ?string $model = SubjectEnrollment::class;
 
     public static function getColumns(): array

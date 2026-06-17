@@ -8,15 +8,20 @@ use App\Models\Course;
 use App\Models\StudentEnrollment;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
+use Override;
 
 final class EnrollmentByCourseStatsWidget extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 3;
 
+    #[Override]
     protected ?string $heading = 'Enrollment by Course';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = 'full';
 
     protected function getData(): array

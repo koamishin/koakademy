@@ -11,9 +11,11 @@ use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 use Mansoor\FilamentVersionable\Page\RevisionsAction;
+use Override;
 
 final class EditStudent extends EditRecord
 {
+    #[Override]
     protected static string $resource = StudentResource::class;
 
     protected function getHeaderActions(): array

@@ -8,9 +8,11 @@ use App\Models\User;
 use App\Notifications\FilamentEmailAuthenticationCode;
 use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Override;
 
 final class SecurityAwareEmailAuthentication extends EmailAuthentication
 {
+    #[Override]
     protected string $codeNotification = FilamentEmailAuthenticationCode::class;
 
     public function isEnabled(Authenticatable $user): bool

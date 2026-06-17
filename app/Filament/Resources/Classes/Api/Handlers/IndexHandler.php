@@ -8,13 +8,16 @@ use App\Filament\Resources\Classes\Api\Transformers\ClassScheduleTransformer;
 use App\Filament\Resources\Classes\ClassResource;
 use App\Models\Classes;
 use Illuminate\Http\Request;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 use Spatie\QueryBuilder\QueryBuilder;
 
 final class IndexHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/schedules';
 
+    #[Override]
     public static ?string $resource = ClassResource::class;
 
     protected static string $permission = 'View:Class';

@@ -12,12 +12,15 @@ use App\Services\GeneralSettingsService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 
 final class CreateHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/';
 
+    #[Override]
     public static ?string $resource = StudentEnrollmentResource::class;
 
     protected static string $permission = 'Create:StudentEnrollment';

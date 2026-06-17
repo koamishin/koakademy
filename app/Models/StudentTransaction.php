@@ -10,6 +10,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class StudentTransaction
@@ -25,8 +26,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class StudentTransaction extends Model
 {
+    #[Override]
     protected $table = 'student_transactions';
 
+    #[Override]
     protected $fillable = [
         'student_id',
         'transaction_id',

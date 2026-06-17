@@ -109,8 +109,6 @@ final class LogoConversionService
         // ── 7. Cleanup ──
         File::cleanDirectory($tmpDir);
 
-        imagedestroy($sourceImage);
-
         return [
             'logo' => "{$prefix}/logo.png",
             'favicon' => $faviconPath,
@@ -202,7 +200,6 @@ final class LogoConversionService
 
         imagecopyresampled($canvas, $source, 0, 0, 0, 0, $newW, $newH, $srcW, $srcH);
         imagepng($canvas, $destPath, 9);
-        imagedestroy($canvas);
     }
 
     /**
@@ -234,8 +231,6 @@ final class LogoConversionService
         imagecopy($canvas, $logoCanvas, $x, $y, 0, 0, $logoW, $logoH);
 
         imagepng($canvas, $destPath, 9);
-        imagedestroy($logoCanvas);
-        imagedestroy($canvas);
     }
 
     /**

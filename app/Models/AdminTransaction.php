@@ -10,6 +10,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class AdminTransaction
@@ -25,8 +26,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class AdminTransaction extends Model
 {
+    #[Override]
     protected $table = 'admin_transactions';
 
+    #[Override]
     protected $fillable = [
         'admin_id',
         'transaction_id',

@@ -12,15 +12,20 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 final class CurrentClassesRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'classEnrollments';
 
+    #[Override]
     protected static ?string $title = 'Current Enrolled Classes';
 
+    #[Override]
     protected static ?string $modelLabel = 'Class';
 
+    #[Override]
     protected static ?string $pluralModelLabel = 'Classes';
 
     public function table(Table $table): Table

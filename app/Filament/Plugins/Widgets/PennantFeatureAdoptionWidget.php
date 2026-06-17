@@ -8,10 +8,12 @@ use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Override;
 use stdClass;
 
 final class PennantFeatureAdoptionWidget extends BaseWidget
 {
+    #[Override]
     protected ?string $heading = 'Feature Adoption';
 
     protected function getStats(): array
@@ -76,8 +78,10 @@ final class PennantFeatureAdoptionWidget extends BaseWidget
 
         foreach (config('pennant-manager.scope_models', []) as $modelConfig) {
             $modelClass = is_array($modelConfig) ? ($modelConfig['model'] ?? null) : $modelConfig;
-
-            if (! is_string($modelClass) || ! is_subclass_of($modelClass, Model::class)) {
+            if (! is_string($modelClass)) {
+                continue;
+            }
+            if (! is_subclass_of($modelClass, Model::class)) {
                 continue;
             }
 

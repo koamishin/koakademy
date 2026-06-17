@@ -24,7 +24,7 @@ final class TwoFactorChallengeController extends Controller
 {
     use ConfiguresPasskeysForRequest;
 
-    private const VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.two_factor_verification_options';
+    private const string VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.two_factor_verification_options';
 
     public function __construct(
         private readonly SecurityAwareAppAuthentication $appAuthentication,
@@ -235,7 +235,7 @@ final class TwoFactorChallengeController extends Controller
         $credential = $request->input('credential');
 
         if (! is_array($credential) && is_string($request->input('passkey'))) {
-            $credential = json_decode((string) $request->input('passkey'), true);
+            $credential = json_decode($request->input('passkey'), true);
         }
 
         if (! is_array($credential)) {

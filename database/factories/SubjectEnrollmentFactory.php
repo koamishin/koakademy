@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\SubjectEnrollment;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\SubjectEnrollment>
@@ -17,6 +18,7 @@ final class SubjectEnrollmentFactory extends Factory
      *
      * @var string
      */
+    #[Override]
     protected $model = SubjectEnrollment::class;
 
     /**

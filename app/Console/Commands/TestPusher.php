@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Events\TestNotification;
 use Illuminate\Console\Command;
+use Override;
 
 final class TestPusher extends Command
 {
@@ -14,6 +15,7 @@ final class TestPusher extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'app:test-pusher';
 
     /**
@@ -21,6 +23,7 @@ final class TestPusher extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Test Pusher WebSocket broadcasting';
 
     /**

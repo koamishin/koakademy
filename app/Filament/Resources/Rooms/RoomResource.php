@@ -15,16 +15,21 @@ use App\Models\Room;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Override;
 use UnitEnum;
 
 final class RoomResource extends Resource
 {
+    #[Override]
     protected static ?string $model = Room::class;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'name';
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Campus';
 
+    #[Override]
     protected static ?int $navigationSort = 3;
 
     public static function form(Schema $schema): Schema

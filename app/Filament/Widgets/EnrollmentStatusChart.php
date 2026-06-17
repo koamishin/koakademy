@@ -7,21 +7,29 @@ namespace App\Filament\Widgets;
 use App\Models\StudentEnrollment;
 use App\Services\EnrollmentPipelineService;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class EnrollmentStatusChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 5;
 
+    #[Override]
     protected ?string $heading = 'Enrollment Workflow Status';
 
+    #[Override]
     protected ?string $description = 'Current status distribution in the enrollment process';
 
+    #[Override]
     protected string $color = 'warning';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

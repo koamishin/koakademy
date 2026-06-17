@@ -6,21 +6,29 @@ namespace App\Filament\Widgets;
 
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class StudentGenderDistributionChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 7;
 
+    #[Override]
     protected ?string $heading = 'Student Gender Distribution';
 
+    #[Override]
     protected ?string $description = 'Distribution of students by gender';
 
+    #[Override]
     protected string $color = 'primary';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

@@ -7,19 +7,26 @@ namespace App\Filament\Widgets;
 use App\Enums\StudentStatus;
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class DropoutByYearLevelChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 31;
 
+    #[Override]
     protected ?string $heading = 'Dropout Rates by Year Level';
 
+    #[Override]
     protected ?string $description = 'Distribution of dropouts across academic year levels';
 
+    #[Override]
     protected string $color = 'warning';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

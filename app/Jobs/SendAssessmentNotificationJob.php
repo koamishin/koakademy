@@ -244,7 +244,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     /**
      * Ensure PDF is available, generate if needed
      */
-    private function ensurePdfIsAvailable(): ?string
+    private function ensurePdfIsAvailable(): string
     {
         // Reuse latest assessment resource if available in configured storage
         $existingResource = $this->studentEnrollment

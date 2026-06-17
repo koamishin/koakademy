@@ -9,14 +9,17 @@ use App\Models\Classes;
 use App\Models\Faculty;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 final class FacultyStudentsHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/{faculty_id}/students';
 
+    #[Override]
     public static ?string $resource = FacultyResource::class;
 
     protected static string $permission = 'View:Faculty';

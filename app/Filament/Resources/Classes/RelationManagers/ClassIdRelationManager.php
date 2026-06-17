@@ -17,9 +17,11 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Override;
 
 final class ClassIdRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'class_id';
 
     public function form(Schema $schema): Schema

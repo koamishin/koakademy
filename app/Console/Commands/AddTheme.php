@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Override;
 
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
@@ -22,6 +23,7 @@ final class AddTheme extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'theme:add {url : The URL of the theme JSON from tweakcn.com}';
 
     /**
@@ -29,6 +31,7 @@ final class AddTheme extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Download and install a new theme from a JSON definition';
 
     private string $themesConfigPath;

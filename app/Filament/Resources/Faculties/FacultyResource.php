@@ -19,18 +19,24 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 use UnitEnum;
 
 final class FacultyResource extends Resource
 {
+    #[Override]
     protected static ?string $model = Faculty::class;
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'People';
 
+    #[Override]
     protected static ?int $navigationSort = 2;
 
+    #[Override]
     protected static ?string $navigationLabel = 'Faculty';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'last_name';
 
     public static function getGloballySearchableAttributes(): array

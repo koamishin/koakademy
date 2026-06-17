@@ -50,8 +50,10 @@ return new class extends Migration
                     }
 
                     $credential = json_decode($passkey->data, true);
-
-                    if (! is_array($credential) || ! is_string($credential['publicKeyCredentialId'] ?? null)) {
+                    if (! is_array($credential)) {
+                        continue;
+                    }
+                    if (! is_string($credential['publicKeyCredentialId'] ?? null)) {
                         continue;
                     }
 

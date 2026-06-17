@@ -10,9 +10,11 @@ use Carbon\Carbon;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Override;
 
 final class ResourceAvailabilityWidget extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 3;
 
     public static function canView(): bool

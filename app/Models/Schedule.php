@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory; // Import Builder
 use Illuminate\Database\Eloquent\Model; // Import Cache
 // Import GeneralSetting
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Override;
 
 // Add this import
 /**
@@ -36,8 +37,10 @@ final class Schedule extends Model
     use HasFactory;
     use SoftDeletes;
 
+    #[Override]
     protected $table = 'schedule';
 
+    #[Override]
     protected $fillable = [
         'day_of_week',
         'start_time',

@@ -19,20 +19,27 @@ use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Override;
 use UnitEnum;
 
 final class UserResource extends Resource
 {
+    #[Override]
     protected static ?string $model = User::class;
 
+    #[Override]
     protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'name';
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'People';
 
+    #[Override]
     protected static ?int $navigationSort = 3;
 
+    #[Override]
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
 
     /**

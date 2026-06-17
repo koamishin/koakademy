@@ -21,21 +21,29 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 final class ShsStudentResource extends Resource
 {
+    #[Override]
     protected static ?string $model = ShsStudent::class;
 
+    #[Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAcademicCap;
 
+    #[Override]
     protected static ?string $cluster = SeniorHighSchoolCluster::class;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'fullname';
 
+    #[Override]
     protected static ?string $modelLabel = 'SHS Student';
 
+    #[Override]
     protected static ?string $pluralModelLabel = 'SHS Students';
 
+    #[Override]
     protected static ?int $navigationSort = 2;
 
     public static function getGloballySearchableAttributes(): array

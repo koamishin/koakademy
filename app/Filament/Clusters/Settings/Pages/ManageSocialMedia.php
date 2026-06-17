@@ -13,17 +13,22 @@ use Filament\Forms\Components\TextInput;
 use Filament\Pages\SettingsPage;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Override;
 
 final class ManageSocialMedia extends SettingsPage
 {
     use HasPageShield;
 
+    #[Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::Squares2x2;
 
+    #[Override]
     protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::OutlinedSquares2x2;
 
+    #[Override]
     protected static string $settings = SocialMediaSettings::class;
 
+    #[Override]
     protected static ?string $cluster = SettingsCluster::class;
 
     /**

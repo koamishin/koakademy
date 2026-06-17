@@ -6,9 +6,11 @@ namespace App\Filament\Resources\Accounts\Pages;
 
 use App\Filament\Resources\Accounts\AccountResource;
 use Filament\Resources\Pages\CreateRecord;
+use Override;
 
 final class CreateAccount extends CreateRecord
 {
+    #[Override]
     protected static string $resource = AccountResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Override;
 
 final class TestMailCommand extends Command
 {
@@ -13,6 +14,7 @@ final class TestMailCommand extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'app:test-mail-command';
 
     /**
@@ -20,6 +22,7 @@ final class TestMailCommand extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Command description';
 
     /**

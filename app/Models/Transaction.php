@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class Transaction
@@ -44,8 +45,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class Transaction extends Model
 {
+    #[Override]
     protected $table = 'transactions';
 
+    #[Override]
     protected $fillable = [
         'description',
         'payment_method',

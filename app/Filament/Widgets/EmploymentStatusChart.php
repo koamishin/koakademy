@@ -8,19 +8,26 @@ use App\Enums\EmploymentStatus;
 use App\Enums\StudentStatus;
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class EmploymentStatusChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 33;
 
+    #[Override]
     protected ?string $heading = 'Graduate Employment Status';
 
+    #[Override]
     protected ?string $description = 'Employment outcomes for graduated students';
 
+    #[Override]
     protected string $color = 'success';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

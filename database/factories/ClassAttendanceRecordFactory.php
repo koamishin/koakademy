@@ -6,9 +6,11 @@ namespace Database\Factories;
 
 use App\Models\ClassAttendanceRecord;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 final class ClassAttendanceRecordFactory extends Factory
 {
+    #[Override]
     protected $model = ClassAttendanceRecord::class;
 
     public function definition()

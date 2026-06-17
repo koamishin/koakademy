@@ -6,9 +6,11 @@ namespace App\Filament\Resources\Students\Components;
 
 use App\Models\Course;
 use Filament\Schemas\Components\Component;
+use Override;
 
 final class CourseInfoDisplay extends Component
 {
+    #[Override]
     protected string $view = 'filament.resources.students.components.course-info-display';
 
     public static function make(): static

@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
+use Override;
 
 /**
  * Class StudentEnrollment
@@ -60,8 +61,10 @@ final class StudentEnrollment extends Model
     use Searchable;
     use SoftDeletes;
 
+    #[Override]
     protected $table = 'student_enrollment';
 
+    #[Override]
     protected $fillable = [
         'student_id',
         'course_id',
@@ -74,6 +77,7 @@ final class StudentEnrollment extends Model
         'school_id',
     ];
 
+    #[Override]
     protected $casts = ['deleted_at' => 'datetime'];
 
     /**

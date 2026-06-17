@@ -9,6 +9,7 @@ use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Override;
 
 final class SyncStudentIds extends Command
 {
@@ -17,6 +18,7 @@ final class SyncStudentIds extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'student:sync-ids 
                             {--dry-run : Run the command without making changes}
                             {--force : Skip confirmation prompts}';
@@ -26,6 +28,7 @@ final class SyncStudentIds extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Sync the id column with the student_id column in the students table';
 
     /**

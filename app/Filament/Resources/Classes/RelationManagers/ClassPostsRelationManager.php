@@ -15,9 +15,11 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Override;
 
 final class ClassPostsRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'classPosts';
 
     public function form(Schema $schema): Schema

@@ -12,15 +12,20 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
+use Override;
 
 final class RecentEnrollmentsTable extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 4;
 
+    #[Override]
     protected static ?string $heading = 'Recent Enrollment Applications';
 
+    #[Override]
     protected int|string|array $columnSpan = 'full';
 
+    #[Override]
     protected static bool $isLazy = false;
 
     private static ?string $description = 'Latest student enrollment applications and their processing status';

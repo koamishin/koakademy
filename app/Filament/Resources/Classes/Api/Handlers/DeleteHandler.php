@@ -6,12 +6,15 @@ namespace App\Filament\Resources\Classes\Api\Handlers;
 
 use App\Filament\Resources\Classes\ClassesResource;
 use Illuminate\Http\Request;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 
 final class DeleteHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/{id}';
 
+    #[Override]
     public static ?string $resource = ClassesResource::class;
 
     protected static string $permission = 'Delete:Classes';

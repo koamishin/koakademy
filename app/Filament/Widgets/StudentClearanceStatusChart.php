@@ -6,21 +6,29 @@ namespace App\Filament\Widgets;
 
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class StudentClearanceStatusChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 5;
 
+    #[Override]
     protected ?string $heading = 'Student Clearance Status';
 
+    #[Override]
     protected ?string $description = 'Overview of student clearance completion status';
 
+    #[Override]
     protected string $color = 'warning';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

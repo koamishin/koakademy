@@ -6,12 +6,15 @@ namespace App\Filament\Resources\StudentEnrollments\Api\Handlers;
 
 use App\Filament\Resources\StudentEnrollments\Api\Requests\UpdateStudentEnrollmentRequest;
 use App\Filament\Resources\StudentEnrollments\StudentEnrollmentResource;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 
 final class UpdateHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/{id}';
 
+    #[Override]
     public static ?string $resource = StudentEnrollmentResource::class;
 
     protected static string $permission = 'Update:StudentEnrollment';

@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\Classes;
 use App\Models\Subject;
 use Illuminate\Console\Command;
+use Override;
 
 final class UpdateClassesSubjectCodes extends Command
 {
@@ -15,6 +16,7 @@ final class UpdateClassesSubjectCodes extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'classes:update-subject-codes';
 
     /**
@@ -22,6 +24,7 @@ final class UpdateClassesSubjectCodes extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Update subject_code field for classes that have subject_ids but missing subject_code';
 
     /**

@@ -128,7 +128,10 @@ final class UpdateEnrollmentPipelineRequest extends FormRequest
             }
 
             $value = $step[$field] ?? null;
-            if (! is_string($value) || mb_trim($value) === '') {
+            if (! is_string($value)) {
+                continue;
+            }
+            if (mb_trim($value) === '') {
                 continue;
             }
 
@@ -192,7 +195,10 @@ final class UpdateEnrollmentPipelineRequest extends FormRequest
             }
 
             $nextStepKey = $step['next_step_key'] ?? null;
-            if (! is_string($nextStepKey) || mb_trim($nextStepKey) === '') {
+            if (! is_string($nextStepKey)) {
+                continue;
+            }
+            if (mb_trim($nextStepKey) === '') {
                 continue;
             }
 

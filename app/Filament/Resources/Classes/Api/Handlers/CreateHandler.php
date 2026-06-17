@@ -6,12 +6,15 @@ namespace App\Filament\Resources\Classes\Api\Handlers;
 
 use App\Filament\Resources\Classes\Api\Requests\CreateClassesRequest;
 use App\Filament\Resources\Classes\ClassesResource;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 
 final class CreateHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/';
 
+    #[Override]
     public static ?string $resource = ClassesResource::class;
 
     protected static string $permission = 'Create:Classes';

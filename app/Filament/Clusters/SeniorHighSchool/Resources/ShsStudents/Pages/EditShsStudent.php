@@ -8,9 +8,11 @@ use App\Filament\Clusters\SeniorHighSchool\Resources\ShsStudents\ShsStudentResou
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use Override;
 
 final class EditShsStudent extends EditRecord
 {
+    #[Override]
     protected static string $resource = ShsStudentResource::class;
 
     protected function getHeaderActions(): array

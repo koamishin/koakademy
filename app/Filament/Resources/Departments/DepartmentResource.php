@@ -18,18 +18,24 @@ use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Override;
 use UnitEnum;
 
 final class DepartmentResource extends Resource
 {
+    #[Override]
     protected static ?string $model = Department::class;
 
+    #[Override]
     protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'name';
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Campus';
 
+    #[Override]
     protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool

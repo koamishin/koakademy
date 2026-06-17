@@ -7,13 +7,16 @@ namespace App\Filament\Resources\Faculties\Api\Handlers;
 use App\Filament\Resources\Faculties\Api\Transformers\FacultyTransformer;
 use App\Filament\Resources\Faculties\FacultyResource;
 use Illuminate\Http\Request;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 use Spatie\QueryBuilder\QueryBuilder;
 
 final class DetailHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/{id}';
 
+    #[Override]
     public static ?string $resource = FacultyResource::class;
 
     protected static string $permission = 'View:Faculty';

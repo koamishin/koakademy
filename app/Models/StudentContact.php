@@ -10,6 +10,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class StudentContact
@@ -22,10 +23,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class StudentContact extends Model
 {
+    #[Override]
     public $timestamps = false;
 
+    #[Override]
     protected $table = 'student_contacts';
 
+    #[Override]
     protected $fillable = [
         'personal_contact',
         'facebook',

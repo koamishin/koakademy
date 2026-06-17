@@ -8,13 +8,16 @@ use App\Enums\StudentStatus;
 use App\Models\Concerns\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class StudentStatusRecord extends Model
 {
     use BelongsToSchool;
 
+    #[Override]
     protected $table = 'student_statuses';
 
+    #[Override]
     protected $fillable = [
         'student_id',
         'academic_year',

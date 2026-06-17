@@ -76,7 +76,7 @@ final class ClassChangeNotification extends Mailable
 
         return [
             Attachment::fromData(
-                fn () => $this->attachmentData['contents'],
+                fn (): string => $this->attachmentData['contents'],
                 $this->attachmentData['name'],
             )->withMime('application/pdf'),
         ];

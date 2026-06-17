@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Override;
 
 /**
  * Class StrandSubject
@@ -25,8 +26,10 @@ final class StrandSubject extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $table = 'strand_subjects';
 
+    #[Override]
     protected $fillable = [
         'code',
         'title',

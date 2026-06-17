@@ -6,12 +6,15 @@ namespace App\Filament\Resources\Students\Api\Handlers;
 
 use App\Filament\Resources\Students\Api\Requests\UpdateStudentRequest;
 use App\Filament\Resources\Students\StudentResource;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 
 final class UpdateHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/{id}';
 
+    #[Override]
     public static ?string $resource = StudentResource::class;
 
     protected static string $permission = 'Update:Student';

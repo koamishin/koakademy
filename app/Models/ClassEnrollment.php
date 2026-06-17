@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
+use Override;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -43,8 +44,10 @@ final class ClassEnrollment extends Model
     use Searchable;
     use SoftDeletes;
 
+    #[Override]
     protected $table = 'class_enrollments';
 
+    #[Override]
     protected $fillable = [
         'class_id',
         'student_id',

@@ -25,7 +25,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -73,7 +73,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -122,7 +122,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -204,7 +204,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -296,7 +296,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -389,7 +389,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -483,7 +483,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -554,7 +554,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -622,7 +622,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -699,7 +699,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -794,7 +794,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',
@@ -855,8 +855,10 @@ final class FacultyController extends Controller
         $savedRecords = [];
         foreach ($request->input('records') as $recordData) {
             $enrollment = ClassEnrollment::find($recordData['enrollment_id']);
-
-            if (! $enrollment || $enrollment->class_id !== $classId) {
+            if (! $enrollment) {
+                continue;
+            }
+            if ($enrollment->class_id !== $classId) {
                 continue;
             }
 
@@ -899,7 +901,7 @@ final class FacultyController extends Controller
     {
         $faculty = $this->getAuthenticatedFaculty($request);
 
-        if (! $faculty) {
+        if (! $faculty instanceof Faculty) {
             return response()->json([
                 'error' => true,
                 'message' => 'Faculty record not found for this account.',

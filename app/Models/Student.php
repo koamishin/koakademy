@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Scout\Searchable;
+use Override;
 use Overtrue\LaravelVersionable\Versionable;
 use Overtrue\LaravelVersionable\VersionStrategy;
 use Spatie\Activitylog\LogOptions;
@@ -131,8 +132,10 @@ final class Student extends Model
     use SoftDeletes;
     use Versionable;
 
+    #[Override]
     public $timestamps = true;
 
+    #[Override]
     public $incrementing = false;
 
     protected $versionable = ['institution_id',
@@ -200,10 +203,12 @@ final class Student extends Model
         'scholarship_type',
         'scholarship_details'];
 
+    #[Override]
     protected $table = 'students';
 
     protected $versionStrategy = VersionStrategy::SNAPSHOT;
 
+    #[Override]
     protected $fillable = [
         'institution_id',
         'student_id',

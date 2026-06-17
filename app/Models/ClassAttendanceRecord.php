@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 /**
  * @property AttendanceStatus $status
@@ -20,6 +21,7 @@ final class ClassAttendanceRecord extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'class_attendance_session_id',
         'class_enrollment_id',

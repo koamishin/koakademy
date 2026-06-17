@@ -9,17 +9,20 @@ use App\Models\Student;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Override;
 
 final class SetAllStudentsToCollege extends Command
 {
     /**
      * The name and signature of the console command.
      */
+    #[Override]
     protected $signature = 'students:set-college-type {--dry-run : Run without making changes}';
 
     /**
      * The console command description.
      */
+    #[Override]
     protected $description = 'Set all existing students to College type';
 
     /**

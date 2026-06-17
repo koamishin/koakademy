@@ -9,11 +9,14 @@ use App\Models\Student;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Override;
 
 final class FixCollegeStudentIds extends Command
 {
+    #[Override]
     protected $signature = 'students:fix-college-ids {--dry-run : Simulate the fix process without making changes}';
 
+    #[Override]
     protected $description = 'Fix college students with 7 or 8 digit IDs and convert them to proper 6-digit IDs starting with 206***';
 
     public function handle(): int

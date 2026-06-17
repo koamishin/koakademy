@@ -6,21 +6,29 @@ namespace App\Filament\Widgets;
 
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class StudentYearLevelChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 3;
 
+    #[Override]
     protected ?string $heading = 'Student Year Level Distribution';
 
+    #[Override]
     protected ?string $description = 'Distribution of students by academic year level';
 
+    #[Override]
     protected string $color = 'info';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

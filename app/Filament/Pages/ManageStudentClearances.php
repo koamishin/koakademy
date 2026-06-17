@@ -24,22 +24,29 @@ use Guava\FilamentIconSelectColumn\Tables\Columns\IconSelectColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Override;
 use UnitEnum;
 
 final class ManageStudentClearances extends Page implements HasTable
 {
     use InteractsWithTable;
 
+    #[Override]
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clipboard-document-check';
 
+    #[Override]
     protected string $view = 'filament.pages.manage-student-clearances';
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Academics';
 
+    #[Override]
     protected static ?int $navigationSort = 4;
 
+    #[Override]
     protected static ?string $title = 'Manage Student Clearances';
 
+    #[Override]
     protected static ?string $navigationLabel = 'Clearances';
 
     public function table(Table $table): Table

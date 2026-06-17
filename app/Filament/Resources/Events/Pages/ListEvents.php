@@ -7,9 +7,11 @@ namespace App\Filament\Resources\Events\Pages;
 use App\Filament\Resources\Events\EventResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Override;
 
 final class ListEvents extends ListRecords
 {
+    #[Override]
     protected static string $resource = EventResource::class;
 
     protected function getHeaderActions(): array

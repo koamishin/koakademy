@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class Room
@@ -31,8 +32,10 @@ final class Room extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $table = 'rooms';
 
+    #[Override]
     protected $fillable = [
         'name',
         'class_code',

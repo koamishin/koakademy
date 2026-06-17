@@ -9,6 +9,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Queue\Events\JobFailed;
+use Override;
 
 final class EventServiceProvider extends ServiceProvider
 {
@@ -17,6 +18,7 @@ final class EventServiceProvider extends ServiceProvider
      *
      * @var array<class-string, array<int, class-string>>
      */
+    #[Override]
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,

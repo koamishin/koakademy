@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 /**
  * @property-read User|null $user
@@ -22,6 +23,7 @@ final class UserSetting extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $fillable = ['user_id', 'semester', 'school_year_start', 'active_school_id'];
 
     /**

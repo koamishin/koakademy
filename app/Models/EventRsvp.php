@@ -7,12 +7,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class EventRsvp extends Model
 {
     /** @use HasFactory<\Database\Factories\EventRsvpFactory> */
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'event_id',
         'user_id',
@@ -27,6 +29,7 @@ final class EventRsvp extends Model
         'custom_responses',
     ];
 
+    #[Override]
     protected $casts = [
         'responded_at' => 'datetime',
         'checked_in' => 'boolean',

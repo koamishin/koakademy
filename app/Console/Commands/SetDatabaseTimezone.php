@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Override;
 
 final class SetDatabaseTimezone extends Command
 {
@@ -15,6 +16,7 @@ final class SetDatabaseTimezone extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'db:set-timezone 
                             {timezone? : The timezone to set (defaults to app.timezone config)}
                             {--check : Only check the current timezone without making changes}';
@@ -24,6 +26,7 @@ final class SetDatabaseTimezone extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Set the PostgreSQL database timezone to match the application timezone';
 
     /**

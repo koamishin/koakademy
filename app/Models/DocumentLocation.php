@@ -11,6 +11,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Override;
 
 /**
  * Class DocumentLocation
@@ -33,10 +34,13 @@ final class DocumentLocation extends Model
         'picture_1x1',
     ];
 
+    #[Override]
     public $timestamps = false;
 
+    #[Override]
     protected $table = 'document_locations';
 
+    #[Override]
     protected $fillable = self::DOCUMENT_FIELDS;
 
     public function resolveDocumentUrl(?string $path): ?string

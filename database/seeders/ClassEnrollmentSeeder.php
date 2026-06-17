@@ -231,8 +231,10 @@ final class ClassEnrollmentSeeder extends Seeder
 
         foreach ($demoClasses as $index => $demoClass) {
             $classStudents = $studentsByClass->get($index);
-
-            if ($classStudents === null || $classStudents->count() < 10) {
+            if ($classStudents === null) {
+                continue;
+            }
+            if ($classStudents->count() < 10) {
                 continue;
             }
 

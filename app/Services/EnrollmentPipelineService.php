@@ -327,7 +327,7 @@ final class EnrollmentPipelineService
     public function getNextStep(?string $currentStatus): ?array
     {
         $steps = $this->getSteps();
-        foreach ($steps as $index => $step) {
+        foreach ($steps as $step) {
             if ($step['status'] !== $currentStatus) {
                 continue;
             }
@@ -349,7 +349,7 @@ final class EnrollmentPipelineService
     public function getPreviousStep(?string $currentStatus): ?array
     {
         $steps = $this->getSteps();
-        foreach ($steps as $index => $step) {
+        foreach ($steps as $step) {
             if ($step['status'] !== $currentStatus) {
                 continue;
             }

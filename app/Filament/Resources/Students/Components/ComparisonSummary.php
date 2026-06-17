@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Students\Components;
 
 use Filament\Schemas\Components\Component;
+use Override;
 
 final class ComparisonSummary extends Component
 {
+    #[Override]
     protected string $view = 'filament.resources.students.components.comparison-summary';
 
     public static function make(int $autoMatched, int $requiresReview, int $noCreditTransfer): static

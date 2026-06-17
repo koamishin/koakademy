@@ -8,10 +8,12 @@ use App\Filament\Resources\Classes\Api\Transformers\ClassScheduleTransformer;
 use App\Filament\Resources\Classes\ClassResource;
 use App\Models\Classes;
 use Illuminate\Http\Request;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 
 final class ScheduleDetailHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/{id}/schedule';
 
     // public static ?string $resource = ClassResource::class;

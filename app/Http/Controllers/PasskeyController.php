@@ -25,7 +25,7 @@ final class PasskeyController extends Controller
 {
     use ConfiguresPasskeysForRequest;
 
-    private const REGISTRATION_OPTIONS_SESSION_KEY = 'passkey.registration_options';
+    private const string REGISTRATION_OPTIONS_SESSION_KEY = 'passkey.registration_options';
 
     public function generateRegistrationOptions(Request $request, GenerateRegistrationOptions $generate): JsonResponse
     {
@@ -114,7 +114,7 @@ final class PasskeyController extends Controller
         $credential = $request->input('credential');
 
         if (! is_array($credential) && is_string($request->input('passkey'))) {
-            $credential = json_decode((string) $request->input('passkey'), true);
+            $credential = json_decode($request->input('passkey'), true);
         }
 
         if (! is_array($credential)) {

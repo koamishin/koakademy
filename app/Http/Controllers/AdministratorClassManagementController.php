@@ -22,7 +22,6 @@ use App\Services\GeneralSettingsService;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -118,7 +117,7 @@ final class AdministratorClassManagementController extends Controller
                     return false;
                 }
 
-                if ($filters['course_id'] && ! in_array($filters['course_id'], array_map('intval', is_array($class->course_codes) ? $class->course_codes : []), true)) {
+                if ($filters['course_id'] && ! in_array($filters['course_id'], array_map(intval(...), is_array($class->course_codes) ? $class->course_codes : []), true)) {
                     return false;
                 }
 
@@ -577,7 +576,7 @@ final class AdministratorClassManagementController extends Controller
 
         $primarySubject = $subjects->first();
 
-        if (! $primarySubject) {
+        if (! $primarySubject instanceof Subject) {
             $primarySubject = $class->isShs()
                 ? $class->ShsSubject
                 : ($class->Subject ?: $class->SubjectByCodeFallback);
@@ -1003,6 +1002,89 @@ final class AdministratorClassManagementController extends Controller
         }
     }
 
+    public function compare(Request $request): JsonResponse
+    {
+        $classAId = $this->nullableInt($request->input('class_a'));
+        $classBId = $this->nullableInt($request->input('class_b'));
+
+        if (! $classAId || ! $classBId) {
+            return response()->json(['error' => 'Both class_a and class_b are required.'], 422);
+        }
+
+        if ($classAId === $classBId) {
+            return response()->json(['error' => 'Please select two different classes.'], 422);
+        }
+
+        $classA = Classes::with([
+            'class_enrollments.student:id,student_id,first_name,last_name,course_id,academic_year',
+            'class_enrollments.student.course:id,code',
+        ])->find($classAId);
+
+        $classB = Classes::with([
+            'class_enrollments.student:id,student_id,first_name,last_name,course_id,academic_year',
+            'class_enrollments.student.course:id,code',
+        ])->find($classBId);
+
+        if (! $classA || ! $classB) {
+            return response()->json(['error' => 'One or both classes were not found.'], 404);
+        }
+
+        $studentsA = $classA->class_enrollments
+            ->map(fn ($ce) => $ce->student)
+            ->filter()
+            ->keyBy('id');
+
+        $studentsB = $classB->class_enrollments
+            ->map(fn ($ce) => $ce->student)
+            ->filter()
+            ->keyBy('id');
+
+        $studentIdsA = $studentsA->keys()->toArray();
+        $studentIdsB = $studentsB->keys()->toArray();
+
+        // Resolve StudentEnrollment IDs for all students in both classes
+        $allStudentIds = array_unique(array_merge($studentIdsA, $studentIdsB));
+        $studentEnrollmentIds = \App\Models\StudentEnrollment::whereIn('student_id', $allStudentIds)
+            ->where('semester', $classA->semester)
+            ->where('school_year', $classA->school_year)
+            ->pluck('id', 'student_id');
+
+        $formatStudent = fn ($student): array => [
+            'id' => $student->id,
+            'student_id' => $student->student_id,
+            'name' => $student->full_name,
+            'course' => $student->course?->code,
+            'academic_year' => $student->academic_year,
+            'student_enrollment_id' => $studentEnrollmentIds[$student->id] ?? null,
+        ];
+
+        $inBoth = $studentsA->only($studentIdsB)->values()->map($formatStudent);
+        $onlyInA = $studentsA->except($studentIdsB)->values()->map($formatStudent);
+        $onlyInB = $studentsB->except($studentIdsA)->values()->map($formatStudent);
+
+        return response()->json([
+            'class_a' => [
+                'id' => $classA->id,
+                'record_title' => $classA->record_title,
+                'subject_code' => $classA->subject_code,
+                'section' => $classA->section,
+                'total_students' => $studentsA->count(),
+            ],
+            'class_b' => [
+                'id' => $classB->id,
+                'record_title' => $classB->record_title,
+                'subject_code' => $classB->subject_code,
+                'section' => $classB->section,
+                'total_students' => $studentsB->count(),
+            ],
+            'comparison' => [
+                'in_both' => $inBoth,
+                'only_in_a' => $onlyInA,
+                'only_in_b' => $onlyInB,
+            ],
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -1278,89 +1360,6 @@ final class AdministratorClassManagementController extends Controller
                 'edit_url' => route('filament.admin.resources.classes.edit', $class),
             ],
         ];
-    }
-
-    public function compare(Request $request): JsonResponse
-    {
-        $classAId = $this->nullableInt($request->input('class_a'));
-        $classBId = $this->nullableInt($request->input('class_b'));
-
-        if (! $classAId || ! $classBId) {
-            return response()->json(['error' => 'Both class_a and class_b are required.'], 422);
-        }
-
-        if ($classAId === $classBId) {
-            return response()->json(['error' => 'Please select two different classes.'], 422);
-        }
-
-        $classA = Classes::with([
-            'class_enrollments.student:id,student_id,first_name,last_name,course_id,academic_year',
-            'class_enrollments.student.course:id,code',
-        ])->find($classAId);
-
-        $classB = Classes::with([
-            'class_enrollments.student:id,student_id,first_name,last_name,course_id,academic_year',
-            'class_enrollments.student.course:id,code',
-        ])->find($classBId);
-
-        if (! $classA || ! $classB) {
-            return response()->json(['error' => 'One or both classes were not found.'], 404);
-        }
-
-        $studentsA = $classA->class_enrollments
-            ->map(fn ($ce) => $ce->student)
-            ->filter()
-            ->keyBy('id');
-
-        $studentsB = $classB->class_enrollments
-            ->map(fn ($ce) => $ce->student)
-            ->filter()
-            ->keyBy('id');
-
-        $studentIdsA = $studentsA->keys()->toArray();
-        $studentIdsB = $studentsB->keys()->toArray();
-
-        // Resolve StudentEnrollment IDs for all students in both classes
-        $allStudentIds = array_unique(array_merge($studentIdsA, $studentIdsB));
-        $studentEnrollmentIds = \App\Models\StudentEnrollment::whereIn('student_id', $allStudentIds)
-            ->where('semester', $classA->semester)
-            ->where('school_year', $classA->school_year)
-            ->pluck('id', 'student_id');
-
-        $formatStudent = fn ($student): array => [
-            'id' => $student->id,
-            'student_id' => $student->student_id,
-            'name' => $student->full_name,
-            'course' => $student->course?->code,
-            'academic_year' => $student->academic_year,
-            'student_enrollment_id' => $studentEnrollmentIds[$student->id] ?? null,
-        ];
-
-        $inBoth = $studentsA->only($studentIdsB)->values()->map($formatStudent);
-        $onlyInA = $studentsA->except($studentIdsB)->values()->map($formatStudent);
-        $onlyInB = $studentsB->except($studentIdsA)->values()->map($formatStudent);
-
-        return response()->json([
-            'class_a' => [
-                'id' => $classA->id,
-                'record_title' => $classA->record_title,
-                'subject_code' => $classA->subject_code,
-                'section' => $classA->section,
-                'total_students' => $studentsA->count(),
-            ],
-            'class_b' => [
-                'id' => $classB->id,
-                'record_title' => $classB->record_title,
-                'subject_code' => $classB->subject_code,
-                'section' => $classB->section,
-                'total_students' => $studentsB->count(),
-            ],
-            'comparison' => [
-                'in_both' => $inBoth,
-                'only_in_a' => $onlyInA,
-                'only_in_b' => $onlyInB,
-            ],
-        ]);
     }
 
     private function nullableString(mixed $value): ?string

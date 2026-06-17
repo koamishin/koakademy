@@ -6,19 +6,26 @@ namespace App\Filament\Widgets;
 
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class GeographicDistributionChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 32;
 
+    #[Override]
     protected ?string $heading = 'Geographic Distribution by Region';
 
+    #[Override]
     protected ?string $description = 'Student distribution across Philippine regions';
 
+    #[Override]
     protected string $color = 'info';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 2,

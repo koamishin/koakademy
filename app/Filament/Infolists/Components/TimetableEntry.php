@@ -8,9 +8,11 @@ use App\Services\GeneralSettingsService;
 use Filament\Infolists\Components\Entry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Override;
 
 final class TimetableEntry extends Entry
 {
+    #[Override]
     protected string $view = 'filament.infolists.components.timetable-entry';
 
     private bool $showHeader = true;

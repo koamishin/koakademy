@@ -26,16 +26,21 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Override;
 use UnitEnum;
 
 final class StudentResource extends Resource
 {
+    #[Override]
     protected static ?string $model = Student::class;
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'People';
 
+    #[Override]
     protected static ?int $navigationSort = 1;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'last_name';
 
     public static function getGloballySearchableAttributes(): array

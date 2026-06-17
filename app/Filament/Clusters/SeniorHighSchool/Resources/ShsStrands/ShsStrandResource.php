@@ -23,21 +23,29 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 final class ShsStrandResource extends Resource
 {
+    #[Override]
     protected static ?string $model = ShsStrand::class;
 
+    #[Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    #[Override]
     protected static ?string $cluster = SeniorHighSchoolCluster::class;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'strand_name';
 
+    #[Override]
     protected static ?string $modelLabel = 'Strand';
 
+    #[Override]
     protected static ?string $pluralModelLabel = 'Strands';
 
+    #[Override]
     protected static ?int $navigationSort = 1;
 
     public static function getGloballySearchableAttributes(): array

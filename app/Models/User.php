@@ -31,6 +31,7 @@ use Laravel\Passkeys\Contracts\PasskeyUser;
 use Laravel\Passkeys\PasskeyAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Scout\Searchable;
+use Override;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -100,6 +101,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
      *
      * @var list<string>
      */
+    #[Override]
     protected $fillable = [
         'name',
         'email',
@@ -130,6 +132,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
      *
      * @var list<string>
      */
+    #[Override]
     protected $hidden = [
         'password',
         'remember_token',
@@ -137,6 +140,7 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         'app_authentication_recovery_codes',
     ];
 
+    #[Override]
     protected $casts = [
         'preferences' => 'array',
     ];

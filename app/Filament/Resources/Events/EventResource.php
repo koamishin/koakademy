@@ -22,10 +22,12 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Override;
 use UnitEnum;
 
 final class EventResource extends Resource
 {
+    #[Override]
     protected static ?string $model = Event::class;
 
     // protected static string|BackedEnum|null $activeNavigationIcon = Heroicon::CalendarDays;
@@ -33,10 +35,13 @@ final class EventResource extends Resource
     // protected static ?int $navigationSort = 10;
 
     // protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Operations';
 
+    #[Override]
     protected static ?int $navigationSort = 1;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'title';
 
     public static function getNavigationBadge(): string

@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Redis;
+use Override;
 
 final class RedisMonitor extends Command
 {
@@ -17,6 +18,7 @@ final class RedisMonitor extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'redis:monitor
                             {--connections=* : The Redis connections to monitor}
                             {--max-memory= : The maximum memory usage in megabytes}
@@ -27,6 +29,7 @@ final class RedisMonitor extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Monitor Redis connections to check if they are online or failed';
 
     /**

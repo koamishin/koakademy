@@ -36,11 +36,13 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Session;
 use Livewire\Component as Livewire;
+use Override;
 
 final class EnrolledSubjectsRelationManager extends RelationManager
 {
     public ?array $data = [];
 
+    #[Override]
     protected static string $relationship = 'subjectEnrolled';
 
     public function form(Schema $schema): Schema

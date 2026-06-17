@@ -20,9 +20,11 @@ use App\Filament\Widgets\StudentTypeDistributionChart;
 use App\Filament\Widgets\StudentYearLevelChart;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Override;
 
 final class ListStudents extends ListRecords
 {
+    #[Override]
     protected static string $resource = StudentResource::class;
 
     protected function getHeaderActions(): array

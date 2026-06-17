@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Override;
 
 /**
  * Class GeneralSetting
@@ -26,8 +27,10 @@ final class GeneralSetting extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $table = 'general_settings';
 
+    #[Override]
     protected $fillable = [
         'site_name',
         'site_description',

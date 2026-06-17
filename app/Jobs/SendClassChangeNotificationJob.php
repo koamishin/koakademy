@@ -203,7 +203,7 @@ final class SendClassChangeNotificationJob implements ShouldQueue
     /**
      * Ensure assessment PDF is available, generate if needed.
      */
-    private function ensurePdfIsAvailable(): ?string
+    private function ensurePdfIsAvailable(): string
     {
         $existingResource = $this->studentEnrollment
             ->resources()
@@ -323,7 +323,7 @@ final class SendClassChangeNotificationJob implements ShouldQueue
             }
         }
 
-        $assessmentPath = $storage->path($relativePath);
+        $storage->path($relativePath);
 
         try {
             $this->studentEnrollment

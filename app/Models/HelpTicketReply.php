@@ -6,9 +6,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class HelpTicketReply extends Model
 {
+    #[Override]
     protected $fillable = [
         'help_ticket_id',
         'user_id',
@@ -16,6 +18,7 @@ final class HelpTicketReply extends Model
         'attachments',
     ];
 
+    #[Override]
     protected $casts = [
         'attachments' => 'array',
     ];

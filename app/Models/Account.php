@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Storage;
+use Override;
 
 /**
  * Class Account
@@ -46,6 +47,7 @@ final class Account extends Authenticatable implements FilamentUser
     use HasFactory;
     use SoftDeletes;
 
+    #[Override]
     protected $table = 'accounts';
 
     /**
@@ -53,6 +55,7 @@ final class Account extends Authenticatable implements FilamentUser
      *
      * @var list<string>
      */
+    #[Override]
     protected $fillable = [
         'name',
         'username',
@@ -70,6 +73,7 @@ final class Account extends Authenticatable implements FilamentUser
      *
      * @var list<string>
      */
+    #[Override]
     protected $hidden = [
         'password',
         'remember_token',

@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\StudentIdChangeLog;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\StudentIdChangeLog>
@@ -17,6 +18,7 @@ final class StudentIdChangeLogFactory extends Factory
      *
      * @var string
      */
+    #[Override]
     protected $model = StudentIdChangeLog::class;
 
     /**

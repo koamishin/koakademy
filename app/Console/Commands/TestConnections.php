@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
+use Override;
 
 final class TestConnections extends Command
 {
@@ -20,6 +21,7 @@ final class TestConnections extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'app:test-connections {--service= : Test specific service only}';
 
     /**
@@ -27,6 +29,7 @@ final class TestConnections extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Test connections to all configured services (R2, Redis, PostgreSQL, Pusher, etc.)';
 
     /**

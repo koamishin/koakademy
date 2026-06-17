@@ -59,14 +59,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @mixin \Eloquent
  */
 use Illuminate\Support\Carbon;
+use Override;
 
 final class Department extends Model
 {
     use BelongsToSchool;
     use HasFactory;
 
+    #[Override]
     protected $table = 'departments';
 
+    #[Override]
     protected $fillable = [
         'school_id',
         'name',
@@ -81,6 +84,7 @@ final class Department extends Model
         'metadata',
     ];
 
+    #[Override]
     protected $primaryKey = 'id';
 
     /**

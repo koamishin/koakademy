@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Override;
 
 /**
  * @property int $id
@@ -60,8 +61,10 @@ final class School extends Model
 {
     use HasFactory, SoftDeletes;
 
+    #[Override]
     protected $table = 'schools';
 
+    #[Override]
     protected $fillable = [
         'name',
         'code',
@@ -75,6 +78,7 @@ final class School extends Model
         'metadata',
     ];
 
+    #[Override]
     protected $primaryKey = 'id';
 
     /**

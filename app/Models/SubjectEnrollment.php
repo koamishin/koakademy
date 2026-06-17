@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Log;
 use Laravel\Scout\Searchable;
+use Override;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -44,8 +45,10 @@ final class SubjectEnrollment extends Model
     use LogsActivity;
     use Searchable;
 
+    #[Override]
     protected $table = 'subject_enrollments';
 
+    #[Override]
     protected $fillable = [
         'subject_id',
         'class_id',

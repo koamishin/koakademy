@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Enums\EnrollStat;
 use App\Models\StudentEnrollment;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\StudentEnrollment>
@@ -18,6 +19,7 @@ final class StudentEnrollmentFactory extends Factory
      *
      * @var string
      */
+    #[Override]
     protected $model = StudentEnrollment::class;
 
     /**

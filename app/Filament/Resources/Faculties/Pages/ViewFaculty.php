@@ -7,9 +7,11 @@ namespace App\Filament\Resources\Faculties\Pages;
 use App\Filament\Resources\Faculties\FacultyResource;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
+use Override;
 
 final class ViewFaculty extends ViewRecord
 {
+    #[Override]
     protected static string $resource = FacultyResource::class;
 
     protected function getHeaderActions(): array

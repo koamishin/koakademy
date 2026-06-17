@@ -26,9 +26,11 @@ use Filament\Schemas\Components\Section;
 use Filament\Support\Enums\Size;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Override;
 
 final class ViewStudentEnrollment extends ViewRecord
 {
+    #[Override]
     protected static string $resource = StudentEnrollmentResource::class;
 
     /**

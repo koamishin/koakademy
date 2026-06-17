@@ -10,13 +10,16 @@ use App\Filament\Resources\Classes\ClassesResource;
 use App\Models\Classes;
 use App\Models\Faculty;
 use Illuminate\Http\Request;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 use Spatie\QueryBuilder\QueryBuilder;
 
 final class FacultyScheduleHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/faculty/{faculty_id}/schedules';
 
+    #[Override]
     public static ?string $resource = ClassesResource::class;
 
     protected static string $permission = 'View:Classes';

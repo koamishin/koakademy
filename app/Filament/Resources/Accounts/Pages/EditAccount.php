@@ -7,9 +7,11 @@ namespace App\Filament\Resources\Accounts\Pages;
 use App\Filament\Resources\Accounts\AccountResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Override;
 
 final class EditAccount extends EditRecord
 {
+    #[Override]
     protected static string $resource = AccountResource::class;
 
     protected function getHeaderActions(): array

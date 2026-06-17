@@ -23,6 +23,7 @@ use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Override;
 use Spatie\Permission\Models\Role;
 
 final class GeneralSettings extends Page
@@ -33,8 +34,10 @@ final class GeneralSettings extends Page
     //     return Auth::user()->can('page_GeneralSetting');
     // }
 
+    #[Override]
     protected string $view = 'filament-general-settings::filament.pages.general-settings-page';
 
+    #[Override]
     protected static bool $shouldRegisterNavigation = false;
 
     public function getTitle(): string

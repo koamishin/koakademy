@@ -10,6 +10,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class StudentParentsInfo
@@ -22,8 +23,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class StudentParentsInfo extends Model
 {
+    #[Override]
     protected $table = 'student_parents_info';
 
+    #[Override]
     protected $fillable = [
         'father_name',
         'fathers_name',

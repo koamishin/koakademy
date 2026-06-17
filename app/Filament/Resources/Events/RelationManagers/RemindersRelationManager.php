@@ -17,11 +17,14 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Override;
 
 final class RemindersRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'reminders';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'reminder_type';
 
     public function form(Schema $schema): Schema

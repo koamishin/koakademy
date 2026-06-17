@@ -18,6 +18,7 @@ use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Override;
 
 /**
  * Table widget showing Student Enrollments where some subjects
@@ -25,12 +26,16 @@ use Illuminate\Support\Collection;
  */
 final class MissingClassEnrollmentsTable extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 5;
 
+    #[Override]
     protected static ?string $heading = 'Enrollments with Missing Class Assignments';
 
+    #[Override]
     protected int|string|array $columnSpan = 'full';
 
+    #[Override]
     protected static bool $isLazy = false;
 
     // Cache for missing classes to avoid repeated calculations

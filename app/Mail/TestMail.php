@@ -95,7 +95,7 @@ final class TestMail extends Mailable
             ->base64();
 
         return [
-            Attachment::fromData(fn () => base64_decode($pdfBase64), 'koakademy-test-document.pdf')
+            Attachment::fromData(fn (): string => base64_decode($pdfBase64), 'koakademy-test-document.pdf')
                 ->withMime('application/pdf'),
         ];
     }

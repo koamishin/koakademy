@@ -7,19 +7,26 @@ namespace App\Filament\Widgets;
 use App\Enums\StudentType;
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class StudentAcademicYearChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 13;
 
+    #[Override]
     protected ?string $heading = 'College Students by Academic Year';
 
+    #[Override]
     protected ?string $description = 'Distribution of college students across year levels';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

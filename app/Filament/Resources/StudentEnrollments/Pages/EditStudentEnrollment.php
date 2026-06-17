@@ -12,9 +12,11 @@ use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use Override;
 
 final class EditStudentEnrollment extends EditRecord
 {
+    #[Override]
     protected static string $resource = StudentEnrollmentResource::class;
 
     private array $tuitionData = [];

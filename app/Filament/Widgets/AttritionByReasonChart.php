@@ -8,19 +8,26 @@ use App\Enums\AttritionCategory;
 use App\Enums\StudentStatus;
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class AttritionByReasonChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 30;
 
+    #[Override]
     protected ?string $heading = 'Attrition by Category';
 
+    #[Override]
     protected ?string $description = 'Breakdown of student withdrawals and dropouts by reason';
 
+    #[Override]
     protected string $color = 'danger';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

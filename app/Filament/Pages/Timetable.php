@@ -32,6 +32,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Override;
 use UnitEnum;
 
 final class Timetable extends Page implements HasForms, HasTable
@@ -53,16 +54,22 @@ final class Timetable extends Page implements HasForms, HasTable
 
     // protected static ?string $navigationIcon = 'heroicon-o-calendar';
 
+    #[Override]
     protected static ?string $navigationLabel = 'Timetable';
 
+    #[Override]
     protected static ?string $title = 'Schedule Management';
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Academics';
 
+    #[Override]
     protected static ?int $navigationSort = 5;
 
+    #[Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendar;
 
+    #[Override]
     protected string $view = 'filament.pages.timetable';
 
     private array $cachedOptions = [];

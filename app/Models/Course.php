@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Laravel\Scout\Searchable;
+use Override;
 
 /**
  * Class Course
@@ -70,8 +71,10 @@ final class Course extends Model
     use HasFactory;
     use Searchable;
 
+    #[Override]
     protected $table = 'courses';
 
+    #[Override]
     protected $fillable = [
         'code',
         'title',
@@ -92,6 +95,7 @@ final class Course extends Model
         'school_id',
     ];
 
+    #[Override]
     protected $primaryKey = 'id';
 
     public static function getCourseDetails($courseId): string

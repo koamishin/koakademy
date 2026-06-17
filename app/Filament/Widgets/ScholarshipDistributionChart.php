@@ -7,19 +7,26 @@ namespace App\Filament\Widgets;
 use App\Enums\ScholarshipType;
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class ScholarshipDistributionChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 34;
 
+    #[Override]
     protected ?string $heading = 'Scholarship Type Distribution';
 
+    #[Override]
     protected ?string $description = 'Breakdown of students by scholarship type';
 
+    #[Override]
     protected string $color = 'warning';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

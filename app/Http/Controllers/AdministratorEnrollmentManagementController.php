@@ -1287,7 +1287,7 @@ final class AdministratorEnrollmentManagementController extends Controller
 
             // Dispatch class change notification if requested
             $shouldNotify = $validated['notify_student'] ?? false;
-            if ($shouldNotify && ! empty($classChanges) && $enrollment->student?->email) {
+            if ($shouldNotify && $classChanges !== [] && $enrollment->student?->email) {
                 SendClassChangeNotificationJob::dispatch(
                     $enrollment,
                     $classChanges,
@@ -1479,7 +1479,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             return response()->json([]);
         }
 
-        $like = '%'.mb_strtolower($search).'%';
+        $like = '%'.mb_strtolower((string) $search).'%';
 
         $students = Student::query()
             ->with('Course')
@@ -1575,7 +1575,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->where('course_id', $courseId);
 
         if ($search) {
-            $like = '%'.mb_strtolower($search).'%';
+            $like = '%'.mb_strtolower((string) $search).'%';
             $subjectsQuery->where(function ($query) use ($like): void {
                 $query->whereRaw('LOWER(code) LIKE ?', [$like])
                     ->orWhereRaw('LOWER(title) LIKE ?', [$like]);
@@ -2827,7 +2827,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             ],
             'additional_fees' => $additionalFees,
             'additional_fees_total' => $additionalFeesTotal,
-            'tuition' => $tuition ? [
+            'tuition' => $tuition instanceof StudentTuition ? [
                 'total_lectures' => $tuition->total_lectures,
                 'total_laboratory' => $tuition->total_laboratory,
                 'total_miscelaneous_fees' => $tuition->total_miscelaneous_fees,

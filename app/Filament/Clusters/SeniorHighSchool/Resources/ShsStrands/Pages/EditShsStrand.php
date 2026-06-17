@@ -8,9 +8,11 @@ use App\Filament\Clusters\SeniorHighSchool\Resources\ShsStrands\ShsStrandResourc
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use Override;
 
 final class EditShsStrand extends EditRecord
 {
+    #[Override]
     protected static string $resource = ShsStrandResource::class;
 
     protected function getHeaderActions(): array

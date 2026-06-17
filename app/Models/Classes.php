@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Searchable;
+use Override;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -76,8 +77,10 @@ final class Classes extends Model
     use LogsActivity;
     use Searchable;
 
+    #[Override]
     protected $table = 'classes';
 
+    #[Override]
     protected $fillable = [
         'subject_id',
         'subject_code',

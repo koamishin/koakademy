@@ -27,18 +27,12 @@ final class MigrateToStudent extends Notification implements ShouldQueue
 
     public StudentEnrollment $record;
 
-    private ?string $generatedPdfPath = null;
-
-    private bool $requiresAttachment = false;
-
     /**
      * Create a new notification instance.
      */
-    public function __construct(StudentEnrollment $record, ?string $assessmentPath = null, bool $requiresAttachment = false)
+    public function __construct(StudentEnrollment $record, private ?string $generatedPdfPath = null, private bool $requiresAttachment = false)
     {
         $this->record = $record->withoutRelations();
-        $this->generatedPdfPath = $assessmentPath;
-        $this->requiresAttachment = $requiresAttachment;
         $this->afterCommit();
     }
 
@@ -420,7 +414,7 @@ final class MigrateToStudent extends Notification implements ShouldQueue
         ];
     }
 
-    private function buildSignupUrl(Student $student, string $studentIdDisplay, ?string $studentEmail): ?string
+    private function buildSignupUrl(Student $student, string $studentIdDisplay, ?string $studentEmail): string
     {
         $params = [
             'record_id' => $student->id,

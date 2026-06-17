@@ -8,21 +8,29 @@ use App\Enums\StudentType;
 use App\Models\StudentEnrollment;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
+use Override;
 
 final class StudentEnrollmentByTypeChart extends ChartWidget
 {
+    #[Override]
     public ?string $filter = 'last_6_months';
 
+    #[Override]
     protected static ?int $sort = 12;
 
+    #[Override]
     protected ?string $heading = 'Student Enrollment Trends by Type';
 
+    #[Override]
     protected ?string $description = 'Monthly enrollment trends for each student type';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = 'full';
 
     protected function getFilters(): array

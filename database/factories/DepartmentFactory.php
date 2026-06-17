@@ -7,12 +7,14 @@ namespace Database\Factories;
 use App\Models\Department;
 use App\Models\School;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /**
  * @extends Factory<Department>
  */
 final class DepartmentFactory extends Factory
 {
+    #[Override]
     protected $model = Department::class;
 
     /**

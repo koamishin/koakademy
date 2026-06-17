@@ -10,6 +10,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class Resource
@@ -22,8 +23,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class Resource extends Model
 {
+    #[Override]
     protected $table = 'resources';
 
+    #[Override]
     protected $fillable = [
         'resourceable_type',
         'resourceable_id',

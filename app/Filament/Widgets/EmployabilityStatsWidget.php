@@ -9,13 +9,17 @@ use App\Enums\StudentStatus;
 use App\Models\Student;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Override;
 
 final class EmployabilityStatsWidget extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 23;
 
+    #[Override]
     protected ?string $heading = 'Graduate Employability & Absorption';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
     protected function getStats(): array

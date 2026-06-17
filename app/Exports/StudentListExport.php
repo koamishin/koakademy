@@ -22,7 +22,7 @@ final readonly class StudentListExport implements FromCollection, ShouldAutoSize
 {
     public function __construct(private Classes $class) {}
 
-    public function collection()
+    public function collection(): \Illuminate\Support\Enumerable
     {
         return $this->class->class_enrollments()
             ->with(['student.course'])

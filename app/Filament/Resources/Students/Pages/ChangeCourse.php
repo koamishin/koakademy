@@ -25,6 +25,7 @@ use Filament\Schemas\Components\View as ViewComponent;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Override;
 
 final class ChangeCourse extends Page implements HasForms
 {
@@ -34,8 +35,10 @@ final class ChangeCourse extends Page implements HasForms
 
     public Student $record;
 
+    #[Override]
     protected static string $resource = StudentResource::class;
 
+    #[Override]
     protected string $view = 'filament.resources.students.pages.change-course';
 
     public function mount(Student $record): void

@@ -16,11 +16,14 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Override;
 
 final class AccounsRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'Accounts';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'Accounts';
 
     public function configure(Schema $schema): Schema

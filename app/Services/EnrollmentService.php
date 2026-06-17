@@ -31,9 +31,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 
-final class EnrollmentService
+final readonly class EnrollmentService
 {
-    public function __construct(private readonly EnrollmentBillingService $billingService) {}
+    public function __construct(private EnrollmentBillingService $billingService) {}
 
     /**
      * Checks if any selected classes for enrollment are full based on their maximum slots.

@@ -15,12 +15,14 @@ use App\Models\Course;
 use App\Models\School;
 use App\Models\Student;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Student>
  */
 final class StudentFactory extends Factory
 {
+    #[Override]
     protected $model = Student::class;
 
     public function definition(): array

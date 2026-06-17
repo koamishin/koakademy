@@ -6,12 +6,14 @@ namespace Database\Factories;
 
 use App\Models\School;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /**
  * @extends Factory<School>
  */
 final class SchoolFactory extends Factory
 {
+    #[Override]
     protected $model = School::class;
 
     /**

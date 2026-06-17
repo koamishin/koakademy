@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\Classes;
 use Illuminate\Console\Command;
+use Override;
 
 final class CleanupDuplicateSubjectIds extends Command
 {
@@ -14,6 +15,7 @@ final class CleanupDuplicateSubjectIds extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'classes:cleanup-duplicate-subjects';
 
     /**
@@ -21,6 +23,7 @@ final class CleanupDuplicateSubjectIds extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Remove duplicate subject IDs from classes subject_ids array';
 
     /**

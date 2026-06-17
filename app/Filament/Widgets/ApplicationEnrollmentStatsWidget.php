@@ -8,13 +8,17 @@ use App\Enums\StudentStatus;
 use App\Models\Student;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Override;
 
 final class ApplicationEnrollmentStatsWidget extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 20;
 
+    #[Override]
     protected ?string $heading = 'Application vs Enrollment Tracking';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
     protected function getStats(): array

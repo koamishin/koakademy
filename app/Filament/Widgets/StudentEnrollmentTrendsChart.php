@@ -8,19 +8,26 @@ use App\Models\StudentEnrollment;
 use Filament\Widgets\ChartWidget;
 use Flowframe\Trend\Trend;
 use Flowframe\Trend\TrendValue;
+use Override;
 
 final class StudentEnrollmentTrendsChart extends ChartWidget
 {
+    #[Override]
     public ?string $filter = 'thisYear';
 
+    #[Override]
     protected static ?int $sort = 6;
 
+    #[Override]
     protected ?string $heading = 'Enrollment Trends';
 
+    #[Override]
     protected ?string $description = 'Monthly trends for student registrations';
 
+    #[Override]
     protected string $color = 'info';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
     protected function getData(): array

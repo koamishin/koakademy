@@ -7,12 +7,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class OnboardingDismissal extends Model
 {
     /** @use HasFactory<\Database\Factories\OnboardingDismissalFactory> */
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'user_id',
         'feature_key',

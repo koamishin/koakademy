@@ -23,7 +23,7 @@ final class UserSettingController extends Controller
 
         // Verify if the semester is valid based on available semesters
         $availableSemesters = $this->settingsService->getAvailableSemesters();
-        if (! array_key_exists($validated['semester'], $availableSemesters)) {
+        if (! array_key_exists((string) $validated['semester'], $availableSemesters)) {
             return back()->withErrors(['semester' => 'Invalid semester selected.']);
         }
 
@@ -41,7 +41,7 @@ final class UserSettingController extends Controller
         // Verify if the school year is valid based on available school years
         // We pass the selected year as reference to ensure it's in the list if it's a bit far out
         $availableSchoolYears = $this->settingsService->getAvailableSchoolYears($validated['school_year_start']);
-        if (! array_key_exists($validated['school_year_start'], $availableSchoolYears)) {
+        if (! array_key_exists((string) $validated['school_year_start'], $availableSchoolYears)) {
             return back()->withErrors(['school_year_start' => 'Invalid school year selected.']);
         }
 

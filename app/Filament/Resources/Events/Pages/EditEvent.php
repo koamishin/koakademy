@@ -8,9 +8,11 @@ use App\Filament\Resources\Events\EventResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use Override;
 
 final class EditEvent extends EditRecord
 {
+    #[Override]
     protected static string $resource = EventResource::class;
 
     protected function getHeaderActions(): array

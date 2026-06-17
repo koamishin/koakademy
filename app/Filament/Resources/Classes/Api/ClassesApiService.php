@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Classes\Api;
 
 use App\Filament\Resources\Classes\ClassesResource;
+use Override;
 use Rupadana\ApiService\ApiService;
 
 final class ClassesApiService extends ApiService
 {
+    #[Override]
     protected static ?string $resource = ClassesResource::class;
 
     public static function handlers(): array

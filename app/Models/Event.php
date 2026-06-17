@@ -12,12 +12,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Override;
 
 final class Event extends Model implements Eventable
 {
     /** @use HasFactory<\Database\Factories\EventFactory> */
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'title',
         'description',
@@ -40,6 +42,7 @@ final class Event extends Model implements Eventable
         'created_by',
     ];
 
+    #[Override]
     protected $casts = [
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',

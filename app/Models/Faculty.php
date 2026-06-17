@@ -24,6 +24,7 @@ use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Scout\Searchable;
+use Override;
 
 /**
  * Class Faculty
@@ -52,10 +53,13 @@ final class Faculty extends Authenticatable implements FilamentUser, HasAvatar
     use Notifiable;
     use Searchable;
 
+    #[Override]
     public $incrementing = false;
 
+    #[Override]
     protected $table = 'faculty';
 
+    #[Override]
     protected $fillable = [
         'id',
         'faculty_id_number',
@@ -79,13 +83,16 @@ final class Faculty extends Authenticatable implements FilamentUser, HasAvatar
         'school_id',
     ];
 
+    #[Override]
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
+    #[Override]
     protected $primaryKey = 'id';
 
+    #[Override]
     protected $keyType = 'string';
 
     private string $guard = 'faculty';

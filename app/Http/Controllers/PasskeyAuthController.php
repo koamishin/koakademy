@@ -21,7 +21,7 @@ final class PasskeyAuthController extends Controller
 {
     use ConfiguresPasskeysForRequest;
 
-    private const VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.verification_options';
+    private const string VERIFICATION_OPTIONS_SESSION_KEY = 'passkey.verification_options';
 
     public function generateAuthenticationOptions(Request $request, GenerateVerificationOptions $generate): JsonResponse
     {
@@ -96,7 +96,7 @@ final class PasskeyAuthController extends Controller
         $credential = $request->input('credential');
 
         if (! is_array($credential) && is_string($request->input('passkey'))) {
-            $credential = json_decode((string) $request->input('passkey'), true);
+            $credential = json_decode($request->input('passkey'), true);
         }
 
         if (! is_array($credential)) {

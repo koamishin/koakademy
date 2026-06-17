@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Override;
 
 /**
  * Class ShsStrand
@@ -28,8 +29,10 @@ final class ShsStrand extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $table = 'shs_strands';
 
+    #[Override]
     protected $fillable = [
         'strand_name',
         'description',

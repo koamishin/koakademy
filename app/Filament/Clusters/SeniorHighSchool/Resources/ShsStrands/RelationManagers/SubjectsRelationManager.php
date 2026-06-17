@@ -21,11 +21,14 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Override;
 
 final class SubjectsRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'subjects';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'title';
 
     public function form(Schema $schema): Schema

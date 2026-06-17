@@ -17,18 +17,24 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Override;
 use UnitEnum;
 
 final class CourseResource extends Resource
 {
+    #[Override]
     protected static ?string $model = Course::class;
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'code';
 
+    #[Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    #[Override]
     protected static string|UnitEnum|null $navigationGroup = 'Academics';
 
+    #[Override]
     protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool

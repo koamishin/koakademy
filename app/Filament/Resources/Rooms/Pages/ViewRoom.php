@@ -7,9 +7,11 @@ namespace App\Filament\Resources\Rooms\Pages;
 use App\Filament\Resources\Rooms\RoomResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
+use Override;
 
 final class ViewRoom extends ViewRecord
 {
+    #[Override]
     protected static string $resource = RoomResource::class;
 
     protected function getHeaderActions(): array

@@ -23,11 +23,14 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Override;
 
 final class StatementOfAccountRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'StudentTuition';
 
+    #[Override]
     protected static bool $isLazy = false;
 
     public function table(Table $table): Table

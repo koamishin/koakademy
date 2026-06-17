@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Notifications\TestDatabaseNotification;
 use Illuminate\Console\Command;
+use Override;
 
 final class SendTestNotification extends Command
 {
@@ -15,6 +16,7 @@ final class SendTestNotification extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'notification:test 
                             {user : The ID or email of the user to send the notification to}
                             {--message= : Custom message for the notification}
@@ -25,6 +27,7 @@ final class SendTestNotification extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Send a test database notification to a user';
 
     /**

@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Models\Classes;
 use Illuminate\Console\Command;
+use Override;
 
 final class BackfillClassSubjectCodes extends Command
 {
@@ -14,6 +15,7 @@ final class BackfillClassSubjectCodes extends Command
      *
      * @var string
      */
+    #[Override]
     protected $signature = 'classes:backfill-subject-codes';
 
     /**
@@ -21,6 +23,7 @@ final class BackfillClassSubjectCodes extends Command
      *
      * @var string
      */
+    #[Override]
     protected $description = 'Backfill null subject_code values from relationships';
 
     /**

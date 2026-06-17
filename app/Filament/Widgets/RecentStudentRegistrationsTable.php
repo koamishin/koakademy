@@ -10,13 +10,17 @@ use Filament\Actions\Action;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Override;
 
 final class RecentStudentRegistrationsTable extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 14;
 
+    #[Override]
     protected int|string|array $columnSpan = 'full';
 
+    #[Override]
     protected static ?string $heading = 'Recent Student Registrations';
 
     private static ?string $description = 'Latest student registrations across all types';

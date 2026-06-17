@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * @property-read Account|null $changedByUser
@@ -24,6 +25,7 @@ final class StudentIdChangeLog extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'old_student_id',
         'new_student_id',

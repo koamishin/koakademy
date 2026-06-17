@@ -8,13 +8,17 @@ use App\Enums\ScholarshipType;
 use App\Models\Student;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Override;
 
 final class ScholarshipStatsWidget extends BaseWidget
 {
+    #[Override]
     protected static ?int $sort = 24;
 
+    #[Override]
     protected ?string $heading = 'Scholarship Distribution';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
     protected function getStats(): array

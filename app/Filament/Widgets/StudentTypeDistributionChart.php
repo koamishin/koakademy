@@ -7,19 +7,26 @@ namespace App\Filament\Widgets;
 use App\Enums\StudentType;
 use App\Models\Student;
 use Filament\Widgets\ChartWidget;
+use Override;
 
 final class StudentTypeDistributionChart extends ChartWidget
 {
+    #[Override]
     protected static ?int $sort = 10;
 
+    #[Override]
     protected ?string $heading = 'Student Type Distribution';
 
+    #[Override]
     protected ?string $description = 'Distribution of students by type (College, SHS, TESDA)';
 
+    #[Override]
     protected ?string $pollingInterval = '60s';
 
+    #[Override]
     protected ?string $maxHeight = '400px';
 
+    #[Override]
     protected int|string|array $columnSpan = [
         'md' => 2,
         'xl' => 1,

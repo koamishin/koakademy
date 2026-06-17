@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Override;
 
 /**
  * Class StudentTuition
@@ -45,8 +46,10 @@ final class StudentTuition extends Model
 {
     use SoftDeletes;
 
+    #[Override]
     protected $table = 'student_tuition';
 
+    #[Override]
     protected $fillable = [
         'total_tuition',
         'total_balance',

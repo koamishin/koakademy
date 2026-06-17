@@ -10,6 +10,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Override;
 
 /**
  * Class PendingUserEmail
@@ -22,14 +23,18 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class PendingUserEmail extends Model
 {
+    #[Override]
     public $timestamps = false;
 
+    #[Override]
     protected $table = 'pending_user_emails';
 
+    #[Override]
     protected $hidden = [
         'token',
     ];
 
+    #[Override]
     protected $fillable = [
         'user_type',
         'user_id',

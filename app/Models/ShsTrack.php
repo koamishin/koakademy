@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model; // Added
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Override;
 
 // Added for clarity
 /**
@@ -33,8 +34,10 @@ final class ShsTrack extends Model
 {
     use HasFactory; // Added
 
+    #[Override]
     protected $table = 'shs_tracks';
 
+    #[Override]
     protected $fillable = [
         'track_name',
         'description',

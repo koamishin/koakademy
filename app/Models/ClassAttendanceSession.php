@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Override;
 
 /**
  * @property-read Classes $class
@@ -21,6 +22,7 @@ final class ClassAttendanceSession extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'class_id',
         'schedule_id',

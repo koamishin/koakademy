@@ -7,13 +7,16 @@ namespace App\Filament\Resources\Courses\Api\Handlers;
 use App\Filament\Resources\Courses\Api\Transformers\CourseTransformer;
 use App\Filament\Resources\Courses\CourseResource;
 use Illuminate\Http\Request;
+use Override;
 use Rupadana\ApiService\Http\Handlers;
 use Spatie\QueryBuilder\QueryBuilder;
 
 final class PaginationHandler extends Handlers
 {
+    #[Override]
     public static ?string $uri = '/';
 
+    #[Override]
     public static ?string $resource = CourseResource::class;
 
     protected static string $permission = 'ViewAny:Course';

@@ -8,9 +8,11 @@ use App\Filament\Resources\Schools\SchoolResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
+use Override;
 
 final class EditSchool extends EditRecord
 {
+    #[Override]
     protected static string $resource = SchoolResource::class;
 
     protected function getHeaderActions(): array

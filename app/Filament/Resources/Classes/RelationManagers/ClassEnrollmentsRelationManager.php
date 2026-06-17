@@ -37,13 +37,17 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Override;
 
 final class ClassEnrollmentsRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'class_enrollments';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'student_id';
 
+    #[Override]
     protected static ?string $title = 'Enrolled Students';
 
     public function getTableQueryForExport(): Builder

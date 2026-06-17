@@ -28,9 +28,11 @@ use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Override;
 
 final class AccountsRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'Account';
 
     public function form(Schema $schema): Schema

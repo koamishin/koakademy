@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Searchable;
+use Override;
 
 /**
  * Class Subject
@@ -42,8 +43,10 @@ final class Subject extends Model
     use HasFactory;
     use Searchable;
 
+    #[Override]
     protected $table = 'subject';
 
+    #[Override]
     protected $fillable = [
         'classification',
         'code',

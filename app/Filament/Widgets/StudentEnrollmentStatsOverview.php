@@ -10,17 +10,22 @@ use App\Services\EnrollmentPipelineService;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Override;
 
 final class StudentEnrollmentStatsOverview extends BaseWidget
 {
     use InteractsWithPageTable;
 
+    #[Override]
     protected static ?int $sort = 1;
 
+    #[Override]
     protected ?string $heading = 'Student Enrollment Statistics';
 
+    #[Override]
     protected ?string $description = 'Overview based on current filters';
 
+    #[Override]
     protected ?string $pollingInterval = null; // Disable polling to avoid resetting filters/query issues
 
     protected function getTablePage(): string

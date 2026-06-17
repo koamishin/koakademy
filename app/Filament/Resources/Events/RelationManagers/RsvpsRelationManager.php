@@ -20,11 +20,14 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Override;
 
 final class RsvpsRelationManager extends RelationManager
 {
+    #[Override]
     protected static string $relationship = 'rsvps';
 
+    #[Override]
     protected static ?string $recordTitleAttribute = 'user.name';
 
     public function form(Schema $schema): Schema

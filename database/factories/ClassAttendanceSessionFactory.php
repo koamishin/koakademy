@@ -6,9 +6,11 @@ namespace Database\Factories;
 
 use App\Models\ClassAttendanceSession;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 final class ClassAttendanceSessionFactory extends Factory
 {
+    #[Override]
     protected $model = ClassAttendanceSession::class;
 
     public function definition()

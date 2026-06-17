@@ -157,7 +157,7 @@ final class AdministratorStudentManagementController extends Controller
         $direction = $request->string('direction', 'desc')->toString();
         $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : 'desc';
 
-        if ($sort) {
+        if ($sort !== '0') {
             if ($sort === 'name') {
                 $studentsQuery->orderBy('last_name', $direction)
                     ->orderBy('first_name', $direction);

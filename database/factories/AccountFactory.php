@@ -9,6 +9,7 @@ use App\Models\Student;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Override;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Account>
@@ -20,6 +21,7 @@ final class AccountFactory extends Factory
      *
      * @var string
      */
+    #[Override]
     protected $model = Account::class;
 
     /**

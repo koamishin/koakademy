@@ -8,6 +8,7 @@ use App\Models\Account;
 use App\Policies\AccountPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Override;
 
 final class AuthServiceProvider extends ServiceProvider
 {
@@ -16,6 +17,7 @@ final class AuthServiceProvider extends ServiceProvider
      *
      * @var array<class-string, class-string>
      */
+    #[Override]
     protected $policies = [
         Account::class => AccountPolicy::class,
     ];
