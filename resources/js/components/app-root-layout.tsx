@@ -20,13 +20,14 @@ export default function AppRootLayout({ children }: { children: React.ReactNode 
     const isAuthComponent = ["login", "signup", "forgot-password", "reset-password", "auth/two-factor-challenge"].includes(component);
     const isAuthPath = ["/login", "/signup", "/forgot-password", "/reset-password", "/two-factor-challenge"].includes(pathname);
     const isAuthPage = isAuthComponent || isAuthPath;
+    const isPortalUser = user ? isFacultyPortalRole(user.role) || isStudentPortalRole(user.role) || isAdministratorPortalRole(user.role) : false;
 
     return (
         <>
             <SeoHead />
             <AnalyticsScripts />
             <DemoModeBanner />
-            {!isAuthPage ? <AnnouncementBanner announcements={announcements} /> : null}
+            {!isAuthPage && !isPortalUser ? <AnnouncementBanner announcements={announcements} /> : null}
             {children}
             {user && isFacultyPortalRole(user.role) ? <FacultyBottomNav /> : null}
             {user && isStudentPortalRole(user.role) ? <StudentBottomNav /> : null}

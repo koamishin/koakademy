@@ -52,12 +52,12 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
     return (
         <Card className="border-border/60 bg-card/75 relative overflow-hidden rounded-lg shadow-sm">
-            <User className="text-primary pointer-events-none absolute top-5 right-6 h-24 w-24 opacity-10" />
+            <User className="text-primary pointer-events-none absolute top-5 right-6 hidden h-24 w-24 opacity-10 sm:block" />
             <CardContent className="relative p-4 md:p-5">
-                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                    <div className="flex min-w-0 flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
                         <div className="relative">
-                            <Avatar className="border-background h-20 w-20 border-4 shadow-lg md:h-24 md:w-24">
+                            <Avatar className="border-background h-16 w-16 border-4 shadow-lg sm:h-20 sm:w-20 md:h-24 md:w-24">
                                 <AvatarImage src={avatarPreview} alt={user.name} />
                                 <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
                                     {(user.name || "").slice(0, 2).toUpperCase()}
@@ -75,7 +75,7 @@ export function ProfileHeader({
                             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={onAvatarSelect} />
                         </div>
                         <div className="min-w-0 space-y-2">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                                 <Badge variant="outline" className="bg-background/80 rounded-md">
                                     {user.role}
                                 </Badge>
@@ -87,14 +87,14 @@ export function ProfileHeader({
                                 )}
                             </div>
                             <h2 className="text-foreground truncate text-2xl font-semibold tracking-tight md:text-3xl">{user.name}</h2>
-                            <p className="text-muted-foreground text-sm md:text-base">
+                            <p className="text-muted-foreground line-clamp-2 text-sm md:text-base">
                                 {isStudent
                                     ? student?.course?.title
                                         ? `${student.course.title}${student.formatted_academic_year ? ` - ${student.formatted_academic_year}` : ""}`
                                         : "Student"
                                     : facultyName || position || (isFaculty ? "Faculty Member" : "")}
                             </p>
-                            <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
+                            <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-2 text-xs sm:justify-start sm:gap-3">
                                 {isStudent && student?.course?.code && (
                                     <span className="flex items-center gap-1">
                                         <GraduationCap className="h-4 w-4" />
@@ -122,14 +122,15 @@ export function ProfileHeader({
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                        <Button variant="secondary" onClick={onTriggerAvatarPicker} className="rounded-lg">
-                            <UploadCloud className="mr-2 h-4 w-4" />
-                            Change Photo
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
+                        <Button variant="secondary" onClick={onTriggerAvatarPicker} className="min-w-0 rounded-lg px-3">
+                            <UploadCloud className="mr-2 h-4 w-4 shrink-0" />
+                            <span className="truncate sm:hidden">Photo</span>
+                            <span className="hidden sm:inline">Change Photo</span>
                         </Button>
                         {hasChanges && (
-                            <Button onClick={onSaveClick} className="rounded-lg">
-                                <Save className="mr-2 h-4 w-4" />
+                            <Button onClick={onSaveClick} className="min-w-0 rounded-lg px-3">
+                                <Save className="mr-2 h-4 w-4 shrink-0" />
                                 Save All
                             </Button>
                         )}

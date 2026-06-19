@@ -501,16 +501,18 @@ export default function ProfilePage() {
                     role: user.role,
                 }}
             >
-                <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 pb-16 md:gap-6 md:p-6">
-                    <div className="flex items-center gap-4">
+                <div className="mx-auto flex w-full max-w-7xl min-w-0 flex-col gap-4 pb-24 md:gap-6 md:p-6">
+                    <div className="flex min-w-0 items-center gap-3">
                         <Link href={isStudent ? "/student/dashboard" : isFaculty ? "/faculty/dashboard" : "/dashboard"}>
-                            <Button variant="outline" size="icon" className="rounded-lg">
+                            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 rounded-lg md:h-10 md:w-10">
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                         </Link>
                         <div className="min-w-0">
-                            <h1 className="text-foreground truncate text-2xl font-semibold tracking-tight md:text-3xl">Profile Settings</h1>
-                            <p className="text-muted-foreground mt-1 text-sm">Manage your account details, security, and preferences.</p>
+                            <h1 className="text-foreground truncate text-xl font-semibold tracking-tight md:text-3xl">Profile Settings</h1>
+                            <p className="text-muted-foreground mt-1 line-clamp-2 text-xs sm:text-sm">
+                                Manage your account details, security, and preferences.
+                            </p>
                         </div>
                     </div>
 
@@ -541,42 +543,45 @@ export default function ProfilePage() {
                         educationItemsCount={educationItems.length}
                     />
 
-                    <Tabs defaultValue="profile" className="grid w-full gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-6">
+                    <Tabs defaultValue="profile" className="grid w-full min-w-0 gap-4 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-6">
                         <aside className="lg:sticky lg:top-24 lg:self-start">
                             <Card className={dashboardPanelClass}>
                                 <CardContent className="p-2">
-                                    <TabsList className="no-scrollbar bg-muted/20 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg p-1 lg:flex-col lg:items-stretch">
-                                        <TabsTrigger value="profile" className="shrink-0 justify-start rounded-lg px-3 py-2 lg:w-full">
-                                            <User className="mr-2 h-4 w-4" />
+                                    <TabsList className="bg-muted/20 grid h-auto w-full grid-cols-2 gap-1 rounded-lg p-1 sm:grid-cols-3 lg:flex lg:flex-col lg:items-stretch">
+                                        <TabsTrigger value="profile" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                            <User className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                             Profile
                                         </TabsTrigger>
                                         {id_card && (isFaculty || isStudent) && (
-                                            <TabsTrigger value="id-card" className="shrink-0 justify-start rounded-lg px-3 py-2 lg:w-full">
-                                                <QrCode className="mr-2 h-4 w-4" />
-                                                Digital ID Card
+                                            <TabsTrigger value="id-card" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                                <QrCode className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
+                                                <span className="truncate">Digital ID</span>
                                             </TabsTrigger>
                                         )}
-                                        <TabsTrigger value="accounts" className="shrink-0 justify-start rounded-lg px-3 py-2 lg:w-full">
-                                            <Plug className="mr-2 h-4 w-4" />
-                                            Accounts & Security
+                                        <TabsTrigger value="accounts" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                            <Plug className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
+                                            <span className="truncate sm:hidden">Security</span>
+                                            <span className="hidden truncate sm:inline lg:hidden">Accounts</span>
+                                            <span className="hidden truncate lg:inline">Accounts & Security</span>
                                         </TabsTrigger>
-                                        <TabsTrigger value="personalization" className="shrink-0 justify-start rounded-lg px-3 py-2 lg:w-full">
-                                            <Palette className="mr-2 h-4 w-4" />
-                                            Personalization
+                                        <TabsTrigger value="personalization" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                            <Palette className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
+                                            <span className="truncate sm:hidden">Theme</span>
+                                            <span className="hidden truncate sm:inline">Personalization</span>
                                         </TabsTrigger>
                                         {experimentalAvailable.length > 0 && (
-                                            <TabsTrigger value="experimental" className="shrink-0 justify-start rounded-lg px-3 py-2 lg:w-full">
-                                                <Plug className="mr-2 h-4 w-4" />
-                                                Experimental
+                                            <TabsTrigger value="experimental" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                                <Plug className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
+                                                <span className="truncate">Experimental</span>
                                             </TabsTrigger>
                                         )}
-                                        <TabsTrigger value="connections" className="shrink-0 justify-start rounded-lg px-3 py-2 lg:w-full">
-                                            <Share2 className="mr-2 h-4 w-4" />
-                                            Connections
+                                        <TabsTrigger value="connections" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                            <Share2 className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
+                                            <span className="truncate">Connections</span>
                                         </TabsTrigger>
-                                        <TabsTrigger value="integrations" className="shrink-0 justify-start rounded-lg px-3 py-2 lg:w-full">
-                                            <Plug className="mr-2 h-4 w-4" />
-                                            Integrations
+                                        <TabsTrigger value="integrations" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                            <Plug className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
+                                            <span className="truncate">Integrations</span>
                                         </TabsTrigger>
                                     </TabsList>
                                 </CardContent>
@@ -584,19 +589,19 @@ export default function ProfilePage() {
                         </aside>
 
                         <div className="min-w-0">
-                            <TabsContent value="profile" className="mt-0 outline-none">
+                            <TabsContent value="profile" className="mt-0 min-w-0 outline-none">
                                 <motion.div
                                     variants={containerVariants}
                                     initial="hidden"
                                     animate="visible"
-                                    className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]"
+                                    className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:gap-5"
                                 >
                                     <motion.div variants={itemVariants} className="min-w-0">
                                         <Tabs value={studentProfileTab} onValueChange={setStudentProfileTab} className="flex flex-col gap-4">
                                             {isStudent && (
                                                 <Card className={dashboardPanelClass}>
-                                                    <CardContent className="space-y-3 p-2">
-                                                        <div className="px-2 pt-2">
+                                                    <CardContent className="space-y-3 p-3">
+                                                        <div className="min-w-0">
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <h2 className="text-sm font-semibold">Student Information</h2>
                                                                 {student_profile_completion && (
@@ -605,40 +610,40 @@ export default function ProfilePage() {
                                                                     </Badge>
                                                                 )}
                                                             </div>
-                                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                            <p className="text-muted-foreground mt-1 break-words text-xs leading-relaxed">
                                                                 Keep official contact details clear with examples like +63 912 345 6789, Juan Dela Cruz, Mother, Davao City, and 2024.
                                                             </p>
                                                         </div>
-                                                        <TabsList className="no-scrollbar bg-muted/20 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg p-1">
-                                                            <TabsTrigger value="basic" className="shrink-0 rounded-lg px-3 py-2">
-                                                                <User className="mr-2 h-4 w-4" />
+                                                        <TabsList className="bg-muted/20 grid h-auto w-full grid-cols-2 gap-1 rounded-lg p-1 sm:grid-cols-4">
+                                                            <TabsTrigger value="basic" className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm">
+                                                                <User className="mr-1.5 h-4 w-4 shrink-0" />
                                                                 Basic
                                                             </TabsTrigger>
                                                             {studentInformationUpdatesEnabled && (
                                                                 <>
-                                                                    <TabsTrigger value="student" className="shrink-0 rounded-lg px-3 py-2">
-                                                                        <GraduationCap className="mr-2 h-4 w-4" />
-                                                                        Student
+                                                                    <TabsTrigger value="student" className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm">
+                                                                        <GraduationCap className="mr-1.5 h-4 w-4 shrink-0" />
+                                                                        <span className="truncate">Student</span>
                                                                         {missingBySection("student") > 0 && (
-                                                                            <Badge variant="secondary" className="ml-2 h-5 rounded-full px-1.5 text-[10px]">
+                                                                            <Badge variant="secondary" className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]">
                                                                                 {missingBySection("student")}
                                                                             </Badge>
                                                                         )}
                                                                     </TabsTrigger>
-                                                                    <TabsTrigger value="contacts" className="shrink-0 rounded-lg px-3 py-2">
-                                                                        <Contact className="mr-2 h-4 w-4" />
-                                                                        Contacts
+                                                                    <TabsTrigger value="contacts" className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm">
+                                                                        <Contact className="mr-1.5 h-4 w-4 shrink-0" />
+                                                                        <span className="truncate">Contacts</span>
                                                                         {missingBySection("contacts") > 0 && (
-                                                                            <Badge variant="secondary" className="ml-2 h-5 rounded-full px-1.5 text-[10px]">
+                                                                            <Badge variant="secondary" className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]">
                                                                                 {missingBySection("contacts")}
                                                                             </Badge>
                                                                         )}
                                                                     </TabsTrigger>
-                                                                    <TabsTrigger value="education" className="shrink-0 rounded-lg px-3 py-2">
-                                                                        <BookOpen className="mr-2 h-4 w-4" />
-                                                                        Education
+                                                                    <TabsTrigger value="education" className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm">
+                                                                        <BookOpen className="mr-1.5 h-4 w-4 shrink-0" />
+                                                                        <span className="truncate">Education</span>
                                                                         {missingBySection("education") > 0 && (
-                                                                            <Badge variant="secondary" className="ml-2 h-5 rounded-full px-1.5 text-[10px]">
+                                                                            <Badge variant="secondary" className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]">
                                                                                 {missingBySection("education")}
                                                                             </Badge>
                                                                         )}
@@ -650,7 +655,7 @@ export default function ProfilePage() {
                                                 </Card>
                                             )}
 
-                                            <TabsContent value="basic" className="mt-0 outline-none">
+                                            <TabsContent value="basic" className="mt-0 min-w-0 outline-none">
                                                 <ProfileForm
                                                     userForm={{
                                                         data: userForm.data,
@@ -681,7 +686,7 @@ export default function ProfilePage() {
 
                                             {isStudent && studentInformationUpdatesEnabled && (
                                                 <>
-                                                    <TabsContent value="student" className="mt-0 outline-none">
+                                                    <TabsContent value="student" className="mt-0 min-w-0 outline-none">
                                                         <StudentDetailsForm
                                                             studentForm={{
                                                                 data: studentForm.data,
@@ -692,7 +697,7 @@ export default function ProfilePage() {
                                                             onSubmit={handleStudentSubmit}
                                                         />
                                                     </TabsContent>
-                                                    <TabsContent value="contacts" className="mt-0 outline-none">
+                                                    <TabsContent value="contacts" className="mt-0 min-w-0 outline-none">
                                                         <StudentContactsForm
                                                             studentForm={{
                                                                 data: studentForm.data,
@@ -702,7 +707,7 @@ export default function ProfilePage() {
                                                             onSubmit={handleStudentSubmit}
                                                         />
                                                     </TabsContent>
-                                                    <TabsContent value="education" className="mt-0 outline-none">
+                                                    <TabsContent value="education" className="mt-0 min-w-0 outline-none">
                                                         <StudentEducationForm
                                                             studentForm={{
                                                                 data: studentForm.data,
@@ -717,7 +722,7 @@ export default function ProfilePage() {
                                         </Tabs>
                                     </motion.div>
 
-                                    <motion.div variants={itemVariants}>
+                                    <motion.div variants={itemVariants} className="hidden xl:block">
                                         <ProfileSidebar
                                             user={user}
                                             avatarPreview={avatarPreview}
