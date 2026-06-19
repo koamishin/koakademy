@@ -242,44 +242,11 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     }
 
     /**
-     * Ensure PDF is available, generate if needed
+     * Generate a fresh assessment PDF for the resend flow.
      */
     private function ensurePdfIsAvailable(): string
     {
-        // Reuse latest assessment resource if available in configured storage
-        $existingResource = $this->studentEnrollment
-            ->resources()
-            ->where('type', 'assessment')
-            ->latest('id')
-            ->first();
-
-        if ($existingResource) {
-            $disk = $existingResource->disk ?: config('filesystems.default');
-            $relativePath = $existingResource->file_path;
-
-            try {
-                if ($relativePath && Storage::disk($disk)->exists($relativePath)) {
-                    Log::info('Existing assessment PDF found in storage, skipping regeneration.', [
-                        'job_id' => $this->jobId,
-                        'resource_id' => $existingResource->id,
-                        'disk' => $disk,
-                        'path' => $relativePath,
-                    ]);
-
-                    return $relativePath;
-                }
-            } catch (Exception $exception) {
-                Log::warning('Could not verify existing assessment resource in storage.', [
-                    'job_id' => $this->jobId,
-                    'resource_id' => $existingResource->id,
-                    'disk' => $disk,
-                    'path' => $relativePath,
-                    'error' => $exception->getMessage(),
-                ]);
-            }
-        }
-
-        Log::info('Assessment PDF not found in storage, attempting regeneration.', [
+        Log::info('Generating fresh assessment PDF for resend.', [
             'job_id' => $this->jobId,
             'enrollment_id' => $this->studentEnrollment->id,
         ]);
@@ -402,6 +369,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
             $resource = Resource::query()->create([
                 'resourceable_id' => $this->studentEnrollment->id,
                 'resourceable_type' => $this->studentEnrollment::class,
+                'name' => $assessmentFilename,
                 'type' => 'assessment',
                 'file_path' => $relativePath, // Store relative path for portability
                 'file_name' => $assessmentFilename,

@@ -30,6 +30,7 @@ final class Resource extends Model
     protected $fillable = [
         'resourceable_type',
         'resourceable_id',
+        'name',
         'type',
         'file_path',
         'file_name',

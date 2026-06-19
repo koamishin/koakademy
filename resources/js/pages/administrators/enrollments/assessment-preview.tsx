@@ -763,9 +763,6 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
                                                 {fee.is_required && <span className="required-tag">(Required)</span>}
                                             </p>
                                         ))}
-                                        {data.additional_fees_total > 0 && (
-                                            <p className="fee-total">Additional Total: {formatMoney(data.additional_fees_total)}</p>
-                                        )}
                                     </div>
 
                                     {/* Payment Summary */}

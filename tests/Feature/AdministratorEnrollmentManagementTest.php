@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
+use App\Jobs\SendAssessmentNotificationJob;
 use App\Models\Course;
 use App\Models\Department;
 use App\Models\GeneralSetting;
+use App\Models\Resource;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\StudentTransaction;
@@ -13,6 +15,7 @@ use App\Models\StudentTuition;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\PdfGenerationService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +31,22 @@ beforeEach(function (): void {
             $table->boolean('is_separate_transaction')->default(false);
             $table->string('transaction_number')->nullable();
             $table->timestamps();
+        });
+    }
+
+    if (Schema::hasTable('resources')) {
+        Schema::table('resources', function (Blueprint $table): void {
+            if (! Schema::hasColumn('resources', 'file_name')) {
+                $table->string('file_name')->nullable();
+            }
+
+            if (! Schema::hasColumn('resources', 'disk')) {
+                $table->string('disk')->nullable();
+            }
+
+            if (! Schema::hasColumn('resources', 'metadata')) {
+                $table->json('metadata')->nullable();
+            }
         });
     }
 });
@@ -323,6 +342,89 @@ it('calculates the assessment preview balance from paid transactions', function 
         ->assertJsonPath('tuition.total_balance', 16075);
 
     expect($enrollment->studentTuition()->first()?->total_balance)->toBe(16075.0);
+});
+
+it('does not show a duplicate additional total line in the printable assessment preview', function (): void {
+    $previewSource = file_get_contents(resource_path('js/pages/administrators/enrollments/assessment-preview.tsx'));
+
+    expect($previewSource)->not->toContain('Additional Total');
+});
+
+it('regenerates a fresh assessment PDF when resending assessment emails', function (): void {
+    config(['filesystems.default' => 'assessment-resend-test']);
+    Storage::fake('assessment-resend-test');
+
+    $student = Student::factory()->create(['email' => 'student@example.test']);
+    $enrollment = StudentEnrollment::factory()->create(['student_id' => $student->id]);
+
+    StudentTuition::query()->create([
+        'student_id' => $student->id,
+        'enrollment_id' => $enrollment->id,
+        'semester' => '1st Semester',
+        'school_year' => '2025 - 2026',
+        'total_tuition' => 10000,
+        'total_lectures' => 8000,
+        'total_laboratory' => 1000,
+        'total_miscelaneous_fees' => 1000,
+        'overall_tuition' => 10000,
+        'downpayment' => 1000,
+        'total_balance' => 9000,
+        'discount' => 0,
+        'academic_year' => 1,
+    ]);
+
+    Storage::disk('assessment-resend-test')->put('assessments/stale.pdf', 'stale-pdf');
+
+    Resource::query()->create([
+        'resourceable_id' => $enrollment->id,
+        'resourceable_type' => $enrollment::class,
+        'name' => 'stale.pdf',
+        'type' => 'assessment',
+        'file_path' => 'assessments/stale.pdf',
+        'file_name' => 'stale.pdf',
+        'mime_type' => 'application/pdf',
+        'disk' => 'assessment-resend-test',
+        'file_size' => 9,
+    ]);
+
+    $pdfService = new class
+    {
+        public int $calls = 0;
+
+        /**
+         * @param  array<string, mixed>  $data
+         * @param  array<string, mixed>  $options
+         */
+        public function generatePdfFromView(string $viewName, array $data, string $outputPath, array $options): void
+        {
+            $this->calls++;
+
+            expect($viewName)->toBe('pdf.assesment-form')
+                ->and($data['student'])->toBeInstanceOf(StudentEnrollment::class)
+                ->and($options['landscape'])->toBeTrue();
+
+            file_put_contents($outputPath, 'fresh-pdf');
+        }
+    };
+
+    app()->instance(PdfGenerationService::class, $pdfService);
+
+    $job = new SendAssessmentNotificationJob($enrollment->fresh(), 'assessment_resend_test');
+    $method = new ReflectionMethod($job, 'ensurePdfIsAvailable');
+    $method->setAccessible(true);
+
+    $freshPath = $method->invoke($job);
+
+    expect($freshPath)
+        ->toStartWith('assessments/assmt-'.$enrollment->id.'-')
+        ->not->toBe('assessments/stale.pdf');
+
+    Storage::disk('assessment-resend-test')->assertExists($freshPath);
+    expect(Storage::disk('assessment-resend-test')->get($freshPath))->toBe('fresh-pdf');
+    expect($pdfService->calls)->toBe(1);
+
+    expect($enrollment->resources()->where('type', 'assessment')->pluck('file_path')->all())
+        ->toBe([$freshPath]);
 });
 
 it('allows administrators to edit enrollment details', function (): void {

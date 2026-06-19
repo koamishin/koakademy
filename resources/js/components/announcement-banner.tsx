@@ -483,7 +483,7 @@ export function AnnouncementBanner({ announcements, displayMode: defaultDisplayM
         }
 
         return (
-            <div className="z-[100]">
+            <div className="relative z-0">
                 <div className="mx-auto max-w-full space-y-2">
                     <AnnouncementItem
                         announcement={urgentAnnouncement}
@@ -502,7 +502,7 @@ export function AnnouncementBanner({ announcements, displayMode: defaultDisplayM
     });
 
     return (
-        <div className="z-[100]">
+        <div className="relative z-0">
             <div className="mx-auto max-w-full space-y-2">
                 <AnimatePresence mode="popLayout">
                     {sortedAnnouncements.slice(0, 3).map((announcement: Announcement) => {
