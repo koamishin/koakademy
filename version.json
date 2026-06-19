@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.1.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.0",
-  "commit": "5f90f64a8f4bcbe7368e9cbc30e2cde3135015a2",
+  "version": "1.9.0-dev.1.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.1",
+  "commit": "a2907b603712431956094565dfc3fe94a350230c",
   "branch": "master",
-  "timestamp": "2026-06-19T03:45:12Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27803840761",
-  "release_type": "feature",
+  "timestamp": "2026-06-19T08:28:21Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27814375415",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.9.0-dev.1.0 - feat: implement dynamic redirect URL configuration for socialite providers",
-    "previous": "1.9.0-dev.0.4"
+    "current": "Version 1.9.0-dev.1.1 - Regenerate assessment PDFs and remove duplicate total line",
+    "previous": "1.9.0-dev.1.0"
   },
   "metadata": {
     "author": "yukazakiri",
