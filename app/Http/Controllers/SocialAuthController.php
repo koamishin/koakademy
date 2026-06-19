@@ -188,11 +188,12 @@ final class SocialAuthController extends Controller
 
     private function driver(string $provider, bool $forConnection = false): mixed
     {
-        $driver = Socialite::driver($provider);
+        $this->socialiteProviders->applyRuntimeConfig(
+            $provider,
+            $forConnection ? url("/integrations/{$provider}/callback") : null,
+        );
 
-        if ($forConnection) {
-            $driver->redirectUrl(url("/integrations/{$provider}/callback"));
-        }
+        $driver = Socialite::driver($provider);
 
         if ($provider === 'google') {
             $driver->with(['prompt' => 'select_account']);

@@ -1346,7 +1346,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                         <Input
                                             type="number"
                                             min={500}
-                                            step={100}
+                                            step={10}
                                             value={downpayment}
                                             onChange={(e) => setDownpayment(parseFloat(e.target.value) || 0)}
                                             className="h-9"

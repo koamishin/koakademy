@@ -83,6 +83,33 @@ it('does not expose incomplete or disabled providers to auth pages', function ()
             ->where('socialAuthProviders', []));
 });
 
+it('uses database backed socialite settings for provider redirects', function (): void {
+    $redirectUri = portalUrlForAdministrators('/auth/google/callback');
+
+    GeneralSetting::factory()->create([
+        'social_network' => [
+            'google_client_id' => 'database-google-client-id',
+            'google_client_secret' => 'database-google-client-secret',
+            'google_enabled' => true,
+            'google_redirect_uri' => $redirectUri,
+        ],
+    ]);
+
+    config([
+        'services.google.client_id' => null,
+        'services.google.client_secret' => null,
+        'services.google.redirect' => null,
+    ]);
+
+    $response = $this->get(portalUrlForAdministrators('/auth/google/redirect'))
+        ->assertRedirect();
+
+    parse_str(parse_url($response->headers->get('Location'), PHP_URL_QUERY) ?: '', $query);
+
+    expect($query['client_id'] ?? null)->toBe('database-google-client-id')
+        ->and($query['redirect_uri'] ?? null)->toBe($redirectUri);
+});
+
 it('logs in a user with an already linked google account', function (): void {
     enableSocialProvider();
     fakeGoogleUser();

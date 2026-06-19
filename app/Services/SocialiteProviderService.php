@@ -72,6 +72,19 @@ final class SocialiteProviderService
             && (bool) Arr::get($config, "{$provider}_enabled", false);
     }
 
+    public function applyRuntimeConfig(string $provider, ?string $redirectUrl = null): void
+    {
+        $config = $this->config();
+
+        config([
+            "services.{$provider}.client_id" => Arr::get($config, "{$provider}_client_id"),
+            "services.{$provider}.client_secret" => Arr::get($config, "{$provider}_client_secret"),
+            "services.{$provider}.redirect" => $redirectUrl
+                ?? Arr::get($config, "{$provider}_redirect_uri")
+                ?? url("/auth/{$provider}/callback"),
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
