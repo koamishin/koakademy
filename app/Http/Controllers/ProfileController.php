@@ -54,13 +54,36 @@ final class ProfileController extends Controller
             ->with(['studentContactsInfo', 'studentEducationInfo', 'studentParentInfo', 'Course'])
             ->first();
 
-        $connectedAccounts = [];
+        $connectedAccounts = [
+            'providers' => [],
+            'accounts' => [],
+        ];
         if (Schema::hasTable('connected_accounts')) {
-            $connectedAccounts = ConnectedAccount::where('user_id', $user->id)
-                ->get()
-                ->pluck('provider')
-                ->mapWithKeys(fn ($provider): array => [$provider => true])
-                ->toArray();
+            $accounts = ConnectedAccount::query()
+                ->where('user_id', $user->id)
+                ->orderByDesc('created_at')
+                ->get();
+
+            $connectedAccounts = [
+                'providers' => $accounts
+                    ->pluck('provider')
+                    ->unique()
+                    ->mapWithKeys(fn ($provider): array => [$provider => true])
+                    ->toArray(),
+                'accounts' => $accounts
+                    ->map(fn (ConnectedAccount $account): array => [
+                        'id' => $account->id,
+                        'provider' => $account->provider,
+                        'provider_id' => $account->provider_id,
+                        'name' => $account->name,
+                        'nickname' => $account->nickname,
+                        'email' => $account->email,
+                        'avatar_path' => $account->avatar_path,
+                        'created_at' => $account->created_at?->toIso8601String(),
+                    ])
+                    ->values()
+                    ->all(),
+            ];
         }
 
         // Generate ID card data

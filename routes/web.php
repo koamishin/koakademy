@@ -294,7 +294,7 @@ Route::get('/health', fn () => response()->json(['status' => 'ok', 'timestamp' =
 Route::middleware(['auth'])->group(function () {
     // Generic Social Auth Routes
     Route::get('/integrations/{provider}/connect', [App\Http\Controllers\SocialAuthController::class, 'connect'])->name('social.connect');
-    Route::get('/integrations/{provider}/callback', [App\Http\Controllers\SocialAuthController::class, 'callback'])->name('social.callback');
+    Route::get('/integrations/{provider}/callback', [App\Http\Controllers\SocialAuthController::class, 'connectCallback'])->name('social.callback');
     Route::post('/integrations/{provider}/disconnect', [App\Http\Controllers\SocialAuthController::class, 'disconnect'])->name('social.disconnect');
 
     // Help & Support Redirectors

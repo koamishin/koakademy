@@ -19,6 +19,7 @@ use App\Services\EnrollmentPipelineService;
 use App\Services\GeneralSettingsService;
 use App\Services\GradingSystemService;
 use App\Services\LogoConversionService;
+use App\Services\SocialiteProviderService;
 use App\Settings\SiteSettings;
 use App\Support\SystemManagementPermissions;
 use Exception;
@@ -478,35 +479,71 @@ final class AdministratorSystemManagementController extends Controller
     {
         $this->authorize('updateSocialite', GeneralSetting::class);
 
-        $settings = GeneralSetting::first();
+        $settings = GeneralSetting::query()->first();
+
+        if (! $settings instanceof GeneralSetting) {
+            $settings = GeneralSetting::query()->create([
+                'site_name' => $this->siteSettings->getAppName(),
+            ]);
+        }
+
+        $socialiteProviders = app(SocialiteProviderService::class);
         $validated = $request->validate([
             'facebook_client_id' => 'nullable|string',
             'facebook_client_secret' => 'nullable|string',
+            'facebook_enabled' => 'nullable|boolean',
+            'facebook_redirect_uri' => 'nullable|url',
             'google_client_id' => 'nullable|string',
             'google_client_secret' => 'nullable|string',
+            'google_enabled' => 'nullable|boolean',
+            'google_redirect_uri' => 'nullable|url',
             'twitter_client_id' => 'nullable|string',
             'twitter_client_secret' => 'nullable|string',
+            'twitter_enabled' => 'nullable|boolean',
+            'twitter_redirect_uri' => 'nullable|url',
             'github_client_id' => 'nullable|string',
             'github_client_secret' => 'nullable|string',
+            'github_enabled' => 'nullable|boolean',
+            'github_redirect_uri' => 'nullable|url',
             'linkedin_client_id' => 'nullable|string',
             'linkedin_client_secret' => 'nullable|string',
+            'linkedin_enabled' => 'nullable|boolean',
+            'linkedin_redirect_uri' => 'nullable|url',
         ]);
 
+        $socialNetwork = array_merge($socialiteProviders->config(), $validated);
+
+        foreach (array_keys($socialiteProviders->providers()) as $provider) {
+            $isConfigured = filled($socialNetwork["{$provider}_client_id"] ?? null)
+                && filled($socialNetwork["{$provider}_client_secret"] ?? null);
+
+            $socialNetwork["{$provider}_enabled"] = $isConfigured
+                && (bool) ($validated["{$provider}_enabled"] ?? false);
+            $socialNetwork["{$provider}_redirect_uri"] = filled($socialNetwork["{$provider}_redirect_uri"] ?? null)
+                ? $socialNetwork["{$provider}_redirect_uri"]
+                : url("/auth/{$provider}/callback");
+        }
+
         // Save to Database
-        $settings->update(['social_network' => $validated]);
+        $settings->update(['social_network' => $socialNetwork]);
 
         // Update .env file
         $envUpdates = [
-            'FACEBOOK_CLIENT_ID' => $validated['facebook_client_id'],
-            'FACEBOOK_CLIENT_SECRET' => $validated['facebook_client_secret'],
-            'GOOGLE_CLIENT_ID' => $validated['google_client_id'],
-            'GOOGLE_CLIENT_SECRET' => $validated['google_client_secret'],
-            'TWITTER_CLIENT_ID' => $validated['twitter_client_id'],
-            'TWITTER_CLIENT_SECRET' => $validated['twitter_client_secret'],
-            'GITHUB_CLIENT_ID' => $validated['github_client_id'],
-            'GITHUB_CLIENT_SECRET' => $validated['github_client_secret'],
-            'LINKEDIN_CLIENT_ID' => $validated['linkedin_client_id'],
-            'LINKEDIN_CLIENT_SECRET' => $validated['linkedin_client_secret'],
+            'FACEBOOK_CLIENT_ID' => $socialNetwork['facebook_client_id'],
+            'FACEBOOK_CLIENT_SECRET' => $socialNetwork['facebook_client_secret'],
+            'FACEBOOK_REDIRECT_URI' => $socialNetwork['facebook_redirect_uri'],
+            'GOOGLE_CLIENT_ID' => $socialNetwork['google_client_id'],
+            'GOOGLE_CLIENT_SECRET' => $socialNetwork['google_client_secret'],
+            'GOOGLE_REDIRECT_URI' => $socialNetwork['google_redirect_uri'],
+            'TWITTER_CLIENT_ID' => $socialNetwork['twitter_client_id'],
+            'TWITTER_CLIENT_SECRET' => $socialNetwork['twitter_client_secret'],
+            'TWITTER_REDIRECT_URI' => $socialNetwork['twitter_redirect_uri'],
+            'GITHUB_CLIENT_ID' => $socialNetwork['github_client_id'],
+            'GITHUB_CLIENT_SECRET' => $socialNetwork['github_client_secret'],
+            'GITHUB_REDIRECT_URI' => $socialNetwork['github_redirect_uri'],
+            'LINKEDIN_CLIENT_ID' => $socialNetwork['linkedin_client_id'],
+            'LINKEDIN_CLIENT_SECRET' => $socialNetwork['linkedin_client_secret'],
+            'LINKEDIN_REDIRECT_URI' => $socialNetwork['linkedin_redirect_uri'],
         ];
 
         $this->updateEnvironmentFile($envUpdates);
@@ -789,22 +826,7 @@ final class AdministratorSystemManagementController extends Controller
 
         $schools = School::all();
 
-        // Merge config defaults if DB is empty
-        $socialiteConfig = $settings->social_network ?? [];
-        $defaults = [
-            'facebook_client_id' => config('services.facebook.client_id'),
-            'facebook_client_secret' => config('services.facebook.client_secret'),
-            'google_client_id' => config('services.google.client_id'),
-            'google_client_secret' => config('services.google.client_secret'),
-            'twitter_client_id' => config('services.twitter.client_id'),
-            'twitter_client_secret' => config('services.twitter.client_secret'),
-            'github_client_id' => config('services.github.client_id'),
-            'github_client_secret' => config('services.github.client_secret'),
-            'linkedin_client_id' => config('services.linkedin.client_id'),
-            'linkedin_client_secret' => config('services.linkedin.client_secret'),
-        ];
-
-        $socialiteConfig = array_merge($defaults, $socialiteConfig);
+        $socialiteConfig = app(SocialiteProviderService::class)->config();
 
         // Merge mail defaults with DB
         $mailConfig = $settings->email_settings ?? [];
@@ -1017,6 +1039,10 @@ final class AdministratorSystemManagementController extends Controller
      */
     private function updateEnvironmentFile(array $values): void
     {
+        if (app()->environment('testing')) {
+            return;
+        }
+
         $envPath = base_path('.env');
         $content = file_get_contents($envPath);
 

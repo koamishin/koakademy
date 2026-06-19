@@ -8,15 +8,23 @@ import { Calendar, Mail, Plug, Video } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+type ConnectedAccountsPayload = {
+    providers: Record<string, boolean>;
+    accounts: Array<{
+        id: number;
+        provider: string;
+    }>;
+};
+
 interface IntegrationsTabProps {
-    connectedAccounts: Record<string, boolean>;
+    connectedAccounts: ConnectedAccountsPayload;
 }
 
 export function IntegrationsTab({ connectedAccounts }: IntegrationsTabProps) {
     const [integrations, setIntegrations] = useState({
-        googleCalendar: connectedAccounts["google"] || false,
-        microsoftOutlook: connectedAccounts["microsoft"] || false,
-        zoom: connectedAccounts["zoom"] || false,
+        googleCalendar: connectedAccounts.providers["google"] || false,
+        microsoftOutlook: connectedAccounts.providers["microsoft"] || false,
+        zoom: connectedAccounts.providers["zoom"] || false,
     });
     const [confirmingUnsync, setConfirmingUnsync] = useState(false);
 

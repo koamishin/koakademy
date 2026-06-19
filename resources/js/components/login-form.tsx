@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SocialAuthButtons } from "@/components/social-auth-buttons";
 import { cn } from "@/lib/utils";
 import { Link, router, useForm } from "@inertiajs/react";
 import axios from "axios";
@@ -335,6 +336,8 @@ export function LoginForm({
                                     </div>
                                 </div>
                             ) : null}
+
+                            <SocialAuthButtons />
 
                             {passkeyAvailable && (
                                 <>

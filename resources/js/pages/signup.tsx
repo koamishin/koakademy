@@ -6,9 +6,15 @@ import { resolveBranding, type Branding } from "@/lib/branding";
 import { usePage } from "@inertiajs/react";
 
 export default function SignupPage() {
-    const { branding, announcements } = usePage<{
+    const { branding, announcements, socialiteSignup } = usePage<{
         branding?: Partial<Branding> | null;
         announcements?: unknown[];
+        socialiteSignup?: {
+            name?: string | null;
+            email?: string | null;
+            avatar_url?: string | null;
+            provider?: string | null;
+        } | null;
     }>().props;
 
     const resolvedBranding = resolveBranding(branding);
@@ -33,7 +39,7 @@ export default function SignupPage() {
                     <AnnouncementBanner announcements={announcements ?? []} />
                 </div>
                 <TransitionWrapper>
-                    <SignupStepper />
+                    <SignupStepper socialiteSignup={socialiteSignup} />
                 </TransitionWrapper>
             </div>
         </div>

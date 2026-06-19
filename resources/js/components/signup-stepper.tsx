@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { SocialAuthButtons } from "@/components/social-auth-buttons";
 import { cn } from "@/lib/utils";
 
 type UserType = "faculty" | "student" | null;
@@ -48,6 +49,13 @@ interface PersistedState {
     record_id: string | number;
 }
 
+interface SocialiteSignup {
+    name?: string | null;
+    email?: string | null;
+    avatar_url?: string | null;
+    provider?: string | null;
+}
+
 function loadPersistedState(): PersistedState | null {
     try {
         const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -69,8 +77,14 @@ function clearPersistedState() {
     } catch {}
 }
 
-export function SignupStepper({ className, ...props }: React.ComponentProps<"div">) {
-    const saved = useRef(loadPersistedState());
+export function SignupStepper({
+    className,
+    socialiteSignup,
+    ...props
+}: React.ComponentProps<"div"> & {
+    socialiteSignup?: SocialiteSignup | null;
+}) {
+    const saved = useRef(socialiteSignup?.email ? null : loadPersistedState());
 
     const [currentStep, setCurrentStep] = useState(saved.current?.currentStep ?? 0);
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
@@ -80,8 +94,8 @@ export function SignupStepper({ className, ...props }: React.ComponentProps<"div
     const [otpSent, setOtpSent] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
-        name: saved.current?.name ?? "",
-        email: saved.current?.email ?? "",
+        name: saved.current?.name ?? socialiteSignup?.name ?? "",
+        email: saved.current?.email ?? socialiteSignup?.email ?? "",
         password: saved.current?.password ?? "",
         password_confirmation: saved.current?.password_confirmation ?? "",
         faculty_id_number: saved.current?.faculty_id_number ?? "",
@@ -385,6 +399,8 @@ export function SignupStepper({ className, ...props }: React.ComponentProps<"div
                         <h1 className="text-2xl font-bold tracking-tight">Create an account</h1>
                         <p className="text-muted-foreground text-sm">Enter your email below to create your account</p>
                     </div>
+
+                    <SocialAuthButtons />
 
                     <div className="space-y-2">
                         <Progress value={progressValue} className="h-1" />

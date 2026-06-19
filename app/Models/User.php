@@ -396,6 +396,14 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
         return $this->hasMany(AdminTransaction::class, 'admin_id', 'id');
     }
 
+    /**
+     * @return HasMany<ConnectedAccount, self>
+     */
+    public function connectedAccounts(): HasMany
+    {
+        return $this->hasMany(ConnectedAccount::class);
+    }
+
     public function helpTickets(): HasMany
     {
         return $this->hasMany(HelpTicket::class);

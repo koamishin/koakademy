@@ -4,64 +4,241 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\ConnectedAccount;
+use App\Models\User;
+use App\Services\SocialiteProviderService;
 use Exception;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
 
 final class SocialAuthController extends Controller
 {
-    public function connect($provider)
+    public function __construct(
+        private readonly SocialiteProviderService $socialiteProviders
+    ) {}
+
+    public function redirect(string $provider): RedirectResponse
+    {
+        abort_unless($this->socialiteProviders->isEnabled($provider), 404);
+
+        return $this->driver($provider)->redirect();
+    }
+
+    public function callback(Request $request, string $provider): RedirectResponse
+    {
+        abort_unless($this->socialiteProviders->isEnabled($provider), 404);
+
+        try {
+            $socialUser = $this->driver($provider)->user();
+            $email = $socialUser->getEmail();
+
+            if (! filled($email)) {
+                return redirect('/login')->withErrors([
+                    'email' => ucfirst($provider).' did not provide an email address.',
+                ]);
+            }
+
+            $connectedAccount = ConnectedAccount::query()
+                ->where('provider', $provider)
+                ->where('provider_id', $socialUser->getId())
+                ->first();
+
+            if ($connectedAccount instanceof ConnectedAccount) {
+                $user = $connectedAccount->user;
+
+                if (! $user instanceof User) {
+                    return redirect('/login')->withErrors([
+                        'email' => 'This social account is no longer linked to a user.',
+                    ]);
+                }
+
+                $this->storeConnectedAccount($user, $provider, $socialUser);
+                if ($provider === 'google') {
+                    $this->syncAvatar($user, $socialUser);
+                }
+                $this->login($request, $user);
+
+                return redirect()->intended($this->redirectForUser($user));
+            }
+
+            $user = User::query()
+                ->where('email', $email)
+                ->first();
+
+            if ($user instanceof User) {
+                $this->storeConnectedAccount($user, $provider, $socialUser);
+                $this->syncAvatar($user, $socialUser);
+                $this->login($request, $user);
+
+                return redirect()
+                    ->intended($this->redirectForUser($user))
+                    ->with('status', ucfirst($provider).' is now linked. You can use it to sign in next time.');
+            }
+
+            $request->session()->put('socialite_signup', [
+                'provider' => $provider,
+                'provider_id' => $socialUser->getId(),
+                'name' => $socialUser->getName(),
+                'nickname' => $socialUser->getNickname(),
+                'email' => $email,
+                'avatar_url' => $socialUser->getAvatar(),
+                'token' => $socialUser->token ?? '',
+                'secret' => $socialUser->tokenSecret ?? null,
+                'refresh_token' => $socialUser->refreshToken ?? null,
+                'expires_at' => $this->expiresAt($socialUser)?->toIso8601String(),
+            ]);
+
+            return redirect('/signup')->with('status', 'Finish creating your account to link '.ucfirst($provider).'.');
+        } catch (Exception $e) {
+            Log::error(ucfirst($provider).' OAuth login error: '.$e->getMessage());
+
+            return redirect('/login')->withErrors([
+                'email' => 'Failed to sign in with '.ucfirst($provider).'.',
+            ]);
+        }
+    }
+
+    public function connect(string $provider): RedirectResponse
+    {
+        abort_unless($this->socialiteProviders->isEnabled($provider), 404);
+
+        return $this->driver($provider, true)->redirect();
+    }
+
+    public function connectCallback(string $provider): RedirectResponse
+    {
+        abort_unless($this->socialiteProviders->isEnabled($provider), 404);
+
+        try {
+            $socialUser = $this->driver($provider, true)->user();
+            $user = Auth::user();
+
+            abort_unless($user instanceof User, 403);
+
+            $existingAccount = ConnectedAccount::query()
+                ->where('provider', $provider)
+                ->where('provider_id', $socialUser->getId())
+                ->first();
+
+            if ($existingAccount instanceof ConnectedAccount && (int) $existingAccount->user_id !== (int) $user->id) {
+                return redirect('/profile')->withErrors([
+                    'socialite' => 'That '.ucfirst($provider).' account is already linked to another user.',
+                ]);
+            }
+
+            $this->storeConnectedAccount($user, $provider, $socialUser);
+
+            if ($provider === 'google') {
+                $this->syncAvatar($user, $socialUser);
+            }
+
+            return redirect('/profile')->with('status', ucfirst($provider).' connected successfully.');
+        } catch (Exception $e) {
+            Log::error(ucfirst($provider).' OAuth connect error: '.$e->getMessage());
+
+            return redirect('/profile')->withErrors([
+                'socialite' => 'Failed to connect '.ucfirst($provider).'.',
+            ]);
+        }
+    }
+
+    public function disconnect(Request $request, string $provider): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
+
+        $query = ConnectedAccount::query()
+            ->where('user_id', $user->id)
+            ->where('provider', $provider);
+
+        if ($provider === 'google' && $request->filled('account_id')) {
+            $query->whereKey($request->integer('account_id'));
+        }
+
+        $query->delete();
+
+        return redirect('/profile')->with('status', ucfirst($provider).' disconnected.');
+    }
+
+    public function storeConnectedAccount(User $user, string $provider, SocialiteUser $socialUser): ConnectedAccount
+    {
+        return ConnectedAccount::query()->updateOrCreate(
+            [
+                'provider' => $provider,
+                'provider_id' => (string) $socialUser->getId(),
+            ],
+            [
+                'user_id' => $user->id,
+                'name' => $socialUser->getName(),
+                'nickname' => $socialUser->getNickname(),
+                'email' => $socialUser->getEmail(),
+                'avatar_path' => $socialUser->getAvatar(),
+                'token' => (string) ($socialUser->token ?? ''),
+                'secret' => $socialUser->tokenSecret ?? null,
+                'refresh_token' => $socialUser->refreshToken ?? null,
+                'expires_at' => $this->expiresAt($socialUser),
+            ]
+        );
+    }
+
+    private function driver(string $provider, bool $forConnection = false): mixed
     {
         $driver = Socialite::driver($provider);
 
-        // Add specific scopes and parameters if needed
+        if ($forConnection) {
+            $driver->redirectUrl(url("/integrations/{$provider}/callback"));
+        }
+
         if ($provider === 'google') {
-            $driver->scopes(['https://www.googleapis.com/auth/calendar'])
-                ->with(['access_type' => 'offline', 'prompt' => 'consent select_account']);
+            $driver->with(['prompt' => 'select_account']);
+
+            if ($forConnection) {
+                $driver
+                    ->scopes(['https://www.googleapis.com/auth/calendar'])
+                    ->with(['access_type' => 'offline', 'prompt' => 'consent select_account']);
+            }
         }
 
-        return $driver->redirect();
+        return $driver;
     }
 
-    public function callback($provider)
+    private function syncAvatar(User $user, SocialiteUser $socialUser): void
     {
-        try {
-            $socialUser = Socialite::driver($provider)->user();
-            $user = Auth::user();
+        $avatar = $socialUser->getAvatar();
 
-            ConnectedAccount::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'provider' => $provider,
-                ],
-                [
-                    'provider_id' => $socialUser->getId(),
-                    'name' => $socialUser->getName(),
-                    'nickname' => $socialUser->getNickname(),
-                    'email' => $socialUser->getEmail(),
-                    'avatar_path' => $socialUser->getAvatar(),
-                    'token' => $socialUser->token,
-                    'refresh_token' => $socialUser->refreshToken,
-                    'expires_at' => property_exists($socialUser, 'expiresIn') ? now()->addSeconds($socialUser->expiresIn) : null,
-                ]
-            );
-
-            return redirect('/profile')->with('success', ucfirst((string) $provider).' connected successfully!');
-        } catch (Exception $e) {
-            Log::error(ucfirst((string) $provider).' OAuth Error: '.$e->getMessage());
-
-            return redirect('/profile')->with('error', 'Failed to connect '.ucfirst((string) $provider).'.');
+        if (filled($avatar)) {
+            $user->forceFill(['avatar_url' => $avatar])->save();
         }
     }
 
-    public function disconnect(Request $request, $provider)
+    private function login(Request $request, User $user): void
     {
-        $user = Auth::user();
-        ConnectedAccount::where('user_id', $user->id)->where('provider', $provider)->delete();
+        Auth::login($user);
+        $request->session()->regenerate();
+    }
 
-        return redirect('/profile')->with('success', ucfirst((string) $provider).' disconnected.');
+    private function redirectForUser(User $user): string
+    {
+        if ($user->isAdministrative()) {
+            return '/administrators';
+        }
+
+        if ($user->role === UserRole::User || $user->role?->isStudent()) {
+            return $user->role?->isStudent() ? '/student/dashboard' : '/dashboard';
+        }
+
+        return '/faculty/dashboard';
+    }
+
+    private function expiresAt(SocialiteUser $socialUser): ?\Illuminate\Support\Carbon
+    {
+        $expiresIn = $socialUser->expiresIn ?? null;
+
+        return is_numeric($expiresIn) ? now()->addSeconds((int) $expiresIn) : null;
     }
 }

@@ -31,6 +31,22 @@ import {
     StudentEducationForm,
 } from "@/components/profile";
 
+type ConnectedAccount = {
+    id: number;
+    provider: string;
+    provider_id: string;
+    name?: string | null;
+    nickname?: string | null;
+    email?: string | null;
+    avatar_path?: string | null;
+    created_at?: string | null;
+};
+
+type ConnectedAccountsPayload = {
+    providers: Record<string, boolean>;
+    accounts: ConnectedAccount[];
+};
+
 const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -78,7 +94,7 @@ export default function ProfilePage() {
         student,
         sessions,
         endpoints,
-        connected_accounts = {},
+        connected_accounts = { providers: {}, accounts: [] },
         id_card,
         feature_flags,
         featureFlags,
@@ -90,7 +106,7 @@ export default function ProfilePage() {
             qr_code: string;
             is_valid: boolean;
         } | null;
-        connected_accounts: Record<string, boolean>;
+        connected_accounts: ConnectedAccountsPayload;
         user: {
             id: number;
             name: string;

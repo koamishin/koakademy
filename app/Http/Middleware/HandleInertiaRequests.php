@@ -15,6 +15,7 @@ use App\Services\ModuleAdminNavigationService;
 use App\Services\NotificationShareService;
 use App\Services\OnboardingShareService;
 use App\Services\SettingsShareService;
+use App\Services\SocialiteProviderService;
 use App\Services\StudentClassShareService;
 use App\Services\StudentProfileCompletionService;
 use App\Support\AdministratorSidebarCounts;
@@ -57,6 +58,7 @@ final class HandleInertiaRequests extends Middleware
         $analyticsService = app(AnalyticsSettingsService::class);
         $moduleAdminNavigationService = app(ModuleAdminNavigationService::class);
         $administratorSidebarCounts = app(AdministratorSidebarCounts::class);
+        $socialiteProviderService = app(SocialiteProviderService::class);
 
         $featureValues = $onboardingService->getAllFeatureValues($user);
         $studentInformationUpdatesEnabled = $user && Feature::for($user)->active(StudentInformationUpdates::class);
@@ -77,6 +79,7 @@ final class HandleInertiaRequests extends Middleware
                 'demoMode' => $this->getDemoModeData(),
                 'status' => session('status'),
                 'settings' => $settingsService->getSettings(),
+                'socialAuthProviders' => fn () => $socialiteProviderService->enabledProviders(),
                 'version' => config('app.version'),
                 'onboarding' => [
                     'forceOnLogin' => (bool) config('onboarding.force_on_login'),

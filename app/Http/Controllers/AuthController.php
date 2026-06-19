@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\ConnectedAccount;
 use App\Models\Faculty;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\SocialiteProviderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -129,7 +132,9 @@ final class AuthController extends Controller
 
     public function showSignupForm(): Response
     {
-        return Inertia::render('signup');
+        return Inertia::render('signup', [
+            'socialiteSignup' => session('socialite_signup'),
+        ]);
     }
 
     public function signup(Request $request)
@@ -230,6 +235,7 @@ final class AuthController extends Controller
             'role' => $role,
             'record_id' => $student->id,
             'email_verified_at' => now(),
+            'avatar_url' => $this->pendingSocialiteAvatar($request->email),
         ]);
 
         // Assign spatie role
@@ -238,6 +244,8 @@ final class AuthController extends Controller
         // Link student to user
         $student->user_id = $user->id;
         $student->save();
+
+        $this->linkPendingSocialiteSignup($request, $user);
 
         Auth::login($user);
 
@@ -296,6 +304,7 @@ final class AuthController extends Controller
             'password' => Hash::make($request->password),
             'role' => $role,
             'email_verified_at' => now(),
+            'avatar_url' => $this->pendingSocialiteAvatar($request->email),
         ];
 
         // If faculty_id_number is provided, verify it matches the email
@@ -322,6 +331,8 @@ final class AuthController extends Controller
 
         // Assign spatie role
         $user->assignRole($spatieRole);
+
+        $this->linkPendingSocialiteSignup($request, $user);
 
         Auth::login($user);
 
@@ -362,5 +373,65 @@ final class AuthController extends Controller
             'enabled' => app()->environment('demo'),
             'accounts' => $accounts,
         ];
+    }
+
+    private function pendingSocialiteAvatar(string $email): ?string
+    {
+        $pending = session('socialite_signup');
+
+        if (! is_array($pending) || ($pending['email'] ?? null) !== $email) {
+            return null;
+        }
+
+        $avatar = $pending['avatar_url'] ?? null;
+
+        return is_string($avatar) && $avatar !== '' ? $avatar : null;
+    }
+
+    private function linkPendingSocialiteSignup(Request $request, User $user): void
+    {
+        $pending = $request->session()->get('socialite_signup');
+
+        if (! is_array($pending) || ($pending['email'] ?? null) !== $user->email) {
+            return;
+        }
+
+        $provider = (string) ($pending['provider'] ?? '');
+        $providerId = (string) ($pending['provider_id'] ?? '');
+
+        if (! app(SocialiteProviderService::class)->isSupported($provider) || $providerId === '') {
+            return;
+        }
+
+        $existingAccount = ConnectedAccount::query()
+            ->where('provider', $provider)
+            ->where('provider_id', $providerId)
+            ->first();
+
+        if ($existingAccount instanceof ConnectedAccount && (int) $existingAccount->user_id !== (int) $user->id) {
+            $request->session()->forget('socialite_signup');
+
+            return;
+        }
+
+        ConnectedAccount::query()->updateOrCreate(
+            [
+                'provider' => $provider,
+                'provider_id' => $providerId,
+            ],
+            [
+                'user_id' => $user->id,
+                'name' => $pending['name'] ?? $user->name,
+                'nickname' => $pending['nickname'] ?? null,
+                'email' => $pending['email'] ?? $user->email,
+                'avatar_path' => $pending['avatar_url'] ?? null,
+                'token' => (string) ($pending['token'] ?? ''),
+                'secret' => $pending['secret'] ?? null,
+                'refresh_token' => $pending['refresh_token'] ?? null,
+                'expires_at' => isset($pending['expires_at']) ? Carbon::parse((string) $pending['expires_at']) : null,
+            ]
+        );
+
+        $request->session()->forget('socialite_signup');
     }
 }

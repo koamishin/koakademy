@@ -69,7 +69,10 @@ final class GoogleCalendarController extends Controller
     public function sync(Request $request)
     {
         $user = Auth::user();
-        $account = ConnectedAccount::where('user_id', $user->id)->where('provider', 'google')->first();
+        $account = ConnectedAccount::where('user_id', $user->id)
+            ->where('provider', 'google')
+            ->latest('id')
+            ->first();
 
         if (! $account) {
             return response()->json(['message' => 'Not connected'], 400);
@@ -132,7 +135,10 @@ final class GoogleCalendarController extends Controller
     public function unsync(Request $request)
     {
         $user = Auth::user();
-        $account = ConnectedAccount::where('user_id', $user->id)->where('provider', 'google')->first();
+        $account = ConnectedAccount::where('user_id', $user->id)
+            ->where('provider', 'google')
+            ->latest('id')
+            ->first();
 
         if (! $account) {
             return response()->json(['message' => 'Not connected'], 400);

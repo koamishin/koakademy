@@ -7,6 +7,7 @@ use App\Http\Controllers\FacultyVerificationController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SignupEmailLookupController;
 use App\Http\Controllers\SignupOtpController;
+use App\Http\Controllers\SocialAuthController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +64,8 @@ Route::middleware('auth')->get('/dashboard', function () {
 // Login/Logout
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('social.auth.redirect');
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('social.auth.callback');
 Route::post('/demo-login/{role}', [AuthController::class, 'demoLogin'])->name('demo.login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::post('/onboarding/dismiss', [App\Http\Controllers\OnboardingDismissalController::class, 'store'])

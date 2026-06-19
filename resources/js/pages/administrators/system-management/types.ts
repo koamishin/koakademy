@@ -101,14 +101,24 @@ export interface EnrollmentCourseOption {
 export interface SocialiteConfig {
     facebook_client_id?: string;
     facebook_client_secret?: string;
+    facebook_enabled?: boolean;
+    facebook_redirect_uri?: string;
     google_client_id?: string;
     google_client_secret?: string;
+    google_enabled?: boolean;
+    google_redirect_uri?: string;
     twitter_client_id?: string;
     twitter_client_secret?: string;
+    twitter_enabled?: boolean;
+    twitter_redirect_uri?: string;
     github_client_id?: string;
     github_client_secret?: string;
+    github_enabled?: boolean;
+    github_redirect_uri?: string;
     linkedin_client_id?: string;
     linkedin_client_secret?: string;
+    linkedin_enabled?: boolean;
+    linkedin_redirect_uri?: string;
 }
 
 export interface MailConfig {
