@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.0.4",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.0.4",
-  "commit": "17b9e34f5bcf8fd63ba69985684f74d9fcc846df",
+  "version": "1.9.0-dev.1.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.0",
+  "commit": "5f90f64a8f4bcbe7368e9cbc30e2cde3135015a2",
   "branch": "master",
-  "timestamp": "2026-06-19T02:54:48Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27802269533",
-  "release_type": "chore",
+  "timestamp": "2026-06-19T03:45:12Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27803840761",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.9.0-dev.0.4 - chore: rename Components directory to components",
-    "previous": "1.9.0-dev.0.3"
+    "current": "Version 1.9.0-dev.1.0 - feat: implement dynamic redirect URL configuration for socialite providers",
+    "previous": "1.9.0-dev.0.4"
   },
   "metadata": {
     "author": "yukazakiri",
