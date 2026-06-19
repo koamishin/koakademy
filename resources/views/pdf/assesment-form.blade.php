@@ -278,11 +278,7 @@
                                     $additionalFeesTotal += $fee->amount;
                                 @endphp
                             @endforeach
-                            @if($additionalFeesTotal > 0)
-                                <p class="border-t border-gray-200 pt-1 mt-1 font-bold">
-                                    Additional Fees Total: ₱{{ number_format($additionalFeesTotal, 2) }}
-                                </p>
-                            @endif
+                          
                         @endif
                     </div>
 
