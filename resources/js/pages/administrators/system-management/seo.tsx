@@ -1,3 +1,5 @@
+import { updateSeo } from "@/actions/App/Http/Controllers/AdministratorSystemManagementController";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,936 +7,513 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { AnalyticsProvider } from "@/types/analytics";
 import { useForm } from "@inertiajs/react";
-import {
-    Activity,
-    AtSign,
-    BarChart3,
-    Bot,
-    Fingerprint,
-    Globe,
-    Image as ImageIcon,
-    Link2,
-    Loader2,
-    Radio,
-    Save,
-    Search,
-    Share2,
-    Type,
-} from "lucide-react";
+import { AlertCircle, Bot, CheckCircle2, Globe2, Image as ImageIcon, Link2, Loader2, Save, Search, Share2, Sparkles, Type } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
-import { submitSystemForm } from "./form-submit";
 import SystemManagementLayout from "./layout";
 import type { SystemManagementPageProps } from "./types";
+
+type RobotsDirective = "index, follow" | "index, nofollow" | "noindex, follow" | "noindex, nofollow";
+type TwitterCard = "summary" | "summary_large_image";
 
 interface SeoFormData {
     site_name: string;
     site_description: string;
-    analytics_enabled: boolean;
-    analytics_provider: AnalyticsProvider;
-    analytics_script: string;
-    analytics_settings: {
-        google_measurement_id: string;
-        ackee_script_url: string;
-        ackee_server_url: string;
-        ackee_domain_id: string;
-        umami_script_url: string;
-        umami_website_id: string;
-        umami_host_url: string;
-        umami_domains: string;
-        openpanel_script_url: string;
-        openpanel_client_id: string;
-        openpanel_api_url: string;
-        openpanel_track_screen_views: boolean;
-        openpanel_track_outgoing_links: boolean;
-        openpanel_track_attributes: boolean;
-        openpanel_session_replay: boolean;
-    };
     seo_title: string;
     seo_keywords: string;
     seo_metadata: {
-        robots: string;
+        robots: RobotsDirective;
         og_image: string;
         twitter_handle: string;
-        twitter_card: string;
+        twitter_card: TwitterCard;
         canonical_url: string;
     };
 }
 
+const robotsOptions: Array<{ value: RobotsDirective; label: string; helper: string }> = [
+    {
+        value: "index, follow",
+        label: "Show in search results",
+        helper: "Best for public marketing or information pages.",
+    },
+    {
+        value: "index, nofollow",
+        label: "Show page only",
+        helper: "Search engines can list the page but should not follow links.",
+    },
+    {
+        value: "noindex, follow",
+        label: "Hide page, follow links",
+        helper: "Useful for private portals that still link to public pages.",
+    },
+    {
+        value: "noindex, nofollow",
+        label: "Hide from search",
+        helper: "Recommended for admin-only or internal systems.",
+    },
+];
+
+function characterTone(length: number, idealMin: number, idealMax: number): string {
+    if (length === 0) {
+        return "text-muted-foreground";
+    }
+
+    if (length < idealMin) {
+        return "text-amber-600 dark:text-amber-400";
+    }
+
+    if (length > idealMax) {
+        return "text-destructive";
+    }
+
+    return "text-emerald-600 dark:text-emerald-400";
+}
+
+function compactUrl(url: string): string {
+    if (!url) {
+        return "https://example.edu";
+    }
+
+    try {
+        const parsed = new URL(url);
+
+        return `${parsed.hostname}${parsed.pathname === "/" ? "" : parsed.pathname}`;
+    } catch {
+        return url.replace(/^https?:\/\//, "");
+    }
+}
+
 export default function SystemManagementSeoPage({ user, general_settings, access }: SystemManagementPageProps) {
+    const seoMetadata = general_settings?.seo_metadata ?? {};
+    const canUpdate = access.sections.seo?.can_update ?? false;
+    const [imageHasError, setImageHasError] = useState(false);
+
     const seoForm = useForm<SeoFormData>({
         site_name: general_settings?.site_name || "",
         site_description: general_settings?.site_description || "",
-        analytics_enabled: general_settings?.analytics_enabled ?? false,
-        analytics_provider: general_settings?.analytics_provider || "google",
-        analytics_script: general_settings?.analytics_script || "",
-        analytics_settings: {
-            google_measurement_id: general_settings?.analytics_settings?.google_measurement_id || general_settings?.google_analytics_id || "",
-            ackee_script_url: general_settings?.analytics_settings?.ackee_script_url || "",
-            ackee_server_url: general_settings?.analytics_settings?.ackee_server_url || "",
-            ackee_domain_id: general_settings?.analytics_settings?.ackee_domain_id || "",
-            umami_script_url: general_settings?.analytics_settings?.umami_script_url || "",
-            umami_website_id: general_settings?.analytics_settings?.umami_website_id || "",
-            umami_host_url: general_settings?.analytics_settings?.umami_host_url || "",
-            umami_domains: general_settings?.analytics_settings?.umami_domains || "",
-            openpanel_script_url: general_settings?.analytics_settings?.openpanel_script_url || "https://openpanel.dev/op1.js",
-            openpanel_client_id: general_settings?.analytics_settings?.openpanel_client_id || "",
-            openpanel_api_url: general_settings?.analytics_settings?.openpanel_api_url || "",
-            openpanel_track_screen_views: general_settings?.analytics_settings?.openpanel_track_screen_views ?? true,
-            openpanel_track_outgoing_links: general_settings?.analytics_settings?.openpanel_track_outgoing_links ?? true,
-            openpanel_track_attributes: general_settings?.analytics_settings?.openpanel_track_attributes ?? true,
-            openpanel_session_replay: general_settings?.analytics_settings?.openpanel_session_replay ?? false,
-        },
         seo_title: general_settings?.seo_title || "",
         seo_keywords: general_settings?.seo_keywords || "",
         seo_metadata: {
-            robots: general_settings?.seo_metadata?.robots || "index, follow",
-            og_image: general_settings?.seo_metadata?.og_image || "",
-            twitter_handle: general_settings?.seo_metadata?.twitter_handle || "",
-            twitter_card: general_settings?.seo_metadata?.twitter_card || "summary_large_image",
-            canonical_url: general_settings?.seo_metadata?.canonical_url || "",
+            robots: (seoMetadata.robots as RobotsDirective | undefined) || "index, follow",
+            og_image: seoMetadata.og_image || "",
+            twitter_handle: seoMetadata.twitter_handle || "",
+            twitter_card: (seoMetadata.twitter_card as TwitterCard | undefined) || "summary_large_image",
+            canonical_url: seoMetadata.canonical_url || "",
         },
     });
-    const analyticsProvider = seoForm.data.analytics_provider;
-    const manualAnalyticsOverride = seoForm.data.analytics_script.trim() !== "";
-    const providerDisplayName =
-        analyticsProvider === "google"
-            ? "Google Analytics"
-            : analyticsProvider === "ackee"
-              ? "Ackee"
-              : analyticsProvider === "umami"
-                ? "Umami"
-                : analyticsProvider === "openpanel"
-                  ? "OpenPanel"
-                  : "Custom";
+
+    useEffect(() => {
+        setImageHasError(false);
+    }, [seoForm.data.seo_metadata.og_image]);
+
+    const errors = seoForm.errors as Record<string, string | undefined>;
+    const resolvedTitle = seoForm.data.seo_title || seoForm.data.site_name || "DCCP Hub";
+    const resolvedDescription =
+        seoForm.data.site_description || "Add a clear description so people understand what this portal offers before they click.";
+    const resolvedCanonical =
+        seoForm.data.seo_metadata.canonical_url ||
+        (typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : "https://example.edu");
+    const robotsOption = robotsOptions.find((option) => option.value === seoForm.data.seo_metadata.robots) ?? robotsOptions[0];
+    const hasSocialImage = seoForm.data.seo_metadata.og_image.trim() !== "" && !imageHasError;
+    const titleLength = resolvedTitle.length;
+    const descriptionLength = seoForm.data.site_description.length;
+    const completionItems = useMemo(
+        () => [
+            Boolean(seoForm.data.site_name.trim()),
+            Boolean(seoForm.data.seo_title.trim()),
+            Boolean(seoForm.data.site_description.trim()),
+            Boolean(seoForm.data.seo_metadata.og_image.trim()),
+            Boolean(seoForm.data.seo_metadata.robots),
+        ],
+        [
+            seoForm.data.seo_metadata.og_image,
+            seoForm.data.seo_metadata.robots,
+            seoForm.data.seo_title,
+            seoForm.data.site_description,
+            seoForm.data.site_name,
+        ],
+    );
+    const completion = Math.round((completionItems.filter(Boolean).length / completionItems.length) * 100);
+
+    const setSeoMetadata = <Key extends keyof SeoFormData["seo_metadata"]>(key: Key, value: SeoFormData["seo_metadata"][Key]) => {
+        seoForm.setData("seo_metadata", {
+            ...seoForm.data.seo_metadata,
+            [key]: value,
+        });
+    };
+
+    const handleSave = () => {
+        seoForm.put(updateSeo.url(), {
+            preserveScroll: true,
+            onSuccess: () => toast.success("SEO settings updated successfully."),
+            onError: () => toast.error("Failed to update SEO settings."),
+        });
+    };
 
     return (
         <SystemManagementLayout
             user={user}
             access={access}
             activeSection="seo"
-            heading="SEO & Metadata Console"
-            description="Manage search indexing defaults, social sharing metadata, and crawlers configurations."
+            heading="SEO & Sharing"
+            description="Set how the portal appears in browser tabs, search results, and social link previews."
         >
-            <div className="flex flex-col gap-6 xl:flex-row">
-                {/* Left Column: Forms */}
-                <div className="flex-1 space-y-6">
-                    <div className="bg-muted/30 border-muted-foreground/10 flex flex-col justify-between gap-4 rounded-xl border p-4 sm:flex-row sm:items-center">
-                        <div className="space-y-1">
-                            <h2 className="text-foreground text-lg font-semibold tracking-tight">Global Configuration</h2>
-                            <p className="text-muted-foreground text-sm">Adjust attributes used by search engines and social platforms.</p>
-                        </div>
-                        <Button
-                            onClick={() =>
-                                submitSystemForm({
-                                    form: seoForm,
-                                    routeName: "administrators.system-management.seo.update",
-                                    successMessage: "SEO settings updated successfully.",
-                                    errorMessage: "Failed to update SEO settings.",
-                                })
-                            }
-                            disabled={seoForm.processing || !seoForm.isDirty}
-                            className="w-full shrink-0 shadow-sm sm:w-auto"
-                        >
-                            {seoForm.processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Save Configuration
-                        </Button>
-                    </div>
-
-                    <div className="grid gap-6">
-                        <Card className="border-muted-foreground/10 overflow-hidden shadow-sm">
-                            <div className="h-1 w-full bg-blue-500/80" />
-                            <CardHeader className="bg-muted/10 border-b pb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="rounded-md bg-blue-100 p-1.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                        <Search className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-base">General Metadata</CardTitle>
-                                        <CardDescription className="mt-0.5 text-xs">Core properties defining your site's identity.</CardDescription>
-                                    </div>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
+                <div className="space-y-5">
+                    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+                        <CardHeader className="pb-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Sparkles className="h-4 w-4" />
+                                        Setup Progress
+                                    </CardTitle>
+                                    <CardDescription>Fill the essentials once. The previews update as you type.</CardDescription>
                                 </div>
-                            </CardHeader>
-                            <CardContent className="space-y-5 p-5">
-                                <div className="grid gap-5 sm:grid-cols-2">
-                                    <div className="space-y-2.5">
-                                        <Label htmlFor="site_name" className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                            Site Name
-                                        </Label>
-                                        <div className="relative">
-                                            <Globe className="text-muted-foreground/70 absolute top-2.5 left-3 h-4 w-4" />
-                                            <Input
-                                                id="site_name"
-                                                value={seoForm.data.site_name}
-                                                onChange={(event) => seoForm.setData("site_name", event.target.value)}
-                                                className="bg-background pl-9 focus-visible:ring-blue-500/30"
-                                                placeholder="e.g. Acme University Portal"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <Label htmlFor="seo_title" className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                            Default SEO Title
-                                        </Label>
-                                        <div className="relative">
-                                            <Type className="text-muted-foreground/70 absolute top-2.5 left-3 h-4 w-4" />
-                                            <Input
-                                                id="seo_title"
-                                                value={seoForm.data.seo_title}
-                                                onChange={(event) => seoForm.setData("seo_title", event.target.value)}
-                                                className="bg-background pl-9 focus-visible:ring-blue-500/30"
-                                                placeholder="e.g. Student Portal | Acme University"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                                <Badge variant="secondary">{completion}% complete</Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="bg-muted h-2 rounded-full">
+                                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${completion}%` }} />
+                            </div>
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                                {seoForm.isDirty ? (
+                                    <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-500/15 dark:text-amber-200">
+                                        Unsaved changes
+                                    </Badge>
+                                ) : (
+                                    <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-200">
+                                        Saved
+                                    </Badge>
+                                )}
+                                <p className="text-muted-foreground text-xs">Search and social previews use these saved defaults.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                                <div className="space-y-2.5">
-                                    <div className="flex items-center justify-between">
-                                        <Label
-                                            htmlFor="site_description"
-                                            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                        >
-                                            Meta Description
-                                        </Label>
-                                        <span
-                                            className={cn(
-                                                "text-xs font-medium",
-                                                seoForm.data.site_description.length > 155 ? "text-destructive" : "text-muted-foreground",
-                                            )}
-                                        >
-                                            {seoForm.data.site_description.length} / 155 chars
-                                        </span>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Type className="h-4 w-4" />
+                                1. Search Basics
+                            </CardTitle>
+                            <CardDescription>The title and description people see before they visit.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-5">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="site_name">Site name</Label>
+                                    <Input
+                                        id="site_name"
+                                        value={seoForm.data.site_name}
+                                        disabled={!canUpdate}
+                                        onChange={(event) => seoForm.setData("site_name", event.target.value)}
+                                        placeholder="DCCP Hub"
+                                    />
+                                    {errors.site_name ? <p className="text-destructive text-xs">{errors.site_name}</p> : null}
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <Label htmlFor="seo_title">Search title</Label>
+                                        <span className={cn("text-xs font-medium", characterTone(titleLength, 35, 60))}>{titleLength} chars</span>
                                     </div>
-                                    <Textarea
-                                        id="site_description"
-                                        rows={3}
-                                        value={seoForm.data.site_description}
-                                        onChange={(event) => seoForm.setData("site_description", event.target.value)}
-                                        className="bg-background resize-none focus-visible:ring-blue-500/30"
-                                        placeholder="Briefly describe the portal purpose to encourage click-through rates..."
+                                    <Input
+                                        id="seo_title"
+                                        value={seoForm.data.seo_title}
+                                        disabled={!canUpdate}
+                                        onChange={(event) => seoForm.setData("seo_title", event.target.value)}
+                                        placeholder="DCCP Administrator Panel"
+                                    />
+                                    {errors.seo_title ? <p className="text-destructive text-xs">{errors.seo_title}</p> : null}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-3">
+                                    <Label htmlFor="site_description">Search description</Label>
+                                    <span className={cn("text-xs font-medium", characterTone(descriptionLength, 120, 160))}>
+                                        {descriptionLength} / 160
+                                    </span>
+                                </div>
+                                <Textarea
+                                    id="site_description"
+                                    rows={4}
+                                    value={seoForm.data.site_description}
+                                    disabled={!canUpdate}
+                                    onChange={(event) => seoForm.setData("site_description", event.target.value)}
+                                    placeholder="Describe the portal in one clear sentence."
+                                />
+                                {errors.site_description ? <p className="text-destructive text-xs">{errors.site_description}</p> : null}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Share2 className="h-4 w-4" />
+                                2. Social Sharing
+                            </CardTitle>
+                            <CardDescription>Control the card that appears when someone shares a link.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-5">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-3">
+                                    <Label htmlFor="og_image">Share image URL</Label>
+                                    <span className="text-muted-foreground text-xs">1200 x 630 recommended</span>
+                                </div>
+                                <div className="relative">
+                                    <ImageIcon className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 h-4 w-4" />
+                                    <Input
+                                        id="og_image"
+                                        value={seoForm.data.seo_metadata.og_image}
+                                        disabled={!canUpdate}
+                                        onChange={(event) => setSeoMetadata("og_image", event.target.value)}
+                                        className="pl-9"
+                                        placeholder="https://example.edu/images/share-card.png"
                                     />
                                 </div>
+                                {errors["seo_metadata.og_image"] ? (
+                                    <p className="text-destructive text-xs">{errors["seo_metadata.og_image"]}</p>
+                                ) : null}
+                            </div>
 
-                                <Separator className="my-2" />
-
-                                <div className="space-y-2.5">
-                                    <Label htmlFor="seo_keywords" className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                        SEO Keywords
-                                    </Label>
-                                    <Textarea
-                                        id="seo_keywords"
-                                        rows={2}
-                                        value={seoForm.data.seo_keywords}
-                                        onChange={(event) => seoForm.setData("seo_keywords", event.target.value)}
-                                        placeholder="education, enrollment, student portal, records"
-                                        className="bg-background resize-none text-sm"
-                                    />
-                                    <p className="text-muted-foreground text-[11px]">
-                                        Comma-separated terms. (Note: Many modern search engines ignore this meta tag)
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="border-muted-foreground/10 overflow-hidden shadow-sm">
-                            <div className="h-1 w-full bg-violet-500/80" />
-                            <CardHeader className="bg-muted/10 border-b pb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="rounded-md bg-violet-100 p-1.5 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                                        <Share2 className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-base">Social Graph & Sharing</CardTitle>
-                                        <CardDescription className="mt-0.5 text-xs">
-                                            Control how links appear on Facebook, X, LinkedIn, etc.
-                                        </CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-5 p-5">
-                                <div className="space-y-2.5">
-                                    <Label
-                                        htmlFor="og_image"
-                                        className="text-muted-foreground flex justify-between text-xs font-semibold tracking-wider uppercase"
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="twitter_card">Card style</Label>
+                                    <Select
+                                        value={seoForm.data.seo_metadata.twitter_card}
+                                        disabled={!canUpdate}
+                                        onValueChange={(value) => setSeoMetadata("twitter_card", value as TwitterCard)}
                                     >
-                                        Open Graph Image URL
-                                        <span className="font-normal normal-case">1200x630px recommended</span>
-                                    </Label>
+                                        <SelectTrigger id="twitter_card">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="summary_large_image">Large image card</SelectItem>
+                                            <SelectItem value="summary">Compact summary card</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="twitter_handle">X handle</Label>
+                                    <Input
+                                        id="twitter_handle"
+                                        value={seoForm.data.seo_metadata.twitter_handle}
+                                        disabled={!canUpdate}
+                                        onChange={(event) => setSeoMetadata("twitter_handle", event.target.value)}
+                                        placeholder="@dccphub"
+                                    />
+                                    {errors["seo_metadata.twitter_handle"] ? (
+                                        <p className="text-destructive text-xs">{errors["seo_metadata.twitter_handle"]}</p>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Bot className="h-4 w-4" />
+                                3. Indexing
+                            </CardTitle>
+                            <CardDescription>Choose whether search engines should list the site and follow links.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-5">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label htmlFor="robots">Search engine access</Label>
+                                    <Select
+                                        value={seoForm.data.seo_metadata.robots}
+                                        disabled={!canUpdate}
+                                        onValueChange={(value) => setSeoMetadata("robots", value as RobotsDirective)}
+                                    >
+                                        <SelectTrigger id="robots">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {robotsOptions.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-muted-foreground text-xs">{robotsOption.helper}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="canonical_url">Canonical URL</Label>
                                     <div className="relative">
-                                        <ImageIcon className="text-muted-foreground/70 absolute top-2.5 left-3 h-4 w-4" />
+                                        <Link2 className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 h-4 w-4" />
                                         <Input
-                                            id="og_image"
-                                            value={seoForm.data.seo_metadata.og_image}
-                                            onChange={(event) =>
-                                                seoForm.setData("seo_metadata", { ...seoForm.data.seo_metadata, og_image: event.target.value })
-                                            }
-                                            className="bg-background pl-9 focus-visible:ring-violet-500/30"
-                                            placeholder="https://example.com/images/og-banner.png"
+                                            id="canonical_url"
+                                            value={seoForm.data.seo_metadata.canonical_url}
+                                            disabled={!canUpdate}
+                                            onChange={(event) => setSeoMetadata("canonical_url", event.target.value)}
+                                            className="pl-9"
+                                            placeholder="Leave blank to use the current page URL"
                                         />
                                     </div>
+                                    {errors["seo_metadata.canonical_url"] ? (
+                                        <p className="text-destructive text-xs">{errors["seo_metadata.canonical_url"]}</p>
+                                    ) : null}
                                 </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                                <div className="grid gap-5 sm:grid-cols-2">
-                                    <div className="space-y-2.5">
-                                        <Label
-                                            htmlFor="twitter_card"
-                                            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                        >
-                                            X (Twitter) Card Style
-                                        </Label>
-                                        <Select
-                                            value={seoForm.data.seo_metadata.twitter_card}
-                                            onValueChange={(value) =>
-                                                seoForm.setData("seo_metadata", { ...seoForm.data.seo_metadata, twitter_card: value })
-                                            }
-                                        >
-                                            <SelectTrigger id="twitter_card" className="bg-background focus:ring-violet-500/30">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="summary">Summary (Small Image)</SelectItem>
-                                                <SelectItem value="summary_large_image">Summary Large Image</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <Label
-                                            htmlFor="twitter_handle"
-                                            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                        >
-                                            X (Twitter) Handle
-                                        </Label>
-                                        <div className="relative">
-                                            <AtSign className="text-muted-foreground/70 absolute top-2.5 left-3 h-4 w-4" />
-                                            <Input
-                                                id="twitter_handle"
-                                                value={seoForm.data.seo_metadata.twitter_handle}
-                                                onChange={(event) =>
-                                                    seoForm.setData("seo_metadata", {
-                                                        ...seoForm.data.seo_metadata,
-                                                        twitter_handle: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background pl-9 focus-visible:ring-violet-500/30"
-                                                placeholder="@universityhandle"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <Search className="h-4 w-4" />
+                                4. Advanced Keywords
+                            </CardTitle>
+                            <CardDescription>Optional. Some older tools still read these, but modern search ranking rarely depends on them.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <Label htmlFor="seo_keywords">Keywords</Label>
+                            <Textarea
+                                id="seo_keywords"
+                                rows={3}
+                                value={seoForm.data.seo_keywords}
+                                disabled={!canUpdate}
+                                onChange={(event) => seoForm.setData("seo_keywords", event.target.value)}
+                                placeholder="college portal, enrollment, student records, academic management"
+                            />
+                            {errors.seo_keywords ? <p className="text-destructive text-xs">{errors.seo_keywords}</p> : null}
+                        </CardContent>
+                    </Card>
 
-                        <Card className="border-muted-foreground/10 overflow-hidden shadow-sm">
-                            <div className="h-1 w-full bg-emerald-500/80" />
-                            <CardHeader className="bg-muted/10 border-b pb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="rounded-md bg-emerald-100 p-1.5 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                        <BarChart3 className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-base">Analytics & Tracking</CardTitle>
-                                        <CardDescription className="mt-0.5 text-xs">
-                                            Configure one analytics provider or paste the final tracking snippet directly.
-                                        </CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-5 p-5">
-                                <div className="grid gap-5 sm:grid-cols-2">
-                                    <div className="space-y-2.5">
-                                        <Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                            Analytics Enabled
-                                        </Label>
-                                        <div className="bg-background flex min-h-11 items-center justify-between rounded-lg border px-3">
-                                            <div className="space-y-0.5">
-                                                <p className="text-sm font-medium">Inject tracking scripts</p>
-                                                <p className="text-muted-foreground text-xs">Applies to Inertia pages and the Filament panel head.</p>
-                                            </div>
-                                            <Switch
-                                                checked={seoForm.data.analytics_enabled}
-                                                onCheckedChange={(checked) => seoForm.setData("analytics_enabled", checked)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <Label
-                                            htmlFor="analytics_provider"
-                                            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                        >
-                                            Provider
-                                        </Label>
-                                        <Select
-                                            value={seoForm.data.analytics_provider}
-                                            onValueChange={(value) => seoForm.setData("analytics_provider", value as AnalyticsProvider)}
-                                        >
-                                            <SelectTrigger id="analytics_provider" className="bg-background">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="google">Google Analytics</SelectItem>
-                                                <SelectItem value="ackee">Ackee</SelectItem>
-                                                <SelectItem value="umami">Umami</SelectItem>
-                                                <SelectItem value="openpanel">OpenPanel</SelectItem>
-                                                <SelectItem value="custom">Custom Script</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2.5">
-                                    <Label
-                                        htmlFor="analytics_script"
-                                        className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                    >
-                                        Manual Script Override
-                                    </Label>
-                                    <Textarea
-                                        id="analytics_script"
-                                        rows={6}
-                                        value={seoForm.data.analytics_script}
-                                        onChange={(event) => seoForm.setData("analytics_script", event.target.value)}
-                                        className="bg-background resize-y font-mono text-xs"
-                                        placeholder={`<script async src="..."></script>\n<script>/* provider init */</script>`}
-                                    />
-                                    <p className="text-muted-foreground text-[11px] leading-tight">
-                                        If this field is filled, the app will use this snippet exactly and ignore the generated provider fields below.
-                                    </p>
-                                </div>
-
-                                {!manualAnalyticsOverride && analyticsProvider === "google" ? (
-                                    <div className="grid gap-5 sm:grid-cols-2">
-                                        <div className="space-y-2.5">
-                                            <Label
-                                                htmlFor="google_measurement_id"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Measurement ID
-                                            </Label>
-                                            <Input
-                                                id="google_measurement_id"
-                                                value={seoForm.data.analytics_settings.google_measurement_id}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        google_measurement_id: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="G-XXXXXXXXXX"
-                                            />
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {!manualAnalyticsOverride && analyticsProvider === "ackee" ? (
-                                    <div className="grid gap-5 sm:grid-cols-2">
-                                        <div className="space-y-2.5">
-                                            <Label
-                                                htmlFor="ackee_script_url"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Tracker Script URL
-                                            </Label>
-                                            <Input
-                                                id="ackee_script_url"
-                                                value={seoForm.data.analytics_settings.ackee_script_url}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        ackee_script_url: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="https://ackee.example.com/tracker.js"
-                                            />
-                                        </div>
-                                        <div className="space-y-2.5">
-                                            <Label
-                                                htmlFor="ackee_server_url"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Ackee Server URL
-                                            </Label>
-                                            <Input
-                                                id="ackee_server_url"
-                                                value={seoForm.data.analytics_settings.ackee_server_url}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        ackee_server_url: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="https://ackee.example.com"
-                                            />
-                                        </div>
-                                        <div className="space-y-2.5 sm:col-span-2">
-                                            <Label
-                                                htmlFor="ackee_domain_id"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Domain ID
-                                            </Label>
-                                            <Input
-                                                id="ackee_domain_id"
-                                                value={seoForm.data.analytics_settings.ackee_domain_id}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        ackee_domain_id: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="e5235bfe-046a-4899-8c08-95a99eb02b00"
-                                            />
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {!manualAnalyticsOverride && analyticsProvider === "umami" ? (
-                                    <div className="grid gap-5 sm:grid-cols-2">
-                                        <div className="space-y-2.5">
-                                            <Label
-                                                htmlFor="umami_script_url"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Script URL
-                                            </Label>
-                                            <Input
-                                                id="umami_script_url"
-                                                value={seoForm.data.analytics_settings.umami_script_url}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        umami_script_url: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="https://cloud.umami.is/script.js"
-                                            />
-                                        </div>
-                                        <div className="space-y-2.5">
-                                            <Label
-                                                htmlFor="umami_website_id"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Website ID
-                                            </Label>
-                                            <Input
-                                                id="umami_website_id"
-                                                value={seoForm.data.analytics_settings.umami_website_id}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        umami_website_id: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="8f6f9c40-..."
-                                            />
-                                        </div>
-                                        <div className="space-y-2.5">
-                                            <Label
-                                                htmlFor="umami_host_url"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Host API URL
-                                            </Label>
-                                            <Input
-                                                id="umami_host_url"
-                                                value={seoForm.data.analytics_settings.umami_host_url}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        umami_host_url: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="https://umami.example.com"
-                                            />
-                                        </div>
-                                        <div className="space-y-2.5">
-                                            <Label
-                                                htmlFor="umami_domains"
-                                                className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                            >
-                                                Allowed Domains
-                                            </Label>
-                                            <Input
-                                                id="umami_domains"
-                                                value={seoForm.data.analytics_settings.umami_domains}
-                                                onChange={(event) =>
-                                                    seoForm.setData("analytics_settings", {
-                                                        ...seoForm.data.analytics_settings,
-                                                        umami_domains: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background"
-                                                placeholder="koakademy.edu,portal.koakademy.edu"
-                                            />
-                                        </div>
-                                    </div>
-                                ) : null}
-
-                                {!manualAnalyticsOverride && analyticsProvider === "openpanel" ? (
-                                    <div className="space-y-5">
-                                        <div className="grid gap-5 sm:grid-cols-2">
-                                            <div className="space-y-2.5">
-                                                <Label
-                                                    htmlFor="openpanel_script_url"
-                                                    className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                                >
-                                                    Script URL
-                                                </Label>
-                                                <Input
-                                                    id="openpanel_script_url"
-                                                    value={seoForm.data.analytics_settings.openpanel_script_url}
-                                                    onChange={(event) =>
-                                                        seoForm.setData("analytics_settings", {
-                                                            ...seoForm.data.analytics_settings,
-                                                            openpanel_script_url: event.target.value,
-                                                        })
-                                                    }
-                                                    className="bg-background"
-                                                    placeholder="https://openpanel.dev/op1.js"
-                                                />
-                                            </div>
-                                            <div className="space-y-2.5">
-                                                <Label
-                                                    htmlFor="openpanel_api_url"
-                                                    className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                                >
-                                                    API URL
-                                                </Label>
-                                                <Input
-                                                    id="openpanel_api_url"
-                                                    value={seoForm.data.analytics_settings.openpanel_api_url}
-                                                    onChange={(event) =>
-                                                        seoForm.setData("analytics_settings", {
-                                                            ...seoForm.data.analytics_settings,
-                                                            openpanel_api_url: event.target.value,
-                                                        })
-                                                    }
-                                                    className="bg-background"
-                                                    placeholder="https://openpanel.koakademy.edu/api"
-                                                />
-                                            </div>
-                                            <div className="space-y-2.5 sm:col-span-2">
-                                                <Label
-                                                    htmlFor="openpanel_client_id"
-                                                    className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                                >
-                                                    Client ID
-                                                </Label>
-                                                <Input
-                                                    id="openpanel_client_id"
-                                                    value={seoForm.data.analytics_settings.openpanel_client_id}
-                                                    onChange={(event) =>
-                                                        seoForm.setData("analytics_settings", {
-                                                            ...seoForm.data.analytics_settings,
-                                                            openpanel_client_id: event.target.value,
-                                                        })
-                                                    }
-                                                    className="bg-background"
-                                                    placeholder="e4e45149-bbde-44d7-b436-f9a0ae1042b0"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="bg-background flex items-center justify-between rounded-lg border px-3 py-2">
-                                                <div>
-                                                    <p className="text-sm font-medium">Track screen views</p>
-                                                    <p className="text-muted-foreground text-xs">Track SPA page transitions.</p>
-                                                </div>
-                                                <Switch
-                                                    checked={seoForm.data.analytics_settings.openpanel_track_screen_views}
-                                                    onCheckedChange={(checked) =>
-                                                        seoForm.setData("analytics_settings", {
-                                                            ...seoForm.data.analytics_settings,
-                                                            openpanel_track_screen_views: checked,
-                                                        })
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="bg-background flex items-center justify-between rounded-lg border px-3 py-2">
-                                                <div>
-                                                    <p className="text-sm font-medium">Track outgoing links</p>
-                                                    <p className="text-muted-foreground text-xs">Capture external link clicks.</p>
-                                                </div>
-                                                <Switch
-                                                    checked={seoForm.data.analytics_settings.openpanel_track_outgoing_links}
-                                                    onCheckedChange={(checked) =>
-                                                        seoForm.setData("analytics_settings", {
-                                                            ...seoForm.data.analytics_settings,
-                                                            openpanel_track_outgoing_links: checked,
-                                                        })
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="bg-background flex items-center justify-between rounded-lg border px-3 py-2">
-                                                <div>
-                                                    <p className="text-sm font-medium">Track attributes</p>
-                                                    <p className="text-muted-foreground text-xs">Allow attribute enrichment on events.</p>
-                                                </div>
-                                                <Switch
-                                                    checked={seoForm.data.analytics_settings.openpanel_track_attributes}
-                                                    onCheckedChange={(checked) =>
-                                                        seoForm.setData("analytics_settings", {
-                                                            ...seoForm.data.analytics_settings,
-                                                            openpanel_track_attributes: checked,
-                                                        })
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="bg-background flex items-center justify-between rounded-lg border px-3 py-2">
-                                                <div>
-                                                    <p className="text-sm font-medium">Session replay</p>
-                                                    <p className="text-muted-foreground text-xs">Enable replay capture if your server supports it.</p>
-                                                </div>
-                                                <Switch
-                                                    checked={seoForm.data.analytics_settings.openpanel_session_replay}
-                                                    onCheckedChange={(checked) =>
-                                                        seoForm.setData("analytics_settings", {
-                                                            ...seoForm.data.analytics_settings,
-                                                            openpanel_session_replay: checked,
-                                                        })
-                                                    }
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : null}
-                            </CardContent>
-                        </Card>
-
-                        <Card className="border-muted-foreground/10 overflow-hidden shadow-sm">
-                            <div className="h-1 w-full bg-slate-500/80" />
-                            <CardHeader className="bg-muted/10 border-b pb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="rounded-md bg-slate-200 p-1.5 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                        <Bot className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-base">Indexing & Crawling</CardTitle>
-                                        <CardDescription className="mt-0.5 text-xs">
-                                            Direct search engine bots on how to handle the portal.
-                                        </CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-5">
-                                <div className="grid gap-5 sm:grid-cols-2">
-                                    <div className="space-y-2.5">
-                                        <Label htmlFor="robots" className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                                            Robots Directives
-                                        </Label>
-                                        <Select
-                                            value={seoForm.data.seo_metadata.robots}
-                                            onValueChange={(value) =>
-                                                seoForm.setData("seo_metadata", { ...seoForm.data.seo_metadata, robots: value })
-                                            }
-                                        >
-                                            <SelectTrigger id="robots" className="bg-background">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="index, follow">Index, Follow (Recommended)</SelectItem>
-                                                <SelectItem value="index, nofollow">Index, No Follow</SelectItem>
-                                                <SelectItem value="noindex, follow">No Index, Follow</SelectItem>
-                                                <SelectItem value="noindex, nofollow">No Index, No Follow</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-muted-foreground mt-1 text-[11px] leading-tight">
-                                            Instructs bots on whether to add pages to their index and follow links.
-                                        </p>
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        <Label
-                                            htmlFor="canonical_url"
-                                            className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
-                                        >
-                                            Canonical Override URL
-                                        </Label>
-                                        <div className="relative">
-                                            <Link2 className="text-muted-foreground/70 absolute top-2.5 left-3 h-4 w-4" />
-                                            <Input
-                                                id="canonical_url"
-                                                value={seoForm.data.seo_metadata.canonical_url}
-                                                onChange={(event) =>
-                                                    seoForm.setData("seo_metadata", {
-                                                        ...seoForm.data.seo_metadata,
-                                                        canonical_url: event.target.value,
-                                                    })
-                                                }
-                                                className="bg-background pl-9"
-                                                placeholder="https://example.com/official-page"
-                                            />
-                                        </div>
-                                        <p className="text-muted-foreground mt-1 text-[11px] leading-tight">
-                                            Define the "master" version of the domain to prevent duplicate content issues.
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <div className="bg-background/95 sticky bottom-4 z-10 rounded-xl border p-3 backdrop-blur">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-muted-foreground text-sm">
+                                {canUpdate
+                                    ? seoForm.isDirty
+                                        ? "You have SEO changes waiting to be saved."
+                                        : "No pending SEO changes."
+                                    : "Your role can view these settings but cannot update them."}
+                            </p>
+                            <Button onClick={handleSave} disabled={!canUpdate || seoForm.processing || !seoForm.isDirty}>
+                                {seoForm.processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Save SEO Settings
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
-                {/* Right Column: Previews */}
-                <div className="w-full shrink-0 space-y-6 xl:w-[380px] 2xl:w-[420px]">
-                    <div className="top-[104px] space-y-6 xl:sticky">
-                        <Card className="border-muted-foreground/10 overflow-hidden shadow-sm">
-                            <CardHeader className="bg-muted/30 border-b px-4 pb-3">
-                                <CardTitle className="flex items-center justify-between text-sm font-semibold">
-                                    <div className="flex items-center gap-2">
-                                        <Search className="text-muted-foreground h-4 w-4" />
-                                        Search Preview
+                <div className="space-y-5 xl:sticky xl:top-[104px] xl:h-fit">
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center justify-between gap-3 text-sm">
+                                <span className="flex items-center gap-2">
+                                    <Search className="h-4 w-4" />
+                                    Search Preview
+                                </span>
+                                <Badge variant="outline">{seoForm.data.seo_metadata.robots}</Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-2 rounded-lg border bg-white p-4 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
+                                <div className="flex items-center gap-2">
+                                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-900">
+                                        <Globe2 className="h-3.5 w-3.5" />
+                                    </span>
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm">{seoForm.data.site_name || "DCCP Hub"}</p>
+                                        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{compactUrl(resolvedCanonical)}</p>
                                     </div>
-                                    <Badge variant="outline" className="px-1.5 font-mono text-[10px] font-normal uppercase">
-                                        {seoForm.data.seo_metadata.robots}
-                                    </Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="bg-background p-4">
-                                <div className="space-y-1.5 md:space-y-1">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="bg-muted flex h-7 w-7 items-center justify-center rounded-full border shadow-sm">
-                                            <Globe className="text-muted-foreground h-3.5 w-3.5" />
-                                        </div>
-                                        <div className="flex flex-col leading-tight">
-                                            <span className="text-foreground text-sm font-medium">{seoForm.data.site_name || "Your Site Name"}</span>
-                                            <span className="text-muted-foreground text-xs">
-                                                https://example.com
-                                                {seoForm.data.seo_metadata.canonical_url
-                                                    ? ` › ${seoForm.data.seo_metadata.canonical_url.split("/")[seoForm.data.seo_metadata.canonical_url.split("/").length - 1]}`
-                                                    : ""}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <h3 className="mt-2 cursor-pointer truncate text-lg leading-tight font-normal text-[#1a0dab] hover:underline lg:text-xl dark:text-[#8ab4f8]">
-                                        {seoForm.data.seo_title || seoForm.data.site_name || "Page Title"}
-                                    </h3>
-                                    <p className="line-clamp-2 text-sm leading-snug text-[#4d5156] dark:text-[#bdc1c6]">
-                                        {seoForm.data.site_description ||
-                                            "Add a meta description to improve your search snippet and encourage relevant clicks to your portal."}
+                                </div>
+                                <p className="line-clamp-2 text-xl leading-tight text-[#1a0dab] dark:text-[#8ab4f8]">{resolvedTitle}</p>
+                                <p className="line-clamp-3 text-sm leading-relaxed text-[#4d5156] dark:text-[#bdc1c6]">{resolvedDescription}</p>
+                            </div>
+                            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                                <div className="rounded-lg border p-2">
+                                    <p className="text-muted-foreground">Title</p>
+                                    <p className={cn("font-medium", characterTone(titleLength, 35, 60))}>
+                                        {titleLength < 35 ? "Could be longer" : titleLength > 60 ? "May truncate" : "Good length"}
                                     </p>
                                 </div>
-                            </CardContent>
-                        </Card>
+                                <div className="rounded-lg border p-2">
+                                    <p className="text-muted-foreground">Description</p>
+                                    <p className={cn("font-medium", characterTone(descriptionLength, 120, 160))}>
+                                        {descriptionLength < 120 ? "Could be richer" : descriptionLength > 160 ? "May truncate" : "Good length"}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                        <Card className="border-muted-foreground/10 overflow-hidden shadow-sm">
-                            <CardHeader className="bg-muted/30 border-b px-4 pb-3">
-                                <CardTitle className="flex items-center justify-between text-sm font-semibold">
-                                    <div className="flex items-center gap-2">
-                                        <Share2 className="text-muted-foreground h-4 w-4" />
-                                        Social Share Preview
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center justify-between gap-3 text-sm">
+                                <span className="flex items-center gap-2">
+                                    <Share2 className="h-4 w-4" />
+                                    Social Share Preview
+                                </span>
+                                <Badge variant="outline">
+                                    {seoForm.data.seo_metadata.twitter_card === "summary_large_image" ? "Large card" : "Summary"}
+                                </Badge>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div
+                                className={cn(
+                                    "bg-muted/30 flex items-center justify-center overflow-hidden border-y",
+                                    seoForm.data.seo_metadata.twitter_card === "summary_large_image" ? "aspect-[1.91/1]" : "aspect-video",
+                                )}
+                            >
+                                {hasSocialImage ? (
+                                    <img
+                                        src={seoForm.data.seo_metadata.og_image}
+                                        alt="Social share preview"
+                                        className="h-full w-full object-cover"
+                                        onError={() => setImageHasError(true)}
+                                    />
+                                ) : (
+                                    <div className="text-muted-foreground flex flex-col items-center gap-2 text-center">
+                                        <ImageIcon className="h-8 w-8 opacity-50" />
+                                        <span className="text-xs font-medium">{imageHasError ? "Image could not load" : "No share image yet"}</span>
                                     </div>
-                                    <Badge variant="outline" className="px-1.5 font-mono text-[10px] font-normal uppercase">
-                                        {seoForm.data.seo_metadata.twitter_card === "summary_large_image" ? "Large Card" : "Summary"}
-                                    </Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-0">
-                                <div
-                                    className={cn(
-                                        "bg-muted/20 flex flex-col items-center justify-center overflow-hidden border-b",
-                                        seoForm.data.seo_metadata.twitter_card === "summary_large_image" ? "aspect-[1.91/1]" : "aspect-video",
-                                    )}
-                                >
-                                    {seoForm.data.seo_metadata.og_image ? (
-                                        <img
-                                            src={seoForm.data.seo_metadata.og_image}
-                                            alt="Preview"
-                                            className="h-full w-full object-cover"
-                                            onError={(e) => {
-                                                e.currentTarget.style.display = "none";
-                                                const sibling = e.currentTarget.nextElementSibling;
-                                                if (sibling) sibling.classList.remove("hidden");
-                                            }}
-                                        />
-                                    ) : null}
-                                    <div
-                                        className={cn(
-                                            "text-muted-foreground flex flex-col items-center gap-2",
-                                            seoForm.data.seo_metadata.og_image ? "hidden" : "",
-                                        )}
-                                    >
-                                        <ImageIcon className="h-8 w-8 shrink-0 opacity-40" />
-                                        <span className="text-xs font-medium">No Social Image</span>
-                                    </div>
-                                </div>
-                                <div className="bg-muted/5 space-y-1 p-4">
-                                    <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">example.com</p>
-                                    <p className="text-foreground truncate text-base leading-tight font-semibold">
-                                        {seoForm.data.seo_title || seoForm.data.site_name || "Page Title"}
-                                    </p>
-                                    <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
-                                        {seoForm.data.site_description || "Add a meta description to improve your snippet."}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                )}
+                            </div>
+                            <div className="space-y-1 p-4">
+                                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">{compactUrl(resolvedCanonical)}</p>
+                                <p className="line-clamp-2 text-base leading-tight font-semibold">{resolvedTitle}</p>
+                                <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">{resolvedDescription}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                        <Card className="border-muted-foreground/10 overflow-hidden shadow-sm">
-                            <CardHeader className="bg-muted/30 border-b px-4 pb-3">
-                                <CardTitle className="flex items-center justify-between text-sm font-semibold">
-                                    <div className="flex items-center gap-2">
-                                        <Activity className="text-muted-foreground h-4 w-4" />
-                                        Analytics Runtime
-                                    </div>
-                                    <Badge
-                                        variant={seoForm.data.analytics_enabled ? "default" : "outline"}
-                                        className="px-1.5 font-mono text-[10px] font-normal uppercase"
-                                    >
-                                        {seoForm.data.analytics_enabled ? "Enabled" : "Disabled"}
-                                    </Badge>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4 p-4">
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="bg-muted/20 rounded-lg border p-3">
-                                        <div className="mb-1 flex items-center gap-2">
-                                            <Radio className="text-muted-foreground h-3.5 w-3.5" />
-                                            <p className="text-xs font-semibold tracking-wider uppercase">Provider</p>
-                                        </div>
-                                        <p className="text-sm font-medium">{providerDisplayName}</p>
-                                    </div>
-                                    <div className="bg-muted/20 rounded-lg border p-3">
-                                        <div className="mb-1 flex items-center gap-2">
-                                            <Fingerprint className="text-muted-foreground h-3.5 w-3.5" />
-                                            <p className="text-xs font-semibold tracking-wider uppercase">Source</p>
-                                        </div>
-                                        <p className="text-sm font-medium">
-                                            {manualAnalyticsOverride ? "Manual script override" : "Generated snippet"}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-muted/10 rounded-lg border p-3">
-                                    <p className="text-xs font-semibold tracking-wider uppercase">Resolved target</p>
-                                    <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                                        {manualAnalyticsOverride
-                                            ? "A custom script snippet will be injected exactly as entered."
-                                            : analyticsProvider === "google"
-                                              ? seoForm.data.analytics_settings.google_measurement_id || "Waiting for a Google measurement ID."
-                                              : analyticsProvider === "ackee"
-                                                ? seoForm.data.analytics_settings.ackee_server_url || "Waiting for Ackee server details."
-                                                : analyticsProvider === "umami"
-                                                  ? seoForm.data.analytics_settings.umami_website_id || "Waiting for a Umami website ID."
-                                                  : analyticsProvider === "openpanel"
-                                                    ? seoForm.data.analytics_settings.openpanel_api_url || "Waiting for an OpenPanel API URL."
-                                                    : "Custom mode requires a script snippet."}
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-sm">
+                                <Bot className="h-4 w-4" />
+                                Indexing Summary
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <Alert>
+                                {seoForm.data.seo_metadata.robots.startsWith("noindex") ? (
+                                    <AlertCircle className="h-4 w-4" />
+                                ) : (
+                                    <CheckCircle2 className="h-4 w-4" />
+                                )}
+                                <AlertTitle>{robotsOption.label}</AlertTitle>
+                                <AlertDescription>{robotsOption.helper}</AlertDescription>
+                            </Alert>
+                            <Separator />
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium">Canonical target</p>
+                                <p className="text-muted-foreground break-all text-sm">{resolvedCanonical}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </SystemManagementLayout>

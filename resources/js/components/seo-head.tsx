@@ -34,8 +34,8 @@ interface Branding {
 
 export function SeoHead({ title, description, keywords, image, type = "website", robots, canonical, twitterCard }: SeoProps) {
     const { props } = usePage<{ branding?: Branding }>();
-    const settings = (props.settings as GeneralSettings) || {};
-    const url = window.location.href;
+    const settings = ((props as { seo?: GeneralSettings }).seo || {}) as GeneralSettings;
+    const url = typeof window !== "undefined" ? window.location.href : "";
 
     // Merge page-specific props with global settings
     const siteName = props.branding?.appName || settings.site_name || "School Portal";
@@ -63,26 +63,28 @@ export function SeoHead({ title, description, keywords, image, type = "website",
     return (
         <Head>
             <title>{metaTitle}</title>
-            <meta name="description" content={metaDescription} />
-            <meta name="keywords" content={metaKeywords} />
-            <meta name="robots" content={effectiveRobots} />
-            <link rel="canonical" href={metaCanonical} />
+            <meta head-key="description" name="description" content={metaDescription} />
+            {metaKeywords ? <meta head-key="keywords" name="keywords" content={metaKeywords} /> : null}
+            <meta head-key="robots" name="robots" content={effectiveRobots} />
+            <link head-key="canonical" rel="canonical" href={metaCanonical} />
 
             {/* Open Graph / Facebook */}
-            <meta property="og:type" content={type} />
-            <meta property="og:url" content={url} />
-            <meta property="og:title" content={metaTitle} />
-            <meta property="og:description" content={metaDescription} />
-            <meta property="og:image" content={metaImage} />
-            <meta property="og:site_name" content={siteName} />
+            <meta head-key="og:type" property="og:type" content={type} />
+            <meta head-key="og:url" property="og:url" content={url} />
+            <meta head-key="og:title" property="og:title" content={metaTitle} />
+            <meta head-key="og:description" property="og:description" content={metaDescription} />
+            <meta head-key="og:image" property="og:image" content={metaImage} />
+            <meta head-key="og:site_name" property="og:site_name" content={siteName} />
 
             {/* Twitter */}
-            <meta name="twitter:card" content={metaTwitterCard} />
-            <meta name="twitter:url" content={url} />
-            <meta name="twitter:title" content={metaTitle} />
-            <meta name="twitter:description" content={metaDescription} />
-            <meta name="twitter:image" content={metaImage} />
-            {settings.seo_metadata?.twitter_handle && <meta name="twitter:site" content={settings.seo_metadata.twitter_handle} />}
+            <meta head-key="twitter:card" name="twitter:card" content={metaTwitterCard} />
+            <meta head-key="twitter:url" name="twitter:url" content={url} />
+            <meta head-key="twitter:title" name="twitter:title" content={metaTitle} />
+            <meta head-key="twitter:description" name="twitter:description" content={metaDescription} />
+            <meta head-key="twitter:image" name="twitter:image" content={metaImage} />
+            {settings.seo_metadata?.twitter_handle && (
+                <meta head-key="twitter:site" name="twitter:site" content={settings.seo_metadata.twitter_handle} />
+            )}
         </Head>
     );
 }

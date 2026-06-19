@@ -13,13 +13,13 @@ final class SiteSettings extends Settings
      * Default branding values for backward compatibility.
      * These are used when settings are not configured in the database.
      */
-    private const string DEFAULT_APP_NAME = 'KoAkademy';
+    private const string DEFAULT_APP_NAME = 'DCCP Hub';
 
-    private const string DEFAULT_APP_SHORT_NAME = 'KOA';
+    private const string DEFAULT_APP_SHORT_NAME = 'DCCP';
 
-    private const string DEFAULT_ORG_NAME = 'KoAkademy';
+    private const string DEFAULT_ORG_NAME = 'DCCP Hub';
 
-    private const string DEFAULT_ORG_SHORT_NAME = 'KOA';
+    private const string DEFAULT_ORG_SHORT_NAME = 'DCCP';
 
     private const string DEFAULT_THEME_COLOR = '#0f172a';
 
@@ -92,6 +92,23 @@ final class SiteSettings extends Settings
     public function getAppName(): string
     {
         return $this->app_name ?? $this->name ?? self::DEFAULT_APP_NAME;
+    }
+
+    public function getPortalName(): string
+    {
+        $portalName = $this->portal_name;
+
+        if (! is_string($portalName) || mb_trim($portalName) === '') {
+            return $this->getAppName();
+        }
+
+        $trimmedPortalName = mb_trim($portalName);
+
+        if (in_array($trimmedPortalName, ['KoAkademy', 'KoAkademy Portal'], true)) {
+            return $this->getAppName();
+        }
+
+        return $trimmedPortalName;
     }
 
     /**

@@ -1,6 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=ui-serif&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=ui-monospace&display=swap');
-
 :root.theme-claude,
 .theme-claude {
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';

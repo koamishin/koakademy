@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AppManifestController;
 use App\Http\Controllers\ClassesController;
 use App\Http\Controllers\DigitalIdCardController;
 use App\Models\Faculty;
@@ -279,6 +280,8 @@ Route::domain(config('app.portal_host'))->group(function () {
 |--------------------------------------------------------------------------
 */
 require __DIR__.'/web/setup.php';
+
+Route::get('/app.webmanifest', AppManifestController::class)->name('app.manifest');
 
 Route::post('/classes/validate-schedules', [ClassesController::class, 'validateSchedules']);
 

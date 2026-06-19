@@ -44,7 +44,7 @@ final class PortalPanelProvider extends PanelProvider
 //            ->domain('dccpportalv3.test')
             ->login()
             ->passwordReset()
-            ->brandName(fn (): string => $this->settings->portal_name ?: $this->settings->getAppName())
+            ->brandName(fn (): string => $this->settings->getPortalName())
             ->brandLogo(fn () => $this->settings->logo ? '/'.$this->settings->logo : null)
             ->brandLogoHeight('3rem')
             ->colors([

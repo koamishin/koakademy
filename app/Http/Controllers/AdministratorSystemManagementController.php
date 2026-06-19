@@ -32,6 +32,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -327,48 +328,40 @@ final class AdministratorSystemManagementController extends Controller
 
         $validated = $request->validate([
             'site_name' => 'required|string|max:255',
-            'site_description' => 'nullable|string',
+            'site_description' => 'nullable|string|max:500',
             'seo_title' => 'nullable|string|max:255',
-            'seo_keywords' => 'nullable|string',
+            'seo_keywords' => 'nullable|string|max:500',
             'seo_metadata' => 'nullable|array',
-            'seo_metadata.robots' => 'nullable|string',
-            'seo_metadata.og_image' => 'nullable|string',
-            'seo_metadata.twitter_handle' => 'nullable|string',
-            'seo_metadata.twitter_card' => 'nullable|string',
-            'seo_metadata.canonical_url' => 'nullable|string',
-            'analytics_enabled' => 'required|boolean',
-            'analytics_provider' => 'nullable|string|in:google,ackee,umami,openpanel,custom',
-            'analytics_script' => 'nullable|string',
-            'analytics_settings' => 'nullable|array',
-            'analytics_settings.google_measurement_id' => 'nullable|string|max:50',
-            'analytics_settings.ackee_script_url' => 'nullable|url|max:2048',
-            'analytics_settings.ackee_server_url' => 'nullable|url|max:2048',
-            'analytics_settings.ackee_domain_id' => 'nullable|string|max:255',
-            'analytics_settings.umami_script_url' => 'nullable|url|max:2048',
-            'analytics_settings.umami_website_id' => 'nullable|string|max:255',
-            'analytics_settings.umami_host_url' => 'nullable|url|max:2048',
-            'analytics_settings.umami_domains' => 'nullable|string|max:255',
-            'analytics_settings.openpanel_script_url' => 'nullable|url|max:2048',
-            'analytics_settings.openpanel_client_id' => 'nullable|string|max:255',
-            'analytics_settings.openpanel_api_url' => 'nullable|url|max:2048',
-            'analytics_settings.openpanel_track_screen_views' => 'nullable|boolean',
-            'analytics_settings.openpanel_track_outgoing_links' => 'nullable|boolean',
-            'analytics_settings.openpanel_track_attributes' => 'nullable|boolean',
-            'analytics_settings.openpanel_session_replay' => 'nullable|boolean',
+            'seo_metadata.robots' => ['nullable', 'string', Rule::in(['index, follow', 'index, nofollow', 'noindex, follow', 'noindex, nofollow'])],
+            'seo_metadata.og_image' => 'nullable|string|max:2048',
+            'seo_metadata.twitter_handle' => 'nullable|string|max:255',
+            'seo_metadata.twitter_card' => ['nullable', 'string', Rule::in(['summary', 'summary_large_image'])],
+            'seo_metadata.canonical_url' => 'nullable|string|max:2048',
         ]);
 
-        $analyticsSettings = $validated['analytics_settings'] ?? [];
-        $validated['analytics_provider'] = filled($validated['analytics_provider'] ?? null)
-            ? $validated['analytics_provider']
-            : null;
-        $validated['analytics_script'] = filled($validated['analytics_script'] ?? null)
-            ? $validated['analytics_script']
-            : null;
-        $validated['google_analytics_id'] = ($validated['analytics_provider'] ?? null) === 'google'
-            ? ($analyticsSettings['google_measurement_id'] ?? null)
+        $metadata = $validated['seo_metadata'] ?? [];
+        $normalize = static fn (mixed $value): ?string => is_string($value) && mb_trim($value) !== ''
+            ? mb_trim($value)
             : null;
 
-        $settings->update($validated);
+        $twitterHandle = $normalize($metadata['twitter_handle'] ?? null);
+        if ($twitterHandle !== null && ! str_starts_with($twitterHandle, '@')) {
+            $twitterHandle = '@'.$twitterHandle;
+        }
+
+        $settings->update([
+            'site_name' => mb_trim($validated['site_name']),
+            'site_description' => $normalize($validated['site_description'] ?? null),
+            'seo_title' => $normalize($validated['seo_title'] ?? null),
+            'seo_keywords' => $normalize($validated['seo_keywords'] ?? null),
+            'seo_metadata' => [
+                'robots' => $metadata['robots'] ?? 'index, follow',
+                'og_image' => $normalize($metadata['og_image'] ?? null),
+                'twitter_handle' => $twitterHandle,
+                'twitter_card' => $metadata['twitter_card'] ?? 'summary_large_image',
+                'canonical_url' => $normalize($metadata['canonical_url'] ?? null),
+            ],
+        ]);
 
         return Redirect::back()->with('success', 'SEO settings updated successfully.');
     }

@@ -3,10 +3,12 @@
 
 <head>
     @php
+        use App\Services\GeneralSettingsService;
         use App\Settings\SiteSettings;
         use Illuminate\Support\Facades\Storage;
 
         $siteSettings = app(SiteSettings::class);
+        $generalSettings = app(GeneralSettingsService::class)->getGlobalSettingsModel();
         $resolveAssetUrl = static function (?string $value): ?string {
             if (! is_string($value) || mb_trim($value) === '') {
                 return null;
@@ -30,6 +32,16 @@
 
         // Check if we're on a documentation page
         $isDocsPage = request()->is('docs/*') || request()->is('api-docs');
+        $resolvedAppName = $isPortalDomain ? $siteSettings->getPortalName() : $siteSettings->getAppName();
+        $seoMetadata = is_array($generalSettings?->seo_metadata) ? $generalSettings->seo_metadata : [];
+        $siteName = $generalSettings?->site_name ?: $resolvedAppName;
+        $siteDescription = $generalSettings?->site_description ?: ($siteSettings->description ?: '');
+        $seoTitle = $generalSettings?->seo_title ?: $siteName;
+        $seoKeywords = $generalSettings?->seo_keywords;
+        $robots = app()->environment('production') ? data_get($seoMetadata, 'robots', 'index, follow') : 'noindex, nofollow';
+        $twitterCard = data_get($seoMetadata, 'twitter_card', 'summary_large_image');
+        $twitterHandle = data_get($seoMetadata, 'twitter_handle');
+        $canonicalOverride = data_get($seoMetadata, 'canonical_url');
 
         // Get page-specific data from Inertia shared props (set by docs controller)
         $pageTitle = \Inertia\Inertia::getShared('page_title');
@@ -42,17 +54,12 @@
             $metaDescription = $pageDescription ?? '';
             $ogImage = $pageOgImage;
         } else {
-            // Use portal-specific settings if on portal domain, otherwise use admin settings
-            $metaTitle = $isPortalDomain
-                ? ($siteSettings->portal_name ?: $siteSettings->getAppName())
-                : $siteSettings->getAppName();
+            $metaTitle = $seoTitle;
+            $metaDescription = $siteDescription;
 
-            $metaDescription = $isPortalDomain
-                ? ($siteSettings->portal_description ?: $siteSettings->description)
-                : $siteSettings->description;
-
-            // Use portal-specific OG image if on portal domain
-            if ($isPortalDomain && $siteSettings->portal_og_image) {
+            if (data_get($seoMetadata, 'og_image')) {
+                $ogImage = $resolveAssetUrl(data_get($seoMetadata, 'og_image'));
+            } elseif ($isPortalDomain && $siteSettings->portal_og_image) {
                 $ogImage = $resolveAssetUrl($siteSettings->portal_og_image);
             } elseif ($siteSettings->og_image) {
                 $ogImage = $resolveAssetUrl($siteSettings->og_image);
@@ -62,10 +69,13 @@
         }
 
         // Generate proper URLs for R2-stored files
-        $faviconUrl = $resolveAssetUrl($siteSettings->favicon);
+        $faviconUrl = $siteSettings->getFavicon();
+        $appleTouchIconUrl = $siteSettings->getLogo();
+        $themeColor = $siteSettings->getThemeColor();
 
         // Current URL for canonical and OG
         $currentUrl = url()->current();
+        $canonicalUrl = is_string($canonicalOverride) && mb_trim($canonicalOverride) !== '' ? $canonicalOverride : $currentUrl;
 
         // Get configurable locale
         $locale = config('app.locale', 'en');
@@ -76,19 +86,23 @@
     <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    @if($faviconUrl)
-        <link rel="icon" type="image/png" href="{{ $faviconUrl }}">
-    @endif
-    @if(config('app.env') !== 'production')
-        <meta name="robots" content="noindex, nofollow">
-    @endif
+    <link rel="icon" href="{{ $faviconUrl }}">
+    <link rel="apple-touch-icon" href="{{ $appleTouchIconUrl }}">
+    <link rel="manifest" href="{{ url('/app.webmanifest') }}">
+    <meta name="theme-color" content="{{ $themeColor }}">
+    <meta name="application-name" content="{{ $resolvedAppName }}">
+    <meta name="apple-mobile-web-app-title" content="{{ $resolvedAppName }}">
+    <meta name="robots" content="{{ $robots }}">
 
     <title inertia>{{ $metaTitle }}</title>
     <meta name="title" content="{{ $metaTitle }}">
     <meta name="description" content="{{ $metaDescription }}">
+    @if(is_string($seoKeywords) && mb_trim($seoKeywords) !== '')
+        <meta name="keywords" content="{{ $seoKeywords }}">
+    @endif
 
     {{-- Open Graph / Facebook --}}
-    <meta property="og:site_name" content="{{ $siteSettings->getAppName() }}">
+    <meta property="og:site_name" content="{{ $resolvedAppName }}">
     <meta property="og:title" content="{{ $metaTitle }}">
     <meta property="og:description" content="{{ $metaDescription }}">
     <meta property="og:type" content="{{ $isDocsPage ? 'article' : 'website' }}">
@@ -101,8 +115,10 @@
     <meta property="og:locale" content="{{ $ogLocale }}">
 
     {{-- Twitter Card --}}
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:site" content="{{ $siteSettings->getAppName() }}">
+    <meta name="twitter:card" content="{{ $twitterCard }}">
+    @if(is_string($twitterHandle) && mb_trim($twitterHandle) !== '')
+        <meta name="twitter:site" content="{{ $twitterHandle }}">
+    @endif
     <meta name="twitter:title" content="{{ $metaTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
     @if($ogImage)
@@ -110,20 +126,16 @@
     @endif
 
     {{-- Canonical URL --}}
-    <link rel="canonical" href="{{ $currentUrl }}">
+    <link rel="canonical" href="{{ $canonicalUrl }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Antic&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"
         rel="stylesheet">
-    @if(config('app.env') !== 'production')
-        <meta name="robots" content="noindex, nofollow">
-    @endif
-
     {{-- Expose appName to window for Inertia --}}
     <script>
-        window.appName = "{{ $siteSettings->getAppName() }}";
+        window.appName = @json($resolvedAppName);
     </script>
 
     @if(app()->environment('demo'))
@@ -142,8 +154,6 @@
                 });
             }
         </script>
-    @else
-        @PwaHead
     @endif
 
     @viteReactRefresh

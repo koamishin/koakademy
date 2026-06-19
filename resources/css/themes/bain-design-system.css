@@ -1,7 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap');
-
 :root.theme-bain-design-system,
 .theme-bain-design-system {
   --font-sans: Inter, system-ui, sans-serif;

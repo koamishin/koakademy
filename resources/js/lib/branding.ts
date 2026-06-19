@@ -18,15 +18,15 @@ export interface Branding {
 }
 
 export const DEFAULT_BRANDING: Branding = {
-    appName: "KoAkademy",
-    appShortName: "KOA",
-    organizationName: "KoAkademy",
-    organizationShortName: "KOA",
+    appName: "DCCP Hub",
+    appShortName: "DCCP",
+    organizationName: "DCCP Hub",
+    organizationShortName: "DCCP",
     organizationAddress: null,
     supportEmail: null,
     supportPhone: null,
     tagline: "Your Campus, Your Connection",
-    copyrightText: `${new Date().getFullYear()} KoAkademy. All rights reserved.`,
+    copyrightText: `${new Date().getFullYear()} DCCP Hub. All rights reserved.`,
     themeColor: "#0f172a",
     currency: "PHP",
     authLayout: "split",

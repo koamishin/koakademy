@@ -21,7 +21,7 @@ if (appElement !== null && initialPage !== null) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const windowAppName = (window as any).appName;
             const envAppName = import.meta.env.VITE_APP_NAME;
-            const appName = windowAppName || envAppName || "KoAkademy";
+            const appName = windowAppName || envAppName || "DCCP Hub";
             return title ? `${title} - ${appName}` : appName;
         },
         resolve: async (name) => {

@@ -6,7 +6,7 @@ use App\Services\SettingsShareService;
 use App\Settings\SiteSettings;
 use Illuminate\Http\Request;
 
-it('uses koakademy defaults when site branding settings are empty', function (): void {
+it('uses dccp hub defaults when site branding settings are empty', function (): void {
     $settings = app(SiteSettings::class);
     $settings->name = null;
     $settings->app_name = null;
@@ -14,10 +14,10 @@ it('uses koakademy defaults when site branding settings are empty', function ():
     $settings->organization_name = null;
     $settings->organization_short_name = null;
 
-    expect($settings->getAppName())->toBe('KoAkademy')
-        ->and($settings->getAppShortName())->toBe('KOA')
-        ->and($settings->getOrganizationName())->toBe('KoAkademy')
-        ->and($settings->getOrganizationShortName())->toBe('KOA');
+    expect($settings->getAppName())->toBe('DCCP Hub')
+        ->and($settings->getAppShortName())->toBe('DCCP')
+        ->and($settings->getOrganizationName())->toBe('DCCP Hub')
+        ->and($settings->getOrganizationShortName())->toBe('DCCP');
 });
 
 it('shares normalized branding values for frontend consumers', function (): void {
@@ -48,21 +48,34 @@ it('shares normalized branding values for frontend consumers', function (): void
         ]);
 });
 
-it('detects the configured portal host and prefers the portal name on that domain', function (): void {
+it('detects the configured portal host and ignores legacy portal names on that domain', function (): void {
     config(['app.portal_host' => 'portal.koakademy.test']);
 
     $settings = app(SiteSettings::class);
-    $settings->app_name = 'KoAkademy';
-    $settings->portal_name = 'KoAkademy Portal';
+    $settings->app_name = 'DCCP Hub';
+    $settings->portal_name = 'KoAkademy';
 
     $service = app(SettingsShareService::class);
     $portalRequest = Request::create('https://portal.koakademy.test/login');
     $adminRequest = Request::create('https://admin.koakademy.test/login');
 
     expect($service->isPortalDomain($portalRequest))->toBeTrue()
-        ->and($service->getAppName($portalRequest))->toBe('KoAkademy Portal')
+        ->and($service->getAppName($portalRequest))->toBe('DCCP Hub')
         ->and($service->isPortalDomain($adminRequest))->toBeFalse()
-        ->and($service->getAppName($adminRequest))->toBe('KoAkademy');
+        ->and($service->getAppName($adminRequest))->toBe('DCCP Hub');
+});
+
+it('keeps a custom portal name on the portal domain', function (): void {
+    config(['app.portal_host' => 'portal.koakademy.test']);
+
+    $settings = app(SiteSettings::class);
+    $settings->app_name = 'DCCP Hub';
+    $settings->portal_name = 'DCCP Faculty Portal';
+
+    $service = app(SettingsShareService::class);
+    $portalRequest = Request::create('https://portal.koakademy.test/login');
+
+    expect($service->getAppName($portalRequest))->toBe('DCCP Faculty Portal');
 });
 
 it('resolves relative branding asset paths to storage URLs and preserves absolute URLs', function (): void {

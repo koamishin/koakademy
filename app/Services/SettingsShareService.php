@@ -27,10 +27,18 @@ final readonly class SettingsShareService
 
     /**
      * Get site settings for frontend.
+     *
+     * @return array<string, string|null>
      */
-    public function getSiteSettings(): SiteSettings
+    public function getSiteSettings(Request $request): array
     {
-        return $this->siteSettings;
+        return [
+            'name' => $this->getAppName($request),
+            'description' => $this->siteSettings->description,
+            'logo' => $this->siteSettings->getLogo(),
+            'favicon' => $this->siteSettings->getFavicon(),
+            'og_image' => $this->siteSettings->og_image,
+        ];
     }
 
     /**
@@ -39,6 +47,31 @@ final readonly class SettingsShareService
     public function getBranding(): array
     {
         return $this->siteSettings->getBrandingArray();
+    }
+
+    /**
+     * Get SEO settings for frontend head management.
+     *
+     * @return array<string, mixed>
+     */
+    public function getSeoSettings(): array
+    {
+        $settings = $this->generalSettingsService->getGlobalSettingsModel();
+        $metadata = is_array($settings?->seo_metadata) ? $settings->seo_metadata : [];
+
+        return [
+            'site_name' => $settings?->site_name ?: $this->siteSettings->getAppName(),
+            'site_description' => $settings?->site_description ?: ($this->siteSettings->description ?: ''),
+            'seo_title' => $settings?->seo_title,
+            'seo_keywords' => $settings?->seo_keywords,
+            'seo_metadata' => [
+                'robots' => $metadata['robots'] ?? 'index, follow',
+                'og_image' => $metadata['og_image'] ?? $this->siteSettings->og_image,
+                'twitter_handle' => $metadata['twitter_handle'] ?? null,
+                'twitter_card' => $metadata['twitter_card'] ?? 'summary_large_image',
+                'canonical_url' => $metadata['canonical_url'] ?? null,
+            ],
+        ];
     }
 
     /**
@@ -59,7 +92,7 @@ final readonly class SettingsShareService
         $isPortalDomain = $this->isPortalDomain($request);
 
         return $isPortalDomain
-            ? ($this->siteSettings->portal_name ?: $this->siteSettings->getAppName())
+            ? $this->siteSettings->getPortalName()
             : $this->siteSettings->getAppName();
     }
 
