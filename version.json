@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.0.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.0.2",
-  "commit": "819f7f9f74be186b8b4b17fe2b9c5c7f90fae3bc",
+  "version": "1.9.0-dev.0.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.0.3",
+  "commit": "f7f02b91bae4c55c49e18261f2c88522257713af",
   "branch": "master",
-  "timestamp": "2026-06-17T06:37:45Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27670347940",
-  "release_type": "chore",
+  "timestamp": "2026-06-19T00:59:30Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27798628891",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.9.0-dev.0.2 - refactor: formated more files",
-    "previous": "1.9.0-dev.0.1"
+    "current": "Version 1.9.0-dev.0.3 - Fix mobile profile layout and portal announcement duplication",
+    "previous": "1.9.0-dev.0.2"
   },
   "metadata": {
     "author": "yukazakiri",
