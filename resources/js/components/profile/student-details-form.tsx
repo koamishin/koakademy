@@ -30,7 +30,7 @@ interface StudentDetailsFormProps {
 
 export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsFormProps) {
     return (
-        <Card className="border-border/60 bg-card/75 rounded-lg shadow-sm">
+        <Card id="student-information" className="border-border/60 bg-card/75 scroll-mt-24 rounded-lg shadow-sm">
             <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                     <GraduationCap className="h-5 w-5" />
@@ -47,6 +47,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                                 id="student_first_name"
                                 value={studentForm.data.first_name}
                                 onChange={(e) => studentForm.setData("first_name", e.target.value)}
+                                placeholder="Juan"
                                 required
                             />
                             {studentForm.errors.first_name && <p className="text-destructive text-sm">{studentForm.errors.first_name}</p>}
@@ -58,7 +59,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                                 id="student_middle_name"
                                 value={studentForm.data.middle_name}
                                 onChange={(e) => studentForm.setData("middle_name", e.target.value)}
-                                placeholder="Optional"
+                                placeholder="Santos"
                             />
                             {studentForm.errors.middle_name && <p className="text-destructive text-sm">{studentForm.errors.middle_name}</p>}
                         </div>
@@ -69,6 +70,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                                 id="student_last_name"
                                 value={studentForm.data.last_name}
                                 onChange={(e) => studentForm.setData("last_name", e.target.value)}
+                                placeholder="Dela Cruz"
                                 required
                             />
                             {studentForm.errors.last_name && <p className="text-destructive text-sm">{studentForm.errors.last_name}</p>}
@@ -81,6 +83,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                                 type="email"
                                 value={studentForm.data.email}
                                 onChange={(e) => studentForm.setData("email", e.target.value)}
+                                placeholder="juan.delacruz@example.com"
                                 required
                             />
                             {studentForm.errors.email && <p className="text-destructive text-sm">{studentForm.errors.email}</p>}
@@ -93,7 +96,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                                 type="tel"
                                 value={studentForm.data.phone}
                                 onChange={(e) => studentForm.setData("phone", e.target.value)}
-                                placeholder="+63 XXX XXX XXXX"
+                                placeholder="+63 912 345 6789"
                             />
                             {studentForm.errors.phone && <p className="text-destructive text-sm">{studentForm.errors.phone}</p>}
                         </div>
@@ -147,7 +150,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                                 id="nationality"
                                 value={studentForm.data.nationality}
                                 onChange={(e) => studentForm.setData("nationality", e.target.value)}
-                                placeholder="e.g. Filipino"
+                                placeholder="Filipino"
                             />
                             {studentForm.errors.nationality && <p className="text-destructive text-sm">{studentForm.errors.nationality}</p>}
                         </div>
@@ -170,7 +173,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                             id="student_address"
                             value={studentForm.data.address}
                             onChange={(e) => studentForm.setData("address", e.target.value)}
-                            placeholder="Complete Home Address"
+                            placeholder="Davao City, Davao del Sur"
                         />
                         {studentForm.errors.address && <p className="text-destructive text-sm">{studentForm.errors.address}</p>}
                     </div>
@@ -181,7 +184,7 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                             id="emergency_contact"
                             value={studentForm.data.emergency_contact}
                             onChange={(e) => studentForm.setData("emergency_contact", e.target.value)}
-                            placeholder="Name and Phone Number"
+                            placeholder="Maria Dela Cruz - 09123456789"
                         />
                         {studentForm.errors.emergency_contact && <p className="text-destructive text-sm">{studentForm.errors.emergency_contact}</p>}
                     </div>

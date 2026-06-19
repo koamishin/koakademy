@@ -8,6 +8,7 @@ import { ArrowLeft, BookOpen, Contact, GraduationCap, Palette, Plug, QrCode, Sha
 import { toast } from "sonner";
 
 import PortalLayout from "@/components/portal-layout";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,6 +56,20 @@ const itemVariants = {
 
 const dashboardPanelClass = "border-border/60 bg-card/75 rounded-lg shadow-sm";
 
+type StudentProfileMissingItem = {
+    key: string;
+    label: string;
+    section: "student" | "contacts" | "education";
+    example?: string;
+};
+
+type StudentProfileCompletion = {
+    total: number;
+    completed: number;
+    percentage: number;
+    missing: StudentProfileMissingItem[];
+};
+
 export default function ProfilePage() {
     useTheme();
     const {
@@ -66,6 +81,8 @@ export default function ProfilePage() {
         connected_accounts = {},
         id_card,
         feature_flags,
+        featureFlags,
+        student_profile_completion,
     } = usePage<{
         id_card: {
             card_data: IdCardData;
@@ -162,7 +179,12 @@ export default function ProfilePage() {
             experimental?: string[];
             experimental_available?: string[];
             developer_mode_enabled?: boolean;
+            student_information_updates?: boolean;
         };
+        featureFlags?: {
+            studentInformationUpdates?: boolean;
+        };
+        student_profile_completion?: StudentProfileCompletion;
         endpoints?: {
             profile_update: string;
             password_update: string;
@@ -184,6 +206,17 @@ export default function ProfilePage() {
 
     const isFaculty = ["professor", "associate_professor", "assistant_professor", "instructor", "part_time_faculty"].includes(user.role);
     const isStudent = ["student", "graduate_student", "shs_student"].includes(user.role);
+    const studentInformationUpdatesEnabled = !isStudent || (feature_flags?.student_information_updates ?? featureFlags?.studentInformationUpdates ?? false);
+    const initialStudentTab = !studentInformationUpdatesEnabled
+        ? "basic"
+        : typeof window !== "undefined" && window.location.hash === "#student-contacts"
+            ? "contacts"
+            : typeof window !== "undefined" && window.location.hash === "#student-education"
+              ? "education"
+              : typeof window !== "undefined" && window.location.hash === "#student-information"
+                ? "student"
+                : "basic";
+    const [studentProfileTab, setStudentProfileTab] = useState(initialStudentTab);
 
     const paths = {
         profile_update: endpoints?.profile_update || "/profile",
@@ -299,14 +332,13 @@ export default function ProfilePage() {
         facultyForm.data.education,
         facultyForm.data.courses_taught,
         facultyForm.data.biography,
-        studentForm.data.first_name,
-        studentForm.data.last_name,
-        studentForm.data.address,
-        studentForm.data.emergency_contact,
     ];
 
     const filledFields = completionFields.filter((value) => Boolean(value && `${value}`.trim())).length;
-    const profileCompletion = Math.min(100, Math.round((filledFields / completionFields.length) * 100));
+    const accountProfileCompletion = Math.min(100, Math.round((filledFields / completionFields.length) * 100));
+    const profileCompletion = isStudent ? (student_profile_completion?.percentage ?? 0) : accountProfileCompletion;
+    const missingStudentItems = student_profile_completion?.missing ?? [];
+    const missingBySection = (section: StudentProfileMissingItem["section"]) => missingStudentItems.filter((item) => item.section === section).length;
 
     useEffect(() => {
         if (!userForm.data.avatar) {
@@ -381,10 +413,20 @@ export default function ProfilePage() {
         const hash = window.location.hash;
         if (!hash) return;
         const targetId = hash.replace("#", "");
-        const target = document.getElementById(targetId);
-        if (target) {
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (targetId === "student-information") {
+            setStudentProfileTab("student");
+        } else if (targetId === "student-contacts") {
+            setStudentProfileTab("contacts");
+        } else if (targetId === "student-education") {
+            setStudentProfileTab("education");
         }
+
+        window.setTimeout(() => {
+            const target = document.getElementById(targetId);
+            if (target) {
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }, 50);
     }, []);
 
     const handleAvatarSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -550,27 +592,59 @@ export default function ProfilePage() {
                                     className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]"
                                 >
                                     <motion.div variants={itemVariants} className="min-w-0">
-                                        <Tabs defaultValue="basic" className="flex flex-col gap-4">
+                                        <Tabs value={studentProfileTab} onValueChange={setStudentProfileTab} className="flex flex-col gap-4">
                                             {isStudent && (
                                                 <Card className={dashboardPanelClass}>
-                                                    <CardContent className="p-2">
+                                                    <CardContent className="space-y-3 p-2">
+                                                        <div className="px-2 pt-2">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <h2 className="text-sm font-semibold">Student Information</h2>
+                                                                {student_profile_completion && (
+                                                                    <Badge variant={profileCompletion === 100 ? "default" : "secondary"} className="rounded-md text-[10px]">
+                                                                        {student_profile_completion.completed}/{student_profile_completion.total} complete
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                                Keep official contact details clear with examples like +63 912 345 6789, Juan Dela Cruz, Mother, Davao City, and 2024.
+                                                            </p>
+                                                        </div>
                                                         <TabsList className="no-scrollbar bg-muted/20 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-lg p-1">
                                                             <TabsTrigger value="basic" className="shrink-0 rounded-lg px-3 py-2">
                                                                 <User className="mr-2 h-4 w-4" />
                                                                 Basic
                                                             </TabsTrigger>
-                                                            <TabsTrigger value="student" className="shrink-0 rounded-lg px-3 py-2">
-                                                                <GraduationCap className="mr-2 h-4 w-4" />
-                                                                Student
-                                                            </TabsTrigger>
-                                                            <TabsTrigger value="contacts" className="shrink-0 rounded-lg px-3 py-2">
-                                                                <Contact className="mr-2 h-4 w-4" />
-                                                                Contacts
-                                                            </TabsTrigger>
-                                                            <TabsTrigger value="education" className="shrink-0 rounded-lg px-3 py-2">
-                                                                <BookOpen className="mr-2 h-4 w-4" />
-                                                                Education
-                                                            </TabsTrigger>
+                                                            {studentInformationUpdatesEnabled && (
+                                                                <>
+                                                                    <TabsTrigger value="student" className="shrink-0 rounded-lg px-3 py-2">
+                                                                        <GraduationCap className="mr-2 h-4 w-4" />
+                                                                        Student
+                                                                        {missingBySection("student") > 0 && (
+                                                                            <Badge variant="secondary" className="ml-2 h-5 rounded-full px-1.5 text-[10px]">
+                                                                                {missingBySection("student")}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </TabsTrigger>
+                                                                    <TabsTrigger value="contacts" className="shrink-0 rounded-lg px-3 py-2">
+                                                                        <Contact className="mr-2 h-4 w-4" />
+                                                                        Contacts
+                                                                        {missingBySection("contacts") > 0 && (
+                                                                            <Badge variant="secondary" className="ml-2 h-5 rounded-full px-1.5 text-[10px]">
+                                                                                {missingBySection("contacts")}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </TabsTrigger>
+                                                                    <TabsTrigger value="education" className="shrink-0 rounded-lg px-3 py-2">
+                                                                        <BookOpen className="mr-2 h-4 w-4" />
+                                                                        Education
+                                                                        {missingBySection("education") > 0 && (
+                                                                            <Badge variant="secondary" className="ml-2 h-5 rounded-full px-1.5 text-[10px]">
+                                                                                {missingBySection("education")}
+                                                                            </Badge>
+                                                                        )}
+                                                                    </TabsTrigger>
+                                                                </>
+                                                            )}
                                                         </TabsList>
                                                     </CardContent>
                                                 </Card>
@@ -597,7 +671,15 @@ export default function ProfilePage() {
                                                 />
                                             </TabsContent>
 
-                                            {isStudent && (
+                                            {isStudent && !studentInformationUpdatesEnabled && (
+                                                <Card className={dashboardPanelClass}>
+                                                    <CardContent className="p-4 text-sm text-muted-foreground">
+                                                        Student information updates are currently unavailable for your account.
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+
+                                            {isStudent && studentInformationUpdatesEnabled && (
                                                 <>
                                                     <TabsContent value="student" className="mt-0 outline-none">
                                                         <StudentDetailsForm

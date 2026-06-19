@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
-use App\Features\Onboarding\StudentSchedule;
+use App\Features\Toggles\StudentInformationUpdates;
+use App\Features\Toggles\StudentSchedule;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Pennant\Feature;
 
 beforeEach(function (): void {
     config(['activitylog.enabled' => false]);
@@ -27,6 +29,8 @@ beforeEach(function (): void {
         'student_education_id' => null,
         'student_personal_id' => null,
     ]);
+
+    Feature::activateForEveryone(StudentInformationUpdates::class);
 });
 
 it('can access student profile page', function (): void {
@@ -124,6 +128,34 @@ it('can update student profile information', function (): void {
     expect($this->user->email)->toBe('updated_student@example.com');
 });
 
+it('blocks student information updates when the feature is inactive', function (): void {
+    Feature::deactivateForEveryone(StudentInformationUpdates::class);
+
+    $response = $this
+        ->actingAs($this->user)
+        ->put(route('student.profile.student.update'), [
+            'first_name' => 'Updated First',
+            'last_name' => 'Updated Last',
+            'email' => 'updated_student@example.com',
+        ]);
+
+    $response->assertForbidden();
+});
+
+it('keeps the student profile page accessible when information updates are inactive', function (): void {
+    Feature::deactivateForEveryone(StudentInformationUpdates::class);
+
+    $response = $this
+        ->actingAs($this->user)
+        ->get(route('student.profile'));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->where('feature_flags.student_information_updates', false)
+        ->has('student')
+    );
+});
+
 it('validates required fields when updating student details', function (): void {
     $response = $this
         ->actingAs($this->user)
@@ -151,6 +183,112 @@ it('returns student data when student record exists', function (): void {
     );
 });
 
+it('returns student profile completion data for incomplete information', function (): void {
+    $this->student->update([
+        'phone' => null,
+        'address' => null,
+        'emergency_contact' => null,
+    ]);
+
+    $response = $this
+        ->actingAs($this->user)
+        ->get(route('student.profile'));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->where('student_profile_completion.total', 22)
+        ->where('student_profile_completion.completed', 7)
+        ->where('student_profile_completion.missing.0.label', 'Phone number')
+        ->where('student_profile_completion.missing.0.example', '+63 912 345 6789')
+    );
+});
+
+it('shares a non-dismissible completion banner when important student information is missing', function (): void {
+    $this->student->update([
+        'phone' => null,
+        'address' => null,
+        'emergency_contact' => null,
+    ]);
+
+    $response = $this
+        ->actingAs($this->user)
+        ->get(route('student.profile'));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->where('announcements.0.title', 'Complete your student information')
+        ->where('announcements.0.action_label', 'Complete student information')
+        ->where('announcements.0.link', '/student/profile#student-information')
+        ->where('announcements.0.non_dismissible', true)
+    );
+});
+
+it('does not share the completion banner when student information updates are inactive', function (): void {
+    Feature::deactivateForEveryone(StudentInformationUpdates::class);
+
+    $this->student->update([
+        'phone' => null,
+        'address' => null,
+        'emergency_contact' => null,
+    ]);
+
+    $response = $this
+        ->actingAs($this->user)
+        ->get(route('student.profile'));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->has('announcements', 0)
+    );
+});
+
+it('does not share the completion banner when important student information is complete', function (): void {
+    $response = $this
+        ->actingAs($this->user)
+        ->put(route('student.profile.student.update'), [
+            'first_name' => 'Complete',
+            'last_name' => 'Student',
+            'email' => 'complete_student@example.com',
+            'phone' => '+63 912 345 6789',
+            'address' => 'Davao City, Davao del Sur',
+            'civil_status' => 'single',
+            'nationality' => 'Filipino',
+            'emergency_contact' => 'Maria Dela Cruz - 09123456789',
+            'birth_date' => '2000-01-01',
+            'gender' => 'male',
+            'contacts' => [
+                'emergency_contact_name' => 'Maria Dela Cruz',
+                'emergency_contact_phone' => '09123456789',
+                'emergency_contact_relationship' => 'Mother',
+                'personal_contact' => '+63 912 345 6789',
+            ],
+            'education' => [
+                'elementary_school' => 'Davao Central Elementary School',
+                'elementary_year_graduated' => '2016',
+                'high_school' => 'Davao National High School',
+                'high_school_year_graduated' => '2020',
+                'senior_high_school' => 'Davao Senior High School',
+                'senior_high_year_graduated' => '2022',
+            ],
+            'parents' => [
+                'father_name' => 'Pedro Dela Cruz',
+                'mother_name' => 'Maria Dela Cruz',
+            ],
+        ]);
+
+    $response->assertRedirect();
+
+    $response = $this
+        ->actingAs($this->user)
+        ->get(route('student.profile'));
+
+    $response->assertSuccessful();
+    $response->assertInertia(fn ($page) => $page
+        ->where('student_profile_completion.percentage', 100)
+        ->has('announcements', 0)
+    );
+});
+
 it('can toggle experimental features', function (): void {
     config(['onboarding.experimental_feature_keys' => ['onboarding-student-schedule']]);
 
@@ -161,5 +299,5 @@ it('can toggle experimental features', function (): void {
         ]);
 
     $response->assertRedirect();
-    expect(Laravel\Pennant\Feature::for($this->user)->active(StudentSchedule::class))->toBeTrue();
+    expect(Feature::for($this->user)->active(StudentSchedule::class))->toBeTrue();
 });

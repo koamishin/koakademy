@@ -42,7 +42,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
     };
 
     return (
-        <Card className="border-border/60 bg-card/75 rounded-lg shadow-sm">
+        <Card id="student-contacts" className="border-border/60 bg-card/75 scroll-mt-24 rounded-lg shadow-sm">
             <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
@@ -59,6 +59,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 id="father_name"
                                 value={studentForm.data.parents.father_name}
                                 onChange={(e) => updateParents("father_name", e.target.value)}
+                                placeholder="Pedro Dela Cruz"
                             />
                         </div>
                         <div className="space-y-2">
@@ -67,6 +68,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 id="mother_name"
                                 value={studentForm.data.parents.mother_name}
                                 onChange={(e) => updateParents("mother_name", e.target.value)}
+                                placeholder="Maria Dela Cruz"
                             />
                         </div>
                     </div>
@@ -80,6 +82,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 id="emergency_contact_name"
                                 value={studentForm.data.contacts.emergency_contact_name}
                                 onChange={(e) => updateContacts("emergency_contact_name", e.target.value)}
+                                placeholder="Maria Dela Cruz"
                             />
                         </div>
                         <div className="space-y-2">
@@ -88,6 +91,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 id="emergency_contact_phone"
                                 value={studentForm.data.contacts.emergency_contact_phone}
                                 onChange={(e) => updateContacts("emergency_contact_phone", e.target.value)}
+                                placeholder="09123456789"
                             />
                         </div>
                         <div className="space-y-2 md:col-span-2">
@@ -96,6 +100,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 id="emergency_contact_relationship"
                                 value={studentForm.data.contacts.emergency_contact_relationship}
                                 onChange={(e) => updateContacts("emergency_contact_relationship", e.target.value)}
+                                placeholder="Mother"
                             />
                         </div>
                         <div className="space-y-2">
@@ -104,6 +109,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 id="personal_contact"
                                 value={studentForm.data.contacts.personal_contact}
                                 onChange={(e) => updateContacts("personal_contact", e.target.value)}
+                                placeholder="+63 912 345 6789"
                             />
                         </div>
                         <div className="space-y-2">

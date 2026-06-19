@@ -28,6 +28,7 @@ interface Announcement {
     priority?: AnnouncementPriority;
     display_mode?: AnnouncementDisplayMode;
     requires_acknowledgment?: boolean;
+    non_dismissible?: boolean;
     link?: string | null;
     action_label?: string | null;
     is_active?: boolean;
@@ -248,7 +249,7 @@ function AnnouncementItem({
                             <IconCheck className="h-3.5 w-3.5" />
                             Acknowledge
                         </Button>
-                    ) : (
+                    ) : announcement.non_dismissible ? null : (
                         <Button
                             variant="ghost"
                             size="icon"
@@ -310,7 +311,7 @@ function ToastNotification({
                         <IconCheck className="mr-1 h-3 w-3" />
                         OK
                     </Button>
-                ) : (
+                ) : announcement.non_dismissible ? null : (
                     <Button variant="ghost" size="icon" onClick={() => onDismiss(announcement.id)} className="h-6 w-6">
                         <IconX className="h-3.5 w-3.5" />
                     </Button>
@@ -377,7 +378,7 @@ function ModalPopup({
                     )}
 
                     <div className="mt-6 flex gap-3">
-                        {!announcement.requires_acknowledgment && (
+                        {!announcement.requires_acknowledgment && !announcement.non_dismissible && (
                             <Button variant="outline" onClick={() => onDismiss(announcement.id)} className="flex-1">
                                 Dismiss
                             </Button>
@@ -428,7 +429,7 @@ export function AnnouncementBanner({ announcements, displayMode: defaultDisplayM
         if (startsAt && startsAt > now) return false;
         if (endsAt && endsAt < now) return false;
 
-        return !dismissedIds.includes(a.id);
+        return a.non_dismissible || !dismissedIds.includes(a.id);
     });
 
     const urgentAnnouncement = activeAnnouncements.find((a: Announcement) => a.priority === "urgent" || a.requires_acknowledgment);

@@ -7,13 +7,16 @@ namespace App\Http\Controllers;
 use App\Features\Toggles\AdminDeveloperMode;
 use App\Features\Toggles\FacultyDeveloperMode;
 use App\Features\Toggles\StudentDeveloperMode;
+use App\Features\Toggles\StudentInformationUpdates;
 use App\Http\Requests\ToggleExperimentalFeaturesRequest;
+use App\Http\Requests\UpdateStudentProfileRequest;
 use App\Models\ConnectedAccount;
 use App\Models\Faculty;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\DigitalIdCardService;
 use App\Services\FeatureToggleRegistry;
+use App\Services\StudentProfileCompletionService;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
@@ -92,6 +95,8 @@ final class ProfileController extends Controller
         };
 
         $developerModeEnabled = $developerModeFeature !== null && Feature::for($user)->active($developerModeFeature);
+        $studentInformationUpdatesEnabled = $isStudent && Feature::for($user)->active(StudentInformationUpdates::class);
+        $studentProfileCompletion = app(StudentProfileCompletionService::class)->summarize($student);
 
         $apiTokens = [];
         if ($developerModeEnabled) {
@@ -145,7 +150,9 @@ final class ProfileController extends Controller
                     ->all(),
                 'experimental_available' => $availableForRole,
                 'developer_mode_enabled' => $developerModeEnabled,
+                'student_information_updates' => $studentInformationUpdatesEnabled,
             ],
+            'student_profile_completion' => $studentProfileCompletion,
             'api_tokens' => $apiTokens,
             'sessions' => $this->getSessions($request),
             'faculty' => $faculty ? [
@@ -475,9 +482,13 @@ final class ProfileController extends Controller
     /**
      * Update student information
      */
-    public function updateStudent(Request $request)
+    public function updateStudent(UpdateStudentProfileRequest $request)
     {
         $user = Auth::user();
+
+        if (! Feature::for($user)->active(StudentInformationUpdates::class)) {
+            abort(403, 'Student information updates are currently disabled.');
+        }
 
         // Check if student record exists
         $student = Student::where('user_id', $user->id)->first();
@@ -486,51 +497,7 @@ final class ProfileController extends Controller
             return back()->withErrors(['error' => 'Student record not found.']);
         }
 
-        // Update existing student record
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                Rule::unique('students')->ignore($student->id),
-            ],
-            'phone' => 'nullable|string|max:20',
-            'address' => 'nullable|string|max:255',
-            'civil_status' => 'nullable|string|max:50',
-            'nationality' => 'nullable|string|max:100',
-            'religion' => 'nullable|string|max:100',
-            'emergency_contact' => 'nullable|string|max:255',
-            'birth_date' => 'nullable|date',
-            'gender' => 'nullable|in:male,female,other,prefer_not_to_say',
-            // Contact Info
-            'contacts.emergency_contact_name' => 'nullable|string|max:255',
-            'contacts.emergency_contact_phone' => 'nullable|string|max:20',
-            'contacts.emergency_contact_relationship' => 'nullable|string|max:255',
-            'contacts.facebook' => 'nullable|string|max:255',
-            'contacts.personal_contact' => 'nullable|string|max:20',
-            // Education Info
-            'education.elementary_school' => 'nullable|string|max:255',
-            'education.elementary_year_graduated' => 'nullable|string|max:20',
-            'education.high_school' => 'nullable|string|max:255',
-            'education.high_school_year_graduated' => 'nullable|string|max:20',
-            'education.senior_high_school' => 'nullable|string|max:255',
-            'education.senior_high_year_graduated' => 'nullable|string|max:20',
-            // Parent Info
-            'parents.father_name' => 'nullable|string|max:255',
-            'parents.mother_name' => 'nullable|string|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return back()
-                ->withErrors($validator->errors())
-                ->withInput($request->all());
-        }
-
-        $validated = $validator->validated();
+        $validated = $request->validated();
 
         $student->update([
             'first_name' => $validated['first_name'],

@@ -35,6 +35,7 @@ use App\Features\Toggles\StudentDashboard;
 use App\Features\Toggles\StudentDeveloperMode;
 use App\Features\Toggles\StudentGradesPreview;
 use App\Features\Toggles\StudentHelp;
+use App\Features\Toggles\StudentInformationUpdates;
 use App\Features\Toggles\StudentSchedule;
 use App\Features\Toggles\StudentSettings;
 use App\Features\Toggles\StudentSignaturePad;
@@ -83,6 +84,7 @@ final class FeatureToggleRegistry
         'student-schedule' => StudentSchedule::class,
         'student-announcements' => StudentAnnouncements::class,
         'student-settings' => StudentSettings::class,
+        'student-information-updates' => StudentInformationUpdates::class,
         'student-help' => StudentHelp::class,
         'student-grades-preview' => StudentGradesPreview::class,
         'student-attendance-tracker' => StudentAttendanceTracker::class,

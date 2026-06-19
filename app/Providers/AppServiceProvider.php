@@ -34,6 +34,7 @@ use App\Features\Toggles\StudentDashboard;
 use App\Features\Toggles\StudentDeveloperMode;
 use App\Features\Toggles\StudentGradesPreview;
 use App\Features\Toggles\StudentHelp;
+use App\Features\Toggles\StudentInformationUpdates;
 use App\Features\Toggles\StudentSchedule;
 use App\Features\Toggles\StudentSettings;
 use App\Features\Toggles\StudentSignaturePad;
@@ -125,6 +126,7 @@ final class AppServiceProvider extends ServiceProvider
         Feature::define(StudentSchedule::class);
         Feature::define(StudentAnnouncements::class);
         Feature::define(StudentSettings::class);
+        Feature::define(StudentInformationUpdates::class);
         Feature::define(StudentHelp::class);
         Feature::define(StudentGradesPreview::class);
         Feature::define(StudentAttendanceTracker::class);

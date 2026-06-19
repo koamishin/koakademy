@@ -31,7 +31,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
     };
 
     return (
-        <Card className="border-border/60 bg-card/75 rounded-lg shadow-sm">
+        <Card id="student-education" className="border-border/60 bg-card/75 scroll-mt-24 rounded-lg shadow-sm">
             <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5" />
@@ -51,6 +51,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 id="elementary_school"
                                 value={studentForm.data.education.elementary_school}
                                 onChange={(e) => updateEducation("elementary_school", e.target.value)}
+                                placeholder="Davao Central Elementary School"
                             />
                         </div>
                         <div className="space-y-2">
@@ -59,6 +60,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 id="elementary_year_graduated"
                                 value={studentForm.data.education.elementary_year_graduated}
                                 onChange={(e) => updateEducation("elementary_year_graduated", e.target.value)}
+                                placeholder="2016"
                             />
                         </div>
 
@@ -71,6 +73,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 id="high_school"
                                 value={studentForm.data.education.high_school}
                                 onChange={(e) => updateEducation("high_school", e.target.value)}
+                                placeholder="Davao National High School"
                             />
                         </div>
                         <div className="space-y-2">
@@ -79,6 +82,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 id="high_school_year_graduated"
                                 value={studentForm.data.education.high_school_year_graduated}
                                 onChange={(e) => updateEducation("high_school_year_graduated", e.target.value)}
+                                placeholder="2020"
                             />
                         </div>
 
@@ -91,6 +95,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 id="senior_high_school"
                                 value={studentForm.data.education.senior_high_school}
                                 onChange={(e) => updateEducation("senior_high_school", e.target.value)}
+                                placeholder="Davao Senior High School"
                             />
                         </div>
                         <div className="space-y-2">
@@ -99,6 +104,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 id="senior_high_year_graduated"
                                 value={studentForm.data.education.senior_high_year_graduated}
                                 onChange={(e) => updateEducation("senior_high_year_graduated", e.target.value)}
+                                placeholder="2022"
                             />
                         </div>
                     </div>

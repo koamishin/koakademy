@@ -5,11 +5,18 @@ declare(strict_types=1);
 use App\Features\Contracts\FeatureToggle;
 use App\Features\Toggles\FacultyDashboard;
 use App\Features\Toggles\StudentDashboard;
+use App\Features\Toggles\StudentInformationUpdates;
 use App\Services\FeatureToggleRegistry;
 
 it('maps keys to feature toggle classes', function (): void {
     $class = FeatureToggleRegistry::classForKey('faculty-dashboard');
     expect($class)->toBe(FacultyDashboard::class);
+});
+
+it('maps the student information updates feature toggle', function (): void {
+    $class = FeatureToggleRegistry::classForKey('student-information-updates');
+
+    expect($class)->toBe(StudentInformationUpdates::class);
 });
 
 it('returns null for unknown keys', function (): void {
