@@ -42,10 +42,6 @@ Route::middleware(['auth', 'administrators.only'])
 
             $portalData = AdministratorPortalData::build($user);
 
-            $stats = $portalData['stats'];
-            $analytics = $portalData['analytics'];
-            $recentActivity = $portalData['recent_activity'];
-
             $quickActions = [
                 [
                     'title' => 'Review pending approvals',
@@ -91,11 +87,9 @@ Route::middleware(['auth', 'administrators.only'])
                     'role' => $user->role?->getLabel() ?? 'Administrator',
                 ],
                 'admin_data' => [
-                    'stats' => $stats,
+                    ...$portalData,
                     'quick_actions' => $quickActions,
-                    'recent_activity' => $recentActivity,
                     'beginner_tips' => $beginnerTips,
-                    'analytics' => $analytics,
                 ],
                 'flash' => session('flash'),
             ]);

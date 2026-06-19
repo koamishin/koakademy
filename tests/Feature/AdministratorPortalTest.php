@@ -35,6 +35,16 @@ it('allows administrative users to view the administrator dashboard', function (
             ->has('admin_data')
             ->has('admin_data.stats')
             ->has('admin_data.quick_actions')
+            ->has('admin_data.current_period')
+            ->has('admin_data.executive_summary.kpis')
+            ->has('admin_data.enrollment_health.pipeline')
+            ->has('admin_data.enrollment_health.trends')
+            ->has('admin_data.student_demographics.by_type')
+            ->has('admin_data.student_demographics.top_courses')
+            ->has('admin_data.finance_snapshot')
+            ->has('admin_data.operations.action_queue')
+            ->has('admin_data.recent_records.students')
+            ->has('admin_data.recent_records.activity')
             ->has('settings')
         );
 });

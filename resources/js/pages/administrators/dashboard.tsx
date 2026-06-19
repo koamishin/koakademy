@@ -1,13 +1,59 @@
 import AdminLayout from "@/components/administrators/admin-layout";
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    BarXAxis,
+    BarYAxis,
+    ChartTooltip,
+    FunnelChart,
+    Gauge,
+    Grid,
+    Legend,
+    LegendItem,
+    LegendLabel,
+    LegendMarker,
+    LegendProgress,
+    LegendValue,
+    Ring,
+    RingCenter,
+    RingChart,
+    XAxis,
+    chartCssVars,
+    type LegendItemData,
+} from "@/components/charts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User } from "@/types/user";
-import { Head, Link } from "@inertiajs/react";
-import { AlertTriangle, ArrowUpRight, BarChart3, ClipboardCheck, GraduationCap, Info, LineChart, ListChecks, Users, Workflow } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Head, Link, usePage } from "@inertiajs/react";
+import {
+    Activity,
+    AlertTriangle,
+    ArrowUpRight,
+    Banknote,
+    BarChart3,
+    CalendarDays,
+    CheckCircle2,
+    ClipboardCheck,
+    GraduationCap,
+    Info,
+    LayoutDashboard,
+    ListChecks,
+    PieChart,
+    School,
+    ShieldCheck,
+    TrendingUp,
+    UserCheck,
+    Users,
+    Workflow,
+    type LucideIcon,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { route } from "ziggy-js";
 
 type AdminStatTone = "success" | "warning" | "info" | "neutral";
 
@@ -30,7 +76,7 @@ type RecentActivityItem = {
     actor: string;
     action: string;
     time: string;
-    status: "success" | "info" | "warning" | "error";
+    status: "success" | "info" | "warning" | "error" | "neutral";
 };
 
 type BeginnerTip = {
@@ -38,66 +84,137 @@ type BeginnerTip = {
     content: string;
 };
 
+type PipelineItem = {
+    status: string;
+    count: number;
+    color?: string;
+};
+
+type StudentTypeItem = {
+    type: string;
+    label: string;
+    count: number;
+    percentage: number;
+};
+
+type TopCourse = {
+    code: string;
+    title: string;
+    student_count: number;
+};
+
+type RecentStudent = {
+    id: number;
+    student_id: string | null;
+    name: string;
+    type: string | null;
+    status: string | null;
+    course: string | null;
+    registered_at: string;
+};
+
+type FinanceSnapshot = {
+    total_revenue: number;
+    total_collectibles: number;
+    total_assessed: number;
+    collection_rate: number;
+    fully_paid_count: number;
+    outstanding_count: number;
+    today_collection: number;
+    today_transactions: number;
+};
+
+type ActionQueueItem = {
+    label: string;
+    value: number;
+    description: string;
+    href: string;
+    tone: AdminStatTone;
+};
+
 type AdminAnalytics = {
     last_updated_at: string;
-    enrollment_trends: { month: string; enrollments: number }[];
-    enrollment_status: { status: string; count: number }[];
+    enrollment_trends: TrendPoint[];
+    enrollment_status: PipelineItem[];
     application_vs_enrollment: {
         applicants: number;
         enrolled: number;
         on_leave: number;
         conversion_rate: number;
     };
-    student_types: { type: string; label: string; count: number; percentage: number }[];
+    student_types: StudentTypeItem[];
     gender_distribution: { gender: string; count: number }[];
     year_level_distribution: { year_level: string; count: number }[];
-    top_courses: { code: string; title: string; student_count: number }[];
-    recent_students: {
-        id: number;
-        student_id: string | null;
-        name: string;
-        type: string | null;
-        status: string | null;
-        course: string | null;
-        registered_at: string;
-    }[];
+    top_courses: TopCourse[];
+    recent_students: RecentStudent[];
+};
+
+type AdminData = {
+    current_period: {
+        school_year: string;
+        semester: number;
+        label: string;
+    };
+    stats: AdminStat[];
+    quick_actions: QuickAction[];
+    recent_activity: RecentActivityItem[];
+    beginner_tips: BeginnerTip[];
+    executive_summary: {
+        kpis: AdminStat[];
+        last_updated_at: string;
+    };
+    enrollment_health: {
+        pending: number;
+        enrolled_this_period: number;
+        conversion_rate: number;
+        applicants: number;
+        enrolled: number;
+        on_leave: number;
+        pipeline: PipelineItem[];
+        trends: TrendPoint[];
+    };
+    student_demographics: {
+        total: number;
+        by_type: StudentTypeItem[];
+        by_gender: { gender: string; count: number }[];
+        by_year_level: { year_level: string; count: number }[];
+        top_courses: TopCourse[];
+    };
+    finance_snapshot: FinanceSnapshot;
+    operations: {
+        total_faculty: number;
+        active_classes: number;
+        total_users: number;
+        unassigned_classes: number;
+        action_queue: ActionQueueItem[];
+    };
+    recent_records: {
+        students: RecentStudent[];
+        activity: RecentActivityItem[];
+    };
+    analytics: AdminAnalytics;
 };
 
 interface AdminDashboardProps {
     user: User;
-    admin_data: {
-        stats: AdminStat[];
-        quick_actions: QuickAction[];
-        recent_activity: RecentActivityItem[];
-        beginner_tips: BeginnerTip[];
-        analytics: AdminAnalytics;
-    };
+    admin_data: AdminData;
 }
 
-const adminCardClass =
-    "border-border/60 bg-card/75 rounded-lg shadow-sm transition-all duration-200 hover:border-primary/25 hover:bg-card hover:shadow-md";
-const adminPanelClass = "border-border/60 bg-card/75 rounded-lg shadow-sm";
+type TrendPoint = {
+    date: string;
+    month: string;
+    enrollments: number;
+};
 
-const enrollmentTrendConfig = {
-    enrollments: {
-        label: "Enrollments",
-        color: "hsl(217.2 91.2% 59.8%)",
-    },
-} satisfies ChartConfig;
+type Branding = {
+    currency?: string;
+};
 
-const studentCountConfig = {
-    count: {
-        label: "Students",
-        color: "hsl(142.1 76.2% 36.3%)",
-    },
-} satisfies ChartConfig;
+type TrendRange = "year" | "six_months";
 
-const enrollmentCountConfig = {
-    count: {
-        label: "Enrollments",
-        color: "hsl(45.4 93.4% 47.5%)",
-    },
-} satisfies ChartConfig;
+const adminCardClass = "border-border/60 bg-card/80 rounded-lg shadow-sm";
+const adminPanelClass = "border-border/60 bg-card/80 rounded-lg shadow-sm";
+const chartPalette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"] as const;
 
 const statIcons = {
     "Pending Enrollments": ClipboardCheck,
@@ -108,311 +225,683 @@ const statIcons = {
 
 function toneBadgeClass(tone: AdminStatTone): string {
     if (tone === "success") {
-        return "border-emerald-500/30 bg-emerald-500/10 text-emerald-500";
+        return "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
     }
 
     if (tone === "warning") {
-        return "border-amber-500/30 bg-amber-500/10 text-amber-500";
+        return "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400";
     }
 
     if (tone === "info") {
-        return "border-sky-500/30 bg-sky-500/10 text-sky-500";
+        return "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400";
     }
 
     return "border-border bg-muted/40 text-muted-foreground";
 }
 
-function toneAccentClass(tone: AdminStatTone): string {
-    if (tone === "success") {
-        return "bg-emerald-500";
-    }
-
-    if (tone === "warning") {
-        return "bg-amber-500";
-    }
-
-    if (tone === "info") {
-        return "bg-sky-500";
-    }
-
-    return "bg-muted-foreground";
-}
-
 function toneIconClass(tone: AdminStatTone): string {
     if (tone === "success") {
-        return "text-emerald-500 bg-emerald-500/10";
+        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
     }
 
     if (tone === "warning") {
-        return "text-amber-500 bg-amber-500/10";
+        return "bg-amber-500/10 text-amber-600 dark:text-amber-400";
     }
 
     if (tone === "info") {
-        return "text-sky-500 bg-sky-500/10";
+        return "bg-sky-500/10 text-sky-600 dark:text-sky-400";
     }
 
-    return "text-muted-foreground bg-muted/60";
+    return "bg-muted text-muted-foreground";
 }
 
-function chartHasData<T extends Record<string, unknown>>(data: T[], key: keyof T): boolean {
+function formatNumber(value: number): string {
+    return new Intl.NumberFormat("en-US").format(value);
+}
+
+function formatPercent(value: number): string {
+    return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)}%`;
+}
+
+function formatCurrency(amount: number, currency: string): string {
+    return new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-PH", {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+    }).format(amount);
+}
+
+function formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(new Date(value));
+}
+
+function hasPositiveData<T extends Record<string, unknown>>(data: T[], key: keyof T): boolean {
     return data.some((item) => Number(item[key] ?? 0) > 0);
 }
 
-function EmptyChartState({ title, description }: { title: string; description: string }) {
+function EmptyPanel({ label }: { label: string }) {
     return (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6">
-            <div className="bg-background/75 border-border/60 rounded-lg border px-4 py-3 text-center shadow-sm backdrop-blur">
-                <BarChart3 className="text-muted-foreground mx-auto mb-2 h-5 w-5" />
-                <p className="text-foreground text-sm font-medium">{title}</p>
-                <p className="text-muted-foreground mt-1 text-xs">{description}</p>
-            </div>
-        </div>
-    );
-}
-
-function EmptyTableState({ label }: { label: string }) {
-    return (
-        <div className="text-muted-foreground flex min-h-32 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center">
+        <div className="text-muted-foreground flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center">
             <ListChecks className="mb-2 h-6 w-6 opacity-40" />
             <p className="text-sm">{label}</p>
         </div>
     );
 }
 
+function SectionHeading({ icon: Icon, title, description }: { icon: LucideIcon; title: string; description: string }) {
+    return (
+        <CardHeader className="border-border/60 border-b pb-4">
+            <CardTitle className="flex items-center gap-2 text-base">
+                <Icon className="text-primary h-4 w-4" />
+                {title}
+            </CardTitle>
+            <CardDescription>{description}</CardDescription>
+        </CardHeader>
+    );
+}
+
+function StatCard({ stat }: { stat: AdminStat }) {
+    const Icon = statIcons[stat.label as keyof typeof statIcons] ?? BarChart3;
+
+    return (
+        <Card className={`${adminCardClass} overflow-hidden`}>
+            <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                    <div className={`rounded-lg p-2.5 ${toneIconClass(stat.tone)}`}>
+                        <Icon className="h-5 w-5" />
+                    </div>
+                    <Badge variant="outline" className={`${toneBadgeClass(stat.tone)} rounded-md text-[10px] uppercase`}>
+                        {stat.tone}
+                    </Badge>
+                </div>
+                <p className="text-muted-foreground mt-5 text-xs font-medium tracking-wide uppercase">{stat.label}</p>
+                <div className="text-foreground mt-2 text-3xl font-semibold tracking-tight">{stat.value}</div>
+                <p className="text-muted-foreground mt-2 text-sm">{stat.description}</p>
+            </CardContent>
+        </Card>
+    );
+}
+
+function MetricTile({ icon: Icon, label, value, description }: { icon: LucideIcon; label: string; value: string; description: string }) {
+    return (
+        <div className="border-border/60 bg-background/40 rounded-lg border p-4">
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+                    <p className="text-foreground mt-2 text-2xl font-semibold tracking-tight">{value}</p>
+                </div>
+                <div className="bg-primary/10 text-primary rounded-lg p-2">
+                    <Icon className="h-4 w-4" />
+                </div>
+            </div>
+            <p className="text-muted-foreground mt-2 text-sm">{description}</p>
+        </div>
+    );
+}
+
+function ActionQueue({ items }: { items: ActionQueueItem[] }) {
+    return (
+        <div className="grid gap-3">
+            {items.map((item) => (
+                <div
+                    key={item.label}
+                    className="border-border/60 hover:bg-muted/25 flex flex-col gap-3 rounded-lg border p-4 transition-colors sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-foreground font-medium">{item.label}</p>
+                            <Badge variant="outline" className={`${toneBadgeClass(item.tone)} rounded-md`}>
+                                {formatNumber(item.value)}
+                            </Badge>
+                        </div>
+                        <p className="text-muted-foreground mt-1 text-sm">{item.description}</p>
+                    </div>
+                    <Button asChild variant="outline" className="rounded-lg">
+                        <Link href={item.href}>
+                            Open
+                            <ArrowUpRight className="ml-2 h-4 w-4" />
+                        </Link>
+                    </Button>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function EnrollmentTrendChart({ data }: { data: TrendPoint[] }) {
+    const hasData = hasPositiveData(data, "enrollments");
+
+    if (!hasData) {
+        return <EmptyPanel label="No enrollment trend data is available for this period yet." />;
+    }
+
+    return (
+        <AreaChart data={data} xDataKey="date" className="h-[280px] w-full" aspectRatio="16 / 7">
+            <Grid horizontal />
+            <Area dataKey="enrollments" fill={chartCssVars.linePrimary} fillOpacity={0.36} showMarkers />
+            <XAxis tickMode="data" />
+            <ChartTooltip showDatePill={false} />
+        </AreaChart>
+    );
+}
+
+function BarComparisonChart({ data, dataKey, labelKey }: { data: Record<string, string | number>[]; dataKey: string; labelKey: string }) {
+    if (!hasPositiveData(data, dataKey)) {
+        return <EmptyPanel label="No comparison data is available yet." />;
+    }
+
+    return (
+        <BarChart data={data} xDataKey={labelKey} className="h-[250px] w-full" aspectRatio="16 / 8" margin={{ left: 64, right: 20, top: 24, bottom: 36 }}>
+            <Grid horizontal />
+            <Bar dataKey={dataKey} fill={chartCssVars.linePrimary} />
+            <BarXAxis />
+            <ChartTooltip showDatePill={false} />
+        </BarChart>
+    );
+}
+
+function HorizontalBarChart({ data, dataKey, labelKey }: { data: Record<string, string | number>[]; dataKey: string; labelKey: string }) {
+    if (!hasPositiveData(data, dataKey)) {
+        return <EmptyPanel label="No ranked data is available yet." />;
+    }
+
+    return (
+        <BarChart
+            data={data}
+            xDataKey={labelKey}
+            orientation="horizontal"
+            className="h-[280px] w-full"
+            aspectRatio="16 / 8"
+            margin={{ left: 86, right: 24, top: 18, bottom: 24 }}
+        >
+            <Grid vertical />
+            <Bar dataKey={dataKey} fill={chartCssVars.linePrimary} />
+            <BarYAxis />
+            <ChartTooltip showDatePill={false} />
+        </BarChart>
+    );
+}
+
+function StudentMixChart({ items, total }: { items: StudentTypeItem[]; total: number }) {
+    const ringData: LegendItemData[] = items.map((item, index) => ({
+        label: item.label,
+        value: item.count,
+        maxValue: Math.max(total, 1),
+        color: chartPalette[index % chartPalette.length],
+    }));
+
+    if (!hasPositiveData(items, "count")) {
+        return <EmptyPanel label="Student mix appears after student profiles are added." />;
+    }
+
+    return (
+        <div className="grid gap-4 md:grid-cols-[minmax(220px,280px)_1fr] md:items-center">
+            <div className="mx-auto w-full max-w-[280px]">
+                <RingChart data={ringData} size={260}>
+                    {ringData.map((item, index) => (
+                        <Ring key={item.label} index={index} />
+                    ))}
+                    <RingCenter defaultLabel="Students" />
+                </RingChart>
+            </div>
+            <Legend items={ringData} className="grid gap-3">
+                <LegendItem className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1">
+                    <LegendMarker />
+                    <LegendLabel />
+                    <LegendValue showPercentage />
+                    <div className="col-span-full">
+                        <LegendProgress />
+                    </div>
+                </LegendItem>
+            </Legend>
+        </div>
+    );
+}
+
+function RecentStudentsTable({ students }: { students: RecentStudent[] }) {
+    if (students.length === 0) {
+        return <EmptyPanel label="No student registrations yet." />;
+    }
+
+    return (
+        <div className="overflow-x-auto">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Student ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Course</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Registered</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {students.map((student) => (
+                        <TableRow key={student.id} className="hover:bg-muted/35">
+                            <TableCell className="text-muted-foreground font-mono text-xs">{student.student_id || "-"}</TableCell>
+                            <TableCell className="font-medium">{student.name}</TableCell>
+                            <TableCell className="text-muted-foreground">{student.type?.toUpperCase() || "-"}</TableCell>
+                            <TableCell className="text-muted-foreground">{student.course || "-"}</TableCell>
+                            <TableCell>
+                                <Badge variant="outline" className="rounded-md">
+                                    {student.status || "-"}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-right">{formatDateTime(student.registered_at)}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    );
+}
+
+function RecentActivityTable({ activity }: { activity: RecentActivityItem[] }) {
+    if (activity.length === 0) {
+        return <EmptyPanel label="No recent activity yet." />;
+    }
+
+    return (
+        <div className="overflow-x-auto">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Actor</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Time</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {activity.map((item, index) => (
+                        <TableRow key={`${item.actor}-${item.action}-${item.time}-${index}`} className="hover:bg-muted/35">
+                            <TableCell className="font-medium">{item.actor}</TableCell>
+                            <TableCell className="text-muted-foreground">{item.action}</TableCell>
+                            <TableCell>
+                                <Badge variant="outline" className="rounded-md">
+                                    {item.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-right">{item.time}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    );
+}
+
 export default function AdministratorDashboard({ user, admin_data }: AdminDashboardProps) {
+    const [trendRange, setTrendRange] = useState<TrendRange>("year");
+    const { props } = usePage<{ branding?: Branding }>();
+    const currency = props.branding?.currency || "PHP";
     const firstName = user.name.split(" ")[0];
-    const hasEnrollmentTrendData = chartHasData(admin_data.analytics.enrollment_trends, "enrollments");
-    const hasWorkflowData = chartHasData(admin_data.analytics.enrollment_status, "count");
-    const hasStudentTypeData = chartHasData(admin_data.analytics.student_types, "count");
-    const hasTopCourseData = chartHasData(admin_data.analytics.top_courses, "student_count");
+    const enrollmentTrends = admin_data.enrollment_health.trends;
+    const filteredTrends = useMemo(
+        () => (trendRange === "six_months" ? enrollmentTrends.slice(-6) : enrollmentTrends),
+        [enrollmentTrends, trendRange],
+    );
+    const pipelineData = admin_data.enrollment_health.pipeline.map((item) => ({
+        label: item.status,
+        value: item.count,
+        displayValue: formatNumber(item.count),
+    }));
+    const yearLevelData = admin_data.student_demographics.by_year_level.map((item) => ({
+        label: item.year_level,
+        count: item.count,
+    }));
+    const topCourseData = admin_data.student_demographics.top_courses.map((course) => ({
+        label: course.code,
+        count: course.student_count,
+    }));
+    const finance = admin_data.finance_snapshot;
+    const collectionRate = Math.min(Math.max(finance.collection_rate, 0), 100);
+    const conversionRate = Math.min(Math.max(admin_data.enrollment_health.conversion_rate, 0), 100);
 
     return (
         <AdminLayout user={user} title="Administrator Overview">
             <Head title="Administrators - Overview" />
 
-            <div className={`${adminPanelClass} flex flex-col justify-between gap-4 p-4 md:flex-row md:items-end md:p-5`}>
-                <div className="min-w-0">
-                    <h2 className="text-foreground mt-2 text-2xl font-semibold tracking-tight md:text-3xl">Welcome, {firstName}</h2>
-                    <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-                        Here's a summary of what's happening in your institution.
-                    </p>
+            <div className={`${adminPanelClass} overflow-hidden`}>
+                <div className="border-border/60 flex flex-col gap-5 border-b p-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="rounded-md">
+                                <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                {admin_data.current_period.label}
+                            </Badge>
+                            <Badge variant="outline" className="rounded-md">
+                                Updated {formatDateTime(admin_data.executive_summary.last_updated_at)}
+                            </Badge>
+                        </div>
+                        <h2 className="text-foreground mt-4 text-2xl font-semibold tracking-tight md:text-3xl">Welcome, {firstName}</h2>
+                        <p className="text-muted-foreground mt-1 max-w-3xl text-sm">
+                            A stakeholder-ready view of enrollment movement, student composition, finance health, and operational work.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button asChild variant="outline" className="rounded-lg">
+                            <Link href={route("administrators.enrollments.index")}>
+                                <ClipboardCheck className="mr-2 h-4 w-4" />
+                                Enrollments
+                            </Link>
+                        </Button>
+                        <Button asChild className="rounded-lg">
+                            <Link href={route("administrators.finance.index")}>
+                                <Banknote className="mr-2 h-4 w-4" />
+                                Finance
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+                <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
+                    {admin_data.executive_summary.kpis.map((stat) => (
+                        <StatCard key={stat.label} stat={stat} />
+                    ))}
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {admin_data.stats.map((stat) => {
-                    const Icon = statIcons[stat.label as keyof typeof statIcons] ?? BarChart3;
+            <Tabs defaultValue="overview" className="grid gap-4">
+                <TabsList className="grid h-auto w-full grid-cols-2 rounded-lg lg:w-fit lg:grid-cols-4">
+                    <TabsTrigger value="overview" className="rounded-md">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Overview
+                    </TabsTrigger>
+                    <TabsTrigger value="enrollment" className="rounded-md">
+                        <Workflow className="mr-2 h-4 w-4" />
+                        Enrollment
+                    </TabsTrigger>
+                    <TabsTrigger value="students" className="rounded-md">
+                        <Users className="mr-2 h-4 w-4" />
+                        Students
+                    </TabsTrigger>
+                    <TabsTrigger value="operations" className="rounded-md">
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Operations
+                    </TabsTrigger>
+                </TabsList>
 
-                    return (
-                        <Card key={stat.label} className={`${adminCardClass} group relative overflow-hidden hover:-translate-y-0.5`}>
-                            <Icon className="text-primary pointer-events-none absolute top-5 right-5 h-16 w-16 opacity-10 transition-all duration-200 group-hover:scale-105 group-hover:opacity-20" />
-                            <div className={`absolute inset-y-0 left-0 w-1 ${toneAccentClass(stat.tone)}`} />
-                            <CardContent className="relative p-5 pr-20">
-                                <div className={`mb-5 inline-flex rounded-lg p-2.5 ${toneIconClass(stat.tone)}`}>
-                                    <Icon className="h-5 w-5" />
+                <TabsContent value="overview" className="grid gap-4">
+                    <div className="grid gap-4 lg:grid-cols-12">
+                        <Card className={`${adminPanelClass} lg:col-span-8`}>
+                            <CardHeader className="border-border/60 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <TrendingUp className="text-primary h-4 w-4" />
+                                        Enrollment trend
+                                    </CardTitle>
+                                    <CardDescription>Monthly enrollment volume for the current year</CardDescription>
                                 </div>
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{stat.label}</p>
-                                        <div className="text-foreground mt-3 text-3xl font-semibold tracking-tight">{stat.value}</div>
-                                    </div>
-                                    <Badge variant="outline" className={`${toneBadgeClass(stat.tone)} shrink-0 rounded-md text-[10px]`}>
-                                        {stat.tone}
-                                    </Badge>
+                                <div className="bg-muted grid grid-cols-2 rounded-lg p-1 text-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTrendRange("year")}
+                                        className={`rounded-md px-3 py-1.5 ${trendRange === "year" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                                    >
+                                        Year
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTrendRange("six_months")}
+                                        className={`rounded-md px-3 py-1.5 ${trendRange === "six_months" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                                    >
+                                        6 months
+                                    </button>
                                 </div>
-                                <p className="text-muted-foreground mt-3 text-sm">{stat.description}</p>
+                            </CardHeader>
+                            <CardContent className="p-4 sm:p-6">
+                                <EnrollmentTrendChart data={filteredTrends} />
                             </CardContent>
                         </Card>
-                    );
-                })}
-            </div>
+
+                        <Card className={`${adminPanelClass} lg:col-span-4`}>
+                            <SectionHeading icon={BarChart3} title="Institution health" description="Conversion and collection signal" />
+                            <CardContent className="grid gap-5 p-5">
+                                <div className="grid place-items-center">
+                                    <Gauge
+                                        value={conversionRate}
+                                        centerValue={conversionRate}
+                                        defaultLabel="Conversion"
+                                        suffix="%"
+                                        inactiveFillOpacity={0.35}
+                                        spacing={24}
+                                        useGradient
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <MetricTile
+                                        icon={UserCheck}
+                                        label="Collection"
+                                        value={formatPercent(collectionRate)}
+                                        description="Assessed tuition collected"
+                                    />
+                                    <MetricTile
+                                        icon={CheckCircle2}
+                                        label="Paid"
+                                        value={formatNumber(finance.fully_paid_count)}
+                                        description="Fully paid students"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-12">
+                        <Card className={`${adminPanelClass} lg:col-span-5`}>
+                            <SectionHeading icon={Workflow} title="Enrollment pipeline" description="Current-period volume by workflow stage" />
+                            <CardContent className="p-5">
+                                {hasPositiveData(pipelineData, "value") ? (
+                                    <FunnelChart data={pipelineData} color={chartCssVars.linePrimary} />
+                                ) : (
+                                    <EmptyPanel label="No enrollment pipeline data is available yet." />
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <Card className={`${adminPanelClass} lg:col-span-7`}>
+                            <SectionHeading icon={Banknote} title="Finance snapshot" description="Current period assessment and collection" />
+                            <CardContent className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
+                                <MetricTile
+                                    icon={Banknote}
+                                    label="Collected"
+                                    value={formatCurrency(finance.total_revenue, currency)}
+                                    description="Revenue recorded this period"
+                                />
+                                <MetricTile
+                                    icon={AlertTriangle}
+                                    label="Outstanding"
+                                    value={formatCurrency(finance.total_collectibles, currency)}
+                                    description="Remaining balances"
+                                />
+                                <MetricTile
+                                    icon={School}
+                                    label="Assessed"
+                                    value={formatCurrency(finance.total_assessed, currency)}
+                                    description="Total tuition assessed"
+                                />
+                                <MetricTile
+                                    icon={Activity}
+                                    label="Today"
+                                    value={formatCurrency(finance.today_collection, currency)}
+                                    description={`${formatNumber(finance.today_transactions)} transactions`}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="enrollment" className="grid gap-4">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <MetricTile
+                            icon={ClipboardCheck}
+                            label="Applicants"
+                            value={formatNumber(admin_data.enrollment_health.applicants)}
+                            description="Students still marked applicant"
+                        />
+                        <MetricTile
+                            icon={GraduationCap}
+                            label="Enrolled"
+                            value={formatNumber(admin_data.enrollment_health.enrolled)}
+                            description="Student profiles marked enrolled"
+                        />
+                        <MetricTile
+                            icon={Workflow}
+                            label="Pending"
+                            value={formatNumber(admin_data.enrollment_health.pending)}
+                            description="Current-period records in review"
+                        />
+                        <MetricTile
+                            icon={PieChart}
+                            label="On leave"
+                            value={formatNumber(admin_data.enrollment_health.on_leave)}
+                            description="Students currently on leave"
+                        />
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        <Card className={adminPanelClass}>
+                            <SectionHeading icon={TrendingUp} title="Enrollment movement" description="Trend filtered by the selected range" />
+                            <CardContent className="p-5">
+                                <EnrollmentTrendChart data={filteredTrends} />
+                            </CardContent>
+                        </Card>
+                        <Card className={adminPanelClass}>
+                            <SectionHeading icon={Workflow} title="Pipeline stages" description="Where enrollment work currently sits" />
+                            <CardContent className="p-5">
+                                {hasPositiveData(pipelineData, "value") ? (
+                                    <FunnelChart data={pipelineData} color={chartCssVars.linePrimary} orientation="vertical" />
+                                ) : (
+                                    <EmptyPanel label="No enrollment pipeline data is available yet." />
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="students" className="grid gap-4">
+                    <div className="grid gap-4 lg:grid-cols-12">
+                        <Card className={`${adminPanelClass} lg:col-span-7`}>
+                            <SectionHeading icon={Users} title="Student mix" description="Distribution by student type" />
+                            <CardContent className="p-5">
+                                <StudentMixChart items={admin_data.student_demographics.by_type} total={admin_data.student_demographics.total} />
+                            </CardContent>
+                        </Card>
+                        <Card className={`${adminPanelClass} lg:col-span-5`}>
+                            <SectionHeading icon={GraduationCap} title="Year levels" description="Students by academic year" />
+                            <CardContent className="p-5">
+                                <BarComparisonChart data={yearLevelData} labelKey="label" dataKey="count" />
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-12">
+                        <Card className={`${adminPanelClass} lg:col-span-5`}>
+                            <SectionHeading icon={PieChart} title="Gender distribution" description="Student profile distribution" />
+                            <CardContent className="grid gap-3 p-5">
+                                {admin_data.student_demographics.by_gender.map((item, index) => (
+                                    <div key={item.gender} className="grid grid-cols-[1fr_auto] items-center gap-3">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
+                                                <p className="text-sm font-medium">{item.gender}</p>
+                                            </div>
+                                            <div className="bg-muted mt-2 h-2 rounded-full">
+                                                <div
+                                                    className="h-2 rounded-full"
+                                                    style={{
+                                                        width: `${admin_data.student_demographics.total > 0 ? Math.round((item.count / admin_data.student_demographics.total) * 100) : 0}%`,
+                                                        backgroundColor: chartPalette[index % chartPalette.length],
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <span className="text-muted-foreground text-sm tabular-nums">{formatNumber(item.count)}</span>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                        <Card className={`${adminPanelClass} lg:col-span-7`}>
+                            <SectionHeading icon={School} title="Top courses" description="Largest student populations by course" />
+                            <CardContent className="p-5">
+                                <HorizontalBarChart data={topCourseData} labelKey="label" dataKey="count" />
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <Card className={adminPanelClass}>
+                        <SectionHeading icon={Users} title="Recent registrations" description="Latest student profiles created in the system" />
+                        <CardContent className="p-0">
+                            <RecentStudentsTable students={admin_data.recent_records.students} />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="operations" className="grid gap-4">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <MetricTile
+                            icon={School}
+                            label="Active classes"
+                            value={formatNumber(admin_data.operations.active_classes)}
+                            description="Classes in the current academic period"
+                        />
+                        <MetricTile
+                            icon={GraduationCap}
+                            label="Faculty"
+                            value={formatNumber(admin_data.operations.total_faculty)}
+                            description="Faculty profiles in the system"
+                        />
+                        <MetricTile
+                            icon={Users}
+                            label="Portal users"
+                            value={formatNumber(admin_data.operations.total_users)}
+                            description="Accounts with portal access"
+                        />
+                        <MetricTile
+                            icon={AlertTriangle}
+                            label="Unassigned"
+                            value={formatNumber(admin_data.operations.unassigned_classes)}
+                            description="Classes without assigned faculty"
+                        />
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-12">
+                        <Card className={`${adminPanelClass} lg:col-span-7`}>
+                            <SectionHeading icon={ListChecks} title="Operational queue" description="Work that needs attention" />
+                            <CardContent className="p-4">
+                                <ActionQueue items={admin_data.operations.action_queue} />
+                            </CardContent>
+                        </Card>
+                        <Card className={`${adminPanelClass} lg:col-span-5`}>
+                            <SectionHeading icon={Info} title="Admin guidance" description="Simple hints for new administrators" />
+                            <CardContent className="grid gap-3 p-4">
+                                {admin_data.beginner_tips.map((tip) => (
+                                    <div key={tip.title} className="border-border/60 bg-background/40 rounded-lg border p-4">
+                                        <div className="flex gap-3">
+                                            <Info className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+                                            <div>
+                                                <p className="text-foreground font-medium">{tip.title}</p>
+                                                <p className="text-muted-foreground mt-1 text-sm">{tip.content}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <Card className={adminPanelClass}>
+                        <SectionHeading icon={Activity} title="Recent activity" description="Recent system and staff actions" />
+                        <CardContent className="p-0">
+                            <RecentActivityTable activity={admin_data.recent_records.activity} />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
             <div className="grid gap-4 lg:grid-cols-12">
                 <Card className={`${adminPanelClass} lg:col-span-7`}>
-                    <CardHeader className="border-border/60 border-b pb-4">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <LineChart className="text-primary h-4 w-4" />
-                            Enrollment trends
-                        </CardTitle>
-                        <CardDescription>Monthly enrollments for the current year</CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative px-2 pt-4 sm:px-6 sm:pt-6">
-                        <ChartContainer config={enrollmentTrendConfig} className="aspect-auto h-[250px] w-full">
-                            <AreaChart data={admin_data.analytics.enrollment_trends}>
-                                <defs>
-                                    <linearGradient id="fillEnrollments" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-enrollments)" stopOpacity={0.45} />
-                                        <stop offset="95%" stopColor="var(--color-enrollments)" stopOpacity={0.08} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="4 4" className="stroke-border/70" />
-                                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} className="text-muted-foreground" />
-                                <YAxis tickLine={false} axisLine={false} tickMargin={8} width={40} className="text-muted-foreground" />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                                <ChartLegend content={<ChartLegendContent />} />
-                                <Area
-                                    dataKey="enrollments"
-                                    type="monotone"
-                                    fill="url(#fillEnrollments)"
-                                    stroke="var(--color-enrollments)"
-                                    strokeWidth={2}
-                                />
-                            </AreaChart>
-                        </ChartContainer>
-                        {!hasEnrollmentTrendData && (
-                            <EmptyChartState title="No enrollment trend yet" description="Monthly movement appears once records are available." />
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card className={`${adminPanelClass} lg:col-span-5`}>
-                    <CardHeader className="border-border/60 border-b pb-4">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Workflow className="text-primary h-4 w-4" />
-                            Enrollment workflow
-                        </CardTitle>
-                        <CardDescription>Distribution for the current term</CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative px-2 pt-4 sm:px-6 sm:pt-6">
-                        <ChartContainer config={enrollmentCountConfig} className="aspect-auto h-[250px] w-full">
-                            <BarChart data={admin_data.analytics.enrollment_status} layout="vertical">
-                                <CartesianGrid horizontal={false} strokeDasharray="4 4" className="stroke-border/70" />
-                                <XAxis type="number" tickLine={false} axisLine={false} className="text-muted-foreground" />
-                                <YAxis
-                                    dataKey="status"
-                                    type="category"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    width={140}
-                                    className="text-muted-foreground"
-                                />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                                <Bar dataKey="count" fill="var(--color-count)" radius={6} />
-                            </BarChart>
-                        </ChartContainer>
-                        {!hasWorkflowData && (
-                            <EmptyChartState
-                                title="No workflow volume"
-                                description="Pending, verification, and enrolled counts are currently empty."
-                            />
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-12">
-                <Card className={`${adminPanelClass} lg:col-span-6`}>
-                    <CardHeader className="border-border/60 border-b pb-4">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Users className="text-primary h-4 w-4" />
-                            Student types
-                        </CardTitle>
-                        <CardDescription>Distribution of students by type</CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative px-2 pt-4 sm:px-6 sm:pt-6">
-                        <ChartContainer config={studentCountConfig} className="aspect-auto h-[250px] w-full">
-                            <BarChart
-                                data={admin_data.analytics.student_types.map((item) => ({
-                                    label: item.type.toUpperCase(),
-                                    count: item.count,
-                                }))}
-                            >
-                                <CartesianGrid vertical={false} strokeDasharray="4 4" className="stroke-border/70" />
-                                <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} className="text-muted-foreground" />
-                                <YAxis tickLine={false} axisLine={false} tickMargin={8} width={40} className="text-muted-foreground" />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                                <Bar dataKey="count" fill="var(--color-count)" radius={6} />
-                            </BarChart>
-                        </ChartContainer>
-                        {!hasStudentTypeData && (
-                            <EmptyChartState title="No student type data" description="Distribution appears after student profiles are added." />
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card className={`${adminPanelClass} lg:col-span-6`}>
-                    <CardHeader className="border-border/60 border-b pb-4">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <GraduationCap className="text-primary h-4 w-4" />
-                            Top courses
-                        </CardTitle>
-                        <CardDescription>Largest student populations by course</CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative px-2 pt-4 sm:px-6 sm:pt-6">
-                        <ChartContainer config={studentCountConfig} className="aspect-auto h-[250px] w-full">
-                            <BarChart
-                                data={admin_data.analytics.top_courses.map((course) => ({
-                                    label: course.code,
-                                    count: course.student_count,
-                                }))}
-                            >
-                                <CartesianGrid vertical={false} strokeDasharray="4 4" className="stroke-border/70" />
-                                <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} className="text-muted-foreground" />
-                                <YAxis tickLine={false} axisLine={false} tickMargin={8} width={40} className="text-muted-foreground" />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                                <Bar dataKey="count" fill="var(--color-count)" radius={6} />
-                            </BarChart>
-                        </ChartContainer>
-                        {!hasTopCourseData && (
-                            <EmptyChartState title="No course volume yet" description="Top courses appear after enrollments exist." />
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Card className={adminPanelClass}>
-                <CardHeader className="border-border/60 border-b pb-4">
-                    <CardTitle className="text-base">Recent student registrations</CardTitle>
-                    <CardDescription>Latest student profiles created in the system</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {admin_data.analytics.recent_students.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Student ID</TableHead>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Type</TableHead>
-                                        <TableHead>Course</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Registered</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {admin_data.analytics.recent_students.map((student) => (
-                                        <TableRow key={student.id} className="hover:bg-muted/35">
-                                            <TableCell className="text-muted-foreground font-mono text-xs">{student.student_id || "-"}</TableCell>
-                                            <TableCell className="font-medium">{student.name}</TableCell>
-                                            <TableCell className="text-muted-foreground">{student.type?.toUpperCase() || "-"}</TableCell>
-                                            <TableCell className="text-muted-foreground">{student.course || "-"}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="rounded-md">
-                                                    {student.status || "-"}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-right">
-                                                {new Date(student.registered_at).toLocaleString()}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    ) : (
-                        <div className="p-4">
-                            <EmptyTableState label="No student registrations yet." />
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <div className="grid gap-4 lg:grid-cols-12">
-                <Card className={`${adminPanelClass} lg:col-span-7`}>
-                    <CardHeader className="border-border/60 border-b pb-4">
-                        <CardTitle className="text-base">Quick actions</CardTitle>
-                        <CardDescription>Shortcuts for common admin tasks.</CardDescription>
-                    </CardHeader>
+                    <SectionHeading icon={ArrowUpRight} title="Quick links" description="Shortcuts for common administrator tasks" />
                     <CardContent className="grid gap-3 p-4">
                         {admin_data.quick_actions.map((action) => (
                             <div
@@ -430,13 +919,12 @@ export default function AdministratorDashboard({ user, admin_data }: AdminDashbo
                                     </div>
                                     <p className="text-muted-foreground mt-1 text-sm">{action.description}</p>
                                 </div>
-
                                 {action.disabled ? (
                                     <Button variant="secondary" disabled title={action.disabledTooltip} className="rounded-lg">
                                         Unavailable
                                     </Button>
                                 ) : (
-                                    <Button asChild className="rounded-lg">
+                                    <Button asChild variant="outline" className="rounded-lg">
                                         <Link href={action.href}>
                                             Open
                                             <ArrowUpRight className="ml-2 h-4 w-4" />
@@ -449,83 +937,22 @@ export default function AdministratorDashboard({ user, admin_data }: AdminDashbo
                 </Card>
 
                 <Card className={`${adminPanelClass} lg:col-span-5`}>
-                    <CardHeader className="border-border/60 border-b pb-4">
-                        <CardTitle className="text-base">Beginner tips</CardTitle>
-                        <CardDescription>Simple guidance for new admins.</CardDescription>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <AlertTriangle className="text-muted-foreground h-4 w-4" />
+                            Filament admin panel
+                        </CardTitle>
+                        <CardDescription>
+                            Filament is served on the separate admin subdomain. This portal view focuses on administrator workflows inside the portal URL.
+                        </CardDescription>
                     </CardHeader>
-                    <CardContent className="grid gap-3 p-4">
-                        {admin_data.beginner_tips.map((tip) => (
-                            <div key={tip.title} className="border-border/60 bg-background/40 rounded-lg border p-4">
-                                <div className="flex gap-3">
-                                    <Info className="text-primary mt-0.5 h-4 w-4 shrink-0" />
-                                    <div>
-                                        <p className="text-foreground font-medium">{tip.title}</p>
-                                        <p className="text-muted-foreground mt-1 text-sm">{tip.content}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                    <CardContent>
+                        <p className="text-muted-foreground text-sm">
+                            Open Filament by visiting the admin domain configured by your system administrator.
+                        </p>
                     </CardContent>
                 </Card>
             </div>
-
-            <Card className={adminPanelClass}>
-                <CardHeader className="border-border/60 border-b pb-4">
-                    <CardTitle className="text-base">Recent activity</CardTitle>
-                    <CardDescription>A quick log of recent system and staff actions.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    {admin_data.recent_activity.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Actor</TableHead>
-                                        <TableHead>Action</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Time</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {admin_data.recent_activity.map((item, index) => (
-                                        <TableRow key={`${item.actor}-${item.action}-${item.time}-${index}`} className="hover:bg-muted/35">
-                                            <TableCell className="font-medium">{item.actor}</TableCell>
-                                            <TableCell className="text-muted-foreground">{item.action}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="rounded-md">
-                                                    {item.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-right">{item.time}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    ) : (
-                        <div className="p-4">
-                            <EmptyTableState label="No recent activity yet." />
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className="border-border/60 bg-muted/20 rounded-lg border-dashed">
-                <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                        <AlertTriangle className="text-muted-foreground h-4 w-4" />
-                        Filament admin panel
-                    </CardTitle>
-                    <CardDescription>
-                        Filament is served on the separate admin subdomain. This portal section is only for administrator pages inside the portal URL.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground text-sm">
-                        Open Filament by visiting the admin domain configured by your system administrator.
-                    </p>
-                </CardContent>
-            </Card>
         </AdminLayout>
     );
 }

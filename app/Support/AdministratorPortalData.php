@@ -6,11 +6,17 @@ namespace App\Support;
 
 use App\Enums\StudentStatus;
 use App\Enums\StudentType;
+use App\Models\Classes;
 use App\Models\Course;
+use App\Models\Faculty;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
+use App\Models\StudentTransaction;
+use App\Models\StudentTuition;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\EnrollmentPipelineService;
+use App\Services\GeneralSettingsService;
 use Carbon\Carbon;
 use Flowframe\Trend\Trend;
 use Flowframe\Trend\TrendValue;
@@ -41,6 +47,9 @@ final class AdministratorPortalData
     {
         unset($user);
         $pipeline = app(EnrollmentPipelineService::class);
+        $settings = app(GeneralSettingsService::class);
+        $currentSchoolYear = $settings->getCurrentSchoolYearString();
+        $currentSemester = $settings->getCurrentSemester();
 
         $pendingEnrollments = StudentEnrollment::currentAcademicPeriod()
             ->withTrashed()
@@ -54,6 +63,16 @@ final class AdministratorPortalData
 
         $totalStudents = $studentStats->total;
         $applicationStats = self::buildApplicationStats($studentStats);
+        $financeSnapshot = self::getFinanceSnapshot($currentSchoolYear, $currentSemester);
+        $enrollmentPipeline = self::getEnrollmentPipelineDistribution($pendingEnrollments, $enrolledThisPeriod);
+        $enrollmentTrends = self::getEnrollmentTrends();
+        $studentTypes = self::buildStudentTypeDistribution($studentStats, $totalStudents);
+        $genderDistribution = self::buildGenderDistribution($studentStats);
+        $yearLevelDistribution = self::buildYearLevelDistribution($studentStats);
+        $topCourses = self::getTopCourses();
+        $recentStudents = self::getRecentStudents();
+        $recentActivity = self::getRecentActivity();
+        $operations = self::getOperationsSnapshot($pendingEnrollments, $financeSnapshot['outstanding_count']);
 
         $stats = [
             [
@@ -83,18 +102,50 @@ final class AdministratorPortalData
         ];
 
         return [
+            'current_period' => [
+                'school_year' => $currentSchoolYear,
+                'semester' => $currentSemester,
+                'label' => sprintf('SY %s, Semester %d', $currentSchoolYear, $currentSemester),
+            ],
             'stats' => $stats,
-            'recent_activity' => self::getRecentActivity(),
+            'executive_summary' => [
+                'kpis' => $stats,
+                'last_updated_at' => now()->toIso8601String(),
+            ],
+            'recent_activity' => $recentActivity,
+            'enrollment_health' => [
+                'pending' => $pendingEnrollments,
+                'enrolled_this_period' => $enrolledThisPeriod,
+                'conversion_rate' => $applicationStats['conversion_rate'],
+                'applicants' => $applicationStats['applicants'],
+                'enrolled' => $applicationStats['enrolled'],
+                'on_leave' => $applicationStats['on_leave'],
+                'pipeline' => $enrollmentPipeline,
+                'trends' => $enrollmentTrends,
+            ],
+            'student_demographics' => [
+                'total' => $totalStudents,
+                'by_type' => $studentTypes,
+                'by_gender' => $genderDistribution,
+                'by_year_level' => $yearLevelDistribution,
+                'top_courses' => $topCourses,
+            ],
+            'finance_snapshot' => $financeSnapshot,
+            'operations' => $operations,
+            'recent_records' => [
+                'students' => $recentStudents,
+                'activity' => $recentActivity,
+            ],
             'analytics' => [
                 'last_updated_at' => now()->toIso8601String(),
-                'enrollment_trends' => self::getEnrollmentTrends(),
-                'enrollment_status' => self::getEnrollmentStatusDistribution($pendingEnrollments, $enrolledThisPeriod),
+                'enrollment_trends' => $enrollmentTrends,
+                'enrollment_status' => $enrollmentPipeline,
                 'application_vs_enrollment' => $applicationStats,
-                'student_types' => self::buildStudentTypeDistribution($studentStats, $totalStudents),
-                'gender_distribution' => self::buildGenderDistribution($studentStats),
-                'year_level_distribution' => self::buildYearLevelDistribution($studentStats),
-                'top_courses' => self::getTopCourses(),
-                'recent_students' => self::getRecentStudents(),
+                'student_types' => $studentTypes,
+                'gender_distribution' => $genderDistribution,
+                'year_level_distribution' => $yearLevelDistribution,
+                'top_courses' => $topCourses,
+                'recent_students' => $recentStudents,
             ],
         ];
     }
@@ -233,7 +284,7 @@ final class AdministratorPortalData
     }
 
     /**
-     * @return array<int, array{month: string, enrollments: int}>
+     * @return array<int, array{date: string, month: string, enrollments: int}>
      */
     private static function getEnrollmentTrends(): array
     {
@@ -247,6 +298,7 @@ final class AdministratorPortalData
 
         return $data
             ->map(fn (TrendValue $value): array => [
+                'date' => Carbon::parse($value->date)->startOfMonth()->toDateString(),
                 'month' => Carbon::parse($value->date)->format('M'),
                 'enrollments' => (int) $value->aggregate,
             ])
@@ -259,21 +311,44 @@ final class AdministratorPortalData
      */
     private static function getEnrollmentStatusDistribution(int $pendingCount, int $enrolledCount): array
     {
+        return self::getEnrollmentPipelineDistribution($pendingCount, $enrolledCount);
+    }
+
+    /**
+     * @return array<int, array{status: string, count: int, color: string}>
+     */
+    private static function getEnrollmentPipelineDistribution(int $pendingCount, int $enrolledCount): array
+    {
         $pipeline = app(EnrollmentPipelineService::class);
-        $verificationStatus = $pipeline->getDepartmentVerifiedStatus();
-        $pendingLabel = $pipeline->getStatusLabels()[$pipeline->getPendingStatus()] ?? 'Pending';
-        $verificationLabel = $pipeline->getStatusLabels()[$verificationStatus] ?? 'In Verification';
-
-        $verifiedByHeadCount = StudentEnrollment::currentAcademicPeriod()
+        $statusCounts = StudentEnrollment::currentAcademicPeriod()
             ->withTrashed()
-            ->where('status', $verificationStatus)
-            ->count();
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
 
-        return [
-            ['status' => $pendingLabel, 'count' => $pendingCount],
-            ['status' => $verificationLabel, 'count' => $verifiedByHeadCount],
-            ['status' => 'Enrolled', 'count' => $enrolledCount],
-        ];
+        $completionStatus = $pipeline->getCashierVerifiedStatus();
+
+        return collect($pipeline->getSteps())
+            ->map(function (array $step) use ($completionStatus, $enrolledCount, $pendingCount, $pipeline, $statusCounts): array {
+                $status = (string) $step['status'];
+                $count = (int) ($statusCounts[$status] ?? 0);
+
+                if ($status === $pipeline->getPendingStatus()) {
+                    $count = $pendingCount;
+                }
+
+                if ($status === $completionStatus) {
+                    $count = $enrolledCount;
+                }
+
+                return [
+                    'status' => (string) ($step['label'] ?? $status),
+                    'count' => $count,
+                    'color' => (string) ($step['color'] ?? 'blue'),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     /**
@@ -373,5 +448,106 @@ final class AdministratorPortalData
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array{
+     *     total_revenue: float,
+     *     total_collectibles: float,
+     *     total_assessed: float,
+     *     collection_rate: float,
+     *     fully_paid_count: int,
+     *     outstanding_count: int,
+     *     today_collection: float,
+     *     today_transactions: int
+     * }
+     */
+    private static function getFinanceSnapshot(string $schoolYear, int $semester): array
+    {
+        $periodTuition = StudentTuition::query()
+            ->whereHas('enrollment', function ($query) use ($schoolYear, $semester): void {
+                $query->forAcademicPeriod($schoolYear, $semester);
+            });
+
+        $totalRevenue = (float) StudentTransaction::query()
+            ->whereHas('transaction', function ($query) use ($schoolYear, $semester): void {
+                $query->forAcademicPeriod($schoolYear, $semester);
+            })
+            ->sum('amount');
+
+        $totalCollectibles = (float) (clone $periodTuition)->sum('total_balance');
+        $totalAssessed = (float) (clone $periodTuition)->sum('overall_tuition');
+        $collectionRate = $totalAssessed > 0 ? round(($totalRevenue / $totalAssessed) * 100, 1) : 0.0;
+
+        $todayStart = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
+        $todayTransactions = Transaction::query()
+            ->whereBetween('transaction_date', [$todayStart, $todayEnd])
+            ->get();
+
+        return [
+            'total_revenue' => $totalRevenue,
+            'total_collectibles' => $totalCollectibles,
+            'total_assessed' => $totalAssessed,
+            'collection_rate' => $collectionRate,
+            'fully_paid_count' => (clone $periodTuition)->where('total_balance', '<=', 0)->count(),
+            'outstanding_count' => (clone $periodTuition)->where('total_balance', '>', 0)->count(),
+            'today_collection' => (float) $todayTransactions->sum(fn (Transaction $transaction): float => $transaction->raw_total_amount),
+            'today_transactions' => $todayTransactions->count(),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     total_faculty: int,
+     *     active_classes: int,
+     *     total_users: int,
+     *     unassigned_classes: int,
+     *     action_queue: array<int, array{label: string, value: int, description: string, href: string, tone: string}>
+     * }
+     */
+    private static function getOperationsSnapshot(int $pendingEnrollments, int $outstandingBalances): array
+    {
+        $activeClasses = Classes::currentAcademicPeriod()->count();
+        $unassignedClasses = Classes::currentAcademicPeriod()
+            ->whereNull('faculty_id')
+            ->count();
+
+        return [
+            'total_faculty' => Faculty::query()->count(),
+            'active_classes' => $activeClasses,
+            'total_users' => User::query()->count(),
+            'unassigned_classes' => $unassignedClasses,
+            'action_queue' => [
+                [
+                    'label' => 'Enrollment reviews',
+                    'value' => $pendingEnrollments,
+                    'description' => 'Pending enrollment records awaiting staff review.',
+                    'href' => route('administrators.enrollments.index'),
+                    'tone' => $pendingEnrollments > 0 ? 'warning' : 'success',
+                ],
+                [
+                    'label' => 'Outstanding balances',
+                    'value' => $outstandingBalances,
+                    'description' => 'Students with remaining tuition balances this period.',
+                    'href' => route('administrators.finance.reports', ['tab' => 'outstanding']),
+                    'tone' => $outstandingBalances > 0 ? 'warning' : 'success',
+                ],
+                [
+                    'label' => 'Unassigned classes',
+                    'value' => $unassignedClasses,
+                    'description' => 'Current-period classes without an assigned faculty member.',
+                    'href' => route('administrators.scheduling-analytics.index'),
+                    'tone' => $unassignedClasses > 0 ? 'info' : 'success',
+                ],
+                [
+                    'label' => 'Audit review',
+                    'value' => Activity::query()->where('created_at', '>=', now()->subDay())->count(),
+                    'description' => 'System events recorded in the last 24 hours.',
+                    'href' => route('administrators.audit-logs.index'),
+                    'tone' => 'neutral',
+                ],
+            ],
+        ];
     }
 }
