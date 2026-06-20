@@ -1,47 +1,57 @@
+import {
+    assignClasses,
+    destroy,
+    edit,
+    index,
+    managePortalAccount,
+    sendNotice,
+    storeDeadline,
+    unassignClass,
+    updateFacultyIdNumber,
+} from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Empty } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { User } from "@/types/user";
-import { Head, Link, router } from "@inertiajs/react";
+import type { User } from "@/Types/user";
+import { Head, Link, router, useForm } from "@inertiajs/react";
 import {
+    AlertTriangle,
     BookOpen,
-    Calendar,
-    Clock,
+    CalendarClock,
+    CheckCircle2,
     ExternalLink,
     GraduationCap,
     IdCard,
+    KeyRound,
     Mail,
-    MapPin,
+    Megaphone,
     Phone,
-    Plus,
-    School,
-    Search,
+    Save,
     Trash2,
-    User as UserIcon,
+    UserCog,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { route } from "ziggy-js";
 
-type Schedule = {
-    start_time: string;
-    end_time: string;
+type Option = { value: string; label: string };
+
+type ScheduleSlot = {
     time_range: string;
     room: { id: number; name: string };
 };
 
-type WeeklySchedule = Record<string, Schedule[]>;
+type WeeklySchedule = Record<string, ScheduleSlot[]>;
 
 type ClassRow = {
     id: number;
@@ -51,7 +61,20 @@ type ClassRow = {
     school_year: string;
     semester: number;
     classification: string | null;
-    schedule?: WeeklySchedule;
+    student_count: number | null;
+    schedule?: WeeklySchedule | null;
+};
+
+type AssignmentWarning = {
+    type: "reassignment" | "schedule_conflict" | "heavy_load";
+    message: string;
+};
+
+type AssignmentClass = ClassRow & {
+    label: string;
+    assigned_faculty: { id: string; name: string } | null;
+    assignment_status: "unassigned" | "assigned_here" | "assigned_elsewhere";
+    warnings: AssignmentWarning[];
 };
 
 type FacultyDetail = {
@@ -76,30 +99,66 @@ type FacultyDetail = {
     age: number | null;
     classes: ClassRow[];
     current_classes: ClassRow[];
+    profile_completion: {
+        completed: number;
+        total: number;
+        percent: number;
+        missing: string[];
+    };
+    portal_account: {
+        status: "linked" | "needs_repair" | "not_linked";
+        label: string;
+        user_id: number | null;
+        role: string | null;
+        role_label: string | null;
+        email_verified_at: string | null;
+        last_login_at: string | null;
+        needs_repair: boolean;
+    };
+    workload_summary: {
+        current_classes_count: number;
+        level: "needs_classes" | "light" | "balanced" | "heavy";
+        label: string;
+    };
+    recommended_actions: {
+        type: string;
+        title: string;
+        description: string;
+    }[];
+    recent_notifications: {
+        id: string;
+        title: string;
+        message: string;
+        priority: string;
+        read_at: string | null;
+        created_at: string | null;
+    }[];
+    deadlines: {
+        id: number;
+        title: string;
+        description: string | null;
+        due_date: string | null;
+        priority: string;
+        type: string | null;
+        class_label: string | null;
+    }[];
     filament: {
         view_url: string;
         edit_url: string;
     };
 };
 
-type UnassignedClassOption = {
-    id: number;
-    subject_code: string;
-    subject_title: string | null;
-    section: string;
-    schedule: WeeklySchedule;
-    label: string;
-    units: number;
-};
-
-type Option = { value: string; label: string };
-
 interface FacultyShowProps {
     user: User;
     faculty: FacultyDetail;
+    assignment_planner: {
+        classes: AssignmentClass[];
+    };
     options: {
-        unassigned_classes: UnassignedClassOption[];
         statuses: Option[];
+        faculty_roles: Option[];
+        deadline_priorities: Option[];
+        notice_priorities: Option[];
     };
 }
 
@@ -108,583 +167,685 @@ function statusLabel(status: string | null | undefined): string {
     if (status === "active") return "Active";
     if (status === "inactive") return "Inactive";
     if (status === "on_leave") return "On Leave";
+
     return status;
 }
 
-function statusBadgeVariant(status: string | null | undefined): "default" | "secondary" | "outline" {
-    if (status === "active") return "default";
-    if (status === "inactive") return "secondary";
-    if (status === "on_leave") return "outline";
-    return "outline";
-}
+function formatSchedule(schedule: WeeklySchedule | null | undefined) {
+    if (!schedule) return <span className="text-muted-foreground">TBA</span>;
 
-function formatSchedule(schedule: WeeklySchedule | undefined) {
-    if (!schedule) return "TBA";
+    const entries = Object.entries(schedule)
+        .flatMap(([day, slots]) => slots.map((slot) => ({ day, slot })))
+        .filter((entry) => entry.slot);
 
-    const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-    const entries: { day: string; time: string; room: string }[] = [];
+    if (entries.length === 0) return <span className="text-muted-foreground">TBA</span>;
 
-    days.forEach((day) => {
-        if (schedule[day] && schedule[day].length > 0) {
-            schedule[day].forEach((slot) => {
-                entries.push({
-                    day: day.slice(0, 3).toUpperCase(),
-                    time: slot.time_range,
-                    room: slot.room.name,
-                });
-            });
-        }
-    });
-
-    if (entries.length === 0) return "TBA";
-
-    // Group by time/room to combine days (e.g. MWF 9-10)
-    // Simple grouping logic for visualization
     return (
-        <div className="flex flex-col gap-1">
-            {entries.map((entry, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-xs">
-                    <Badge variant="outline" className="h-5 px-1 py-0 font-mono text-[10px]">
-                        {entry.day}
+        <div className="space-y-1">
+            {entries.map((entry, index) => (
+                <div key={`${entry.day}-${index}`} className="text-muted-foreground flex items-center gap-2 text-xs">
+                    <Badge variant="outline" className="h-5 px-1.5 py-0 font-mono text-[10px]">
+                        {entry.day.slice(0, 3).toUpperCase()}
                     </Badge>
-                    <span className="text-muted-foreground">{entry.time}</span>
-                    <span className="text-muted-foreground">• {entry.room}</span>
+                    <span>{entry.slot.time_range}</span>
+                    <span>{entry.slot.room.name}</span>
                 </div>
             ))}
         </div>
     );
 }
 
-export default function AdministratorFacultyShow({ user, faculty, options }: FacultyShowProps) {
-    const [idDialogOpen, setIdDialogOpen] = useState(false);
-    const [assignOpen, setAssignOpen] = useState(false);
+export default function AdministratorFacultyShow({ user, faculty, assignment_planner, options }: FacultyShowProps) {
+    const [assignmentSearch, setAssignmentSearch] = useState("");
 
-    const [facultyIdNumber, setFacultyIdNumber] = useState(faculty.faculty_id_number ?? "");
-    const [assignSearch, setAssignSearch] = useState("");
-    const [selectedClassIds, setSelectedClassIds] = useState<Set<number>>(new Set());
+    const idForm = useForm({ faculty_id_number: faculty.faculty_id_number ?? "" });
+    const assignmentForm = useForm({
+        class_ids: [] as number[],
+        allow_reassignment: false,
+        notify_faculty: true,
+    });
+    const portalForm = useForm({
+        mode: faculty.portal_account.status === "not_linked" ? "create" : "repair",
+        role: faculty.portal_account.role ?? options.faculty_roles[0]?.value ?? "instructor",
+        send_reset_link: true,
+    });
+    const noticeForm = useForm({
+        title: "",
+        message: "",
+        priority: "normal",
+        action_url: "",
+    });
+    const deadlineForm = useForm({
+        title: "",
+        description: "",
+        due_date: "",
+        priority: "medium",
+        type: "administrative",
+        class_id: "none",
+    });
 
-    const filteredUnassigned = useMemo(() => {
-        const query = assignSearch.trim().toLowerCase();
-        if (!query) return options.unassigned_classes;
+    const filteredPlannerClasses = useMemo(() => {
+        const query = assignmentSearch.trim().toLowerCase();
+        if (!query) return assignment_planner.classes;
 
-        return options.unassigned_classes.filter(
-            (opt) =>
-                opt.label.toLowerCase().includes(query) ||
-                opt.subject_code.toLowerCase().includes(query) ||
-                (opt.subject_title && opt.subject_title.toLowerCase().includes(query)),
-        );
-    }, [assignSearch, options.unassigned_classes]);
+        return assignment_planner.classes.filter((item) => {
+            return item.label.toLowerCase().includes(query) || item.subject_code.toLowerCase().includes(query) || item.section.toLowerCase().includes(query);
+        });
+    }, [assignmentSearch, assignment_planner.classes]);
 
-    const toggleClass = (classId: number) => {
-        setSelectedClassIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(classId)) next.delete(classId);
-            else next.add(classId);
-            return next;
+    const selectedPlannerClasses = useMemo(() => {
+        return assignment_planner.classes.filter((item) => assignmentForm.data.class_ids.includes(item.id));
+    }, [assignmentForm.data.class_ids, assignment_planner.classes]);
+
+    const selectedHasReassignment = selectedPlannerClasses.some((item) => item.assignment_status === "assigned_elsewhere");
+    const selectedWarnings = selectedPlannerClasses.flatMap((item) => item.warnings.map((warning) => ({ ...warning, classLabel: item.label })));
+
+    const toggleAssignmentClass = (classId: number) => {
+        const classIds = assignmentForm.data.class_ids.includes(classId)
+            ? assignmentForm.data.class_ids.filter((id) => id !== classId)
+            : [...assignmentForm.data.class_ids, classId];
+
+        assignmentForm.setData("class_ids", classIds);
+    };
+
+    const submitAssignments = () => {
+        assignmentForm.post(assignClasses.url(faculty.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                assignmentForm.reset("class_ids", "allow_reassignment");
+                setAssignmentSearch("");
+            },
         });
     };
 
-    const assignClasses = () => {
-        const classIds = Array.from(selectedClassIds);
-        if (classIds.length === 0) return;
-
-        router.post(
-            route("administrators.faculties.assign-classes", faculty.id),
-            { class_ids: classIds },
-            {
-                onSuccess: () => {
-                    setAssignSearch("");
-                    setSelectedClassIds(new Set());
-                    setAssignOpen(false);
-                },
-            },
-        );
+    const submitPortal = () => {
+        portalForm.post(managePortalAccount.url(faculty.id), { preserveScroll: true });
     };
 
-    const unassignClass = (classId: number) => {
+    const submitNotice = () => {
+        noticeForm.post(sendNotice.url(faculty.id), {
+            preserveScroll: true,
+            onSuccess: () => noticeForm.reset(),
+        });
+    };
+
+    const submitDeadline = () => {
+        deadlineForm.transform((data) => ({
+            ...data,
+            class_id: data.class_id === "none" ? null : Number(data.class_id),
+        }));
+
+        deadlineForm.post(storeDeadline.url(faculty.id), {
+            preserveScroll: true,
+            onSuccess: () => deadlineForm.reset(),
+        });
+    };
+
+    const submitFacultyId = () => {
+        idForm.put(updateFacultyIdNumber.url(faculty.id), { preserveScroll: true });
+    };
+
+    const removeClass = (classId: number) => {
         if (!confirm("Unassign this class from the faculty?")) return;
 
-        router.delete(
-            route("administrators.faculties.classes.unassign", {
-                faculty: faculty.id,
-                class: classId,
-            }),
-        );
-    };
-
-    const updateFacultyIdNumber = () => {
-        router.put(
-            route("administrators.faculties.update-id-number", faculty.id),
-            { faculty_id_number: facultyIdNumber },
-            { onSuccess: () => setIdDialogOpen(false) },
-        );
+        router.delete(unassignClass.url({ faculty: faculty.id, class: classId }), { preserveScroll: true });
     };
 
     const deleteFaculty = () => {
         if (!confirm(`Delete ${faculty.name}? This cannot be undone.`)) return;
-        router.delete(route("administrators.faculties.destroy", faculty.id));
+
+        router.delete(destroy.url(faculty.id));
     };
 
     return (
         <AdminLayout user={user} title="Faculty Details">
-            <Head title={`Faculty • ${faculty.name}`} />
+            <Head title={`Faculty - ${faculty.name}`} />
 
             <div className="space-y-6">
-                {/* Header Actions */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-muted-foreground flex items-center gap-2">
-                        <Link href={route("administrators.faculties.index")} className="hover:text-foreground transition-colors">
-                            Faculty Directory
-                        </Link>
-                        <span>/</span>
-                        <span className="text-foreground font-medium">{faculty.name}</span>
+                    <div>
+                        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                            <Link href={index.url()} className="hover:text-foreground transition-colors">
+                                Faculty Operations
+                            </Link>
+                            <span>/</span>
+                            <span className="text-foreground font-medium">{faculty.name}</span>
+                        </div>
+                        <h2 className="mt-2 text-2xl font-bold tracking-tight">{faculty.name}</h2>
+                        <p className="text-muted-foreground">Teaching load, portal access, notices, and profile records.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button asChild variant="outline" size="sm" className="text-foreground">
-                            <Link href={route("administrators.faculties.edit", faculty.id)}>Edit Profile</Link>
+                    <div className="flex flex-wrap gap-2">
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={edit.url(faculty.id)}>
+                                <UserCog className="mr-2 h-4 w-4" />
+                                Edit Profile
+                            </Link>
                         </Button>
-                        <Button asChild variant="outline" size="sm" className="text-foreground">
+                        <Button asChild variant="outline" size="sm">
                             <a href={faculty.filament.view_url} target="_blank" rel="noreferrer">
-                                <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                                <ExternalLink className="mr-2 h-4 w-4" />
                                 Filament
                             </a>
                         </Button>
                         <Button variant="destructive" size="sm" onClick={deleteFaculty}>
-                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                            <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-12">
-                    {/* Left Column: Profile & Personal Info */}
-                    <div className="space-y-6 lg:col-span-4">
-                        <Card className="overflow-hidden">
-                            <div className="bg-muted/30 relative h-24">
-                                <div className="absolute -bottom-12 left-6">
-                                    <Avatar className="border-background h-24 w-24 border-4 shadow-sm">
-                                        <AvatarImage src={faculty.avatar_url ?? undefined} alt={faculty.name} />
-                                        <AvatarFallback className="text-xl">{(faculty.name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                </div>
-                            </div>
-                            <CardHeader className="pt-16 pb-4">
-                                <div className="flex items-start justify-between">
+                <div className="grid gap-4 md:grid-cols-4">
+                    <MetricCard title="Current load" value={`${faculty.current_classes.length}`} detail={faculty.workload_summary.label} icon={BookOpen} />
+                    <MetricCard title="Portal" value={faculty.portal_account.label} detail={faculty.portal_account.role_label ?? "No role"} icon={KeyRound} />
+                    <MetricCard title="Profile" value={`${faculty.profile_completion.percent}%`} detail={`${faculty.profile_completion.completed}/${faculty.profile_completion.total} fields`} icon={CheckCircle2} />
+                    <MetricCard title="Status" value={statusLabel(faculty.status)} detail={faculty.department ?? "No department"} icon={GraduationCap} />
+                </div>
+
+                {faculty.recommended_actions.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-3">
+                        {faculty.recommended_actions.map((action) => (
+                            <Card key={action.title} className="border-yellow-200 bg-yellow-50/40">
+                                <CardContent className="flex gap-3 p-4">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-700" />
                                     <div>
-                                        <CardTitle className="text-xl">{faculty.name}</CardTitle>
-                                        <CardDescription className="mt-1 flex items-center gap-1.5">
-                                            <Mail className="h-3.5 w-3.5" /> {faculty.email}
-                                        </CardDescription>
+                                        <div className="text-sm font-medium">{action.title}</div>
+                                        <div className="text-muted-foreground text-xs">{action.description}</div>
                                     </div>
-                                    <Badge variant={statusBadgeVariant(faculty.status)} className="capitalize">
-                                        {statusLabel(faculty.status)}
-                                    </Badge>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                ) : null}
+
+                <Tabs defaultValue="overview" className="w-full">
+                    <TabsList className="grid w-full grid-cols-5">
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="load">Teaching load</TabsTrigger>
+                        <TabsTrigger value="portal">Portal access</TabsTrigger>
+                        <TabsTrigger value="notices">Notices</TabsTrigger>
+                        <TabsTrigger value="records">Records</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="overview" className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-14 w-14">
+                                        <AvatarImage src={faculty.avatar_url ?? undefined} alt={faculty.name} />
+                                        <AvatarFallback>{faculty.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0">
+                                        <CardTitle className="truncate">{faculty.name}</CardTitle>
+                                        <CardDescription className="truncate">{faculty.email}</CardDescription>
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="grid gap-3">
-                                    <div className="group flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-2">
-                                            <IdCard className="h-4 w-4" /> Faculty ID
-                                        </span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono">{faculty.faculty_id_number ?? "—"}</span>
-                                            <Dialog open={idDialogOpen} onOpenChange={setIdDialogOpen}>
-                                                <DialogTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                                                    >
-                                                        <span className="sr-only">Edit ID</span>
-                                                        <IdCard className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent>
-                                                    <DialogHeader>
-                                                        <DialogTitle>Update Faculty ID</DialogTitle>
-                                                        <DialogDescription>Enter the new ID number for this faculty member.</DialogDescription>
-                                                    </DialogHeader>
-                                                    <div className="grid gap-2 py-4">
-                                                        <Label htmlFor="faculty_id">Faculty ID Number</Label>
-                                                        <Input
-                                                            id="faculty_id"
-                                                            value={facultyIdNumber}
-                                                            onChange={(e) => setFacultyIdNumber(e.target.value)}
-                                                            placeholder="e.g. 100023"
-                                                        />
-                                                    </div>
-                                                    <DialogFooter>
-                                                        <Button variant="outline" onClick={() => setIdDialogOpen(false)}>
-                                                            Cancel
-                                                        </Button>
-                                                        <Button onClick={updateFacultyIdNumber}>Save Changes</Button>
-                                                    </DialogFooter>
-                                                </DialogContent>
-                                            </Dialog>
-                                        </div>
-                                    </div>
-
-                                    <Separator />
-
+                                <InfoRow icon={IdCard} label="Faculty ID" value={faculty.faculty_id_number ?? "Missing"} />
+                                <InfoRow icon={Mail} label="Email" value={faculty.email} />
+                                <InfoRow icon={Phone} label="Phone" value={faculty.phone_number ?? "None"} />
+                                <InfoRow icon={CalendarClock} label="Office hours" value={faculty.office_hours ?? "Not listed"} />
+                                <Separator />
+                                <div className="space-y-2">
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-2">
-                                            <School className="h-4 w-4" /> Department
-                                        </span>
-                                        <span>{faculty.department ?? "—"}</span>
+                                        <span className="font-medium">Profile completion</span>
+                                        <span className="text-muted-foreground">{faculty.profile_completion.percent}%</span>
                                     </div>
-
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-2">
-                                            <Phone className="h-4 w-4" /> Phone
-                                        </span>
-                                        <span>{faculty.phone_number ?? "—"}</span>
-                                    </div>
+                                    <Progress value={faculty.profile_completion.percent} className="h-2" />
+                                    {faculty.profile_completion.missing.length > 0 ? (
+                                        <div className="text-muted-foreground text-xs">Missing: {faculty.profile_completion.missing.join(", ")}</div>
+                                    ) : null}
                                 </div>
                             </CardContent>
                         </Card>
 
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <UserIcon className="h-4 w-4" /> Personal Details
-                                </CardTitle>
+                                <CardTitle>Quick Corrections</CardTitle>
+                                <CardDescription>Small administrative repairs that do not require opening the full edit form.</CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4 text-sm">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <div className="text-muted-foreground mb-1 text-xs">Gender</div>
-                                        <div className="capitalize">{faculty.gender ?? "—"}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-muted-foreground mb-1 text-xs">Age</div>
-                                        <div>{faculty.age ? `${faculty.age} years old` : "—"}</div>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
-                                            <Calendar className="h-3 w-3" /> Birth Date
-                                        </div>
-                                        <div>{faculty.birth_date ?? "—"}</div>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <div className="text-muted-foreground mb-1 flex items-center gap-1 text-xs">
-                                            <MapPin className="h-3 w-3" /> Address
-                                        </div>
-                                        <div className="whitespace-pre-line">{faculty.address_line1 ?? "—"}</div>
-                                    </div>
+                            <CardContent className="grid gap-4 md:grid-cols-[1fr_auto]">
+                                <div className="space-y-2">
+                                    <Label htmlFor="faculty_id_number">Faculty ID Number</Label>
+                                    <Input
+                                        id="faculty_id_number"
+                                        value={idForm.data.faculty_id_number}
+                                        onChange={(event) => idForm.setData("faculty_id_number", event.target.value)}
+                                    />
+                                    {idForm.errors.faculty_id_number ? <p className="text-sm text-red-500">{idForm.errors.faculty_id_number}</p> : null}
+                                </div>
+                                <div className="flex items-end">
+                                    <Button onClick={submitFacultyId} disabled={idForm.processing}>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Save ID
+                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>
+                    </TabsContent>
+
+                    <TabsContent value="load" className="mt-4 space-y-4">
+                        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Current Classes</CardTitle>
+                                    <CardDescription>Classes assigned in the active academic period.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ClassTable classes={faculty.current_classes} onUnassign={removeClass} />
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Assignment Planner</CardTitle>
+                                    <CardDescription>Select classes, review warnings, and optionally notify the faculty.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <Input value={assignmentSearch} onChange={(event) => setAssignmentSearch(event.target.value)} placeholder="Search classes" />
+                                    <div className="max-h-[440px] space-y-2 overflow-auto pr-1">
+                                        {filteredPlannerClasses.map((classItem) => {
+                                            const isSelected = assignmentForm.data.class_ids.includes(classItem.id);
+                                            const isAssignedHere = classItem.assignment_status === "assigned_here";
+
+                                            return (
+                                                <button
+                                                    key={classItem.id}
+                                                    type="button"
+                                                    disabled={isAssignedHere}
+                                                    onClick={() => toggleAssignmentClass(classItem.id)}
+                                                    className={cn(
+                                                        "w-full rounded-md border p-3 text-left transition",
+                                                        isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                                                        isAssignedHere && "cursor-not-allowed opacity-60",
+                                                    )}
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div>
+                                                            <div className="text-sm font-medium">{classItem.label}</div>
+                                                            <div className="text-muted-foreground text-xs">{formatSchedule(classItem.schedule)}</div>
+                                                        </div>
+                                                        <Checkbox checked={isSelected || isAssignedHere} />
+                                                    </div>
+                                                    {classItem.assigned_faculty && classItem.assignment_status === "assigned_elsewhere" ? (
+                                                        <Badge variant="secondary" className="mt-2">
+                                                            Assigned to {classItem.assigned_faculty.name}
+                                                        </Badge>
+                                                    ) : null}
+                                                    {classItem.warnings.length > 0 ? (
+                                                        <div className="mt-2 space-y-1">
+                                                            {classItem.warnings.map((warning) => (
+                                                                <div key={warning.message} className="text-xs text-yellow-700">
+                                                                    {warning.message}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : null}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedWarnings.length > 0 ? (
+                                        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800">
+                                            {selectedWarnings.slice(0, 3).map((warning) => (
+                                                <div key={`${warning.classLabel}-${warning.message}`}>{warning.classLabel}: {warning.message}</div>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                    <label className="flex items-center gap-2 text-sm">
+                                        <Checkbox checked={assignmentForm.data.notify_faculty} onCheckedChange={(checked) => assignmentForm.setData("notify_faculty", checked === true)} />
+                                        Notify faculty after assignment changes
+                                    </label>
+                                    {selectedHasReassignment ? (
+                                        <label className="flex items-center gap-2 text-sm">
+                                            <Checkbox
+                                                checked={assignmentForm.data.allow_reassignment}
+                                                onCheckedChange={(checked) => assignmentForm.setData("allow_reassignment", checked === true)}
+                                            />
+                                            Confirm reassignment from another faculty
+                                        </label>
+                                    ) : null}
+                                    {assignmentForm.errors.class_ids ? <p className="text-sm text-red-500">{assignmentForm.errors.class_ids}</p> : null}
+                                    <Button
+                                        className="w-full"
+                                        onClick={submitAssignments}
+                                        disabled={
+                                            assignmentForm.processing ||
+                                            assignmentForm.data.class_ids.length === 0 ||
+                                            (selectedHasReassignment && !assignmentForm.data.allow_reassignment)
+                                        }
+                                    >
+                                        Assign {assignmentForm.data.class_ids.length} class(es)
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        </div>
 
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <Clock className="h-4 w-4" /> Office Hours
-                                </CardTitle>
+                                <CardTitle>Class History</CardTitle>
+                                <CardDescription>Previous and current records tied to this faculty profile.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-muted-foreground text-sm whitespace-pre-line">
-                                    {faculty.office_hours || "No office hours listed."}
-                                </p>
+                                <ClassTable classes={faculty.classes} />
                             </CardContent>
                         </Card>
-                    </div>
+                    </TabsContent>
 
-                    {/* Right Column: Classes & Academic Info */}
-                    <div className="space-y-6 lg:col-span-8">
-                        <Tabs defaultValue="current" className="w-full">
-                            <TabsList className="grid w-full grid-cols-3">
-                                <TabsTrigger value="current">Current Classes</TabsTrigger>
-                                <TabsTrigger value="history">Class History</TabsTrigger>
-                                <TabsTrigger value="academic">Academic Profile</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="current" className="mt-4 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h3 className="text-lg font-medium">Current Assignments</h3>
-                                        <p className="text-muted-foreground text-sm">Classes for the active academic period.</p>
+                    <TabsContent value="portal" className="mt-4 grid gap-4 lg:grid-cols-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Portal Account</CardTitle>
+                                <CardDescription>Repair or create the linked faculty user account.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="rounded-md border p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <div className="font-medium">{faculty.portal_account.label}</div>
+                                            <div className="text-muted-foreground text-sm">{faculty.portal_account.role_label ?? "No faculty role linked"}</div>
+                                        </div>
+                                        <Badge variant={faculty.portal_account.status === "linked" ? "default" : "secondary"}>{faculty.portal_account.status}</Badge>
                                     </div>
+                                    <Separator className="my-3" />
+                                    <div className="text-muted-foreground space-y-1 text-sm">
+                                        <div>Email verified: {faculty.portal_account.email_verified_at ?? "No"}</div>
+                                        <div>Last login: {faculty.portal_account.last_login_at ?? "Never"}</div>
+                                    </div>
+                                </div>
 
-                                    <Sheet open={assignOpen} onOpenChange={setAssignOpen}>
-                                        <SheetTrigger asChild>
-                                            <Button size="sm">
-                                                <Plus className="mr-2 h-4 w-4" /> Assign Class
-                                            </Button>
-                                        </SheetTrigger>
-                                        <SheetContent className="w-full sm:max-w-2xl">
-                                            <SheetHeader className="mb-4">
-                                                <SheetTitle>Assign Classes to {faculty.first_name}</SheetTitle>
-                                                <SheetDescription>Select classes from the unassigned list below.</SheetDescription>
-                                                <div className="relative mt-2">
-                                                    <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
-                                                    <Input
-                                                        placeholder="Search by subject code, title or ID..."
-                                                        value={assignSearch}
-                                                        onChange={(e) => setAssignSearch(e.target.value)}
-                                                        className="pl-9"
-                                                    />
-                                                </div>
-                                            </SheetHeader>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Mode</Label>
+                                        <Select value={portalForm.data.mode} onValueChange={(value) => portalForm.setData("mode", value ?? "create")}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="create">Create</SelectItem>
+                                                <SelectItem value="repair">Repair</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Role</Label>
+                                        <Select value={portalForm.data.role} onValueChange={(value) => portalForm.setData("role", value ?? "instructor")}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {options.faculty_roles.map((role) => (
+                                                    <SelectItem key={role.value} value={role.value}>
+                                                        {role.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <label className="flex items-center gap-2 text-sm">
+                                    <Checkbox checked={portalForm.data.send_reset_link} onCheckedChange={(checked) => portalForm.setData("send_reset_link", checked === true)} />
+                                    Send password reset link
+                                </label>
+                                {portalForm.errors.mode ? <p className="text-sm text-red-500">{portalForm.errors.mode}</p> : null}
+                                <Button onClick={submitPortal} disabled={portalForm.processing}>
+                                    <KeyRound className="mr-2 h-4 w-4" />
+                                    Prepare portal access
+                                </Button>
+                            </CardContent>
+                        </Card>
 
-                                            <div className="flex h-full max-h-[calc(100vh-220px)] flex-col">
-                                                {filteredUnassigned.length === 0 ? (
-                                                    <div className="text-muted-foreground m-1 flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed">
-                                                        <GraduationCap className="mb-2 h-8 w-8 opacity-50" />
-                                                        <p>No matching classes found.</p>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex-1 space-y-3 overflow-y-auto pr-2 pb-4">
-                                                        {filteredUnassigned.map((opt) => {
-                                                            const isSelected = selectedClassIds.has(opt.id);
-                                                            return (
-                                                                <div
-                                                                    key={opt.id}
-                                                                    className={cn(
-                                                                        "group relative flex cursor-pointer flex-col gap-4 rounded-lg border p-4 transition-all hover:shadow-md sm:flex-row",
-                                                                        isSelected
-                                                                            ? "bg-primary/5 border-primary ring-primary/20 ring-1"
-                                                                            : "bg-card hover:border-primary/50",
-                                                                    )}
-                                                                    onClick={() => toggleClass(opt.id)}
-                                                                >
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <div className="mb-1 flex items-start justify-between gap-2">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <Badge variant={isSelected ? "default" : "secondary"}>
-                                                                                    {opt.subject_code}
-                                                                                </Badge>
-                                                                                <span className="text-muted-foreground rounded border px-1.5 py-0.5 text-xs font-medium">
-                                                                                    {opt.section}
-                                                                                </span>
-                                                                            </div>
-                                                                            {/* Mobile Checkbox */}
-                                                                            <div className="sm:hidden">
-                                                                                <Checkbox checked={isSelected} />
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <h4 className="truncate pr-4 text-sm font-semibold sm:text-base">
-                                                                            {opt.subject_title || "No Title"}
-                                                                        </h4>
-
-                                                                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                                                            <div className="col-span-2">{formatSchedule(opt.schedule)}</div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div className="hidden flex-col items-end justify-center border-l pl-2 sm:flex">
-                                                                        <Button
-                                                                            size="sm"
-                                                                            variant={isSelected ? "default" : "outline"}
-                                                                            className={cn(
-                                                                                "w-24 transition-all",
-                                                                                isSelected &&
-                                                                                    "hover:bg-destructive hover:text-destructive-foreground",
-                                                                            )}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                toggleClass(opt.id);
-                                                                            }}
-                                                                        >
-                                                                            {isSelected ? "Remove" : "Add"}
-                                                                        </Button>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Recent Notices</CardTitle>
+                                <CardDescription>Latest database notifications visible to the linked portal user.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {faculty.recent_notifications.length === 0 ? (
+                                    <div className="text-muted-foreground rounded-md border p-4 text-sm">No recent notices.</div>
+                                ) : (
+                                    faculty.recent_notifications.map((notice) => (
+                                        <div key={notice.id} className="rounded-md border p-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="font-medium">{notice.title}</div>
+                                                <Badge variant="outline">{notice.priority}</Badge>
                                             </div>
+                                            <div className="text-muted-foreground mt-1 text-sm">{notice.message}</div>
+                                            <div className="text-muted-foreground mt-2 text-xs">{notice.created_at}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
-                                            <SheetFooter className="mt-4 border-t pt-4">
-                                                <div className="flex w-full items-center justify-between">
-                                                    <div className="text-sm font-medium">{selectedClassIds.size} class(es) selected</div>
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => {
-                                                                setAssignOpen(false);
-                                                                setSelectedClassIds(new Set());
-                                                                setAssignSearch("");
-                                                            }}
-                                                        >
-                                                            Cancel
-                                                        </Button>
-                                                        <Button onClick={assignClasses} disabled={selectedClassIds.size === 0}>
-                                                            Assign Selected
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </SheetFooter>
-                                        </SheetContent>
-                                    </Sheet>
+                    <TabsContent value="notices" className="mt-4 grid gap-4 lg:grid-cols-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Send Admin Notice</CardTitle>
+                                <CardDescription>Creates a portal notification for the linked faculty user.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Title</Label>
+                                    <Input value={noticeForm.data.title} onChange={(event) => noticeForm.setData("title", event.target.value)} />
+                                    {noticeForm.errors.title ? <p className="text-sm text-red-500">{noticeForm.errors.title}</p> : null}
                                 </div>
-
-                                <Card>
-                                    <CardContent className="p-0">
-                                        {faculty.current_classes.length === 0 ? (
-                                            <Empty>
-                                                <div className="flex flex-col items-center justify-center p-8 text-center">
-                                                    <div className="bg-muted/30 mb-3 rounded-full p-3">
-                                                        <GraduationCap className="text-muted-foreground h-6 w-6" />
-                                                    </div>
-                                                    <h3 className="text-lg font-medium">No Active Classes</h3>
-                                                    <p className="text-muted-foreground mt-1 mb-4 max-w-sm text-sm">
-                                                        This faculty member doesn't have any classes assigned for the current semester.
-                                                    </p>
-                                                    <Button variant="outline" onClick={() => setAssignOpen(true)}>
-                                                        Assign a Class
-                                                    </Button>
-                                                </div>
-                                            </Empty>
-                                        ) : (
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Code</TableHead>
-                                                        <TableHead>Subject</TableHead>
-                                                        <TableHead>Section</TableHead>
-                                                        <TableHead>Schedule</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {faculty.current_classes.map((cls) => (
-                                                        <TableRow key={cls.id}>
-                                                            <TableCell className="font-medium">{cls.subject_code}</TableCell>
-                                                            <TableCell className="max-w-[200px] truncate" title={cls.subject_title || ""}>
-                                                                {cls.subject_title || "—"}
-                                                            </TableCell>
-                                                            <TableCell>{cls.section}</TableCell>
-                                                            <TableCell className="text-muted-foreground text-xs">
-                                                                {formatSchedule(cls.schedule)}
-                                                            </TableCell>
-                                                            <TableCell className="text-right">
-                                                                <div className="flex items-center justify-end gap-2">
-                                                                    <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                        <Link href={route("administrators.classes.show", cls.id)}>
-                                                                            <span className="sr-only">View</span>
-                                                                            <ExternalLink className="h-4 w-4" />
-                                                                        </Link>
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                                                                        onClick={() => unassignClass(cls.id)}
-                                                                    >
-                                                                        <span className="sr-only">Unassign</span>
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-
-                            <TabsContent value="history" className="mt-4 space-y-4">
-                                <div className="mb-4">
-                                    <h3 className="text-lg font-medium">Class History</h3>
-                                    <p className="text-muted-foreground text-sm">All classes previously assigned to this faculty.</p>
+                                <div className="space-y-2">
+                                    <Label>Message</Label>
+                                    <Textarea rows={4} value={noticeForm.data.message} onChange={(event) => noticeForm.setData("message", event.target.value)} />
+                                    {noticeForm.errors.message ? <p className="text-sm text-red-500">{noticeForm.errors.message}</p> : null}
                                 </div>
-                                <Card>
-                                    <CardContent className="p-0">
-                                        {faculty.classes.length === 0 ? (
-                                            <div className="text-muted-foreground p-8 text-center">No class history found.</div>
-                                        ) : (
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>SY / Sem</TableHead>
-                                                        <TableHead>Code</TableHead>
-                                                        <TableHead>Subject</TableHead>
-                                                        <TableHead>Section</TableHead>
-                                                        <TableHead className="text-right">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {faculty.classes.map((cls) => (
-                                                        <TableRow key={cls.id}>
-                                                            <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                                                                {cls.school_year} • {cls.semester}
-                                                            </TableCell>
-                                                            <TableCell className="font-medium">{cls.subject_code}</TableCell>
-                                                            <TableCell className="max-w-[200px] truncate">{cls.subject_title || "—"}</TableCell>
-                                                            <TableCell>{cls.section}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                    <Link href={route("administrators.classes.show", cls.id)}>
-                                                                        <ExternalLink className="h-4 w-4" />
-                                                                    </Link>
-                                                                </Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-
-                            <TabsContent value="academic" className="mt-4 space-y-6">
-                                <div className="space-y-6">
-                                    <div>
-                                        <h3 className="mb-2 flex items-center gap-2 text-lg font-medium">
-                                            <BookOpen className="h-4 w-4" /> Biography
-                                        </h3>
-                                        <Card>
-                                            <CardContent className="pt-6">
-                                                {faculty.biography ? (
-                                                    <p className="text-sm leading-relaxed whitespace-pre-line">{faculty.biography}</p>
-                                                ) : (
-                                                    <p className="text-muted-foreground text-sm italic">No biography provided.</p>
-                                                )}
-                                            </CardContent>
-                                        </Card>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Priority</Label>
+                                        <Select value={noticeForm.data.priority} onValueChange={(value) => noticeForm.setData("priority", value ?? "normal")}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {options.notice_priorities.map((priority) => (
+                                                    <SelectItem key={priority.value} value={priority.value}>
+                                                        {priority.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
-
-                                    <div>
-                                        <h3 className="mb-2 flex items-center gap-2 text-lg font-medium">
-                                            <GraduationCap className="h-4 w-4" /> Education
-                                        </h3>
-                                        <Card>
-                                            <CardContent className="pt-6">
-                                                {faculty.education ? (
-                                                    <p className="text-sm leading-relaxed whitespace-pre-line">{faculty.education}</p>
-                                                ) : (
-                                                    <p className="text-muted-foreground text-sm italic">No education history provided.</p>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="mb-2 flex items-center gap-2 text-lg font-medium">
-                                            <School className="h-4 w-4" /> Courses Taught
-                                        </h3>
-                                        <Card>
-                                            <CardContent className="pt-6">
-                                                {faculty.courses_taught ? (
-                                                    <p className="text-sm leading-relaxed whitespace-pre-line">{faculty.courses_taught}</p>
-                                                ) : (
-                                                    <p className="text-muted-foreground text-sm italic">No courses listed.</p>
-                                                )}
-                                            </CardContent>
-                                        </Card>
+                                    <div className="space-y-2">
+                                        <Label>Action URL</Label>
+                                        <Input value={noticeForm.data.action_url} onChange={(event) => noticeForm.setData("action_url", event.target.value)} />
                                     </div>
                                 </div>
-                            </TabsContent>
-                        </Tabs>
-                    </div>
-                </div>
+                                <Button onClick={submitNotice} disabled={noticeForm.processing}>
+                                    <Megaphone className="mr-2 h-4 w-4" />
+                                    Send notice
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Create Faculty Deadline</CardTitle>
+                                <CardDescription>Track an administrative or class-related task for this faculty member.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Title</Label>
+                                    <Input value={deadlineForm.data.title} onChange={(event) => deadlineForm.setData("title", event.target.value)} />
+                                    {deadlineForm.errors.title ? <p className="text-sm text-red-500">{deadlineForm.errors.title}</p> : null}
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Description</Label>
+                                    <Textarea rows={3} value={deadlineForm.data.description} onChange={(event) => deadlineForm.setData("description", event.target.value)} />
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Due date</Label>
+                                        <Input type="datetime-local" value={deadlineForm.data.due_date} onChange={(event) => deadlineForm.setData("due_date", event.target.value)} />
+                                        {deadlineForm.errors.due_date ? <p className="text-sm text-red-500">{deadlineForm.errors.due_date}</p> : null}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Priority</Label>
+                                        <Select value={deadlineForm.data.priority} onValueChange={(value) => deadlineForm.setData("priority", value ?? "medium")}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {options.deadline_priorities.map((priority) => (
+                                                    <SelectItem key={priority.value} value={priority.value}>
+                                                        {priority.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Type</Label>
+                                        <Input value={deadlineForm.data.type} onChange={(event) => deadlineForm.setData("type", event.target.value)} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Related class</Label>
+                                        <Select value={deadlineForm.data.class_id} onValueChange={(value) => deadlineForm.setData("class_id", value ?? "none")}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">No class</SelectItem>
+                                                {faculty.current_classes.map((classItem) => (
+                                                    <SelectItem key={classItem.id} value={String(classItem.id)}>
+                                                        {classItem.subject_code} {classItem.section}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <Button onClick={submitDeadline} disabled={deadlineForm.processing}>
+                                    <CalendarClock className="mr-2 h-4 w-4" />
+                                    Create deadline
+                                </Button>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="lg:col-span-2">
+                            <CardHeader>
+                                <CardTitle>Open Deadlines</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid gap-3 md:grid-cols-2">
+                                {faculty.deadlines.length === 0 ? (
+                                    <div className="text-muted-foreground rounded-md border p-4 text-sm md:col-span-2">No active deadlines.</div>
+                                ) : (
+                                    faculty.deadlines.map((deadline) => (
+                                        <div key={deadline.id} className="rounded-md border p-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="font-medium">{deadline.title}</div>
+                                                <Badge variant="outline">{deadline.priority}</Badge>
+                                            </div>
+                                            <div className="text-muted-foreground mt-1 text-sm">{deadline.description ?? "No description"}</div>
+                                            <div className="text-muted-foreground mt-2 text-xs">
+                                                {deadline.due_date ?? "No due date"} {deadline.class_label ? `- ${deadline.class_label}` : ""}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="records" className="mt-4 grid gap-4 lg:grid-cols-3">
+                        <RecordCard title="Biography" value={faculty.biography} />
+                        <RecordCard title="Education" value={faculty.education} />
+                        <RecordCard title="Courses Taught" value={faculty.courses_taught} />
+                        <RecordCard title="Address" value={faculty.address_line1} />
+                        <RecordCard title="Personal" value={[faculty.gender, faculty.age ? `${faculty.age} years old` : null, faculty.birth_date].filter(Boolean).join(" - ")} />
+                        <RecordCard title="Department" value={faculty.department} />
+                    </TabsContent>
+                </Tabs>
             </div>
         </AdminLayout>
+    );
+}
+
+function MetricCard({ title, value, detail, icon: Icon }: { title: string; value: string; detail: string; icon: typeof BookOpen }) {
+    return (
+        <Card>
+            <CardContent className="flex items-center gap-3 p-4">
+                <div className="bg-muted rounded-md p-2">
+                    <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                    <div className="text-muted-foreground text-xs">{title}</div>
+                    <div className="truncate font-semibold">{value}</div>
+                    <div className="text-muted-foreground truncate text-xs">{detail}</div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+function InfoRow({ icon: Icon, label, value }: { icon: typeof BookOpen; label: string; value: string }) {
+    return (
+        <div className="flex items-start justify-between gap-3 text-sm">
+            <span className="text-muted-foreground flex items-center gap-2">
+                <Icon className="h-4 w-4" />
+                {label}
+            </span>
+            <span className="max-w-44 text-right font-medium">{value}</span>
+        </div>
+    );
+}
+
+function ClassTable({ classes, onUnassign }: { classes: ClassRow[]; onUnassign?: (classId: number) => void }) {
+    if (classes.length === 0) {
+        return <div className="text-muted-foreground rounded-md border p-6 text-center text-sm">No classes found.</div>;
+    }
+
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Schedule</TableHead>
+                    <TableHead className="text-right">Students</TableHead>
+                    {onUnassign ? <TableHead className="text-right">Actions</TableHead> : null}
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {classes.map((classItem) => (
+                    <TableRow key={classItem.id}>
+                        <TableCell className="font-medium">{classItem.subject_code}</TableCell>
+                        <TableCell className="max-w-56 truncate">{classItem.subject_title ?? "No title"}</TableCell>
+                        <TableCell>{classItem.section}</TableCell>
+                        <TableCell>{formatSchedule(classItem.schedule)}</TableCell>
+                        <TableCell className="text-right">{classItem.student_count ?? "-"}</TableCell>
+                        {onUnassign ? (
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" onClick={() => onUnassign(classItem.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </TableCell>
+                        ) : null}
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    );
+}
+
+function RecordCard({ title, value }: { title: string; value: string | null | undefined }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base">{title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-muted-foreground text-sm whitespace-pre-line">{value || "No record provided."}</p>
+            </CardContent>
+        </Card>
     );
 }

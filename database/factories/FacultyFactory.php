@@ -19,8 +19,8 @@ final class FacultyFactory extends Factory
     public function definition(): array
     {
         $departments = ['CCS', 'CBA', 'CTE', 'CHTM'];
-        $genders = ['Male', 'Female'];
-        $statuses = ['Active', 'Inactive', 'On Leave'];
+        $genders = ['male', 'female'];
+        $statuses = ['active', 'inactive', 'on_leave'];
 
         return [
             'id' => $this->faker->uuid(),

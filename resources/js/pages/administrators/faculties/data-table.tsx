@@ -14,6 +14,7 @@ import * as React from "react";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+import { show } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
 import { router } from "@inertiajs/react";
 import { route } from "ziggy-js";
 import { DataTablePagination } from "./data-table-pagination";
@@ -37,6 +38,7 @@ interface DataTableProps<TData extends { id?: string }, TValue> {
     };
     filters?: Record<string, unknown>;
     routeName?: string; // Route to visit for server-side updates
+    onSelectionChange?: (rows: TData[]) => void;
 }
 
 export function DataTable<TData extends { id?: string }, TValue>({
@@ -47,6 +49,7 @@ export function DataTable<TData extends { id?: string }, TValue>({
     pagination,
     filters = {},
     routeName = "administrators.faculties.index",
+    onSelectionChange,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -124,6 +127,10 @@ export function DataTable<TData extends { id?: string }, TValue>({
         },
     });
 
+    React.useEffect(() => {
+        onSelectionChange?.(table.getFilteredSelectedRowModel().rows.map((row) => row.original));
+    }, [onSelectionChange, rowSelection, table]);
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between gap-2">
@@ -166,7 +173,7 @@ export function DataTable<TData extends { id?: string }, TValue>({
 
                                         // Navigate to faculty detail page
                                         if (row.original.id) {
-                                            router.visit(route("administrators.faculties.show", row.original.id));
+                                            router.visit(show.url(row.original.id));
                                         }
                                     }}
                                 >

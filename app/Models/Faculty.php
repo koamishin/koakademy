@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\DatabaseNotificationCollection;
@@ -143,7 +145,7 @@ final class Faculty extends Authenticatable implements FilamentUser, HasAvatar
         return $this->belongsTo(Department::class, 'department', 'code');
     }
 
-    public function classes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function classes(): HasMany
     {
         return $this->hasMany(Classes::class, 'faculty_id', 'id');
     }
@@ -151,10 +153,20 @@ final class Faculty extends Authenticatable implements FilamentUser, HasAvatar
     /**
      * Get only the classes assigned to this faculty member for the current academic period.
      */
-    public function currentClasses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function currentClasses(): HasMany
     {
         return $this->hasMany(Classes::class, 'faculty_id', 'id')
             ->currentAcademicPeriod();
+    }
+
+    public function deadlines(): HasMany
+    {
+        return $this->hasMany(FacultyDeadline::class, 'faculty_id', 'id');
+    }
+
+    public function portalUser(): HasOne
+    {
+        return $this->hasOne(User::class, 'email', 'email');
     }
 
     public function classEnrollments()

@@ -279,11 +279,15 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/faculties', [AdministratorFacultyManagementController::class, 'index'])->name('faculties.index');
         Route::get('/faculties/create', [AdministratorFacultyManagementController::class, 'create'])->name('faculties.create');
         Route::post('/faculties', [AdministratorFacultyManagementController::class, 'store'])->name('faculties.store');
+        Route::patch('/faculties/bulk/status', [AdministratorFacultyManagementController::class, 'bulkUpdateStatus'])->name('faculties.bulk.status');
         Route::get('/faculties/{faculty}', [AdministratorFacultyManagementController::class, 'show'])->name('faculties.show');
         Route::get('/faculties/{faculty}/edit', [AdministratorFacultyManagementController::class, 'edit'])->name('faculties.edit');
         Route::put('/faculties/{faculty}', [AdministratorFacultyManagementController::class, 'update'])->name('faculties.update');
         Route::delete('/faculties/{faculty}', [AdministratorFacultyManagementController::class, 'destroy'])->name('faculties.destroy');
         Route::post('/faculties/{faculty}/assign-classes', [AdministratorFacultyManagementController::class, 'assignClasses'])->name('faculties.assign-classes');
+        Route::post('/faculties/{faculty}/portal-account', [AdministratorFacultyManagementController::class, 'managePortalAccount'])->name('faculties.portal-account');
+        Route::post('/faculties/{faculty}/notice', [AdministratorFacultyManagementController::class, 'sendNotice'])->name('faculties.notice');
+        Route::post('/faculties/{faculty}/deadlines', [AdministratorFacultyManagementController::class, 'storeDeadline'])->name('faculties.deadlines.store');
         Route::delete('/faculties/{faculty}/classes/{class}', [AdministratorFacultyManagementController::class, 'unassignClass'])->name('faculties.classes.unassign');
         Route::put('/faculties/{faculty}/faculty-id-number', [AdministratorFacultyManagementController::class, 'updateFacultyIdNumber'])->name('faculties.update-id-number');
 

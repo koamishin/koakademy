@@ -1,23 +1,37 @@
+import { bulkUpdateStatus, create, destroy, index } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
 import AdminLayout from "@/components/administrators/admin-layout";
-import { Filters, type Filter, type FilterFieldConfig } from "@/components/reui/filters";
+import { Filters, type Filter, type FilterFieldConfig } from "@/Components/reui/filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/Components/ui/empty";
 import { Input } from "@/components/ui/input";
-import type { User } from "@/types/user";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import type { User } from "@/Types/user";
 import { Head, Link, router } from "@inertiajs/react";
-import { BookOpen, Building2, CheckCircle2, Filter as FilterIcon, PauseCircle, Plus, Search, Users, UsersRound, XCircle } from "lucide-react";
+import {
+    AlertTriangle,
+    BookOpen,
+    Building2,
+    CheckCircle2,
+    Filter as FilterIcon,
+    KeyRound,
+    PauseCircle,
+    Plus,
+    Search,
+    Users,
+    UsersRound,
+    XCircle,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import { route } from "ziggy-js";
 import { getColumns, type FacultyRow } from "./columns";
 import { DataTable } from "./data-table";
 
-type StatCard = {
+type Segment = {
+    value: string;
     label: string;
-    value: number;
-    hint: string;
 };
 
 interface FacultiesIndexProps {
@@ -34,7 +48,12 @@ interface FacultiesIndexProps {
         inactive: number;
         on_leave: number;
         with_current_classes: number;
+        needs_classes: number;
+        portal_not_linked: number;
+        incomplete_profile: number;
+        unassigned_current_classes: number;
     };
+    segments: Segment[];
     faculties: {
         data: FacultyRow[];
         prev_page_url: string | null;
@@ -51,18 +70,32 @@ interface FacultiesIndexProps {
         department?: string | null;
         status?: string | null;
         current_classes?: string | null;
+        portal?: string | null;
+        profile?: string | null;
+        segment?: string | null;
+        sort?: string | null;
+        direction?: "asc" | "desc";
         per_page?: number;
     };
     options: {
         departments: string[];
         statuses: { value: string; label: string }[];
         current_classes: { value: string; label: string }[];
+        portal: { value: string; label: string }[];
+        profile: { value: string; label: string }[];
+        sorts: { value: string; label: string }[];
     };
 }
 
-export default function AdministratorFacultiesIndex({ user, filament, stats, faculties, filters, options }: FacultiesIndexProps) {
+function normalizeFilterValue(value: string | null | undefined): string | null {
+    return value && value !== "all" ? value : null;
+}
+
+export default function AdministratorFacultiesIndex({ user, filament, stats, segments, faculties, filters, options }: FacultiesIndexProps) {
     const [search, setSearch] = useState(filters.search || "");
     const [activeFilters, setActiveFilters] = useState<Filter[]>([]);
+    const [selectedRows, setSelectedRows] = useState<FacultyRow[]>([]);
+    const [bulkStatus, setBulkStatus] = useState("active");
 
     const activeFiltersRef = useRef<Filter[]>([]);
 
@@ -70,53 +103,56 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
         activeFiltersRef.current = activeFilters;
     }, [activeFilters]);
 
-    const buildAppliedFilters = useCallback((newFilters: Filter[]) => {
-        const applied: Record<string, string | null> = {
-            department: null,
-            status: null,
-            current_classes: null,
-        };
+    const baseQuery = useCallback(
+        (newFilters = activeFiltersRef.current) => {
+            const applied: Record<string, string | number | null | undefined> = {
+                department: null,
+                status: null,
+                current_classes: null,
+                portal: null,
+                profile: null,
+                segment: filters.segment || "all",
+                sort: filters.sort || "faculty",
+                direction: filters.direction || "asc",
+                per_page: faculties.per_page,
+            };
 
-        newFilters.forEach((f) => {
-            if (f.values.length > 0) {
-                applied[f.field] = String(f.values[0]);
-            }
-        });
+            newFilters.forEach((filter) => {
+                applied[filter.field] = filter.values.length > 0 ? String(filter.values[0]) : null;
+            });
 
-        return applied;
-    }, []);
+            return applied;
+        },
+        [faculties.per_page, filters.direction, filters.segment, filters.sort],
+    );
 
     useEffect(() => {
         setSearch(filters.search || "");
 
         const initial: Filter[] = [];
-        if (filters.department) {
-            initial.push({ id: "department", field: "department", operator: "is", values: [filters.department] });
-        }
-        if (filters.status) {
-            initial.push({ id: "status", field: "status", operator: "is", values: [filters.status] });
-        }
-        if (filters.current_classes) {
-            initial.push({ id: "current_classes", field: "current_classes", operator: "is", values: [filters.current_classes] });
-        }
+        const fields = ["department", "status", "current_classes", "portal", "profile"] as const;
+
+        fields.forEach((field) => {
+            const value = normalizeFilterValue(filters[field]);
+            if (value) {
+                initial.push({ id: field, field, operator: "is", values: [value] });
+            }
+        });
 
         setActiveFilters(initial);
     }, [filters]);
 
+    const visitIndex = (query: Record<string, string | number | null | undefined>) => {
+        router.get(index.url(), query, { preserveState: true, replace: true });
+    };
+
     const handleSearch = useDebouncedCallback(
         (term: string) => {
-            const applied = buildAppliedFilters(activeFiltersRef.current);
-
-            router.get(
-                route("administrators.faculties.index"),
-                {
-                    ...applied,
-                    search: term.trim() ? term : null,
-                    per_page: faculties.per_page,
-                    page: 1,
-                },
-                { preserveState: true, replace: true },
-            );
+            visitIndex({
+                ...baseQuery(),
+                search: term.trim() ? term : null,
+                page: 1,
+            });
         },
         300,
         { maxWait: 750 },
@@ -124,72 +160,96 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
 
     const handleFiltersChange = (newFilters: Filter[]) => {
         setActiveFilters(newFilters);
+        visitIndex({
+            ...baseQuery(newFilters),
+            search: search.trim() ? search : null,
+            page: 1,
+        });
+    };
 
-        const applied = buildAppliedFilters(newFilters);
+    const handleSegment = (segment: string) => {
+        visitIndex({
+            ...baseQuery(),
+            search: search.trim() ? search : null,
+            segment,
+            page: 1,
+        });
+    };
 
-        router.get(
-            route("administrators.faculties.index"),
-            {
-                ...applied,
-                search: search.trim() ? search : null,
-                per_page: faculties.per_page,
-                page: 1,
-            },
-            { preserveState: true, replace: true },
-        );
+    const handleSort = (sort: string | null) => {
+        if (!sort) return;
+
+        visitIndex({
+            ...baseQuery(),
+            search: search.trim() ? search : null,
+            sort,
+            page: 1,
+        });
+    };
+
+    const handleDirection = (direction: string | null) => {
+        if (!direction) return;
+
+        visitIndex({
+            ...baseQuery(),
+            search: search.trim() ? search : null,
+            direction,
+            page: 1,
+        });
+    };
+
+    const handlePerPage = (perPage: string | null) => {
+        if (!perPage) return;
+
+        visitIndex({
+            ...baseQuery(),
+            search: search.trim() ? search : null,
+            per_page: Number(perPage),
+            page: 1,
+        });
     };
 
     const handleReset = () => {
         setSearch("");
         setActiveFilters([]);
-
-        router.get(
-            route("administrators.faculties.index"),
-            {
-                search: null,
-                department: null,
-                status: null,
-                current_classes: null,
-                per_page: faculties.per_page,
-                page: 1,
-            },
-            { preserveState: false, replace: true },
-        );
+        visitIndex({
+            search: null,
+            department: null,
+            status: null,
+            current_classes: null,
+            portal: null,
+            profile: null,
+            segment: "all",
+            sort: "faculty",
+            direction: "asc",
+            per_page: faculties.per_page,
+            page: 1,
+        });
     };
 
     const handleDelete = useCallback((id: string, name: string) => {
         if (confirm(`Delete ${name}? This cannot be undone.`)) {
-            router.delete(route("administrators.faculties.destroy", id));
+            router.delete(destroy.url(id));
         }
     }, []);
 
+    const applyBulkStatus = () => {
+        if (selectedRows.length === 0) return;
+
+        router.patch(
+            bulkUpdateStatus.url(),
+            {
+                faculty_ids: selectedRows.map((row) => row.id),
+                status: bulkStatus,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => setSelectedRows([]),
+            },
+        );
+    };
+
     const columns = useMemo(() => getColumns({ onDelete: handleDelete }), [handleDelete]);
-
-    const statusOptionIcon = (value: string) => {
-        if (value === "active") {
-            return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-        }
-
-        if (value === "inactive") {
-            return <XCircle className="text-muted-foreground h-4 w-4" />;
-        }
-
-        if (value === "on_leave") {
-            return <PauseCircle className="h-4 w-4 text-yellow-600" />;
-        }
-
-        return <CheckCircle2 className="text-muted-foreground h-4 w-4" />;
-    };
-
-    const currentClassesOptionIcon = (value: string) => {
-        const normalized = value.toLowerCase();
-
-        if (normalized.includes("with") || normalized.includes("yes") || normalized === "true") {
-            return <BookOpen className="h-4 w-4 text-green-600" />;
-        }
-
-        return <BookOpen className="text-muted-foreground h-4 w-4" />;
-    };
 
     const filterFields: FilterFieldConfig[] = useMemo(
         () => [
@@ -198,9 +258,9 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
                 label: "Department",
                 type: "select",
                 icon: <Building2 className="h-4 w-4" />,
-                options: options.departments.map((dept) => ({
-                    value: dept,
-                    label: dept,
+                options: options.departments.map((department) => ({
+                    value: department,
+                    label: department,
                     icon: <Building2 className="text-muted-foreground h-4 w-4" />,
                 })),
             },
@@ -209,9 +269,9 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
                 label: "Status",
                 type: "select",
                 icon: <CheckCircle2 className="h-4 w-4" />,
-                options: options.statuses.map((opt) => ({
-                    ...opt,
-                    icon: statusOptionIcon(opt.value),
+                options: options.statuses.map((option) => ({
+                    ...option,
+                    icon: option.value === "on_leave" ? <PauseCircle className="h-4 w-4 text-yellow-600" /> : <CheckCircle2 className="h-4 w-4 text-green-600" />,
                 })),
             },
             {
@@ -219,51 +279,65 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
                 label: "Current Classes",
                 type: "select",
                 icon: <BookOpen className="h-4 w-4" />,
-                options: options.current_classes.map((opt) => ({
-                    ...opt,
-                    icon: currentClassesOptionIcon(opt.value),
+                options: options.current_classes.map((option) => ({
+                    ...option,
+                    icon: <BookOpen className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+            {
+                key: "portal",
+                label: "Portal",
+                type: "select",
+                icon: <KeyRound className="h-4 w-4" />,
+                options: options.portal.map((option) => ({
+                    ...option,
+                    icon: <KeyRound className="text-muted-foreground h-4 w-4" />,
+                })),
+            },
+            {
+                key: "profile",
+                label: "Profile",
+                type: "select",
+                icon: <AlertTriangle className="h-4 w-4" />,
+                options: options.profile.map((option) => ({
+                    ...option,
+                    icon: <AlertTriangle className="text-muted-foreground h-4 w-4" />,
                 })),
             },
         ],
         [options],
     );
 
-    const statCards: StatCard[] = [
-        {
-            label: "Total Faculty",
-            value: stats.total,
-            hint: "All faculty profiles in the system.",
-        },
-        {
-            label: "Active",
-            value: stats.active,
-            hint: "Can be scheduled and assigned classes.",
-        },
-        {
-            label: "On Leave",
-            value: stats.on_leave,
-            hint: "Temporarily unavailable.",
-        },
-        {
-            label: "With Current Classes",
-            value: stats.with_current_classes,
-            hint: "Teaching this semester/school year.",
-        },
+    const statCards = [
+        { label: "Active", value: stats.active, hint: "Ready for assignment", icon: CheckCircle2 },
+        { label: "Needs classes", value: stats.needs_classes, hint: "No current load", icon: BookOpen },
+        { label: "Portal issues", value: stats.portal_not_linked, hint: "Access not linked", icon: KeyRound },
+        { label: "Incomplete", value: stats.incomplete_profile, hint: "Missing records", icon: AlertTriangle },
     ];
 
-    const hasAnyControlsActive = search.trim().length > 0 || activeFilters.length > 0;
+    const activeSegment = filters.segment || "all";
+    const hasAnyControlsActive = search.trim().length > 0 || activeFilters.length > 0 || activeSegment !== "all";
+
+    const segmentCount = (segment: string): number => {
+        if (segment === "needs_classes") return stats.needs_classes;
+        if (segment === "on_leave") return stats.on_leave;
+        if (segment === "portal_not_linked") return stats.portal_not_linked;
+        if (segment === "incomplete_profile") return stats.incomplete_profile;
+
+        return stats.total;
+    };
 
     const tableToolbar = (
         <>
             <div className="relative w-full md:max-w-sm">
                 <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
                 <Input
-                    placeholder="Search faculty ID, name, or email…"
+                    placeholder="Search faculty ID, name, or email"
                     className="pl-8"
                     value={search}
-                    onChange={(e) => {
-                        setSearch(e.target.value);
-                        handleSearch(e.target.value);
+                    onChange={(event) => {
+                        setSearch(event.target.value);
+                        handleSearch(event.target.value);
                     }}
                 />
             </div>
@@ -276,25 +350,25 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
                     <Button variant="outline" size="sm" className="gap-2">
                         <FilterIcon className="h-4 w-4" />
                         Filters
-                        {activeFilters.length > 0 && (
+                        {activeFilters.length > 0 ? (
                             <Badge variant="secondary" className="h-5 min-w-5 rounded-full px-1.5 text-xs">
                                 {activeFilters.length}
                             </Badge>
-                        )}
+                        ) : null}
                     </Button>
                 }
             />
 
-            {hasAnyControlsActive && (
+            {hasAnyControlsActive ? (
                 <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground hover:text-foreground">
                     <XCircle className="mr-2 h-4 w-4" />
                     Reset
                 </Button>
-            )}
+            ) : null}
 
             <div className="hidden items-center gap-2 text-sm lg:flex">
                 <Badge variant="outline" className="gap-1">
-                    <Users className="h-3.5 w-3.5" /> Showing {faculties.data.length} on this page
+                    <Users className="h-3.5 w-3.5" /> Showing {faculties.data.length}
                 </Badge>
                 <Badge variant="outline" className="gap-1">
                     <UsersRound className="h-3.5 w-3.5" /> Total {faculties.total}
@@ -305,13 +379,13 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
 
     return (
         <AdminLayout user={user} title="Faculties">
-            <Head title="Administrators • Faculties" />
+            <Head title="Administrators - Faculties" />
 
             <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Faculty Management</h2>
-                        <p className="text-muted-foreground">Quickly find a teacher, update details, and manage class assignments.</p>
+                        <h2 className="text-2xl font-bold tracking-tight">Faculty Operations</h2>
+                        <p className="text-muted-foreground">Monitor workload, portal readiness, and faculty profile quality from one console.</p>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -321,7 +395,7 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
                             </a>
                         </Button>
                         <Button asChild>
-                            <Link href={route("administrators.faculties.create")}>
+                            <Link href={create.url()}>
                                 <Plus className="mr-2 h-4 w-4" /> Add Faculty
                             </Link>
                         </Button>
@@ -329,63 +403,141 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, fac
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-4">
-                    {statCards.map((stat) => (
-                        <Card key={stat.label}>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-muted-foreground text-sm font-medium">{stat.label}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-1">
-                                <div className="text-2xl font-semibold tracking-tight">{stat.value}</div>
-                                <div className="text-muted-foreground text-xs">{stat.hint}</div>
-                            </CardContent>
-                        </Card>
+                    {statCards.map((stat) => {
+                        const Icon = stat.icon;
+
+                        return (
+                            <Card key={stat.label}>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+                                        <Icon className="h-4 w-4" />
+                                        {stat.label}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-1">
+                                    <div className="text-2xl font-semibold tracking-tight">{stat.value}</div>
+                                    <div className="text-muted-foreground text-xs">{stat.hint}</div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                    {segments.map((segment) => (
+                        <Button
+                            key={segment.value}
+                            variant={activeSegment === segment.value ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleSegment(segment.value)}
+                            className={cn("shrink-0 gap-2", activeSegment === segment.value && "shadow-sm")}
+                        >
+                            {segment.label}
+                            <Badge variant={activeSegment === segment.value ? "secondary" : "outline"}>{segmentCount(segment.value)}</Badge>
+                        </Button>
                     ))}
                 </div>
 
                 <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle>Faculty List</CardTitle>
-                        <CardDescription>Click “View” to manage classes and see full details.</CardDescription>
+                    <CardHeader className="gap-4 pb-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <CardTitle>Faculty Directory</CardTitle>
+                            <CardDescription>Sort, filter, and apply common administrative actions in bulk.</CardDescription>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <Select value={filters.sort || "faculty"} onValueChange={handleSort}>
+                                <SelectTrigger className="w-44">
+                                    <SelectValue placeholder="Sort by" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {options.sorts.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.direction || "asc"} onValueChange={handleDirection}>
+                                <SelectTrigger className="w-28">
+                                    <SelectValue placeholder="Direction" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="asc">Asc</SelectItem>
+                                    <SelectItem value="desc">Desc</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={String(faculties.per_page)} onValueChange={handlePerPage}>
+                                <SelectTrigger className="w-28">
+                                    <SelectValue placeholder="Per page" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[10, 20, 50, 100].map((size) => (
+                                        <SelectItem key={size} value={String(size)}>
+                                            {size} / page
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardHeader>
                     <CardContent className="border-t p-0">
-                        <div className="p-0">
-                            <DataTable
-                                columns={columns}
-                                data={faculties.data}
-                                toolbar={tableToolbar}
-                                emptyState={
-                                    <div className="p-6">
-                                        <Empty>
-                                            <EmptyHeader>
-                                                <EmptyMedia variant="icon">
-                                                    <CheckCircle2 className="h-6 w-6" />
-                                                </EmptyMedia>
-                                                <EmptyTitle>No results</EmptyTitle>
-                                                <EmptyDescription>Try clearing filters or add a new faculty profile.</EmptyDescription>
-                                            </EmptyHeader>
-                                            <EmptyContent>
-                                                <Button asChild>
-                                                    <Link href={route("administrators.faculties.create")}>
-                                                        <Plus className="mr-2 h-4 w-4" /> Add Faculty
-                                                    </Link>
-                                                </Button>
-                                            </EmptyContent>
-                                        </Empty>
-                                    </div>
-                                }
-                                pagination={{
-                                    current_page: faculties.current_page,
-                                    last_page: faculties.last_page,
-                                    per_page: faculties.per_page,
-                                    total: faculties.total,
-                                    next_page_url: faculties.next_page_url,
-                                    prev_page_url: faculties.prev_page_url,
-                                    from: faculties.from,
-                                    to: faculties.to,
-                                }}
-                                filters={{ ...filters, per_page: faculties.per_page }}
-                            />
-                        </div>
+                        {selectedRows.length > 0 ? (
+                            <div className="bg-muted/40 flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="text-sm font-medium">{selectedRows.length} faculty selected</div>
+                                <div className="flex flex-wrap gap-2">
+                                    <Select value={bulkStatus} onValueChange={(value) => value && setBulkStatus(value)}>
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {options.statuses.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button onClick={applyBulkStatus}>Apply status</Button>
+                                </div>
+                            </div>
+                        ) : null}
+                        <DataTable
+                            columns={columns}
+                            data={faculties.data}
+                            toolbar={tableToolbar}
+                            onSelectionChange={setSelectedRows}
+                            emptyState={
+                                <div className="p-6">
+                                    <Empty>
+                                        <EmptyHeader>
+                                            <EmptyMedia variant="icon">
+                                                <CheckCircle2 className="h-6 w-6" />
+                                            </EmptyMedia>
+                                            <EmptyTitle>No results</EmptyTitle>
+                                            <EmptyDescription>Try clearing filters or add a new faculty profile.</EmptyDescription>
+                                        </EmptyHeader>
+                                        <EmptyContent>
+                                            <Button asChild>
+                                                <Link href={create.url()}>
+                                                    <Plus className="mr-2 h-4 w-4" /> Add Faculty
+                                                </Link>
+                                            </Button>
+                                        </EmptyContent>
+                                    </Empty>
+                                </div>
+                            }
+                            pagination={{
+                                current_page: faculties.current_page,
+                                last_page: faculties.last_page,
+                                per_page: faculties.per_page,
+                                total: faculties.total,
+                                next_page_url: faculties.next_page_url,
+                                prev_page_url: faculties.prev_page_url,
+                                from: faculties.from,
+                                to: faculties.to,
+                            }}
+                            filters={{ ...filters, per_page: faculties.per_page }}
+                        />
                     </CardContent>
                 </Card>
             </div>
