@@ -1,4 +1,3 @@
-import { updateSeo } from "@/actions/App/Http/Controllers/AdministratorSystemManagementController";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { useForm } from "@inertiajs/react";
 import { AlertCircle, Bot, CheckCircle2, Globe2, Image as ImageIcon, Link2, Loader2, Save, Search, Share2, Sparkles, Type } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { route } from "ziggy-js";
 
 import SystemManagementLayout from "./layout";
 import type { SystemManagementPageProps } from "./types";
@@ -147,7 +147,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
     };
 
     const handleSave = () => {
-        seoForm.put(updateSeo.url(), {
+        seoForm.put(route("administrators.system-management.seo.update"), {
             preserveScroll: true,
             onSuccess: () => toast.success("SEO settings updated successfully."),
             onError: () => toast.error("Failed to update SEO settings."),
@@ -164,7 +164,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
         >
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
                 <div className="space-y-5">
-                    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+                    <Card className="border-primary/20 from-primary/5 via-background to-background bg-linear-to-br">
                         <CardHeader className="pb-3">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
@@ -374,7 +374,9 @@ export default function SystemManagementSeoPage({ user, general_settings, access
                                 <Search className="h-4 w-4" />
                                 4. Advanced Keywords
                             </CardTitle>
-                            <CardDescription>Optional. Some older tools still read these, but modern search ranking rarely depends on them.</CardDescription>
+                            <CardDescription>
+                                Optional. Some older tools still read these, but modern search ranking rarely depends on them.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-2">
                             <Label htmlFor="seo_keywords">Keywords</Label>
@@ -483,7 +485,9 @@ export default function SystemManagementSeoPage({ user, general_settings, access
                                 )}
                             </div>
                             <div className="space-y-1 p-4">
-                                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">{compactUrl(resolvedCanonical)}</p>
+                                <p className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+                                    {compactUrl(resolvedCanonical)}
+                                </p>
                                 <p className="line-clamp-2 text-base leading-tight font-semibold">{resolvedTitle}</p>
                                 <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">{resolvedDescription}</p>
                             </div>
@@ -510,7 +514,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
                             <Separator />
                             <div className="space-y-1">
                                 <p className="text-sm font-medium">Canonical target</p>
-                                <p className="text-muted-foreground break-all text-sm">{resolvedCanonical}</p>
+                                <p className="text-muted-foreground text-sm break-all">{resolvedCanonical}</p>
                             </div>
                         </CardContent>
                     </Card>

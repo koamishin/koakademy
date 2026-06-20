@@ -1,4 +1,3 @@
-import { destroy, edit, show } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import {
 import { router } from "@inertiajs/react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Edit, Eye, FileText, KeyRound, MoreHorizontal, PieChart, Trash } from "lucide-react";
+import { route } from "ziggy-js";
 import { DataTableColumnHeader } from "./data-table-column-header";
 
 export type FacultyRow = {
@@ -181,17 +181,20 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<FacultyRow>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => router.visit(show.url(faculty.id))}>
+                        <DropdownMenuItem onClick={() => router.visit(route("administrators.faculties.show", faculty.id))}>
                             <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.visit(edit.url(faculty.id))}>
+                        <DropdownMenuItem onClick={() => router.visit(route("administrators.faculties.edit", faculty.id))}>
                             <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => window.open(faculty.filament.edit_url, "_blank")}>
                             <FileText className="mr-2 h-4 w-4" /> Edit in Filament
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600 focus:bg-red-50 focus:text-red-600" onClick={() => onDelete(faculty.id, faculty.name)}>
+                        <DropdownMenuItem
+                            className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                            onClick={() => onDelete(faculty.id, faculty.name)}
+                        >
                             <Trash className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                     </DropdownMenuContent>

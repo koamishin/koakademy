@@ -13,8 +13,6 @@ import {
 import * as React from "react";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-import { show } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
 import { router } from "@inertiajs/react";
 import { route } from "ziggy-js";
 import { DataTablePagination } from "./data-table-pagination";
@@ -173,7 +171,7 @@ export function DataTable<TData extends { id?: string }, TValue>({
 
                                         // Navigate to faculty detail page
                                         if (row.original.id) {
-                                            router.visit(show.url(row.original.id));
+                                            router.visit(route("administrators.faculties.show", row.original.id));
                                         }
                                     }}
                                 >

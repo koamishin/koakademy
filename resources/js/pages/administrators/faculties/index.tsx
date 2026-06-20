@@ -1,4 +1,3 @@
-import { bulkUpdateStatus, create, destroy, index } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Filters, type Filter, type FilterFieldConfig } from "@/Components/reui/filters";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +25,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { route } from "ziggy-js";
 import { getColumns, type FacultyRow } from "./columns";
 import { DataTable } from "./data-table";
 
@@ -143,7 +143,7 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, seg
     }, [filters]);
 
     const visitIndex = (query: Record<string, string | number | null | undefined>) => {
-        router.get(index.url(), query, { preserveState: true, replace: true });
+        router.get(route("administrators.faculties.index"), query, { preserveState: true, replace: true });
     };
 
     const handleSearch = useDebouncedCallback(
@@ -229,7 +229,7 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, seg
 
     const handleDelete = useCallback((id: string, name: string) => {
         if (confirm(`Delete ${name}? This cannot be undone.`)) {
-            router.delete(destroy.url(id));
+            router.delete(route("administrators.faculties.destroy", id));
         }
     }, []);
 
@@ -237,7 +237,7 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, seg
         if (selectedRows.length === 0) return;
 
         router.patch(
-            bulkUpdateStatus.url(),
+            route("administrators.faculties.bulk.status"),
             {
                 faculty_ids: selectedRows.map((row) => row.id),
                 status: bulkStatus,
@@ -271,7 +271,12 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, seg
                 icon: <CheckCircle2 className="h-4 w-4" />,
                 options: options.statuses.map((option) => ({
                     ...option,
-                    icon: option.value === "on_leave" ? <PauseCircle className="h-4 w-4 text-yellow-600" /> : <CheckCircle2 className="h-4 w-4 text-green-600" />,
+                    icon:
+                        option.value === "on_leave" ? (
+                            <PauseCircle className="h-4 w-4 text-yellow-600" />
+                        ) : (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ),
                 })),
             },
             {
@@ -395,7 +400,7 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, seg
                             </a>
                         </Button>
                         <Button asChild>
-                            <Link href={create.url()}>
+                            <Link href={route("administrators.faculties.create")}>
                                 <Plus className="mr-2 h-4 w-4" /> Add Faculty
                             </Link>
                         </Button>
@@ -518,7 +523,7 @@ export default function AdministratorFacultiesIndex({ user, filament, stats, seg
                                         </EmptyHeader>
                                         <EmptyContent>
                                             <Button asChild>
-                                                <Link href={create.url()}>
+                                                <Link href={route("administrators.faculties.create")}>
                                                     <Plus className="mr-2 h-4 w-4" /> Add Faculty
                                                 </Link>
                                             </Button>

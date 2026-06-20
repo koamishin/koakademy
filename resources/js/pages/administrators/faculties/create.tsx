@@ -2,7 +2,7 @@ import AdminLayout from "@/components/administrators/admin-layout";
 import { Button } from "@/components/ui/button";
 import type { User } from "@/Types/user";
 import { Head, Link } from "@inertiajs/react";
-import { index } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
+import { route } from "ziggy-js";
 import { FacultyForm } from "./faculty-form";
 
 type Option = { value: string; label: string };
@@ -32,7 +32,7 @@ export default function AdministratorFacultyCreate({ user, defaults, options }: 
                         <p className="text-muted-foreground">Create the academic profile first, then manage classes and portal access.</p>
                     </div>
                     <Button variant="outline" asChild>
-                        <Link href={index.url()}>Back</Link>
+                        <Link href={route("administrators.faculties.index")}>Back</Link>
                     </Button>
                 </div>
 

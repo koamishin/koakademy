@@ -75,13 +75,13 @@ export default defineConfig({
         }),
     ],
     resolve: {
-        alias: {
-            "@": path.resolve(__dirname, "resources/js"),
-            "@/components": path.resolve(__dirname, "resources/js/Components"),
-            "@/hooks": path.resolve(__dirname, "resources/js/Hooks"),
-            "@/lib": path.resolve(__dirname, "resources/js/Lib"),
-            "@/types": path.resolve(__dirname, "resources/js/Types"),
-        },
+        alias: [
+            { find: "@/components", replacement: path.resolve(__dirname, "resources/js/Components") },
+            { find: "@/hooks", replacement: path.resolve(__dirname, "resources/js/Hooks") },
+            { find: "@/lib", replacement: path.resolve(__dirname, "resources/js/Lib") },
+            { find: "@/types", replacement: path.resolve(__dirname, "resources/js/Types") },
+            { find: "@", replacement: path.resolve(__dirname, "resources/js") },
+        ],
     },
     server: {
         cors: true,

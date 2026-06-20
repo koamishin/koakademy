@@ -1,14 +1,3 @@
-import {
-    assignClasses,
-    destroy,
-    edit,
-    index,
-    managePortalAccount,
-    sendNotice,
-    storeDeadline,
-    unassignClass,
-    updateFacultyIdNumber,
-} from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +32,7 @@ import {
     UserCog,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { route } from "ziggy-js";
 
 type Option = { value: string; label: string };
 
@@ -229,7 +219,11 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
         if (!query) return assignment_planner.classes;
 
         return assignment_planner.classes.filter((item) => {
-            return item.label.toLowerCase().includes(query) || item.subject_code.toLowerCase().includes(query) || item.section.toLowerCase().includes(query);
+            return (
+                item.label.toLowerCase().includes(query) ||
+                item.subject_code.toLowerCase().includes(query) ||
+                item.section.toLowerCase().includes(query)
+            );
         });
     }, [assignmentSearch, assignment_planner.classes]);
 
@@ -249,7 +243,7 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
     };
 
     const submitAssignments = () => {
-        assignmentForm.post(assignClasses.url(faculty.id), {
+        assignmentForm.post(route("administrators.faculties.assign-classes", faculty.id), {
             preserveScroll: true,
             onSuccess: () => {
                 assignmentForm.reset("class_ids", "allow_reassignment");
@@ -259,11 +253,11 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
     };
 
     const submitPortal = () => {
-        portalForm.post(managePortalAccount.url(faculty.id), { preserveScroll: true });
+        portalForm.post(route("administrators.faculties.portal-account", faculty.id), { preserveScroll: true });
     };
 
     const submitNotice = () => {
-        noticeForm.post(sendNotice.url(faculty.id), {
+        noticeForm.post(route("administrators.faculties.notice", faculty.id), {
             preserveScroll: true,
             onSuccess: () => noticeForm.reset(),
         });
@@ -275,26 +269,26 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
             class_id: data.class_id === "none" ? null : Number(data.class_id),
         }));
 
-        deadlineForm.post(storeDeadline.url(faculty.id), {
+        deadlineForm.post(route("administrators.faculties.deadlines.store", faculty.id), {
             preserveScroll: true,
             onSuccess: () => deadlineForm.reset(),
         });
     };
 
     const submitFacultyId = () => {
-        idForm.put(updateFacultyIdNumber.url(faculty.id), { preserveScroll: true });
+        idForm.put(route("administrators.faculties.update-id-number", faculty.id), { preserveScroll: true });
     };
 
     const removeClass = (classId: number) => {
         if (!confirm("Unassign this class from the faculty?")) return;
 
-        router.delete(unassignClass.url({ faculty: faculty.id, class: classId }), { preserveScroll: true });
+        router.delete(route("administrators.faculties.classes.unassign", { faculty: faculty.id, class: classId }), { preserveScroll: true });
     };
 
     const deleteFaculty = () => {
         if (!confirm(`Delete ${faculty.name}? This cannot be undone.`)) return;
 
-        router.delete(destroy.url(faculty.id));
+        router.delete(route("administrators.faculties.destroy", faculty.id));
     };
 
     return (
@@ -305,7 +299,7 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                            <Link href={index.url()} className="hover:text-foreground transition-colors">
+                            <Link href={route("administrators.faculties.index")} className="hover:text-foreground transition-colors">
                                 Faculty Operations
                             </Link>
                             <span>/</span>
@@ -316,7 +310,7 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <Button asChild variant="outline" size="sm">
-                            <Link href={edit.url(faculty.id)}>
+                            <Link href={route("administrators.faculties.edit", faculty.id)}>
                                 <UserCog className="mr-2 h-4 w-4" />
                                 Edit Profile
                             </Link>
@@ -335,10 +329,30 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-4">
-                    <MetricCard title="Current load" value={`${faculty.current_classes.length}`} detail={faculty.workload_summary.label} icon={BookOpen} />
-                    <MetricCard title="Portal" value={faculty.portal_account.label} detail={faculty.portal_account.role_label ?? "No role"} icon={KeyRound} />
-                    <MetricCard title="Profile" value={`${faculty.profile_completion.percent}%`} detail={`${faculty.profile_completion.completed}/${faculty.profile_completion.total} fields`} icon={CheckCircle2} />
-                    <MetricCard title="Status" value={statusLabel(faculty.status)} detail={faculty.department ?? "No department"} icon={GraduationCap} />
+                    <MetricCard
+                        title="Current load"
+                        value={`${faculty.current_classes.length}`}
+                        detail={faculty.workload_summary.label}
+                        icon={BookOpen}
+                    />
+                    <MetricCard
+                        title="Portal"
+                        value={faculty.portal_account.label}
+                        detail={faculty.portal_account.role_label ?? "No role"}
+                        icon={KeyRound}
+                    />
+                    <MetricCard
+                        title="Profile"
+                        value={`${faculty.profile_completion.percent}%`}
+                        detail={`${faculty.profile_completion.completed}/${faculty.profile_completion.total} fields`}
+                        icon={CheckCircle2}
+                    />
+                    <MetricCard
+                        title="Status"
+                        value={statusLabel(faculty.status)}
+                        detail={faculty.department ?? "No department"}
+                        icon={GraduationCap}
+                    />
                 </div>
 
                 {faculty.recommended_actions.length > 0 ? (
@@ -412,7 +426,9 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                         value={idForm.data.faculty_id_number}
                                         onChange={(event) => idForm.setData("faculty_id_number", event.target.value)}
                                     />
-                                    {idForm.errors.faculty_id_number ? <p className="text-sm text-red-500">{idForm.errors.faculty_id_number}</p> : null}
+                                    {idForm.errors.faculty_id_number ? (
+                                        <p className="text-sm text-red-500">{idForm.errors.faculty_id_number}</p>
+                                    ) : null}
                                 </div>
                                 <div className="flex items-end">
                                     <Button onClick={submitFacultyId} disabled={idForm.processing}>
@@ -442,7 +458,11 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                     <CardDescription>Select classes, review warnings, and optionally notify the faculty.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <Input value={assignmentSearch} onChange={(event) => setAssignmentSearch(event.target.value)} placeholder="Search classes" />
+                                    <Input
+                                        value={assignmentSearch}
+                                        onChange={(event) => setAssignmentSearch(event.target.value)}
+                                        placeholder="Search classes"
+                                    />
                                     <div className="max-h-[440px] space-y-2 overflow-auto pr-1">
                                         {filteredPlannerClasses.map((classItem) => {
                                             const isSelected = assignmentForm.data.class_ids.includes(classItem.id);
@@ -488,12 +508,17 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                     {selectedWarnings.length > 0 ? (
                                         <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800">
                                             {selectedWarnings.slice(0, 3).map((warning) => (
-                                                <div key={`${warning.classLabel}-${warning.message}`}>{warning.classLabel}: {warning.message}</div>
+                                                <div key={`${warning.classLabel}-${warning.message}`}>
+                                                    {warning.classLabel}: {warning.message}
+                                                </div>
                                             ))}
                                         </div>
                                     ) : null}
                                     <label className="flex items-center gap-2 text-sm">
-                                        <Checkbox checked={assignmentForm.data.notify_faculty} onCheckedChange={(checked) => assignmentForm.setData("notify_faculty", checked === true)} />
+                                        <Checkbox
+                                            checked={assignmentForm.data.notify_faculty}
+                                            onCheckedChange={(checked) => assignmentForm.setData("notify_faculty", checked === true)}
+                                        />
                                         Notify faculty after assignment changes
                                     </label>
                                     {selectedHasReassignment ? (
@@ -505,7 +530,9 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                             Confirm reassignment from another faculty
                                         </label>
                                     ) : null}
-                                    {assignmentForm.errors.class_ids ? <p className="text-sm text-red-500">{assignmentForm.errors.class_ids}</p> : null}
+                                    {assignmentForm.errors.class_ids ? (
+                                        <p className="text-sm text-red-500">{assignmentForm.errors.class_ids}</p>
+                                    ) : null}
                                     <Button
                                         className="w-full"
                                         onClick={submitAssignments}
@@ -543,9 +570,13 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
                                             <div className="font-medium">{faculty.portal_account.label}</div>
-                                            <div className="text-muted-foreground text-sm">{faculty.portal_account.role_label ?? "No faculty role linked"}</div>
+                                            <div className="text-muted-foreground text-sm">
+                                                {faculty.portal_account.role_label ?? "No faculty role linked"}
+                                            </div>
                                         </div>
-                                        <Badge variant={faculty.portal_account.status === "linked" ? "default" : "secondary"}>{faculty.portal_account.status}</Badge>
+                                        <Badge variant={faculty.portal_account.status === "linked" ? "default" : "secondary"}>
+                                            {faculty.portal_account.status}
+                                        </Badge>
                                     </div>
                                     <Separator className="my-3" />
                                     <div className="text-muted-foreground space-y-1 text-sm">
@@ -569,7 +600,10 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Role</Label>
-                                        <Select value={portalForm.data.role} onValueChange={(value) => portalForm.setData("role", value ?? "instructor")}>
+                                        <Select
+                                            value={portalForm.data.role}
+                                            onValueChange={(value) => portalForm.setData("role", value ?? "instructor")}
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -584,7 +618,10 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                     </div>
                                 </div>
                                 <label className="flex items-center gap-2 text-sm">
-                                    <Checkbox checked={portalForm.data.send_reset_link} onCheckedChange={(checked) => portalForm.setData("send_reset_link", checked === true)} />
+                                    <Checkbox
+                                        checked={portalForm.data.send_reset_link}
+                                        onCheckedChange={(checked) => portalForm.setData("send_reset_link", checked === true)}
+                                    />
                                     Send password reset link
                                 </label>
                                 {portalForm.errors.mode ? <p className="text-sm text-red-500">{portalForm.errors.mode}</p> : null}
@@ -633,13 +670,20 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Message</Label>
-                                    <Textarea rows={4} value={noticeForm.data.message} onChange={(event) => noticeForm.setData("message", event.target.value)} />
+                                    <Textarea
+                                        rows={4}
+                                        value={noticeForm.data.message}
+                                        onChange={(event) => noticeForm.setData("message", event.target.value)}
+                                    />
                                     {noticeForm.errors.message ? <p className="text-sm text-red-500">{noticeForm.errors.message}</p> : null}
                                 </div>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label>Priority</Label>
-                                        <Select value={noticeForm.data.priority} onValueChange={(value) => noticeForm.setData("priority", value ?? "normal")}>
+                                        <Select
+                                            value={noticeForm.data.priority}
+                                            onValueChange={(value) => noticeForm.setData("priority", value ?? "normal")}
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -654,7 +698,10 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Action URL</Label>
-                                        <Input value={noticeForm.data.action_url} onChange={(event) => noticeForm.setData("action_url", event.target.value)} />
+                                        <Input
+                                            value={noticeForm.data.action_url}
+                                            onChange={(event) => noticeForm.setData("action_url", event.target.value)}
+                                        />
                                     </div>
                                 </div>
                                 <Button onClick={submitNotice} disabled={noticeForm.processing}>
@@ -677,17 +724,28 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Description</Label>
-                                    <Textarea rows={3} value={deadlineForm.data.description} onChange={(event) => deadlineForm.setData("description", event.target.value)} />
+                                    <Textarea
+                                        rows={3}
+                                        value={deadlineForm.data.description}
+                                        onChange={(event) => deadlineForm.setData("description", event.target.value)}
+                                    />
                                 </div>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label>Due date</Label>
-                                        <Input type="datetime-local" value={deadlineForm.data.due_date} onChange={(event) => deadlineForm.setData("due_date", event.target.value)} />
+                                        <Input
+                                            type="datetime-local"
+                                            value={deadlineForm.data.due_date}
+                                            onChange={(event) => deadlineForm.setData("due_date", event.target.value)}
+                                        />
                                         {deadlineForm.errors.due_date ? <p className="text-sm text-red-500">{deadlineForm.errors.due_date}</p> : null}
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Priority</Label>
-                                        <Select value={deadlineForm.data.priority} onValueChange={(value) => deadlineForm.setData("priority", value ?? "medium")}>
+                                        <Select
+                                            value={deadlineForm.data.priority}
+                                            onValueChange={(value) => deadlineForm.setData("priority", value ?? "medium")}
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -704,11 +762,17 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label>Type</Label>
-                                        <Input value={deadlineForm.data.type} onChange={(event) => deadlineForm.setData("type", event.target.value)} />
+                                        <Input
+                                            value={deadlineForm.data.type}
+                                            onChange={(event) => deadlineForm.setData("type", event.target.value)}
+                                        />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Related class</Label>
-                                        <Select value={deadlineForm.data.class_id} onValueChange={(value) => deadlineForm.setData("class_id", value ?? "none")}>
+                                        <Select
+                                            value={deadlineForm.data.class_id}
+                                            onValueChange={(value) => deadlineForm.setData("class_id", value ?? "none")}
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -760,7 +824,10 @@ export default function AdministratorFacultyShow({ user, faculty, assignment_pla
                         <RecordCard title="Education" value={faculty.education} />
                         <RecordCard title="Courses Taught" value={faculty.courses_taught} />
                         <RecordCard title="Address" value={faculty.address_line1} />
-                        <RecordCard title="Personal" value={[faculty.gender, faculty.age ? `${faculty.age} years old` : null, faculty.birth_date].filter(Boolean).join(" - ")} />
+                        <RecordCard
+                            title="Personal"
+                            value={[faculty.gender, faculty.age ? `${faculty.age} years old` : null, faculty.birth_date].filter(Boolean).join(" - ")}
+                        />
                         <RecordCard title="Department" value={faculty.department} />
                     </TabsContent>
                 </Tabs>

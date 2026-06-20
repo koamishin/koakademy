@@ -2,7 +2,7 @@ import AdminLayout from "@/components/administrators/admin-layout";
 import { Button } from "@/components/ui/button";
 import type { User } from "@/Types/user";
 import { Head, Link } from "@inertiajs/react";
-import { show } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
+import { route } from "ziggy-js";
 import { FacultyForm, type FacultyFormPayload } from "./faculty-form";
 
 type Option = { value: string; label: string };
@@ -29,7 +29,7 @@ export default function AdministratorFacultyEdit({ user, faculty, options }: Fac
                         <p className="text-muted-foreground">Keep academic records, contact details, and profile readiness aligned.</p>
                     </div>
                     <Button variant="outline" asChild>
-                        <Link href={show.url(faculty.id ?? "")}>Back</Link>
+                        <Link href={route("administrators.faculties.show", faculty.id ?? "")}>Back</Link>
                     </Button>
                 </div>
 

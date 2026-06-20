@@ -10,10 +10,10 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useForm } from "@inertiajs/react";
+import { Camera, Save, UserPlus } from "lucide-react";
 import type { FormEventHandler } from "react";
 import { useMemo, useState } from "react";
-import { index, show, store, update } from "@/actions/App/Http/Controllers/AdministratorFacultyManagementController";
-import { Camera, Save, UserPlus } from "lucide-react";
+import { route } from "ziggy-js";
 
 type Option = { value: string; label: string };
 
@@ -105,14 +105,14 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
         event.preventDefault();
 
         if (isEdit && faculty?.id) {
-            put(update.url(faculty.id), { forceFormData: true });
+            put(route("administrators.faculties.update", faculty.id), { forceFormData: true });
             return;
         }
 
-        post(store.url(), { forceFormData: true });
+        post(route("administrators.faculties.store"), { forceFormData: true });
     };
 
-    const backHref = isEdit && faculty?.id ? show.url(faculty.id) : index.url();
+    const backHref = isEdit && faculty?.id ? route("administrators.faculties.show", faculty.id) : route("administrators.faculties.index");
 
     return (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -134,27 +134,52 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                             <CardContent className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="faculty_id_number">Faculty ID Number</Label>
-                                    <Input id="faculty_id_number" value={data.faculty_id_number} onChange={(event) => setData("faculty_id_number", event.target.value)} required />
+                                    <Input
+                                        id="faculty_id_number"
+                                        value={data.faculty_id_number}
+                                        onChange={(event) => setData("faculty_id_number", event.target.value)}
+                                        required
+                                    />
                                     {errors.faculty_id_number ? <p className="text-sm text-red-500">{errors.faculty_id_number}</p> : null}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="email">Email</Label>
-                                    <Input id="email" type="email" value={data.email} onChange={(event) => setData("email", event.target.value)} required />
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={data.email}
+                                        onChange={(event) => setData("email", event.target.value)}
+                                        required
+                                    />
                                     {errors.email ? <p className="text-sm text-red-500">{errors.email}</p> : null}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="first_name">First Name</Label>
-                                    <Input id="first_name" value={data.first_name} onChange={(event) => setData("first_name", event.target.value)} required />
+                                    <Input
+                                        id="first_name"
+                                        value={data.first_name}
+                                        onChange={(event) => setData("first_name", event.target.value)}
+                                        required
+                                    />
                                     {errors.first_name ? <p className="text-sm text-red-500">{errors.first_name}</p> : null}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="last_name">Last Name</Label>
-                                    <Input id="last_name" value={data.last_name} onChange={(event) => setData("last_name", event.target.value)} required />
+                                    <Input
+                                        id="last_name"
+                                        value={data.last_name}
+                                        onChange={(event) => setData("last_name", event.target.value)}
+                                        required
+                                    />
                                     {errors.last_name ? <p className="text-sm text-red-500">{errors.last_name}</p> : null}
                                 </div>
                                 <div className="space-y-2 sm:col-span-2">
                                     <Label htmlFor="middle_name">Middle Name</Label>
-                                    <Input id="middle_name" value={data.middle_name} onChange={(event) => setData("middle_name", event.target.value)} />
+                                    <Input
+                                        id="middle_name"
+                                        value={data.middle_name}
+                                        onChange={(event) => setData("middle_name", event.target.value)}
+                                    />
                                     {errors.middle_name ? <p className="text-sm text-red-500">{errors.middle_name}</p> : null}
                                 </div>
                                 <Separator className="sm:col-span-2" />
@@ -176,7 +201,12 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="department">Department</Label>
-                                    <Input id="department" list="faculty-departments" value={data.department} onChange={(event) => setData("department", event.target.value)} />
+                                    <Input
+                                        id="department"
+                                        list="faculty-departments"
+                                        value={data.department}
+                                        onChange={(event) => setData("department", event.target.value)}
+                                    />
                                     <datalist id="faculty-departments">
                                         {departmentSuggestions.map((department) => (
                                             <option key={department} value={department} />
@@ -212,12 +242,19 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                             <CardContent className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="phone_number">Phone Number</Label>
-                                    <Input id="phone_number" value={data.phone_number} onChange={(event) => setData("phone_number", event.target.value)} />
+                                    <Input
+                                        id="phone_number"
+                                        value={data.phone_number}
+                                        onChange={(event) => setData("phone_number", event.target.value)}
+                                    />
                                     {errors.phone_number ? <p className="text-sm text-red-500">{errors.phone_number}</p> : null}
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Gender</Label>
-                                    <Select value={data.gender || "none"} onValueChange={(value) => setData("gender", value === "none" || value === null ? "" : value)}>
+                                    <Select
+                                        value={data.gender || "none"}
+                                        onValueChange={(value) => setData("gender", value === "none" || value === null ? "" : value)}
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Optional" />
                                         </SelectTrigger>
@@ -234,7 +271,12 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="birth_date">Birth Date</Label>
-                                    <Input id="birth_date" type="date" value={data.birth_date} onChange={(event) => setData("birth_date", event.target.value)} />
+                                    <Input
+                                        id="birth_date"
+                                        type="date"
+                                        value={data.birth_date}
+                                        onChange={(event) => setData("birth_date", event.target.value)}
+                                    />
                                     {errors.birth_date ? <p className="text-sm text-red-500">{errors.birth_date}</p> : null}
                                 </div>
                                 <div className="space-y-2">
@@ -244,12 +286,22 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                                 </div>
                                 <div className="space-y-2 sm:col-span-2">
                                     <Label htmlFor="office_hours">Office Hours</Label>
-                                    <Textarea id="office_hours" value={data.office_hours} onChange={(event) => setData("office_hours", event.target.value)} rows={3} />
+                                    <Textarea
+                                        id="office_hours"
+                                        value={data.office_hours}
+                                        onChange={(event) => setData("office_hours", event.target.value)}
+                                        rows={3}
+                                    />
                                     {errors.office_hours ? <p className="text-sm text-red-500">{errors.office_hours}</p> : null}
                                 </div>
                                 <div className="space-y-2 sm:col-span-2">
                                     <Label htmlFor="address_line1">Address</Label>
-                                    <Textarea id="address_line1" value={data.address_line1} onChange={(event) => setData("address_line1", event.target.value)} rows={3} />
+                                    <Textarea
+                                        id="address_line1"
+                                        value={data.address_line1}
+                                        onChange={(event) => setData("address_line1", event.target.value)}
+                                        rows={3}
+                                    />
                                     {errors.address_line1 ? <p className="text-sm text-red-500">{errors.address_line1}</p> : null}
                                 </div>
                             </CardContent>
@@ -265,17 +317,32 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                             <CardContent className="grid gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="biography">Biography</Label>
-                                    <Textarea id="biography" value={data.biography} onChange={(event) => setData("biography", event.target.value)} rows={4} />
+                                    <Textarea
+                                        id="biography"
+                                        value={data.biography}
+                                        onChange={(event) => setData("biography", event.target.value)}
+                                        rows={4}
+                                    />
                                     {errors.biography ? <p className="text-sm text-red-500">{errors.biography}</p> : null}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="education">Education</Label>
-                                    <Textarea id="education" value={data.education} onChange={(event) => setData("education", event.target.value)} rows={3} />
+                                    <Textarea
+                                        id="education"
+                                        value={data.education}
+                                        onChange={(event) => setData("education", event.target.value)}
+                                        rows={3}
+                                    />
                                     {errors.education ? <p className="text-sm text-red-500">{errors.education}</p> : null}
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="courses_taught">Courses Taught</Label>
-                                    <Textarea id="courses_taught" value={data.courses_taught} onChange={(event) => setData("courses_taught", event.target.value)} rows={3} />
+                                    <Textarea
+                                        id="courses_taught"
+                                        value={data.courses_taught}
+                                        onChange={(event) => setData("courses_taught", event.target.value)}
+                                        rows={3}
+                                    />
                                     {errors.courses_taught ? <p className="text-sm text-red-500">{errors.courses_taught}</p> : null}
                                 </div>
                             </CardContent>
@@ -294,7 +361,10 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                                 <ReviewItem label="Faculty ID" value={data.faculty_id_number || "Missing"} />
                                 <ReviewItem label="Department" value={data.department || "No department"} />
                                 <ReviewItem label="Status" value={statusLabel(data.status)} />
-                                <ReviewItem label="Portal readiness" value={data.email && data.faculty_id_number ? "Ready for portal account" : "Needs email and faculty ID"} />
+                                <ReviewItem
+                                    label="Portal readiness"
+                                    value={data.email && data.faculty_id_number ? "Ready for portal account" : "Needs email and faculty ID"}
+                                />
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -326,7 +396,13 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                             <div className="truncate font-medium">{displayName}</div>
                             <div className="text-muted-foreground truncate text-sm">{data.email || "No email yet"}</div>
                         </div>
-                        <Button type="button" variant="outline" size="icon" className="ml-auto" onClick={() => document.getElementById("photo")?.click()}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="ml-auto"
+                            onClick={() => document.getElementById("photo")?.click()}
+                        >
                             <Camera className="h-4 w-4" />
                         </Button>
                     </div>
@@ -351,7 +427,8 @@ export function FacultyForm({ mode, defaults, faculty, options }: FacultyFormPro
                             <span className="text-foreground font-medium">Office hours:</span> {data.office_hours ? "Listed" : "Not listed"}
                         </div>
                         <div>
-                            <span className="text-foreground font-medium">Teaching profile:</span> {data.education || data.courses_taught ? "Has records" : "Needs records"}
+                            <span className="text-foreground font-medium">Teaching profile:</span>{" "}
+                            {data.education || data.courses_taught ? "Has records" : "Needs records"}
                         </div>
                     </div>
                 </CardContent>
