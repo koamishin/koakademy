@@ -23,6 +23,7 @@ import {
     chartCssVars,
     type LegendItemData,
 } from "@/components/charts";
+import { StatCardArea, type StatCardAreaPoint } from "@/components/stat-card-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +62,10 @@ type AdminStat = {
     label: string;
     value: number | string;
     description: string;
+    format?: "number" | "percent";
+    series?: StatCardAreaPoint[];
     tone: AdminStatTone;
+    trend?: number;
 };
 
 type QuickAction = {
@@ -216,13 +220,6 @@ const adminCardClass = "border-border/60 bg-card/80 rounded-lg shadow-sm";
 const adminPanelClass = "border-border/60 bg-card/80 rounded-lg shadow-sm";
 const chartPalette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"] as const;
 
-const statIcons = {
-    "Pending Enrollments": ClipboardCheck,
-    "Enrolled This Period": GraduationCap,
-    "Total Students": Users,
-    "Conversion Rate": BarChart3,
-} as const;
-
 function toneBadgeClass(tone: AdminStatTone): string {
     if (tone === "success") {
         return "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
@@ -280,6 +277,16 @@ function formatDateTime(value: string): string {
     }).format(new Date(value));
 }
 
+function parseStatNumber(value: number | string): number {
+    if (typeof value === "number") {
+        return value;
+    }
+
+    const parsed = Number.parseFloat(value.replace(/[^0-9.-]+/g, ""));
+
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function hasPositiveData<T extends Record<string, unknown>>(data: T[], key: keyof T): boolean {
     return data.some((item) => Number(item[key] ?? 0) > 0);
 }
@@ -305,25 +312,25 @@ function SectionHeading({ icon: Icon, title, description }: { icon: LucideIcon; 
     );
 }
 
-function StatCard({ stat }: { stat: AdminStat }) {
-    const Icon = statIcons[stat.label as keyof typeof statIcons] ?? BarChart3;
+function DashboardStatCard({ stat, index }: { stat: AdminStat; index: number }) {
+    const numericValue = parseStatNumber(stat.value);
+    const chartData = stat.series?.length ? stat.series : [{ date: new Date().toISOString(), value: numericValue }];
+    const isPercent = stat.format === "percent";
 
     return (
-        <Card className={`${adminCardClass} overflow-hidden`}>
-            <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                    <div className={`rounded-lg p-2.5 ${toneIconClass(stat.tone)}`}>
-                        <Icon className="h-5 w-5" />
-                    </div>
-                    <Badge variant="outline" className={`${toneBadgeClass(stat.tone)} rounded-md text-[10px] uppercase`}>
-                        {stat.tone}
-                    </Badge>
-                </div>
-                <p className="text-muted-foreground mt-5 text-xs font-medium tracking-wide uppercase">{stat.label}</p>
-                <div className="text-foreground mt-2 text-3xl font-semibold tracking-tight">{stat.value}</div>
-                <p className="text-muted-foreground mt-2 text-sm">{stat.description}</p>
-            </CardContent>
-        </Card>
+        <StatCardArea
+            chartColor={chartPalette[index % chartPalette.length]}
+            data={chartData}
+            description={stat.description}
+            formatOptions={{
+                maximumFractionDigits: isPercent ? 1 : 0,
+            }}
+            label={isPercent ? "Rate" : "Current"}
+            suffix={isPercent ? "%" : undefined}
+            title={stat.label}
+            trend={stat.trend ?? 0}
+            value={numericValue}
+        />
     );
 }
 
@@ -601,8 +608,8 @@ export default function AdministratorDashboard({ user, admin_data }: AdminDashbo
                     </div>
                 </div>
                 <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
-                    {admin_data.executive_summary.kpis.map((stat) => (
-                        <StatCard key={stat.label} stat={stat} />
+                    {admin_data.executive_summary.kpis.map((stat, index) => (
+                        <DashboardStatCard key={stat.label} index={index} stat={stat} />
                     ))}
                 </div>
             </div>

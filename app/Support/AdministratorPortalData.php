@@ -73,6 +73,10 @@ final class AdministratorPortalData
         $recentStudents = self::getRecentStudents();
         $recentActivity = self::getRecentActivity();
         $operations = self::getOperationsSnapshot($pendingEnrollments, $financeSnapshot['outstanding_count']);
+        $pendingEnrollmentTrend = self::getEnrollmentTrendSeries($pipeline->getPendingStatus());
+        $enrolledThisPeriodTrend = self::statSeriesFromTrend($enrollmentTrends, 'enrollments');
+        $studentProfileTrend = self::getStudentProfileTrendSeries();
+        $conversionRateTrend = self::getConversionRateTrendSeries();
 
         $stats = [
             [
@@ -80,24 +84,36 @@ final class AdministratorPortalData
                 'value' => $pendingEnrollments,
                 'description' => 'Enrollment requests awaiting review',
                 'tone' => $pendingEnrollments > 0 ? 'warning' : 'success',
+                'trend' => self::calculateSeriesTrend($pendingEnrollmentTrend),
+                'series' => $pendingEnrollmentTrend,
+                'format' => 'number',
             ],
             [
                 'label' => 'Enrolled This Period',
                 'value' => $enrolledThisPeriod,
                 'description' => 'Verified enrollments for current term',
                 'tone' => 'info',
+                'trend' => self::calculateSeriesTrend($enrolledThisPeriodTrend),
+                'series' => $enrolledThisPeriodTrend,
+                'format' => 'number',
             ],
             [
                 'label' => 'Total Students',
                 'value' => $totalStudents,
                 'description' => 'All student profiles in the system',
                 'tone' => 'neutral',
+                'trend' => self::calculateSeriesTrend($studentProfileTrend),
+                'series' => $studentProfileTrend,
+                'format' => 'number',
             ],
             [
                 'label' => 'Conversion Rate',
                 'value' => sprintf('%.1f%%', $applicationStats['conversion_rate']),
                 'description' => 'Applicants converted to enrolled',
                 'tone' => $applicationStats['conversion_rate'] >= 70 ? 'success' : 'warning',
+                'trend' => self::calculateSeriesTrend($conversionRateTrend),
+                'series' => $conversionRateTrend,
+                'format' => 'percent',
             ],
         ];
 
@@ -304,6 +320,129 @@ final class AdministratorPortalData
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<int, array{date: string, value: float|int}>
+     */
+    private static function getEnrollmentTrendSeries(?string $status = null): array
+    {
+        $query = StudentEnrollment::withTrashed();
+
+        if ($status !== null) {
+            $query->where('status', $status);
+        }
+
+        $data = Trend::query($query)
+            ->between(start: now()->startOfYear(), end: now()->endOfYear())
+            ->perMonth()
+            ->count();
+
+        return $data
+            ->map(fn (TrendValue $value): array => [
+                'date' => Carbon::parse($value->date)->startOfMonth()->toDateString(),
+                'value' => (int) $value->aggregate,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{date: string, value: float|int}>
+     */
+    private static function getStudentProfileTrendSeries(): array
+    {
+        $data = Trend::query(Student::query())
+            ->between(start: now()->startOfYear(), end: now()->endOfYear())
+            ->perMonth()
+            ->count();
+
+        return $data
+            ->map(fn (TrendValue $value): array => [
+                'date' => Carbon::parse($value->date)->startOfMonth()->toDateString(),
+                'value' => (int) $value->aggregate,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{date: string, value: float|int}>
+     */
+    private static function getConversionRateTrendSeries(): array
+    {
+        $applicantTrend = self::getStudentStatusTrendSeries(StudentStatus::Applicant->value);
+        $enrolledTrend = self::getStudentStatusTrendSeries(StudentStatus::Enrolled->value);
+        $applicantsByDate = collect($applicantTrend)->keyBy('date');
+
+        return collect($enrolledTrend)
+            ->map(function (array $enrolledPoint) use ($applicantsByDate): array {
+                $date = (string) $enrolledPoint['date'];
+                $enrolled = (int) $enrolledPoint['value'];
+                $applicants = (int) ($applicantsByDate->get($date)['value'] ?? 0);
+                $processed = $enrolled + $applicants;
+
+                return [
+                    'date' => $date,
+                    'value' => $processed > 0 ? round(($enrolled / $processed) * 100, 1) : 0.0,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{date: string, value: float|int}>
+     */
+    private static function getStudentStatusTrendSeries(string $status): array
+    {
+        $data = Trend::query(Student::query()->where('status', $status))
+            ->between(start: now()->startOfYear(), end: now()->endOfYear())
+            ->perMonth()
+            ->count();
+
+        return $data
+            ->map(fn (TrendValue $value): array => [
+                'date' => Carbon::parse($value->date)->startOfMonth()->toDateString(),
+                'value' => (int) $value->aggregate,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $trend
+     * @return array<int, array{date: string, value: float|int}>
+     */
+    private static function statSeriesFromTrend(array $trend, string $valueKey): array
+    {
+        return collect($trend)
+            ->map(fn (array $point): array => [
+                'date' => (string) $point['date'],
+                'value' => (int) ($point[$valueKey] ?? 0),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array{date: string, value: float|int}>  $series
+     */
+    private static function calculateSeriesTrend(array $series): float
+    {
+        $values = collect($series)
+            ->pluck('value')
+            ->filter(fn (float|int $value): bool => $value > 0)
+            ->values();
+
+        if ($values->count() < 2) {
+            return 0.0;
+        }
+
+        $current = (float) $values->last();
+        $previous = (float) $values->slice(-2, 1)->first();
+
+        return $previous > 0 ? round((($current - $previous) / $previous) * 100, 1) : 0.0;
     }
 
     /**

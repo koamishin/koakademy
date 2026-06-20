@@ -37,6 +37,8 @@ it('allows administrative users to view the administrator dashboard', function (
             ->has('admin_data.quick_actions')
             ->has('admin_data.current_period')
             ->has('admin_data.executive_summary.kpis')
+            ->has('admin_data.executive_summary.kpis.0.series')
+            ->has('admin_data.executive_summary.kpis.0.trend')
             ->has('admin_data.enrollment_health.pipeline')
             ->has('admin_data.enrollment_health.trends')
             ->has('admin_data.student_demographics.by_type')
