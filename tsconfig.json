@@ -109,10 +109,14 @@
         "skipLibCheck": true /* Skip type checking all .d.ts files. */,
         "baseUrl": ".",
         "paths": {
+            "@/components/*": ["./resources/js/Components/*"],
+            "@/hooks/*": ["./resources/js/Hooks/*"],
+            "@/lib/*": ["./resources/js/Lib/*"],
+            "@/types/*": ["./resources/js/Types/*"],
             "@/*": ["./resources/js/*"],
-            "ziggy-js": ["./vendor/tightenco/ziggy"]
+            "ziggy-js": ["./vendor/tightenco/ziggy"],
         },
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
     },
-    "include": ["resources/js/**/*.ts", "resources/js/**/*.d.ts", "resources/js/**/*.tsx"]
+    "include": ["resources/js/**/*.ts", "resources/js/**/*.d.ts", "resources/js/**/*.tsx"],
 }

@@ -1,8 +1,9 @@
 import tailwindcss from "@tailwindcss/vite";
 import legacy from "@vitejs/plugin-legacy";
 import react from "@vitejs/plugin-react";
-import fs from "node:fs";
 import laravel from "laravel-vite-plugin";
+import fs from "node:fs";
+import path from "node:path";
 import { defineConfig } from "vite";
 
 const CONTROL_CHARS_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
@@ -73,6 +74,15 @@ export default defineConfig({
             renderModernChunks: true,
         }),
     ],
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "resources/js"),
+            "@/components": path.resolve(__dirname, "resources/js/Components"),
+            "@/hooks": path.resolve(__dirname, "resources/js/Hooks"),
+            "@/lib": path.resolve(__dirname, "resources/js/Lib"),
+            "@/types": path.resolve(__dirname, "resources/js/Types"),
+        },
+    },
     server: {
         cors: true,
     },
