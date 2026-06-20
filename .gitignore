@@ -38,7 +38,6 @@ yarn-error.log
 /.codex
 /.junie
 /.windsurf
-/.agents
 /.ai/*
 /.amp
 /.cursor/**
