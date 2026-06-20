@@ -65,6 +65,75 @@ it('allows cashier users to view the finance reports page', function (): void {
         ->assertOk();
 });
 
+it('shares cashier desk data on the finance dashboard', function (): void {
+    $user = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    grantFinancePermission($user);
+
+    $this->actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/finance'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('administrators/finance/dashboard', false)
+            ->has('stats.total_revenue')
+            ->has('stats.total_collectibles')
+            ->has('cashier_desk.ready_for_collection')
+            ->has('cashier_desk.average_transaction_today')
+            ->has('cashier_desk.next_actions')
+            ->has('collection_queue')
+            ->has('recent_transactions')
+        );
+});
+
+it('shares payment desk summaries and active filters', function (): void {
+    $user = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    grantFinancePermission($user);
+
+    $this->actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/finance/payments?search=receipt&method=Cash&status=paid'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('administrators/finance/payments', false)
+            ->has('payments.data')
+            ->has('summary.total_transactions')
+            ->has('summary.total_collected')
+            ->has('summary.today_transactions')
+            ->has('summary.today_collected')
+            ->has('summary.payment_methods')
+            ->where('filters.search', 'receipt')
+            ->where('filters.method', 'Cash')
+            ->where('filters.status', 'paid')
+        );
+});
+
+it('shares billing desk summaries and active filters', function (): void {
+    $user = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    grantFinancePermission($user);
+
+    $this->actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/finance/invoices?search=student&status=unpaid'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('administrators/finance/invoices', false)
+            ->has('invoices.data')
+            ->has('summary.total_billings')
+            ->has('summary.total_assessed')
+            ->has('summary.total_outstanding')
+            ->has('summary.paid_count')
+            ->has('summary.unpaid_count')
+            ->where('filters.search', 'student')
+            ->where('filters.status', 'unpaid')
+        );
+});
+
 it('forbids registrar users from accessing finance reports without cashier permission', function (): void {
     $user = User::factory()->create([
         'role' => UserRole::Registrar,

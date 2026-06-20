@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2, ChevronsUpDown, FileText, Loader2, Package, Plus, Search, User as UserIcon, X } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { route } from "ziggy-js";
 
@@ -121,8 +121,15 @@ export default function CreatePaymentPage({ user, items, currency: propCurrency 
 
     const [submitting, setSubmitting] = useState(false);
     const studentSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const prefilledStudentRef = useRef(false);
 
     // Search Logic
+    const loadStudentOptions = useCallback(async (search: string): Promise<StudentOption[]> => {
+        const response = await fetch(route("administrators.enrollments.api.students") + `?search=${encodeURIComponent(search)}`);
+
+        return response.json();
+    }, []);
+
     const searchStudents = useCallback((search: string) => {
         if (studentSearchTimeout.current) clearTimeout(studentSearchTimeout.current);
         if (search.length < 2) {
@@ -132,16 +139,14 @@ export default function CreatePaymentPage({ user, items, currency: propCurrency 
         studentSearchTimeout.current = setTimeout(async () => {
             setStudentLoading(true);
             try {
-                const response = await fetch(route("administrators.enrollments.api.students") + `?search=${encodeURIComponent(search)}`);
-                const data = await response.json();
-                setStudentOptions(data);
+                setStudentOptions(await loadStudentOptions(search));
             } catch (error) {
                 toast.error("Search failed");
             } finally {
                 setStudentLoading(false);
             }
         }, 300);
-    }, []);
+    }, [loadStudentOptions]);
 
     const handleSelectStudent = async (student: StudentOption) => {
         setStudentOpen(false);
@@ -161,6 +166,37 @@ export default function CreatePaymentPage({ user, items, currency: propCurrency 
             toast.error("Failed to load details");
         }
     };
+
+    useEffect(() => {
+        if (prefilledStudentRef.current || selectedStudent || typeof window === "undefined") {
+            return;
+        }
+
+        const studentQuery = new URLSearchParams(window.location.search).get("student");
+
+        if (!studentQuery || studentQuery.length < 2) {
+            return;
+        }
+
+        prefilledStudentRef.current = true;
+        setStudentSearch(studentQuery);
+        setStudentLoading(true);
+
+        loadStudentOptions(studentQuery)
+            .then((students) => {
+                setStudentOptions(students);
+
+                if (students.length === 1) {
+                    void handleSelectStudent(students[0]);
+                    return;
+                }
+
+                setStudentOpen(true);
+                toast.info("Choose the matching student to continue payment.");
+            })
+            .catch(() => toast.error("Could not prefill student from billing."))
+            .finally(() => setStudentLoading(false));
+    }, [loadStudentOptions, selectedStudent]);
 
     // Handle Tuition Selection
     const handleTuitionChange = (val: string) => {
@@ -291,7 +327,7 @@ export default function CreatePaymentPage({ user, items, currency: propCurrency 
                         <p className="text-muted-foreground">Process student payments and fees.</p>
                     </div>
                     <Button variant="outline" asChild>
-                        <Link href="/administrators/finance/payments">
+                        <Link href={route("administrators.finance.payments")}>
                             <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
                         </Link>
                     </Button>

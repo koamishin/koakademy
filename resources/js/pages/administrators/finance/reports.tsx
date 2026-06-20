@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User } from "@/types/user";
-import { Head, usePage } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import {
     IconCalendar,
     IconCash,
@@ -28,6 +28,7 @@ import {
 import { format } from "date-fns";
 import { useCallback, useState } from "react";
 import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
+import { route } from "ziggy-js";
 
 interface Branding {
     currency: string;
@@ -208,11 +209,26 @@ const barChartConfig = {
     total: { label: "Amount", color: "hsl(142.1 76.2% 36.3%)" },
 } satisfies ChartConfig;
 
+const reportTabs = ["daily", "collection", "outstanding", "scholarship", "revenue", "fullypaid", "cashier"] as const;
+
+type ReportTab = (typeof reportTabs)[number];
+
+function initialReportTab(): ReportTab {
+    if (typeof window === "undefined") {
+        return "daily";
+    }
+
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    const normalizedTab = tab === "fully-paid" ? "fullypaid" : tab;
+
+    return reportTabs.includes(normalizedTab as ReportTab) ? (normalizedTab as ReportTab) : "daily";
+}
+
 export default function ReportsPage({ user, filters }: ReportsProps) {
     const { props } = usePage<{ branding?: Branding }>();
     const currency = props.branding?.currency || "PHP";
 
-    const [activeTab, setActiveTab] = useState("daily");
+    const [activeTab, setActiveTab] = useState<ReportTab>(() => initialReportTab());
     const [loading, setLoading] = useState(false);
 
     // Date states
@@ -244,7 +260,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
     const fetchDailyCollection = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await fetch(`/administrators/finance/reports/daily-collection?date=${format(selectedDate, "yyyy-MM-dd")}`);
+            const response = await fetch(route("administrators.finance.reports.daily-collection", { date: format(selectedDate, "yyyy-MM-dd") }));
             const data = await response.json();
             setDailyData(data);
         } catch (error) {
@@ -263,7 +279,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
             });
             if (paymentMethod) params.append("payment_method", paymentMethod);
 
-            const response = await fetch(`/administrators/finance/reports/collection?${params}`);
+            const response = await fetch(route("administrators.finance.reports.collection") + `?${params}`);
             const data = await response.json();
             setCollectionData(data);
         } catch (error) {
@@ -281,7 +297,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
                 semester: semester,
             });
 
-            const response = await fetch(`/administrators/finance/reports/outstanding-balances?${params}`);
+            const response = await fetch(route("administrators.finance.reports.outstanding-balances") + `?${params}`);
             const data = await response.json();
             setOutstandingData(data);
         } catch (error) {
@@ -299,7 +315,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
                 semester: semester,
             });
 
-            const response = await fetch(`/administrators/finance/reports/scholarship?${params}`);
+            const response = await fetch(route("administrators.finance.reports.scholarship") + `?${params}`);
             const data = await response.json();
             setScholarshipData(data);
         } catch (error) {
@@ -317,7 +333,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
                 semester: semester,
             });
 
-            const response = await fetch(`/administrators/finance/reports/revenue-breakdown?${params}`);
+            const response = await fetch(route("administrators.finance.reports.revenue-breakdown") + `?${params}`);
             const data = await response.json();
             setRevenueData(data);
         } catch (error) {
@@ -335,7 +351,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
                 semester: semester,
             });
 
-            const response = await fetch(`/administrators/finance/reports/fully-paid?${params}`);
+            const response = await fetch(route("administrators.finance.reports.fully-paid") + `?${params}`);
             const data = await response.json();
             setFullyPaidData(data);
         } catch (error) {
@@ -353,7 +369,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
                 end_date: format(endDate, "yyyy-MM-dd"),
             });
 
-            const response = await fetch(`/administrators/finance/reports/cashier-performance?${params}`);
+            const response = await fetch(route("administrators.finance.reports.cashier-performance") + `?${params}`);
             const data = await response.json();
             setCashierData(data);
         } catch (error) {
@@ -427,17 +443,41 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
     );
 
     return (
-        <AdminLayout user={user} title="Financial Reports">
+        <AdminLayout user={user} title="Accounting Reports">
             <Head title="Finance - Reports" />
 
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <h2 className="text-foreground text-2xl font-bold tracking-tight">Financial Reports</h2>
-                    <p className="text-muted-foreground">Generate comprehensive financial reports and analytics.</p>
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="rounded-md">
+                            SY {filters.current_school_year}
+                        </Badge>
+                        <Badge variant="outline" className="rounded-md">
+                            Semester {filters.current_semester}
+                        </Badge>
+                    </div>
+                    <h2 className="text-foreground text-3xl font-bold tracking-tight">Accounting Reports</h2>
+                    <p className="text-muted-foreground mt-2 max-w-3xl text-sm">
+                        Generate cashier closeout lists, official collection reports, outstanding balance follow-ups, and audit-ready exports.
+                    </p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button asChild className="gap-2">
+                        <Link href={route("administrators.finance.payments.create")}>
+                            <IconCash className="size-4" />
+                            Receive Payment
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="gap-2">
+                        <Link href={route("administrators.finance.payments")}>
+                            <IconReceipt className="size-4" />
+                            Receipts
+                        </Link>
+                    </Button>
                 </div>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)} className="mt-6">
                 <TabsList className="mb-4 h-auto flex-wrap gap-1">
                     <TabsTrigger value="daily" className="gap-2">
                         <IconReceipt className="size-4" />
@@ -446,7 +486,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
                     </TabsTrigger>
                     <TabsTrigger value="collection" className="gap-2">
                         <IconCash className="size-4" />
-                        <span className="hidden sm:inline">Collection Report</span>
+                        <span className="hidden sm:inline">Date Range</span>
                         <span className="sm:hidden">Collection</span>
                     </TabsTrigger>
                     <TabsTrigger value="outstanding" className="gap-2">
@@ -471,7 +511,7 @@ export default function ReportsPage({ user, filters }: ReportsProps) {
                     </TabsTrigger>
                     <TabsTrigger value="cashier" className="gap-2">
                         <IconUsers className="size-4" />
-                        <span className="hidden sm:inline">Cashier</span>
+                        <span className="hidden sm:inline">Cashier Closeout</span>
                         <span className="sm:hidden">Staff</span>
                     </TabsTrigger>
                 </TabsList>

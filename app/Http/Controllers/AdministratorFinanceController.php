@@ -167,6 +167,52 @@ final class AdministratorFinanceController extends Controller
                 'transaction_count' => $item->transaction_count,
             ]);
 
+        $collectionQueue = StudentTuition::query()
+            ->with(['student.Course', 'enrollment'])
+            ->whereHas('enrollment', function ($q) use ($currentSchoolYear, $currentSemester): void {
+                $q->where('school_year', $currentSchoolYear)
+                    ->where('semester', $currentSemester);
+            })
+            ->where('total_balance', '>', 0)
+            ->orderByDesc('total_balance')
+            ->limit(8)
+            ->get()
+            ->map(fn (StudentTuition $tuition): array => [
+                'id' => $tuition->id,
+                'student_id' => $tuition->student?->student_id ?? 'N/A',
+                'student_name' => $tuition->student?->full_name ?? 'N/A',
+                'course' => $tuition->student?->Course?->code ?? 'N/A',
+                'year_level' => $tuition->student?->academic_year ?? 'N/A',
+                'total_amount' => $tuition->overall_tuition,
+                'paid' => $tuition->paid,
+                'balance' => $tuition->total_balance,
+                'payment_progress' => $tuition->payment_progress,
+            ]);
+
+        $cashierDesk = [
+            'ready_for_collection' => $collectionQueue->count(),
+            'average_transaction_today' => $todayTransactions > 0
+                ? round($todayCollection / $todayTransactions, 2)
+                : 0,
+            'next_actions' => [
+                [
+                    'label' => 'Receive student payment',
+                    'description' => 'Search student, apply tuition or fee payments, then print receipt.',
+                    'href' => route('administrators.finance.payments.create'),
+                ],
+                [
+                    'label' => 'Review payment history',
+                    'description' => 'Find receipts, cashier entries, and reference numbers.',
+                    'href' => route('administrators.finance.payments'),
+                ],
+                [
+                    'label' => 'Check billing balances',
+                    'description' => 'See unpaid enrollment billings before accepting payment.',
+                    'href' => route('administrators.finance.invoices'),
+                ],
+            ],
+        ];
+
         // 13. Scholarship/Discount Summary
         $totalDiscounts = StudentTuition::query()
             ->whereHas('enrollment', function ($q) use ($currentSchoolYear, $currentSemester): void {
@@ -216,13 +262,10 @@ final class AdministratorFinanceController extends Controller
         $endDate = $now->copy()->endOfMonth();
 
         $transactionsByMonth = Transaction::query()
-            ->select(
-                DB::raw("DATE_TRUNC('month', transaction_date) as month"),
-                'settlements'
-            )
+            ->select(['transaction_date', 'settlements'])
             ->whereBetween('transaction_date', [$startDate, $endDate])
             ->get()
-            ->groupBy(fn ($item): string => Carbon::parse($item->month)->format('Y-m'))
+            ->groupBy(fn (Transaction $transaction): string => $transaction->transaction_date->format('Y-m'))
             ->map(fn ($transactions) => $transactions->sum(function ($tx): int|float {
                 $settlements = $tx->settlements;
                 if (is_string($settlements)) {
@@ -268,6 +311,8 @@ final class AdministratorFinanceController extends Controller
             'daily_collection' => $dailyCollection,
             'recent_transactions' => $recentTransactions,
             'top_students' => $topStudents,
+            'collection_queue' => $collectionQueue,
+            'cashier_desk' => $cashierDesk,
             'fee_breakdown' => $feeBreakdown,
             'chart_data' => $monthlyRevenue,
             'current_period' => [
@@ -533,7 +578,7 @@ final class AdministratorFinanceController extends Controller
         ]);
     }
 
-    public function invoices(): Response|RedirectResponse
+    public function invoices(Request $request): Response|RedirectResponse
     {
         $this->authorizeFinanceAccess();
 
@@ -543,21 +588,71 @@ final class AdministratorFinanceController extends Controller
             return redirect('/login');
         }
 
-        // For now, listing StudentTuitions as "Invoices" or Billing Statements
-        // Or we could list Enrollments which act as the main billing record.
+        $search = mb_trim((string) $request->query('search', ''));
+        $status = (string) $request->query('status', 'all');
 
-        $invoices = StudentEnrollment::query()
-            ->with(['student', 'studentTuition'])
-            ->latest()
+        $invoiceQuery = StudentEnrollment::query()
+            ->with(['student.Course', 'studentTuition'])
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($searchQuery) use ($search): void {
+                    $searchQuery->whereHas('student', function ($studentQuery) use ($search): void {
+                        $studentQuery
+                            ->where('student_id', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%")
+                            ->orWhere('middle_name', 'like', "%{$search}%");
+                    });
+                });
+            })
+            ->when($status === 'paid', function ($query): void {
+                $query->whereHas('studentTuition', fn ($tuitionQuery) => $tuitionQuery->where('total_balance', '<=', 0));
+            })
+            ->when($status === 'unpaid', function ($query): void {
+                $query->whereHas('studentTuition', fn ($tuitionQuery) => $tuitionQuery->where('total_balance', '>', 0));
+            })
+            ->latest();
+
+        $invoiceSummary = (clone $invoiceQuery)
+            ->get()
+            ->reduce(function (array $summary, StudentEnrollment $enrollment): array {
+                $tuition = $enrollment->studentTuition;
+                $totalAmount = (float) ($tuition?->overall_tuition ?? 0);
+                $balance = (float) ($tuition?->total_balance ?? 0);
+
+                $summary['total_billings']++;
+                $summary['total_assessed'] += $totalAmount;
+                $summary['total_outstanding'] += $balance;
+
+                if ($tuition !== null && $balance <= 0) {
+                    $summary['paid_count']++;
+                } else {
+                    $summary['unpaid_count']++;
+                }
+
+                return $summary;
+            }, [
+                'total_billings' => 0,
+                'total_assessed' => 0.0,
+                'total_outstanding' => 0.0,
+                'paid_count' => 0,
+                'unpaid_count' => 0,
+            ]);
+
+        $invoices = $invoiceQuery
             ->paginate(15)
+            ->withQueryString()
             ->through(fn ($enrollment): array => [
                 'id' => $enrollment->id,
                 'invoice_number' => 'INV-'.mb_str_pad((string) $enrollment->id, 6, '0', STR_PAD_LEFT),
-                'student_name' => $enrollment->student->full_name,
+                'student_id' => $enrollment->student?->student_id ?? 'N/A',
+                'student_name' => $enrollment->student?->full_name ?? 'N/A',
+                'course' => $enrollment->student?->Course?->code ?? 'N/A',
+                'year_level' => $enrollment->student?->academic_year ?? 'N/A',
                 'total_amount' => $enrollment->studentTuition?->overall_tuition ?? 0,
                 'balance' => $enrollment->studentTuition?->total_balance ?? 0,
                 'status' => $enrollment->studentTuition && $enrollment->studentTuition->total_balance <= 0 ? 'Paid' : 'Unpaid',
                 'date' => $enrollment->created_at->format('M d, Y'),
+                'payment_progress' => $enrollment->studentTuition?->payment_progress ?? 0,
             ]);
 
         return Inertia::render('administrators/finance/invoices', [
@@ -567,10 +662,15 @@ final class AdministratorFinanceController extends Controller
                 'role' => $user->role?->getLabel() ?? 'Administrator',
             ],
             'invoices' => $invoices,
+            'summary' => $invoiceSummary,
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+            ],
         ]);
     }
 
-    public function payments(): Response|RedirectResponse
+    public function payments(Request $request): Response|RedirectResponse
     {
         $this->authorizeFinanceAccess();
 
@@ -580,18 +680,61 @@ final class AdministratorFinanceController extends Controller
             return redirect('/login');
         }
 
-        $payments = Transaction::query()
-            ->with(['studentTransactions.student'])
-            ->latest()
+        $search = mb_trim((string) $request->query('search', ''));
+        $method = (string) $request->query('method', 'all');
+        $status = (string) $request->query('status', 'all');
+
+        $paymentsQuery = Transaction::query()
+            ->with(['studentTransactions.student', 'user'])
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($searchQuery) use ($search): void {
+                    $searchQuery
+                        ->where('transaction_number', 'like', "%{$search}%")
+                        ->orWhere('invoicenumber', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhereHas('studentTransactions.student', function ($studentQuery) use ($search): void {
+                            $studentQuery
+                                ->where('student_id', 'like', "%{$search}%")
+                                ->orWhere('first_name', 'like', "%{$search}%")
+                                ->orWhere('last_name', 'like', "%{$search}%")
+                                ->orWhere('middle_name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($method !== 'all', fn ($query) => $query->where('payment_method', $method))
+            ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->latest();
+
+        $paymentRows = (clone $paymentsQuery)->get();
+        $paymentSummary = [
+            'total_transactions' => $paymentRows->count(),
+            'total_collected' => $paymentRows->sum(fn (Transaction $transaction): float => (float) $transaction->raw_total_amount),
+            'today_transactions' => $paymentRows->filter(fn (Transaction $transaction): bool => $transaction->transaction_date->isToday())->count(),
+            'today_collected' => $paymentRows
+                ->filter(fn (Transaction $transaction): bool => $transaction->transaction_date->isToday())
+                ->sum(fn (Transaction $transaction): float => (float) $transaction->raw_total_amount),
+            'payment_methods' => $paymentRows
+                ->pluck('payment_method')
+                ->filter()
+                ->unique()
+                ->values(),
+        ];
+
+        $payments = $paymentsQuery
             ->paginate(15)
+            ->withQueryString()
             ->through(fn ($tx): array => [
                 'id' => $tx->id,
                 'transaction_number' => $tx->transaction_number,
+                'student_id' => $tx->studentTransactions->first()?->student?->student_id ?? 'N/A',
                 'student_name' => $tx->studentTransactions->first()?->student?->full_name ?? 'N/A',
                 'amount' => $tx->raw_total_amount,
-                'method' => 'Cash', // Placeholder, assuming mostly cash or need column check
+                'method' => $tx->payment_method,
                 'status' => $tx->status,
                 'date' => $tx->transaction_date->format('M d, Y H:i A'),
+                'cashier' => $tx->user?->name ?? 'System',
+                'description' => $tx->description,
+                'receipt_url' => route('administrators.finance.payments.show', $tx->id),
             ]);
 
         return Inertia::render('administrators/finance/payments', [
@@ -601,6 +744,12 @@ final class AdministratorFinanceController extends Controller
                 'role' => $user->role?->getLabel() ?? 'Administrator',
             ],
             'payments' => $payments,
+            'summary' => $paymentSummary,
+            'filters' => [
+                'search' => $search,
+                'method' => $method,
+                'status' => $status,
+            ],
         ]);
     }
 

@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { User } from "@/types/user";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import { ArrowLeft, CheckCircle2, Printer } from "lucide-react";
+import { route } from "ziggy-js";
 
 interface TransactionDetails {
     id: number;
@@ -55,7 +56,7 @@ export default function ReceiptPage({ user, transaction }: ReceiptProps) {
                     {/* Actions - Hidden in Print */}
                     <div className="mb-6 flex items-center justify-between print:hidden">
                         <Button variant="outline" asChild>
-                            <Link href="/administrators/finance/payments">
+                            <Link href={route("administrators.finance.payments")}>
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 Back to Payments
                             </Link>
@@ -66,7 +67,7 @@ export default function ReceiptPage({ user, transaction }: ReceiptProps) {
                                 Print
                             </Button>
                             <Button variant="outline" asChild>
-                                <Link href="/administrators/finance/payments/create">New Transaction</Link>
+                                <Link href={route("administrators.finance.payments.create")}>New Transaction</Link>
                             </Button>
                         </div>
                     </div>
