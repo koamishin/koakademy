@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.1.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.1",
-  "commit": "a2907b603712431956094565dfc3fe94a350230c",
+  "version": "1.9.0-dev.1.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.2",
+  "commit": "e2effcb022189662806ffa342d58732716b2d166",
   "branch": "master",
-  "timestamp": "2026-06-19T08:28:21Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27814375415",
-  "release_type": "patch",
+  "timestamp": "2026-06-22T14:37:51Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27960167979",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.9.0-dev.1.1 - Regenerate assessment PDFs and remove duplicate total line",
-    "previous": "1.9.0-dev.1.0"
+    "current": "Version 1.9.0-dev.1.2 - fix(build): correct case-sensitive frontend imports",
+    "previous": "1.9.0-dev.1.1"
   },
   "metadata": {
     "author": "yukazakiri",
