@@ -68,7 +68,9 @@ export default function SchedulingFiltersBar({
     availableFaculty,
 }: SchedulingFiltersBarProps) {
     const [roomFilterOpen, setRoomFilterOpen] = useState(false);
+    const [facultyFilterOpen, setFacultyFilterOpen] = useState(false);
     const selectedRoom = availableRooms.find((room) => String(room.id) === roomFilter);
+    const selectedFaculty = availableFaculty.find((faculty) => faculty.id === facultyFilter);
 
     return (
         <Card className="bg-muted/30 border shadow-none">
@@ -170,22 +172,59 @@ export default function SchedulingFiltersBar({
                         </PopoverContent>
                     </Popover>
 
-                    <Select value={facultyFilter} onValueChange={onFacultyFilterChange}>
-                        <SelectTrigger className="h-9 w-[160px] text-xs">
-                            <div className="flex items-center gap-1.5">
-                                <UserIcon className="text-muted-foreground h-3 w-3" />
-                                <SelectValue placeholder="Faculty" />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Faculty</SelectItem>
-                            {availableFaculty.map((f) => (
-                                <SelectItem key={f.id} value={f.id}>
-                                    {f.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Popover open={facultyFilterOpen} onOpenChange={setFacultyFilterOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={facultyFilterOpen}
+                                className="h-9 w-[180px] justify-between px-3 text-xs font-normal"
+                            >
+                                <span className="flex min-w-0 items-center gap-1.5">
+                                    <UserIcon className="text-muted-foreground h-3 w-3 shrink-0" />
+                                    <span className="truncate">{selectedFaculty?.name ?? "All Faculty"}</span>
+                                </span>
+                                <ChevronsUpDown className="text-muted-foreground ml-2 h-3 w-3 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[260px] p-0" align="start">
+                            <Command>
+                                <CommandInput placeholder="Search faculty..." />
+                                <CommandList>
+                                    <CommandEmpty>No faculty found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="all faculty"
+                                            onSelect={() => {
+                                                onFacultyFilterChange("all");
+                                                setFacultyFilterOpen(false);
+                                            }}
+                                        >
+                                            <Check className={cn("h-3.5 w-3.5", facultyFilter === "all" ? "opacity-100" : "opacity-0")} />
+                                            All Faculty
+                                        </CommandItem>
+                                        {availableFaculty.map((faculty) => (
+                                            <CommandItem
+                                                key={faculty.id}
+                                                value={`${faculty.name} ${faculty.department ?? ""}`}
+                                                onSelect={() => {
+                                                    onFacultyFilterChange(faculty.id);
+                                                    setFacultyFilterOpen(false);
+                                                }}
+                                            >
+                                                <Check className={cn("h-3.5 w-3.5", facultyFilter === faculty.id ? "opacity-100" : "opacity-0")} />
+                                                <span className="truncate">{faculty.name}</span>
+                                                {faculty.department && (
+                                                    <span className="text-muted-foreground ml-auto text-xs">{faculty.department}</span>
+                                                )}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
 
                     <div className="relative min-w-[170px]">
                         <GraduationCap className="text-muted-foreground absolute top-2.5 left-2.5 h-3.5 w-3.5" />
