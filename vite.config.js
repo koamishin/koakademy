@@ -76,11 +76,11 @@ export default defineConfig({
     ],
     resolve: {
         alias: [
-            { find: "@/components", replacement: path.resolve(__dirname, "resources/js/Components") },
+            { find: "@/components", replacement: path.resolve(__dirname, "resources/js/components") },
             { find: "@/context", replacement: path.resolve(__dirname, "resources/js/Context") },
-            { find: "@/hooks", replacement: path.resolve(__dirname, "resources/js/Hooks") },
-            { find: "@/lib", replacement: path.resolve(__dirname, "resources/js/Lib") },
-            { find: "@/types", replacement: path.resolve(__dirname, "resources/js/Types") },
+            { find: "@/hooks", replacement: path.resolve(__dirname, "resources/js/hooks") },
+            { find: "@/lib", replacement: path.resolve(__dirname, "resources/js/lib") },
+            { find: "@/types", replacement: path.resolve(__dirname, "resources/js/types") },
             { find: "@/wrappers", replacement: path.resolve(__dirname, "resources/js/Wrappers") },
             { find: "@", replacement: path.resolve(__dirname, "resources/js") },
         ],
