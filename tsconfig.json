@@ -110,9 +110,11 @@
         "baseUrl": ".",
         "paths": {
             "@/components/*": ["./resources/js/Components/*"],
+            "@/context/*": ["./resources/js/Context/*"],
             "@/hooks/*": ["./resources/js/Hooks/*"],
             "@/lib/*": ["./resources/js/Lib/*"],
             "@/types/*": ["./resources/js/Types/*"],
+            "@/wrappers/*": ["./resources/js/Wrappers/*"],
             "@/*": ["./resources/js/*"],
             "ziggy-js": ["./vendor/tightenco/ziggy"],
         },
