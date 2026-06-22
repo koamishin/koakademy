@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Button } from "@/components/ui/button";
-import type { User } from "@/Types/user";
+import type { User } from "@/types/user";
 import { Head, Link } from "@inertiajs/react";
 import { route } from "ziggy-js";
 import { FacultyForm } from "./faculty-form";

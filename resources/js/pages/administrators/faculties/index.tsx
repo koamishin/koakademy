@@ -1,13 +1,13 @@
 import AdminLayout from "@/components/administrators/admin-layout";
-import { Filters, type Filter, type FilterFieldConfig } from "@/Components/reui/filters";
+import { Filters, type Filter, type FilterFieldConfig } from "@/components/reui/filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/Components/ui/empty";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { User } from "@/Types/user";
+import type { User } from "@/types/user";
 import { Head, Link, router } from "@inertiajs/react";
 import {
     AlertTriangle,

@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { User } from "@/Types/user";
+import type { User } from "@/types/user";
 import { Head, Link, router, useForm } from "@inertiajs/react";
 import {
     AlertTriangle,
