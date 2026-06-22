@@ -1,8 +1,13 @@
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, Building2, GraduationCap, Loader2, Search, User as UserIcon, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { BookOpen, Building2, Check, ChevronsUpDown, GraduationCap, Loader2, Search, User as UserIcon, X } from "lucide-react";
 
 type CourseOption = { id: number; code: string; title: string };
 type RoomOption = { id: number; name: string; class_code: string | null };
@@ -62,6 +67,9 @@ export default function SchedulingFiltersBar({
     availableRooms,
     availableFaculty,
 }: SchedulingFiltersBarProps) {
+    const [roomFilterOpen, setRoomFilterOpen] = useState(false);
+    const selectedRoom = availableRooms.find((room) => String(room.id) === roomFilter);
+
     return (
         <Card className="bg-muted/30 border shadow-none">
             <CardContent className="p-3">
@@ -110,22 +118,57 @@ export default function SchedulingFiltersBar({
                         </SelectContent>
                     </Select>
 
-                    <Select value={roomFilter} onValueChange={onRoomFilterChange}>
-                        <SelectTrigger className="h-9 w-[140px] text-xs">
-                            <div className="flex items-center gap-1.5">
-                                <Building2 className="text-muted-foreground h-3 w-3" />
-                                <SelectValue placeholder="Room" />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Rooms</SelectItem>
-                            {availableRooms.map((r) => (
-                                <SelectItem key={r.id} value={String(r.id)}>
-                                    {r.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Popover open={roomFilterOpen} onOpenChange={setRoomFilterOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={roomFilterOpen}
+                                className="h-9 w-[160px] justify-between px-3 text-xs font-normal"
+                            >
+                                <span className="flex min-w-0 items-center gap-1.5">
+                                    <Building2 className="text-muted-foreground h-3 w-3 shrink-0" />
+                                    <span className="truncate">{selectedRoom?.name ?? "All Rooms"}</span>
+                                </span>
+                                <ChevronsUpDown className="text-muted-foreground ml-2 h-3 w-3 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[220px] p-0" align="start">
+                            <Command>
+                                <CommandInput placeholder="Search rooms..." />
+                                <CommandList>
+                                    <CommandEmpty>No rooms found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="all rooms"
+                                            onSelect={() => {
+                                                onRoomFilterChange("all");
+                                                setRoomFilterOpen(false);
+                                            }}
+                                        >
+                                            <Check className={cn("h-3.5 w-3.5", roomFilter === "all" ? "opacity-100" : "opacity-0")} />
+                                            All Rooms
+                                        </CommandItem>
+                                        {availableRooms.map((room) => (
+                                            <CommandItem
+                                                key={room.id}
+                                                value={`${room.name} ${room.class_code ?? ""}`}
+                                                onSelect={() => {
+                                                    onRoomFilterChange(String(room.id));
+                                                    setRoomFilterOpen(false);
+                                                }}
+                                            >
+                                                <Check className={cn("h-3.5 w-3.5", roomFilter === String(room.id) ? "opacity-100" : "opacity-0")} />
+                                                <span className="truncate">{room.name}</span>
+                                                {room.class_code && <span className="text-muted-foreground ml-auto text-xs">{room.class_code}</span>}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
 
                     <Select value={facultyFilter} onValueChange={onFacultyFilterChange}>
                         <SelectTrigger className="h-9 w-[160px] text-xs">
