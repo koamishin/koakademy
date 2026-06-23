@@ -84,6 +84,46 @@ final class ScheduleUpdateTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_update_schedule_room(): void
+    {
+        $newRoom = Room::factory()->create();
+
+        $response = $this->actingAs($this->admin)->patchJson(route('administrators.scheduling-analytics.schedules.update', $this->schedule->id), [
+            'day_of_week' => 'Monday',
+            'start_time' => '09:00',
+            'end_time' => '10:30',
+            'room_id' => $newRoom->id,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('schedule.room_id', $newRoom->id);
+        $response->assertJsonPath('schedule.room', $newRoom->name);
+
+        $this->assertDatabaseHas('schedule', [
+            'id' => $this->schedule->id,
+            'room_id' => $newRoom->id,
+        ]);
+    }
+
+    public function test_admin_can_clear_schedule_room(): void
+    {
+        $response = $this->actingAs($this->admin)->patchJson(route('administrators.scheduling-analytics.schedules.update', $this->schedule->id), [
+            'day_of_week' => 'Monday',
+            'start_time' => '09:00',
+            'end_time' => '10:30',
+            'room_id' => null,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('schedule.room_id', null);
+        $response->assertJsonPath('schedule.room', null);
+
+        $this->assertDatabaseHas('schedule', [
+            'id' => $this->schedule->id,
+            'room_id' => null,
+        ]);
+    }
+
     public function test_cannot_update_schedule_with_invalid_data(): void
     {
         $response = $this->actingAs($this->admin)->patchJson(route('administrators.scheduling-analytics.schedules.update', $this->schedule->id), [

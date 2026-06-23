@@ -811,7 +811,24 @@ function WeeklyTimetable({
                         </div>
                     )}
                 </TooltipContent>
-            </Tooltip>
+                </Tooltip>
+                <ContextMenuContent className="w-52">
+                    <ContextMenuLabel className="truncate">{b.cls.subject_code}</ContextMenuLabel>
+                    <ContextMenuItem onSelect={() => onBlockClick(b.cls)}>
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Quick details
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={() => onClassView?.(b.cls.id)}>
+                        <Eye className="h-3.5 w-3.5" />
+                        View class
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => onClassEdit?.(b.cls.id)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit class
+                    </ContextMenuItem>
+                </ContextMenuContent>
+            </ContextMenu>
         );
     };
 
@@ -969,6 +986,146 @@ function ScheduleListView({ data, onClassClick }: { data: ClassScheduleData[]; o
 }
 // ── Main Component ──────────────────────────────────────────────────
 
+function ScheduleConfigurationDialog({
+    selection,
+    rooms,
+    open,
+    isSaving,
+    onOpenChange,
+    onSave,
+}: {
+    selection: ScheduleConfigurationSelection | null;
+    rooms: RoomOption[];
+    open: boolean;
+    isSaving: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSave: (values: ScheduleConfigurationValues) => void;
+}) {
+    const [values, setValues] = React.useState<ScheduleConfigurationValues>({
+        day_of_week: "Monday",
+        start_time: "08:00",
+        end_time: "09:00",
+        room_id: null,
+    });
+
+    React.useEffect(() => {
+        if (!selection || !open) {
+            return;
+        }
+
+        setValues({
+            day_of_week: selection.schedule.day_of_week,
+            start_time: toApiTime(selection.schedule.start_time),
+            end_time: toApiTime(selection.schedule.end_time),
+            room_id: selection.schedule.room_id ?? null,
+        });
+    }, [open, selection]);
+
+    if (!selection) {
+        return null;
+    }
+
+    const startMinutes = parseMinutes(values.start_time);
+    const endMinutes = parseMinutes(values.end_time);
+    const hasInvalidTimeRange = endMinutes <= startMinutes;
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[420px]">
+                <DialogHeader>
+                    <DialogTitle>Configure schedule</DialogTitle>
+                    <DialogDescription>
+                        {selection.classItem.subject_code} ({selection.classItem.section})
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-2">
+                    <div className="grid gap-2">
+                        <Label htmlFor="schedule-day">Day</Label>
+                        <Select value={values.day_of_week} onValueChange={(day) => setValues((current) => ({ ...current, day_of_week: day }))}>
+                            <SelectTrigger id="schedule-day" className="w-full">
+                                <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {DAYS.map((day) => (
+                                    <SelectItem key={day} value={day}>
+                                        {day}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="grid gap-2">
+                            <Label htmlFor="schedule-start-time">Start time</Label>
+                            <Input
+                                id="schedule-start-time"
+                                type="time"
+                                min={minutesToHHMM(HOUR_START * 60)}
+                                max={minutesToHHMM(HOUR_END * 60 - SNAP_MINUTES)}
+                                step={SNAP_MINUTES * 60}
+                                value={values.start_time}
+                                onChange={(event) => setValues((current) => ({ ...current, start_time: event.target.value }))}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="schedule-end-time">End time</Label>
+                            <Input
+                                id="schedule-end-time"
+                                type="time"
+                                min={minutesToHHMM(HOUR_START * 60 + SNAP_MINUTES)}
+                                max={minutesToHHMM(HOUR_END * 60)}
+                                step={SNAP_MINUTES * 60}
+                                value={values.end_time}
+                                onChange={(event) => setValues((current) => ({ ...current, end_time: event.target.value }))}
+                                aria-invalid={hasInvalidTimeRange}
+                            />
+                        </div>
+                    </div>
+
+                    {hasInvalidTimeRange && <p className="text-destructive text-sm">End time must be after the start time.</p>}
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="schedule-room">Room</Label>
+                        <Select
+                            value={values.room_id ? String(values.room_id) : "none"}
+                            onValueChange={(roomId) =>
+                                setValues((current) => ({
+                                    ...current,
+                                    room_id: roomId === "none" ? null : Number(roomId),
+                                }))
+                            }
+                        >
+                            <SelectTrigger id="schedule-room" className="w-full">
+                                <SelectValue placeholder="Select room" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">No room assigned</SelectItem>
+                                {rooms.map((room) => (
+                                    <SelectItem key={room.id} value={String(room.id)}>
+                                        {room.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+                        Cancel
+                    </Button>
+                    <Button type="button" onClick={() => onSave(values)} disabled={isSaving || hasInvalidTimeRange}>
+                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save changes
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function SchedulingAnalytics({ user, schedule_data, stats, filters, creation_options, defaults }: SchedulingAnalyticsProps) {
     // Filter state
     const [search, setSearch] = React.useState("");
@@ -995,6 +1152,7 @@ export default function SchedulingAnalytics({ user, schedule_data, stats, filter
 
     const [editMode, setEditMode] = React.useState(false);
     const [selectedScheduleForRoom, setSelectedScheduleForRoom] = React.useState<number | null>(null);
+    const [scheduleConfigurationSelection, setScheduleConfigurationSelection] = React.useState<ScheduleConfigurationSelection | null>(null);
     const [activeDrag, setActiveDrag] = React.useState<(DragData & { width: number; height: number }) | null>(null);
     const [activeDragDelta, setActiveDragDelta] = React.useState(0);
     const [hoveredDay, setHoveredDay] = React.useState<string | null>(null);
@@ -1298,6 +1456,27 @@ export default function SchedulingAnalytics({ user, schedule_data, stats, filter
         }
     };
 
+    const applyScheduleUpdate = React.useCallback((scheduleId: number, schedule: ScheduleUpdateResponse["schedule"]) => {
+        setLocalData((prev) =>
+            prev.map((cls) => ({
+                ...cls,
+                schedules: cls.schedules.map((s) =>
+                    s.id === scheduleId
+                        ? {
+                              ...s,
+                              day_of_week: schedule.day_of_week,
+                              start_time: schedule.start_time,
+                              end_time: schedule.end_time,
+                              time_range: schedule.time_range,
+                              room: schedule.room,
+                              room_id: schedule.room_id,
+                          }
+                        : s,
+                ),
+            })),
+        );
+    }, []);
+
     const executeMove = async (move: NonNullable<typeof pendingMove>) => {
         setPendingMove(null);
         setIsSaving(true);
@@ -1331,24 +1510,7 @@ export default function SchedulingAnalytics({ user, schedule_data, stats, filter
 
             const result = res.data as ScheduleUpdateResponse;
 
-            setLocalData((prev) =>
-                prev.map((cls) => ({
-                    ...cls,
-                    schedules: cls.schedules.map((s) =>
-                        s.id === move.scheduleId
-                            ? {
-                                  ...s,
-                                  day_of_week: result.schedule.day_of_week,
-                                  start_time: result.schedule.start_time,
-                                  end_time: result.schedule.end_time,
-                                  time_range: result.schedule.time_range,
-                                  room: result.schedule.room,
-                                  room_id: result.schedule.room_id,
-                              }
-                            : s,
-                    ),
-                })),
-            );
+            applyScheduleUpdate(move.scheduleId, result.schedule);
 
             setLocalConflicts(result.conflicts ?? []);
             toast.success(`Moved ${move.subjectCode} (${move.section}) to ${move.toDay} at ${move.toTime}`);
@@ -1422,24 +1584,7 @@ export default function SchedulingAnalytics({ user, schedule_data, stats, filter
 
             const result = res.data as ScheduleUpdateResponse;
 
-            setLocalData((prev) =>
-                prev.map((cls) => ({
-                    ...cls,
-                    schedules: cls.schedules.map((s) =>
-                        s.id === scheduleId
-                            ? {
-                                  ...s,
-                                  day_of_week: result.schedule.day_of_week,
-                                  start_time: result.schedule.start_time,
-                                  end_time: result.schedule.end_time,
-                                  time_range: result.schedule.time_range,
-                                  room: result.schedule.room,
-                                  room_id: result.schedule.room_id,
-                              }
-                            : s,
-                    ),
-                })),
-            );
+            applyScheduleUpdate(scheduleId, result.schedule);
 
             setLocalConflicts(result.conflicts ?? []);
 
@@ -1481,6 +1626,91 @@ export default function SchedulingAnalytics({ user, schedule_data, stats, filter
                 msg = error.response.data.message;
             }
             toast.error(msg);
+        }
+    };
+
+    const openScheduleConfiguration = React.useCallback((classItem: ClassScheduleData, schedule: ScheduleEntry) => {
+        setScheduleConfigurationSelection({ classItem, schedule });
+    }, []);
+
+    const closeScheduleConfiguration = React.useCallback((open: boolean) => {
+        if (!open) {
+            setScheduleConfigurationSelection(null);
+        }
+    }, []);
+
+    const saveScheduleConfiguration = async (values: ScheduleConfigurationValues) => {
+        const selection = scheduleConfigurationSelection;
+        const scheduleId = selection?.schedule.id;
+
+        if (!selection || !scheduleId) {
+            toast.error("Selected schedule block was not found.");
+            return;
+        }
+
+        const startMin = parseMinutes(values.start_time);
+        const endMin = parseMinutes(values.end_time);
+
+        if (endMin <= startMin) {
+            toast.error("End time must be after the start time.");
+            return;
+        }
+
+        const previousData = localData;
+        const selectedRoom = values.room_id ? (creation_options.rooms.find((room) => room.id === values.room_id)?.name ?? null) : null;
+
+        setIsSaving(true);
+        setLocalData((prev) =>
+            prev.map((cls) => ({
+                ...cls,
+                schedules: cls.schedules.map((schedule) =>
+                    schedule.id === scheduleId
+                        ? {
+                              ...schedule,
+                              day_of_week: values.day_of_week,
+                              start_time: minutesToDisplay(startMin),
+                              end_time: minutesToDisplay(endMin),
+                              time_range: `${minutesToDisplay(startMin)} - ${minutesToDisplay(endMin)}`,
+                              room: selectedRoom,
+                              room_id: values.room_id,
+                          }
+                        : schedule,
+                ),
+            })),
+        );
+
+        try {
+            const res = await axios.patch(route("administrators.scheduling-analytics.schedules.update", { schedule: scheduleId }), {
+                day_of_week: values.day_of_week,
+                start_time: values.start_time,
+                end_time: values.end_time,
+                room_id: values.room_id,
+            });
+
+            const result = res.data as ScheduleUpdateResponse;
+            applyScheduleUpdate(scheduleId, result.schedule);
+            setLocalConflicts(result.conflicts ?? []);
+            setScheduleConfigurationSelection(null);
+
+            toast.success(`Updated ${selection.classItem.subject_code} (${selection.classItem.section})`);
+
+            if (result.conflicts?.length > 0) {
+                toast.warning(`${result.conflicts.length} schedule conflict${result.conflicts.length > 1 ? "s" : ""} detected.`);
+            }
+        } catch (error: unknown) {
+            setLocalData(previousData);
+            logError("saveScheduleConfiguration.patch", error, { scheduleId, values });
+
+            let message = "Failed to update schedule.";
+            if (axios.isAxiosError(error) && error.response?.data?.message) {
+                message = String(error.response.data.message);
+            } else if (error instanceof Error) {
+                message = error.message;
+            }
+
+            toast.error(message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -1788,6 +2018,9 @@ export default function SchedulingAnalytics({ user, schedule_data, stats, filter
                                                 selectedScheduleId={selectedScheduleForRoom}
                                                 onScheduleSelect={setSelectedScheduleForRoom}
                                                 onScheduleDelete={deleteSchedule}
+                                                onScheduleConfigure={openScheduleConfiguration}
+                                                onClassView={(classId) => router.visit(route("administrators.classes.show", { class: classId }))}
+                                                onClassEdit={(classId) => router.visit(route("administrators.classes.edit", { class: classId }))}
                                             />
                                         );
                                     })()
@@ -1898,6 +2131,15 @@ export default function SchedulingAnalytics({ user, schedule_data, stats, filter
                     </DragOverlay>
                 </DndContext>
             </div>
+
+            <ScheduleConfigurationDialog
+                selection={scheduleConfigurationSelection}
+                rooms={creation_options.rooms}
+                open={!!scheduleConfigurationSelection}
+                isSaving={isSaving}
+                onOpenChange={closeScheduleConfiguration}
+                onSave={saveScheduleConfiguration}
+            />
 
             <ClassDetailsDialog classItem={selectedClass} open={!!selectedClass} onOpenChange={(o) => !o && setSelectedClass(null)} />
 
