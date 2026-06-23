@@ -12,10 +12,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,13 +32,16 @@ import {
     BookOpen,
     Calendar,
     Clock,
+    Eye,
     GraduationCap,
     GripVertical,
     LayoutGrid,
     List,
     Loader2,
     MapPin,
+    Pencil,
     Search,
+    Settings2,
     Trash2,
     User as UserIcon,
     Users,
@@ -109,6 +114,18 @@ type ScheduleUpdateResponse = {
         room_id: number | null;
     };
     conflicts: ScheduleConflict[];
+};
+
+type ScheduleConfigurationValues = {
+    day_of_week: string;
+    start_time: string;
+    end_time: string;
+    room_id: number | null;
+};
+
+type ScheduleConfigurationSelection = {
+    classItem: ClassScheduleData;
+    schedule: ScheduleEntry;
 };
 
 type ScheduleStats = {
@@ -400,17 +417,19 @@ const SNAP_MINUTES = 15;
 function DraggableBlock({
     id,
     data,
+    disabled,
     className,
     style,
     children,
 }: {
     id: string;
     data: DragData;
+    disabled?: boolean;
     className?: string;
     style?: React.CSSProperties;
     children: React.ReactNode;
 }) {
-    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, data });
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, data, disabled });
     return (
         <div ref={setNodeRef} {...listeners} {...attributes} className={`${className || ""} ${isDragging ? "opacity-30" : ""}`} style={style}>
             {children}
@@ -524,6 +543,9 @@ function WeeklyTimetable({
     selectedScheduleId,
     onScheduleSelect,
     onScheduleDelete,
+    onScheduleConfigure,
+    onClassView,
+    onClassEdit,
 }: {
     data: ClassScheduleData[];
     onBlockClick: (c: ClassScheduleData) => void;
@@ -540,10 +562,14 @@ function WeeklyTimetable({
     selectedScheduleId?: number | null;
     onScheduleSelect?: (scheduleId: number | null) => void;
     onScheduleDelete?: (scheduleId: number) => void;
+    onScheduleConfigure?: (classItem: ClassScheduleData, schedule: ScheduleEntry) => void;
+    onClassView?: (classId: number) => void;
+    onClassEdit?: (classId: number) => void;
 }) {
     const hours = React.useMemo(() => Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i), []);
     const blocks = React.useMemo(() => buildBlocks(data), [data]);
     const totalH = (HOUR_END - HOUR_START + 1) * CELL_H;
+    const [openContextMenuId, setOpenContextMenuId] = React.useState<string | null>(null);
 
     const getConflicts = (cls: ClassScheduleData) => {
         return conflicts.filter(
@@ -595,33 +621,40 @@ function WeeklyTimetable({
         const l = b.totalCols > 1 ? `calc(${(b.col / b.totalCols) * 100}% + 2px)` : "2px";
         const blockStyle = { top: b.topPx, height: Math.max(b.heightPx - 2, 18), width: w, left: l };
 
+        const resizeHandles =
+            editMode && onResizeStart && schedId ? (
+                <>
+                    <div
+                        className="absolute top-0 right-0 left-0 z-50 flex h-3.5 cursor-ns-resize items-center justify-center rounded-t-md opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-100 dark:hover:bg-white/10"
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            onResizeStart(schedId, "top", e.clientY, parseMinutes(b.sched.start_time), parseMinutes(b.sched.end_time));
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        aria-label={`Resize start time for ${b.cls.subject_title}`}
+                    >
+                        <div className="bg-foreground/35 h-1 w-8 rounded-full" />
+                    </div>
+                    <div
+                        className="absolute right-0 bottom-0 left-0 z-50 flex h-3.5 cursor-ns-resize items-center justify-center rounded-b-md opacity-0 transition-opacity hover:bg-black/10 group-hover:opacity-100 dark:hover:bg-white/10"
+                        onPointerDown={(e) => {
+                            e.stopPropagation();
+                            onResizeStart(schedId, "bottom", e.clientY, parseMinutes(b.sched.start_time), parseMinutes(b.sched.end_time));
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        aria-label={`Resize end time for ${b.cls.subject_title}`}
+                    >
+                        <div className="bg-foreground/35 h-1 w-8 rounded-full" />
+                    </div>
+                </>
+            ) : null;
+
         const blockInner = (
             <>
                 {editMode && <GripVertical className="text-muted-foreground absolute top-0.5 right-0.5 h-3 w-3 opacity-60" />}
                 {hasConflict && !editMode && <AlertTriangle className="absolute top-0.5 right-0.5 h-3 w-3 animate-pulse text-red-500" />}
-
-                {editMode && onResizeStart && (
-                    <>
-                        <div
-                            className="absolute top-0 right-0 left-0 z-30 h-2.5 cursor-ns-resize opacity-0 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
-                            onPointerDown={(e) => {
-                                e.stopPropagation();
-                                onResizeStart(schedId, "top", e.clientY, parseMinutes(b.sched.start_time), parseMinutes(b.sched.end_time));
-                            }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => e.stopPropagation()}
-                        />
-                        <div
-                            className="absolute right-0 bottom-0 left-0 z-30 h-2.5 cursor-ns-resize opacity-0 transition-colors hover:bg-black/10 dark:hover:bg-white/10"
-                            onPointerDown={(e) => {
-                                e.stopPropagation();
-                                onResizeStart(schedId, "bottom", e.clientY, parseMinutes(b.sched.start_time), parseMinutes(b.sched.end_time));
-                            }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => e.stopPropagation()}
-                        />
-                    </>
-                )}
 
                 <div className={`truncate text-[11px] leading-tight font-bold ${hasConflict ? "text-red-700 dark:text-red-300" : pal.text}`}>
                     {b.cls.subject_title}
@@ -643,9 +676,10 @@ function WeeklyTimetable({
         );
 
         const isSelected = selectedScheduleId === schedId;
-        const baseClassName = `absolute overflow-hidden rounded-md border-l-[3px] ${hasConflict ? "border-l-red-500 ring-2 ring-red-400/50 dark:ring-red-500/40" : pal.accent} ${hasConflict ? "bg-red-500/12 dark:bg-red-400/15" : pal.bg} ${isSelected ? "ring-2 ring-primary z-30" : ""} p-1 text-left transition-all hover:z-20 hover:shadow-lg hover:brightness-95`;
+        const baseClassName = `group absolute overflow-hidden rounded-md border-l-[3px] ${hasConflict ? "border-l-red-500 ring-2 ring-red-400/50 dark:ring-red-500/40" : pal.accent} ${hasConflict ? "bg-red-500/12 dark:bg-red-400/15" : pal.bg} ${isSelected ? "ring-2 ring-primary z-30" : ""} p-1 text-left transition-[box-shadow,filter,opacity,transform] hover:z-20 hover:shadow-lg hover:brightness-95`;
 
         if (editMode && schedId) {
+            const contextMenuId = `sched-${schedId}`;
             const dragData: DragData = {
                 block: b,
                 scheduleId: schedId,
@@ -654,33 +688,49 @@ function WeeklyTimetable({
                 originalEndTime: b.sched.end_time,
             };
             return (
-                <ContextMenu key={`${b.cls.id}-${schedId}-${i}`}>
+                <ContextMenu key={`${b.cls.id}-${schedId}-${i}`} onOpenChange={(open) => setOpenContextMenuId(open ? contextMenuId : null)}>
                     <ContextMenuTrigger asChild>
                         <DraggableBlock
                             id={`sched-${schedId}`}
                             data={dragData}
+                            disabled={openContextMenuId === contextMenuId}
                             className={`${baseClassName} cursor-grab active:cursor-grabbing`}
                             style={blockStyle}
                         >
                             <button
                                 type="button"
-                                className="absolute inset-0 z-40"
+                                className="absolute inset-0 z-20"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onScheduleSelect?.(isSelected ? null : schedId);
                                 }}
                                 aria-label={`Select ${b.cls.subject_title} schedule`}
                             />
+                            {resizeHandles}
                             <div className="pointer-events-none relative z-10">{blockInner}</div>
                         </DraggableBlock>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-52">
+                        <ContextMenuLabel className="truncate">{b.cls.subject_code}</ContextMenuLabel>
+                        <ContextMenuItem onSelect={() => onScheduleConfigure?.(b.cls, b.sched)}>
+                            <Settings2 className="h-3.5 w-3.5" />
+                            Configure schedule
+                        </ContextMenuItem>
                         <ContextMenuItem onSelect={() => onScheduleSelect?.(isSelected ? null : schedId)}>
                             {isSelected ? "Clear selection" : "Select for room assignment"}
                         </ContextMenuItem>
                         <ContextMenuItem onSelect={() => onBlockClick(b.cls)}>
                             <BookOpen className="h-3.5 w-3.5" />
-                            View class details
+                            Quick details
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onSelect={() => onClassView?.(b.cls.id)}>
+                            <Eye className="h-3.5 w-3.5" />
+                            View class
+                        </ContextMenuItem>
+                        <ContextMenuItem onSelect={() => onClassEdit?.(b.cls.id)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit class
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
@@ -700,12 +750,17 @@ function WeeklyTimetable({
             );
         }
 
+        const scheduleButton = (
+            <button onClick={() => onBlockClick(b.cls)} className={`${baseClassName} cursor-pointer active:scale-[0.98]`} style={blockStyle}>
+                {blockInner}
+            </button>
+        );
+
         return (
-            <Tooltip key={`${b.cls.id}-${i}`}>
+            <ContextMenu key={`${b.cls.id}-${i}`}>
+                <Tooltip>
                 <TooltipTrigger asChild>
-                    <button onClick={() => onBlockClick(b.cls)} className={`${baseClassName} cursor-pointer active:scale-[0.98]`} style={blockStyle}>
-                        {blockInner}
-                    </button>
+                    <ContextMenuTrigger asChild>{scheduleButton}</ContextMenuTrigger>
                 </TooltipTrigger>
                 <TooltipContent
                     side="right"
