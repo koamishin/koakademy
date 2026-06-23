@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.1.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.2",
-  "commit": "e2effcb022189662806ffa342d58732716b2d166",
+  "version": "1.9.0-dev.1.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.3",
+  "commit": "1d45b99d9c994cbdc925d1d622048316960fa3f6",
   "branch": "master",
-  "timestamp": "2026-06-22T14:37:51Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/27960167979",
-  "release_type": "bugfix",
+  "timestamp": "2026-06-23T05:25:08Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28004033026",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.9.0-dev.1.2 - fix(build): correct case-sensitive frontend imports",
-    "previous": "1.9.0-dev.1.1"
+    "current": "Version 1.9.0-dev.1.3 - Add schedule resize and context menu controls",
+    "previous": "1.9.0-dev.1.2"
   },
   "metadata": {
     "author": "yukazakiri",
