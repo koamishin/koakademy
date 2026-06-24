@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8781cb4d0ab4e3e26c7f21d379f4a9fa",
+    "content-hash": "45a85d1108e4ffff6e446d3731ef1deb",
     "packages": [
         {
             "name": "achyutn/filament-log-viewer",
@@ -6309,6 +6309,77 @@
                 }
             ],
             "time": "2025-10-12T15:31:36+00:00"
+        },
+        {
+            "name": "laraowl/client",
+            "version": "v1.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laraowl/client.git",
+                "reference": "3407f5d4e58969d07bc0a3ec7dbb89ff9cf58478"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laraowl/client/zipball/3407f5d4e58969d07bc0a3ec7dbb89ff9cf58478",
+                "reference": "3407f5d4e58969d07bc0a3ec7dbb89ff9cf58478",
+                "shasum": ""
+            },
+            "require": {
+                "ext-zlib": "*",
+                "guzzlehttp/promises": "^2.0",
+                "laravel/framework": "^10.0|^11.0|^12.0|^13.0",
+                "monolog/monolog": "^3.6",
+                "nesbot/carbon": "^2.0|^3.0",
+                "php": "^8.2",
+                "psr/http-message": "^1.0|^2.0",
+                "psr/log": "^1.0|^2.0|^3.0",
+                "ramsey/uuid": "^4.0",
+                "symfony/console": "^6.0|^7.0|^8.0",
+                "symfony/http-foundation": "^6.0|^7.0|^8.0",
+                "symfony/polyfill-php84": "^1.29"
+            },
+            "require-dev": {
+                "ext-pcntl": "*",
+                "ext-pdo": "*",
+                "guzzlehttp/guzzle": "^7.0",
+                "guzzlehttp/psr7": "^2.0",
+                "laravel/pint": "1.21.0",
+                "mockery/mockery": "^1.0",
+                "phpstan/phpstan": "^1.0",
+                "phpunit/phpunit": "^10.0|^11.0|^12.0",
+                "symfony/var-dumper": "^6.0|^7.0|^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "LaraowlClient": "Laraowl\\Client\\Facades\\LaraowlClient"
+                    },
+                    "providers": [
+                        "Laraowl\\Client\\LaraowlClientServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laraowl\\Client\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Laraowl monitoring client for Laravel applications.",
+            "keywords": [
+                "laraowl",
+                "laravel",
+                "monitoring"
+            ],
+            "support": {
+                "issues": "https://github.com/laraowl/client/issues",
+                "source": "https://github.com/laraowl/client/tree/v1.0.3"
+            },
+            "time": "2026-06-17T20:12:00+00:00"
         },
         {
             "name": "laravel/framework",
@@ -23376,5 +23447,5 @@
         "php": ">=8.5 <8.6"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }
