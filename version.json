@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.1.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.1.3",
-  "commit": "1d45b99d9c994cbdc925d1d622048316960fa3f6",
+  "version": "1.9.0-dev.2.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.2.0",
+  "commit": "e0b82e99680beeb3165b5b578ee5c1e719ed118a",
   "branch": "master",
-  "timestamp": "2026-06-23T05:25:08Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28004033026",
-  "release_type": "patch",
+  "timestamp": "2026-06-24T14:13:56Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28104346075",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.9.0-dev.1.3 - Add schedule resize and context menu controls",
-    "previous": "1.9.0-dev.1.2"
+    "current": "Version 1.9.0-dev.2.0 - feat: laraowl logs",
+    "previous": "1.9.0-dev.1.3"
   },
   "metadata": {
     "author": "yukazakiri",
