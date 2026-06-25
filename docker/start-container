@@ -475,6 +475,18 @@ ensure_vendor_view_dirs() {
     if [ -d "vendor/moataz-01/filament-notification-sound" ]; then
         mkdir -p "vendor/moataz-01/filament-notification-sound/resources/views"
     fi
+
+    if [ -d "vendor/alizharb/laravel-modular" ]; then
+        mkdir -p "vendor/alizharb/laravel-modular/resources/views"
+    fi
+
+    if [ -d "Modules" ]; then
+        for module_dir in Modules/*; do
+            if [ -d "${module_dir}/resources" ]; then
+                mkdir -p "${module_dir}/resources/views"
+            fi
+        done
+    fi
 }
 
 run_production_seeders() {

@@ -104,3 +104,19 @@ test('site settings defines a safe default for auth layout', function (): void {
     expect($settingsClass)->toContain("private const string DEFAULT_AUTH_LAYOUT = 'split';");
     expect($settingsClass)->toContain('public ?string $auth_layout = self::DEFAULT_AUTH_LAYOUT;');
 });
+
+test('docker startup creates missing vendor view directories', function (): void {
+    $script = file_get_contents(base_path('docker/start-container'));
+
+    expect($script)->toContain('ensure_vendor_view_dirs');
+    expect($script)->toContain('vendor/moataz-01/filament-notification-sound/resources/views');
+    expect($script)->toContain('vendor/alizharb/laravel-modular/resources/views');
+    expect($script)->toContain('mkdir -p "${module_dir}/resources/views"');
+});
+
+test('laravel modular resolves the repository modules directory', function (): void {
+    $config = require base_path('config/modular.php');
+
+    expect($config['paths']['modules'])
+        ->toBe(base_path('Modules'));
+});

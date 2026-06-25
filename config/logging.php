@@ -7,6 +7,15 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
+$stackChannels = array_values(array_unique(array_filter(
+    array_map('trim', explode(',', (string) env('LOG_STACK', 'single'))),
+    static fn (string $channel): bool => $channel !== '' && $channel !== 'stack',
+)));
+
+if ($stackChannels === []) {
+    $stackChannels = ['single'];
+}
+
 return [
 
     /*
@@ -56,7 +65,7 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => $stackChannels,
             'ignore_exceptions' => false,
         ],
 
