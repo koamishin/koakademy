@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.2.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.2.1",
-  "commit": "a8d3c94e7809809293940f77754b08ebf63d86c2",
+  "version": "1.9.0-dev.2.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.2.2",
+  "commit": "2ccccb41f4cc0a75794f7059bf6e3110ace165e7",
   "branch": "master",
-  "timestamp": "2026-06-25T02:07:16Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28141890066",
+  "timestamp": "2026-06-25T06:59:08Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28152439371",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.9.0-dev.2.1 - Fix Docker startup logging and module cache paths",
-    "previous": "1.9.0-dev.2.0"
+    "current": "Version 1.9.0-dev.2.2 - Fix Docker healthcheck for FrankenPHP",
+    "previous": "1.9.0-dev.2.1"
   },
   "metadata": {
     "author": "yukazakiri",
