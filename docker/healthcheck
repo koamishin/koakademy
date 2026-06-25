@@ -21,7 +21,29 @@ check_supervisor_program() {
 }
 
 if [ "${container_mode}" = "http" ]; then
-    php "${ROOT}/artisan" octane:status
+    check_supervisor_program "frankenphp"
+
+    php -r '
+        $port = getenv("PORT") ?: "8000";
+        $timeout = (float) (getenv("HEALTHCHECK_TIMEOUT") ?: "2");
+        $url = "http://127.0.0.1:{$port}/health";
+        $context = stream_context_create([
+            "http" => [
+                "timeout" => $timeout,
+                "ignore_errors" => true,
+            ],
+        ]);
+
+        $response = @file_get_contents($url, false, $context);
+        $statusLine = $http_response_header[0] ?? "";
+
+        if ($response !== false && preg_match("/^HTTP\/\S+\s+2\d\d\b/", $statusLine)) {
+            exit(0);
+        }
+
+        fwrite(STDERR, "Healthcheck failed: {$url} did not return 2xx ({$statusLine}).\n");
+        exit(1);
+    '
 elif [ "${container_mode}" = "horizon" ]; then
     php "${ROOT}/artisan" horizon:status
 elif [ "${container_mode}" = "scheduler" ]; then
