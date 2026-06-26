@@ -4,7 +4,44 @@ declare(strict_types=1);
 
 use Symfony\Component\Process\Process;
 
-function runStartContainerRedisRequirement(array $environment): string
+function dockerStartupPosixShell(): ?string
+{
+    static $resolved = false;
+    static $shell = null;
+
+    if ($resolved) {
+        return $shell;
+    }
+
+    $resolved = true;
+    $candidates = array_filter([
+        getenv('POSIX_SHELL') ?: null,
+        'sh',
+        '/bin/sh',
+        'C:\\Program Files\\Git\\bin\\sh.exe',
+        'C:\\Program Files\\Git\\usr\\bin\\sh.exe',
+    ]);
+
+    foreach ($candidates as $candidate) {
+        $process = new Process([$candidate, '-c', 'exit 0'], base_path());
+        $process->run();
+
+        if ($process->isSuccessful()) {
+            $shell = $candidate;
+
+            return $shell;
+        }
+    }
+
+    return null;
+}
+
+function pathForPosixShell(string $path): string
+{
+    return str_replace('\\', '/', $path);
+}
+
+function runStartContainerRedisRequirement(array $environment, string $shell): string
 {
     $script = file_get_contents(base_path('docker/start-container'));
     $prefix = mb_strstr($script, "\nif [ \"\$1\" != \"\" ]; then", true);
@@ -16,7 +53,7 @@ function runStartContainerRedisRequirement(array $environment): string
 
     file_put_contents($testScript, $prefix."\nif is_redis_required; then\n    echo required\nelse\n    echo skipped\nfi\n");
 
-    $process = new Process(['sh', $testScript], base_path(), $environment);
+    $process = new Process([$shell, pathForPosixShell($testScript)], base_path(), $environment);
     $process->run();
 
     expect($process->isSuccessful())->toBeTrue($process->getErrorOutput() ?: $process->getOutput());
@@ -25,6 +62,12 @@ function runStartContainerRedisRequirement(array $environment): string
 }
 
 test('docker startup scripts are valid posix shell', function (): void {
+    $shell = dockerStartupPosixShell();
+
+    if ($shell === null) {
+        $this->markTestSkipped('A POSIX shell is not available.');
+    }
+
     $scripts = [
         base_path('docker/start-container'),
         base_path('docker/docker-scripts/scout-index.sh'),
@@ -32,7 +75,7 @@ test('docker startup scripts are valid posix shell', function (): void {
     ];
 
     foreach ($scripts as $script) {
-        $process = new Process(['sh', '-n', $script], base_path());
+        $process = new Process([$shell, '-n', pathForPosixShell($script)], base_path());
         $process->run();
 
         expect($process->isSuccessful())
@@ -49,6 +92,17 @@ test('primary-only startup tasks stay scoped to the http container', function ()
     expect($script)->toContain('RUN_OPTIMIZE');
 });
 
+test('docker startup does not import scout records', function (): void {
+    $script = file_get_contents(base_path('docker/start-container'));
+
+    expect($script)->toContain('schedule_scout_settings_post_start');
+    expect($script)->toContain('scout:sync-index-settings');
+    expect($script)->not->toContain('docker/docker-scripts/scout-index.sh');
+    expect($script)->not->toContain('scout:import');
+    expect($script)->not->toContain('RUN_SCOUT_IMPORT=${');
+    expect($script)->not->toContain('SCOUT_IMPORT_QUEUE');
+});
+
 test('docker startup dependency checks are driven by configured services', function (): void {
     $script = file_get_contents(base_path('docker/start-container'));
 
@@ -63,23 +117,35 @@ test('docker startup dependency checks are driven by configured services', funct
 });
 
 test('docker startup does not require redis for default laravel services with pulse redis ingest', function (): void {
+    $shell = dockerStartupPosixShell();
+
+    if ($shell === null) {
+        $this->markTestSkipped('A POSIX shell is not available.');
+    }
+
     expect(runStartContainerRedisRequirement([
         'QUEUE_CONNECTION' => 'sync',
         'CACHE_STORE' => 'database',
         'SESSION_DRIVER' => 'database',
         'PULSE_ENABLED' => 'true',
         'PULSE_INGEST_DRIVER' => 'redis',
-    ]))->toBe('skipped');
+    ], $shell))->toBe('skipped');
 });
 
 test('docker startup still requires redis for redis backed application services', function (): void {
+    $shell = dockerStartupPosixShell();
+
+    if ($shell === null) {
+        $this->markTestSkipped('A POSIX shell is not available.');
+    }
+
     expect(runStartContainerRedisRequirement([
         'QUEUE_CONNECTION' => 'sync',
         'CACHE_STORE' => 'redis',
         'SESSION_DRIVER' => 'database',
         'PULSE_ENABLED' => 'true',
         'PULSE_INGEST_DRIVER' => 'storage',
-    ]))->toBe('required');
+    ], $shell))->toBe('required');
 });
 
 test('docker startup migrations seed demo environments', function (): void {
