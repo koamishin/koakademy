@@ -51,6 +51,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\FileViewFinder;
 use Laravel\Passkeys\Passkeys;
 use Laravel\Pennant\Feature;
 use Livewire\Livewire;
@@ -96,6 +97,10 @@ final class AppServiceProvider extends ServiceProvider
         // GitHub releases (stable only) and version.json so the changelog
         // stays in sync without manual config edits.
         $this->syncFeatureShowcaseConfig();
+
+        $this->app->booted(function (): void {
+            $this->removeMissingViewFinderPaths();
+        });
     }
 
     private function definePennantFeatures(): void
@@ -172,5 +177,34 @@ final class AppServiceProvider extends ServiceProvider
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function removeMissingViewFinderPaths(): void
+    {
+        $finder = $this->app['view']->getFinder();
+
+        if (! $finder instanceof FileViewFinder) {
+            return;
+        }
+
+        $finder->setPaths($this->existingDirectories($finder->getPaths()));
+
+        foreach ($finder->getHints() as $namespace => $hints) {
+            $finder->replaceNamespace($namespace, $this->existingDirectories($hints));
+        }
+
+        $finder->flush();
+    }
+
+    /**
+     * @param  array<int, string>  $paths
+     * @return array<int, string>
+     */
+    private function existingDirectories(array $paths): array
+    {
+        return array_values(array_filter(
+            $paths,
+            static fn (string $path): bool => is_dir($path),
+        ));
     }
 }
