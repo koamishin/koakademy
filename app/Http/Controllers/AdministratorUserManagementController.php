@@ -10,6 +10,7 @@ use App\Http\Requests\Administrators\UpdateUserRequest;
 use App\Models\Department;
 use App\Models\School;
 use App\Models\User;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -95,56 +96,12 @@ final class AdministratorUserManagementController extends Controller
             $onlineUsers = count($onlineUserIds);
         }
 
-        $topActiveUsers = [];
-
-        if (Schema::hasTable('pulse_aggregates') && config('pulse.enabled')) {
-            $topActiveUsers = DB::table('pulse_aggregates')
-                ->where('type', 'user_request')
-                ->where('period', 60)
-                ->where('aggregate', 'count')
-                ->where('bucket', '>=', now()->subMinutes(60)->timestamp)
-                ->orderByDesc('value')
-                ->limit(5)
-                ->get()
-                ->map(function ($item): array {
-                    $user = User::find((int) $item->key);
-
-                    return [
-                        'id' => $item->key,
-                        'name' => $user?->name ?? 'Unknown User',
-                        'email' => $user?->email ?? '',
-                        'requests' => (int) $item->value,
-                        'avatar' => $user?->avatar_url,
-                    ];
-                })
-                ->values()
-                ->toArray();
-        }
-
-        // Analytics Data
-        $analytics = [
-            'total_users' => User::count(),
-            'new_users_today' => User::whereDate('created_at', Carbon::today())->count(),
-            'verified_users' => User::whereNotNull('email_verified_at')->count(),
-            'online_users' => $onlineUsers,
-            'top_active_users' => $topActiveUsers,
-            'registrations_chart' => User::query()
-                ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
-                ->where('created_at', '>=', Carbon::now()->subDays(30))
-                ->groupBy('date')
-                ->orderBy('date')
-                ->get()
-                ->map(fn ($item): array => ['date' => $item->date, 'count' => $item->count])
-                ->values()
-                ->toArray(),
-        ];
-
         return Inertia::render('administrators/users/index', [
             'users' => [
                 'data' => $users,
                 'total' => $users->count(),
             ],
-            'analytics' => $analytics,
+            'analytics' => $this->getUserAnalytics($onlineUsers),
             'online_user_ids' => $onlineUserIds,
             'filters' => $request->all(['search', 'role', 'school_id', 'department_id', 'email_verified', 'trashed', 'sort', 'direction']),
             'options' => [
@@ -326,6 +283,261 @@ final class AdministratorUserManagementController extends Controller
             'type' => $status === Password::RESET_LINK_SENT ? 'success' : 'error',
             'message' => __($status),
         ]);
+    }
+
+    /**
+     * @return array{
+     *     total_users: int,
+     *     all_time_users: int,
+     *     trashed_users: int,
+     *     new_users_today: int,
+     *     new_users_30_days: int,
+     *     previous_30_days_users: int,
+     *     growth_rate: float,
+     *     verified_users: int,
+     *     unverified_users: int,
+     *     verification_rate: float,
+     *     online_users: int,
+     *     online_rate: float,
+     *     two_factor_enabled_users: int,
+     *     two_factor_rate: float,
+     *     assigned_users: int,
+     *     assignment_rate: float,
+     *     top_active_users: array<int, array{id: string, name: string, email: string, requests: int, avatar: string|null}>,
+     *     registrations_chart: array<int, array{date: string, label: string, count: int, cumulative: int}>,
+     *     role_distribution: array<int, array{role: string, label: string, count: int, percentage: float}>,
+     *     school_distribution: array<int, array{id: int|null, name: string, count: int, percentage: float}>,
+     *     department_distribution: array<int, array{id: int|null, name: string, count: int, percentage: float}>,
+     *     recent_users: array<int, array{id: int, name: string, email: string, role: string, role_label: string, avatar: string|null, verified: bool, created_at: string|null}>,
+     *     last_updated_at: string,
+     * }
+     */
+    private function getUserAnalytics(int $onlineUsers): array
+    {
+        $today = Carbon::today();
+        $currentPeriodStart = $today->copy()->subDays(29)->startOfDay();
+        $previousPeriodStart = $currentPeriodStart->copy()->subDays(30);
+        $totalUsers = User::count();
+        $verifiedUsers = User::whereNotNull('email_verified_at')->count();
+        $newUsers30Days = User::where('created_at', '>=', $currentPeriodStart)->count();
+        $previous30DaysUsers = User::whereBetween('created_at', [$previousPeriodStart, $currentPeriodStart->copy()->subSecond()])->count();
+        $twoFactorEnabledUsers = User::where('security_two_factor_enabled', true)->count();
+        $assignedUsers = User::where(function ($query): void {
+            $query->whereNotNull('school_id')
+                ->orWhereNotNull('department_id');
+        })->count();
+
+        return [
+            'total_users' => $totalUsers,
+            'all_time_users' => User::withTrashed()->count(),
+            'trashed_users' => User::onlyTrashed()->count(),
+            'new_users_today' => User::whereDate('created_at', $today)->count(),
+            'new_users_30_days' => $newUsers30Days,
+            'previous_30_days_users' => $previous30DaysUsers,
+            'growth_rate' => $this->percentageChange($newUsers30Days, $previous30DaysUsers),
+            'verified_users' => $verifiedUsers,
+            'unverified_users' => max($totalUsers - $verifiedUsers, 0),
+            'verification_rate' => $this->percentageOf($verifiedUsers, $totalUsers),
+            'online_users' => $onlineUsers,
+            'online_rate' => $this->percentageOf($onlineUsers, $totalUsers),
+            'two_factor_enabled_users' => $twoFactorEnabledUsers,
+            'two_factor_rate' => $this->percentageOf($twoFactorEnabledUsers, $totalUsers),
+            'assigned_users' => $assignedUsers,
+            'assignment_rate' => $this->percentageOf($assignedUsers, $totalUsers),
+            'top_active_users' => $this->getTopActiveUsers(),
+            'registrations_chart' => $this->getRegistrationTrend($currentPeriodStart, $today),
+            'role_distribution' => $this->getRoleDistribution($totalUsers),
+            'school_distribution' => $this->getSchoolDistribution($totalUsers),
+            'department_distribution' => $this->getDepartmentDistribution($totalUsers),
+            'recent_users' => $this->getRecentUsers(),
+            'last_updated_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * @return array<int, array{id: string, name: string, email: string, requests: int, avatar: string|null}>
+     */
+    private function getTopActiveUsers(): array
+    {
+        if (! Schema::hasTable('pulse_aggregates') || ! config('pulse.enabled')) {
+            return [];
+        }
+
+        $activity = DB::table('pulse_aggregates')
+            ->select('key')
+            ->selectRaw('SUM(value) as requests')
+            ->where('type', 'user_request')
+            ->where('period', 60)
+            ->where('aggregate', 'count')
+            ->where('bucket', '>=', now()->subMinutes(60)->timestamp)
+            ->groupBy('key')
+            ->orderByDesc('requests')
+            ->limit(5)
+            ->get();
+
+        $users = User::whereIn('id', $activity->pluck('key')->map(fn ($key): int => (int) $key))
+            ->get(['id', 'name', 'email', 'avatar_url'])
+            ->keyBy('id');
+
+        return $activity
+            ->map(function ($item) use ($users): array {
+                $user = $users->get((int) $item->key);
+
+                return [
+                    'id' => (string) $item->key,
+                    'name' => $user?->name ?? 'Unknown User',
+                    'email' => $user?->email ?? '',
+                    'requests' => (int) $item->requests,
+                    'avatar' => $user?->avatar_url,
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array{date: string, label: string, count: int, cumulative: int}>
+     */
+    private function getRegistrationTrend(Carbon $startDate, Carbon $endDate): array
+    {
+        $countsByDate = User::query()
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', $startDate)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->mapWithKeys(fn ($item): array => [(string) $item->date => (int) $item->count]);
+
+        $cumulative = User::where('created_at', '<', $startDate)->count();
+
+        return collect(CarbonPeriod::create($startDate->toDateString(), $endDate->toDateString()))
+            ->map(function ($date) use ($countsByDate, &$cumulative): array {
+                $count = (int) ($countsByDate[$date->toDateString()] ?? 0);
+                $cumulative += $count;
+
+                return [
+                    'date' => $date->toDateString(),
+                    'label' => $date->format('M j'),
+                    'count' => $count,
+                    'cumulative' => $cumulative,
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array{role: string, label: string, count: int, percentage: float}>
+     */
+    private function getRoleDistribution(int $totalUsers): array
+    {
+        return DB::table('users')
+            ->select('role')
+            ->selectRaw('COUNT(*) as count')
+            ->whereNull('deleted_at')
+            ->groupBy('role')
+            ->orderByDesc('count')
+            ->get()
+            ->map(fn ($item): array => [
+                'role' => (string) $item->role,
+                'label' => UserRole::tryFrom((string) $item->role)?->getLabel() ?? str((string) $item->role)->replace('_', ' ')->title()->toString(),
+                'count' => (int) $item->count,
+                'percentage' => $this->percentageOf((int) $item->count, $totalUsers),
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array{id: int|null, name: string, count: int, percentage: float}>
+     */
+    private function getSchoolDistribution(int $totalUsers): array
+    {
+        return DB::table('users')
+            ->leftJoin('schools', 'schools.id', '=', 'users.school_id')
+            ->select('schools.id', DB::raw("COALESCE(schools.name, 'Unassigned') as name"))
+            ->selectRaw('COUNT(users.id) as count')
+            ->whereNull('users.deleted_at')
+            ->groupBy('schools.id', 'schools.name')
+            ->orderByDesc('count')
+            ->limit(6)
+            ->get()
+            ->map(fn ($item): array => [
+                'id' => $item->id ? (int) $item->id : null,
+                'name' => (string) $item->name,
+                'count' => (int) $item->count,
+                'percentage' => $this->percentageOf((int) $item->count, $totalUsers),
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array{id: int|null, name: string, count: int, percentage: float}>
+     */
+    private function getDepartmentDistribution(int $totalUsers): array
+    {
+        return DB::table('users')
+            ->leftJoin('departments', 'departments.id', '=', 'users.department_id')
+            ->select('departments.id', DB::raw("COALESCE(departments.name, 'Unassigned') as name"))
+            ->selectRaw('COUNT(users.id) as count')
+            ->whereNull('users.deleted_at')
+            ->groupBy('departments.id', 'departments.name')
+            ->orderByDesc('count')
+            ->limit(6)
+            ->get()
+            ->map(fn ($item): array => [
+                'id' => $item->id ? (int) $item->id : null,
+                'name' => (string) $item->name,
+                'count' => (int) $item->count,
+                'percentage' => $this->percentageOf((int) $item->count, $totalUsers),
+            ])
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, email: string, role: string, role_label: string, avatar: string|null, verified: bool, created_at: string|null}>
+     */
+    private function getRecentUsers(): array
+    {
+        return User::latest()
+            ->limit(6)
+            ->get(['id', 'name', 'email', 'role', 'avatar_url', 'email_verified_at', 'created_at'])
+            ->map(function (User $user): array {
+                $role = $user->role;
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $role->value,
+                    'role_label' => $role->getLabel() ?? $role->value,
+                    'avatar' => $user->avatar_url,
+                    'verified' => $user->email_verified_at !== null,
+                    'created_at' => $user->created_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
+
+    private function percentageOf(int $value, int $total): float
+    {
+        if ($total === 0) {
+            return 0.0;
+        }
+
+        return round(($value / $total) * 100, 1);
+    }
+
+    private function percentageChange(int $current, int $previous): float
+    {
+        if ($previous === 0) {
+            return $current > 0 ? 100.0 : 0.0;
+        }
+
+        return round((($current - $previous) / $previous) * 100, 1);
     }
 
     private function getAvailableRoles(): array

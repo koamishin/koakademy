@@ -1,24 +1,411 @@
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    BarXAxis,
+    BarYAxis,
+    ChartTooltip,
+    Grid,
+    Legend,
+    LegendItem,
+    LegendLabel,
+    LegendMarker,
+    LegendProgress,
+    LegendValue,
+    Ring,
+    RingCenter,
+    RingChart,
+    XAxis,
+    chartCssVars,
+    type LegendItemData,
+} from "@/Components/charts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { Activity, ArrowUpRight, ShieldCheck, Signal, UserPlus, Users, Zap } from "lucide-react";
+import { Activity, Building2, CheckCircle2, Clock3, Radio, ShieldCheck, Sparkles, UserRoundCheck, Users, Zap, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 export interface AnalyticsData {
     total_users: number;
+    all_time_users: number;
+    trashed_users: number;
     new_users_today: number;
+    new_users_30_days: number;
+    previous_30_days_users: number;
+    growth_rate: number;
     verified_users: number;
+    unverified_users: number;
+    verification_rate: number;
     online_users: number;
-    top_active_users: {
-        id: string;
-        name: string;
-        email: string;
-        requests: number;
-        avatar?: string | null;
-    }[];
-    registrations_chart: { date: string; count: number }[];
+    online_rate: number;
+    two_factor_enabled_users: number;
+    two_factor_rate: number;
+    assigned_users: number;
+    assignment_rate: number;
+    top_active_users: ActiveUser[];
+    registrations_chart: RegistrationPoint[];
+    role_distribution: DistributionPoint[];
+    school_distribution: OrganizationPoint[];
+    department_distribution: OrganizationPoint[];
+    recent_users: RecentUser[];
+    last_updated_at: string;
+}
+
+interface ActiveUser {
+    id: string;
+    name: string;
+    email: string;
+    requests: number;
+    avatar?: string | null;
+}
+
+interface RegistrationPoint {
+    date: string;
+    label: string;
+    count: number;
+    cumulative: number;
+}
+
+interface DistributionPoint {
+    role: string;
+    label: string;
+    count: number;
+    percentage: number;
+}
+
+interface OrganizationPoint {
+    id: number | null;
+    name: string;
+    count: number;
+    percentage: number;
+}
+
+interface RecentUser {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    role_label: string;
+    avatar?: string | null;
+    verified: boolean;
+    created_at: string | null;
+}
+
+const chartPalette = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"] as const;
+
+function formatNumber(value: number): string {
+    return new Intl.NumberFormat("en-US").format(value);
+}
+
+function formatPercent(value: number): string {
+    return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)}%`;
+}
+
+function formatDateTime(value: string | null): string {
+    if (!value) {
+        return "Unknown";
+    }
+
+    return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(new Date(value));
+}
+
+function hasPositiveData<T extends Record<string, unknown>>(items: T[], key: keyof T): boolean {
+    return items.some((item) => Number(item[key] ?? 0) > 0);
+}
+
+function updateRegistrationChart(chart: RegistrationPoint[]): RegistrationPoint[] {
+    const today = new Date().toISOString().slice(0, 10);
+    const nextChart = [...chart];
+    const todayIndex = nextChart.findIndex((item) => item.date === today);
+
+    if (todayIndex >= 0) {
+        for (let index = todayIndex; index < nextChart.length; index += 1) {
+            nextChart[index] = {
+                ...nextChart[index],
+                count: index === todayIndex ? nextChart[index].count + 1 : nextChart[index].count,
+                cumulative: nextChart[index].cumulative + 1,
+            };
+        }
+
+        return nextChart;
+    }
+
+    const cumulative = (nextChart.at(-1)?.cumulative ?? 0) + 1;
+
+    return [
+        ...nextChart.slice(-29),
+        {
+            date: today,
+            label: new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date()),
+            count: 1,
+            cumulative,
+        },
+    ];
+}
+
+function EmptyPanel({ label }: { label: string }) {
+    return (
+        <div className="text-muted-foreground flex min-h-36 flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center">
+            <Activity className="mb-2 size-6 opacity-40" />
+            <p className="text-sm">{label}</p>
+        </div>
+    );
+}
+
+function MetricCard({
+    title,
+    value,
+    description,
+    icon: Icon,
+    tone,
+    progress,
+    detail,
+}: {
+    title: string;
+    value: string;
+    description: string;
+    icon: LucideIcon;
+    tone: string;
+    progress?: number;
+    detail?: string;
+}) {
+    return (
+        <Card className="border-border/60 bg-card/80 overflow-hidden">
+            <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{title}</p>
+                        <p className="text-foreground mt-2 text-2xl font-semibold tracking-tight">{value}</p>
+                    </div>
+                    <div className={cn("rounded-lg p-2", tone)}>
+                        <Icon className="size-4" />
+                    </div>
+                </div>
+                <p className="text-muted-foreground mt-2 min-h-9 text-sm leading-5">{description}</p>
+                {progress !== undefined ? (
+                    <div className="mt-4 space-y-2">
+                        <Progress value={Math.max(0, Math.min(progress, 100))} className="h-2" />
+                        {detail ? <p className="text-muted-foreground text-xs tabular-nums">{detail}</p> : null}
+                    </div>
+                ) : null}
+            </CardContent>
+        </Card>
+    );
+}
+
+function RegistrationChart({ data }: { data: RegistrationPoint[] }) {
+    if (!hasPositiveData(data, "cumulative")) {
+        return <EmptyPanel label="Registration data will appear once users are created." />;
+    }
+
+    return (
+        <AreaChart data={data} xDataKey="date" className="h-[310px] w-full" aspectRatio="16 / 7" margin={{ left: 36, right: 24, top: 26, bottom: 38 }}>
+            <Grid horizontal />
+            <Area dataKey="cumulative" fill={chartCssVars.lineSecondary} fillOpacity={0.18} stroke={chartCssVars.lineSecondary} strokeWidth={2} />
+            <Area dataKey="count" fill={chartCssVars.linePrimary} fillOpacity={0.36} stroke={chartCssVars.linePrimary} strokeWidth={2} showMarkers />
+            <XAxis tickMode="data" />
+            <ChartTooltip
+                showDatePill
+                rows={(point) => [
+                    {
+                        color: chartCssVars.linePrimary,
+                        label: "New users",
+                        value: formatNumber(Number(point.count ?? 0)),
+                    },
+                    {
+                        color: chartCssVars.lineSecondary,
+                        label: "Running total",
+                        value: formatNumber(Number(point.cumulative ?? 0)),
+                    },
+                ]}
+            />
+        </AreaChart>
+    );
+}
+
+function RoleChart({ data }: { data: DistributionPoint[] }) {
+    const topRoles = data.slice(0, 8);
+
+    if (!hasPositiveData(topRoles, "count")) {
+        return <EmptyPanel label="No role distribution data is available yet." />;
+    }
+
+    return (
+        <BarChart
+            data={topRoles}
+            xDataKey="label"
+            orientation="horizontal"
+            className="h-[300px] w-full"
+            aspectRatio="16 / 8"
+            margin={{ left: 130, right: 22, top: 20, bottom: 24 }}
+            revealSignature={`roles-${topRoles.map((item) => `${item.role}:${item.count}`).join("|")}`}
+        >
+            <Grid vertical />
+            <Bar dataKey="count" fill={chartCssVars.linePrimary} minBarHeight={3} />
+            <BarYAxis />
+            <ChartTooltip
+                showDatePill={false}
+                rows={(point) => [
+                    {
+                        color: chartCssVars.linePrimary,
+                        label: "Users",
+                        value: `${formatNumber(Number(point.count ?? 0))} / ${formatPercent(Number(point.percentage ?? 0))}`,
+                    },
+                ]}
+            />
+        </BarChart>
+    );
+}
+
+function StatusRing({ data }: { data: AnalyticsData }) {
+    const ringData: LegendItemData[] = [
+        {
+            label: "Verified",
+            value: data.verified_users,
+            maxValue: Math.max(data.total_users, 1),
+            color: chartPalette[1],
+        },
+        {
+            label: "Unverified",
+            value: data.unverified_users,
+            maxValue: Math.max(data.total_users, 1),
+            color: chartPalette[3],
+        },
+        {
+            label: "2FA enabled",
+            value: data.two_factor_enabled_users,
+            maxValue: Math.max(data.total_users, 1),
+            color: chartPalette[2],
+        },
+    ];
+
+    if (data.total_users === 0) {
+        return <EmptyPanel label="Identity coverage data will appear once users are created." />;
+    }
+
+    return (
+        <div className="grid gap-5 lg:grid-cols-[minmax(210px,260px)_1fr] lg:items-center">
+            <div className="mx-auto w-full max-w-[260px]">
+                <RingChart data={ringData} size={250}>
+                    {ringData.map((item, index) => (
+                        <Ring key={item.label} index={index} />
+                    ))}
+                    <RingCenter defaultLabel="Users" formatValue={formatNumber} />
+                </RingChart>
+            </div>
+            <Legend items={ringData} className="grid gap-3">
+                <LegendItem className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1">
+                    <LegendMarker />
+                    <LegendLabel />
+                    <LegendValue showPercentage formatValue={formatNumber} />
+                    <div className="col-span-full">
+                        <LegendProgress />
+                    </div>
+                </LegendItem>
+            </Legend>
+        </div>
+    );
+}
+
+function OrganizationList({ title, items }: { title: string; items: OrganizationPoint[] }) {
+    return (
+        <div className="space-y-3">
+            <p className="text-sm font-medium">{title}</p>
+            {items.length > 0 ? (
+                items.map((item, index) => (
+                    <div key={`${item.id ?? "unassigned"}-${item.name}`} className="space-y-2">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <span className="size-2 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
+                                <span className="truncate">{item.name}</span>
+                            </div>
+                            <span className="text-muted-foreground tabular-nums">{formatNumber(item.count)}</span>
+                        </div>
+                        <Progress value={item.percentage} className="h-2" />
+                    </div>
+                ))
+            ) : (
+                <EmptyPanel label="No organization distribution data is available yet." />
+            )}
+        </div>
+    );
+}
+
+function TopActiveUsers({ users }: { users: ActiveUser[] }) {
+    if (users.length === 0) {
+        return <EmptyPanel label="No Pulse user-request activity has been recorded in the last hour." />;
+    }
+
+    return (
+        <div className="space-y-4">
+            {users.map((user, index) => (
+                <div key={user.id} className="flex items-center justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="relative">
+                            <Avatar className="size-10 border">
+                                <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="bg-background text-muted-foreground ring-border absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full text-[10px] font-semibold ring-1">
+                                {index + 1}
+                            </span>
+                        </div>
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{user.name}</p>
+                            <p className="text-muted-foreground truncate text-xs">{user.email || "No email recorded"}</p>
+                        </div>
+                    </div>
+                    <Badge variant={index === 0 ? "default" : "secondary"} className="rounded-md font-mono text-xs">
+                        {formatNumber(user.requests)}
+                    </Badge>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function RecentUsers({ users }: { users: RecentUser[] }) {
+    if (users.length === 0) {
+        return <EmptyPanel label="Recently created users will appear here." />;
+    }
+
+    return (
+        <div className="space-y-4">
+            {users.map((user) => (
+                <div key={user.id} className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <Avatar className="size-10 border">
+                            <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{user.name}</p>
+                            <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <Badge variant="outline" className="rounded-md">
+                                    {user.role_label}
+                                </Badge>
+                                {user.verified ? (
+                                    <Badge variant="secondary" className="rounded-md">
+                                        Verified
+                                    </Badge>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
+                    <p className="text-muted-foreground shrink-0 text-right text-xs">{formatDateTime(user.created_at)}</p>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 export function UserAnalytics({ stats }: { stats: AnalyticsData }) {
@@ -29,28 +416,30 @@ export function UserAnalytics({ stats }: { stats: AnalyticsData }) {
     }, [stats]);
 
     useEffect(() => {
-        if (!window.Echo) return;
+        if (!window.Echo) {
+            return;
+        }
 
         const channel = window.Echo.private("administrators");
 
-        channel.listen(".UserCreated", (e: any) => {
-            const today = new Date().toISOString().split("T")[0];
-
-            setData((prev) => {
-                const newChart = [...prev.registrations_chart];
-                const todayIndex = newChart.findIndex((item) => item.date === today);
-
-                if (todayIndex >= 0) {
-                    newChart[todayIndex].count += 1;
-                } else {
-                    newChart.push({ date: today, count: 1 });
-                }
+        channel.listen(".UserCreated", () => {
+            setData((previous) => {
+                const registrationsChart = updateRegistrationChart(previous.registrations_chart);
+                const totalUsers = previous.total_users + 1;
 
                 return {
-                    ...prev,
-                    total_users: prev.total_users + 1,
-                    new_users_today: prev.new_users_today + 1,
-                    registrations_chart: newChart,
+                    ...previous,
+                    total_users: totalUsers,
+                    all_time_users: previous.all_time_users + 1,
+                    new_users_today: previous.new_users_today + 1,
+                    new_users_30_days: previous.new_users_30_days + 1,
+                    unverified_users: previous.unverified_users + 1,
+                    verification_rate: totalUsers > 0 ? Number(((previous.verified_users / totalUsers) * 100).toFixed(1)) : 0,
+                    online_rate: totalUsers > 0 ? Number(((previous.online_users / totalUsers) * 100).toFixed(1)) : 0,
+                    two_factor_rate: totalUsers > 0 ? Number(((previous.two_factor_enabled_users / totalUsers) * 100).toFixed(1)) : 0,
+                    assignment_rate: totalUsers > 0 ? Number(((previous.assigned_users / totalUsers) * 100).toFixed(1)) : 0,
+                    registrations_chart: registrationsChart,
+                    last_updated_at: new Date().toISOString(),
                 };
             });
         });
@@ -60,182 +449,159 @@ export function UserAnalytics({ stats }: { stats: AnalyticsData }) {
         };
     }, []);
 
+    const latestRegistrationPoint = data.registrations_chart.at(-1);
+
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatsCard
-                    title="Total Users"
-                    value={data.total_users}
-                    description="Active accounts"
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricCard
+                    title="Total users"
+                    value={formatNumber(data.total_users)}
+                    description={`${formatNumber(data.new_users_30_days)} new in 30 days, ${formatNumber(data.trashed_users)} deleted records retained.`}
                     icon={Users}
-                    trend="+2.5% from last month"
-                    trendUp={true}
+                    tone="bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                    progress={Math.min(100, Math.max(0, data.growth_rate))}
+                    detail={`${formatPercent(data.growth_rate)} vs previous 30 days`}
                 />
-                <StatsCard
-                    title="Online Now"
-                    value={data.online_users}
-                    description="Active sessions"
-                    icon={Signal}
-                    className="border-green-500/50 dark:border-green-500/20"
-                    iconClassName="text-green-500 animate-pulse"
+                <MetricCard
+                    title="New today"
+                    value={formatNumber(data.new_users_today)}
+                    description={`${formatNumber(latestRegistrationPoint?.count ?? 0)} captured on the latest chart day.`}
+                    icon={Sparkles}
+                    tone="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                 />
-                <StatsCard title="New Today" value={data.new_users_today} description="Registrations" icon={UserPlus} />
-                <StatsCard
+                <MetricCard
                     title="Verified"
-                    value={`${Math.round((data.verified_users / (data.total_users || 1)) * 100)}%`}
-                    description="Email verified"
-                    icon={ShieldCheck}
+                    value={formatPercent(data.verification_rate)}
+                    description={`${formatNumber(data.verified_users)} verified, ${formatNumber(data.unverified_users)} waiting.`}
+                    icon={UserRoundCheck}
+                    tone="bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                    progress={data.verification_rate}
+                    detail={`${formatNumber(data.verified_users)} / ${formatNumber(data.total_users)} users`}
                 />
-            </div>
+                <MetricCard
+                    title="Online now"
+                    value={formatNumber(data.online_users)}
+                    description="Active sessions inside the platform activity window."
+                    icon={Radio}
+                    tone="bg-lime-500/10 text-lime-600 dark:text-lime-400"
+                    progress={data.online_rate}
+                    detail={`${formatPercent(data.online_rate)} of active users`}
+                />
+            </section>
 
-            <div className="grid gap-4 md:grid-cols-7">
-                <Card className="from-card to-card/50 col-span-4 bg-gradient-to-br">
-                    <CardHeader>
-                        <CardTitle>Registration Trends</CardTitle>
-                        <CardDescription>User growth over the last 30 days</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                        <div className="h-[240px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data.registrations_chart} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                                    <XAxis
-                                        dataKey="date"
-                                        stroke="#888888"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={(value) => {
-                                            const date = new Date(value);
-                                            return `${date.getMonth() + 1}/${date.getDate()}`;
-                                        }}
-                                        minTickGap={32}
-                                    />
-                                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                                    <Tooltip
-                                        content={({ active, payload }) => {
-                                            if (active && payload && payload.length) {
-                                                return (
-                                                    <div className="bg-background rounded-lg border p-2 shadow-sm">
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-muted-foreground text-[0.70rem] uppercase">New Users</span>
-                                                                <span className="font-bold">{payload[0].value}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        }}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="count"
-                                        stroke="hsl(var(--primary))"
-                                        fillOpacity={1}
-                                        fill="url(#colorCount)"
-                                        strokeWidth={2}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+            <section className="grid gap-4 md:grid-cols-2">
+                <MetricCard
+                    title="2FA coverage"
+                    value={formatPercent(data.two_factor_rate)}
+                    description={`${formatNumber(data.two_factor_enabled_users)} users have the account security flag enabled.`}
+                    icon={ShieldCheck}
+                    tone="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                    progress={data.two_factor_rate}
+                    detail={`${formatNumber(data.two_factor_enabled_users)} protected accounts`}
+                />
+                <MetricCard
+                    title="Organization assignment"
+                    value={formatPercent(data.assignment_rate)}
+                    description={`${formatNumber(data.assigned_users)} users are tied to a school or department.`}
+                    icon={Building2}
+                    tone="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    progress={data.assignment_rate}
+                    detail={`${formatNumber(data.total_users - data.assigned_users)} unassigned users`}
+                />
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.85fr)]">
+                <Card className="border-border/60 bg-card/80 overflow-hidden">
+                    <CardHeader className="border-border/60 border-b">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Clock3 className="text-primary size-4" />
+                                    Registration Growth
+                                </CardTitle>
+                                <CardDescription>Daily registrations and cumulative user count over the last 30 days.</CardDescription>
+                            </div>
+                            <Badge variant="outline" className="w-fit rounded-md">
+                                Updated {formatDateTime(data.last_updated_at)}
+                            </Badge>
                         </div>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                        <RegistrationChart data={data.registrations_chart} />
                     </CardContent>
                 </Card>
 
-                <Card className="col-span-3 flex flex-col">
-                    <CardHeader>
+                <Card className="border-border/60 bg-card/80 overflow-hidden">
+                    <CardHeader className="border-border/60 border-b">
                         <CardTitle className="flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-amber-500" />
+                            <CheckCircle2 className="text-primary size-4" />
+                            Identity Coverage
+                        </CardTitle>
+                        <CardDescription>Verification and two-factor coverage across current users.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                        <StatusRing data={data} />
+                    </CardContent>
+                </Card>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+                <Card className="border-border/60 bg-card/80 overflow-hidden">
+                    <CardHeader className="border-border/60 border-b">
+                        <CardTitle className="flex items-center gap-2">
+                            <Users className="text-primary size-4" />
+                            Role Mix
+                        </CardTitle>
+                        <CardDescription>Current users grouped by primary role.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                        <RoleChart data={data.role_distribution} />
+                    </CardContent>
+                </Card>
+
+                <Card className="border-border/60 bg-card/80 overflow-hidden">
+                    <CardHeader className="border-border/60 border-b">
+                        <CardTitle className="flex items-center gap-2">
+                            <Building2 className="text-primary size-4" />
+                            Organization Spread
+                        </CardTitle>
+                        <CardDescription>Top schools and departments by assigned users.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-6 p-5">
+                        <OrganizationList title="Schools" items={data.school_distribution} />
+                        <OrganizationList title="Departments" items={data.department_distribution} />
+                    </CardContent>
+                </Card>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-2">
+                <Card className="border-border/60 bg-card/80 overflow-hidden">
+                    <CardHeader className="border-border/60 border-b">
+                        <CardTitle className="flex items-center gap-2">
+                            <Zap className="text-primary size-4" />
                             Top Active Users
                         </CardTitle>
-                        <CardDescription>Users with most requests (1h)</CardDescription>
+                        <CardDescription>User request leaders recorded by Pulse in the last hour.</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1">
-                        <div className="space-y-4">
-                            {data.top_active_users.length === 0 ? (
-                                <div className="text-muted-foreground flex h-full flex-col items-center justify-center space-y-2 text-center">
-                                    <Activity className="h-8 w-8 opacity-20" />
-                                    <p className="text-sm">No activity recorded recently</p>
-                                </div>
-                            ) : (
-                                data.top_active_users.map((user, i) => (
-                                    <div key={user.id} className="flex items-center justify-between gap-4">
-                                        <div className="flex items-center gap-3 overflow-hidden">
-                                            <div className="relative">
-                                                <Avatar className="h-9 w-9 border">
-                                                    <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="bg-background text-muted-foreground ring-border absolute -right-1 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ring-1">
-                                                    {i + 1}
-                                                </span>
-                                            </div>
-                                            <div className="grid gap-0.5 overflow-hidden">
-                                                <p className="truncate text-sm leading-none font-medium">{user.name}</p>
-                                                <p className="text-muted-foreground truncate text-xs">{user.email}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="secondary" className="font-mono text-xs">
-                                                {user.requests.toLocaleString()}
-                                            </Badge>
-                                            {i === 0 && <ArrowUpRight className="h-3 w-3 text-green-500" />}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
+                    <CardContent className="p-5">
+                        <TopActiveUsers users={data.top_active_users} />
                     </CardContent>
                 </Card>
-            </div>
-        </div>
-    );
-}
 
-function StatsCard({
-    title,
-    value,
-    description,
-    icon: Icon,
-    className,
-    iconClassName,
-    trend,
-    trendUp,
-}: {
-    title: string;
-    value: string | number;
-    description: string;
-    icon: any;
-    className?: string;
-    iconClassName?: string;
-    trend?: string;
-    trendUp?: boolean;
-}) {
-    return (
-        <Card className={cn("overflow-hidden transition-all hover:shadow-md", className)}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-muted-foreground text-sm font-medium">{title}</CardTitle>
-                <Icon className={cn("text-muted-foreground h-4 w-4", iconClassName)} />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
-                <div className="text-muted-foreground flex items-center text-xs">
-                    {description}
-                    {trend && (
-                        <span className={cn("ml-2 flex items-center gap-0.5", trendUp ? "text-green-500" : "text-red-500")}>
-                            {trendUp ? <ArrowUpRight className="h-3 w-3" /> : null}
-                            {trend}
-                        </span>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                <Card className="border-border/60 bg-card/80 overflow-hidden">
+                    <CardHeader className="border-border/60 border-b">
+                        <CardTitle className="flex items-center gap-2">
+                            <Activity className="text-primary size-4" />
+                            Latest Users
+                        </CardTitle>
+                        <CardDescription>The newest accounts created in user management.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5">
+                        <RecentUsers users={data.recent_users} />
+                    </CardContent>
+                </Card>
+            </section>
+        </div>
     );
 }

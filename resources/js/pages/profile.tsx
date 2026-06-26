@@ -86,6 +86,35 @@ type StudentProfileCompletion = {
     missing: StudentProfileMissingItem[];
 };
 
+type StudentProfileTab = "basic" | "student" | "contacts" | "education";
+
+const normalizeStudentGender = (gender?: string | null): string => {
+    const normalizedGender = (gender ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+    return ["male", "female", "other", "prefer_not_to_say"].includes(normalizedGender) ? normalizedGender : "";
+};
+
+const tabForStudentFormErrors = (errors: Record<string, string>): StudentProfileTab => {
+    const errorKeys = Object.keys(errors);
+
+    if (errorKeys.some((key) => !key.includes("."))) {
+        return "student";
+    }
+
+    if (errorKeys.some((key) => key.startsWith("contacts.") || key.startsWith("parents."))) {
+        return "contacts";
+    }
+
+    if (errorKeys.some((key) => key.startsWith("education."))) {
+        return "education";
+    }
+
+    return "student";
+};
+
 export default function ProfilePage() {
     useTheme();
     const {
@@ -222,16 +251,17 @@ export default function ProfilePage() {
 
     const isFaculty = ["professor", "associate_professor", "assistant_professor", "instructor", "part_time_faculty"].includes(user.role);
     const isStudent = ["student", "graduate_student", "shs_student"].includes(user.role);
-    const studentInformationUpdatesEnabled = !isStudent || (feature_flags?.student_information_updates ?? featureFlags?.studentInformationUpdates ?? false);
-    const initialStudentTab = !studentInformationUpdatesEnabled
+    const studentInformationUpdatesEnabled =
+        !isStudent || (feature_flags?.student_information_updates ?? featureFlags?.studentInformationUpdates ?? false);
+    const initialStudentTab: StudentProfileTab = !studentInformationUpdatesEnabled
         ? "basic"
         : typeof window !== "undefined" && window.location.hash === "#student-contacts"
-            ? "contacts"
-            : typeof window !== "undefined" && window.location.hash === "#student-education"
-              ? "education"
-              : typeof window !== "undefined" && window.location.hash === "#student-information"
-                ? "student"
-                : "basic";
+          ? "contacts"
+          : typeof window !== "undefined" && window.location.hash === "#student-education"
+            ? "education"
+            : typeof window !== "undefined" && window.location.hash === "#student-information"
+              ? "student"
+              : "basic";
     const [studentProfileTab, setStudentProfileTab] = useState(initialStudentTab);
 
     const paths = {
@@ -297,7 +327,7 @@ export default function ProfilePage() {
         religion: student?.religion || "",
         emergency_contact: student?.emergency_contact || "",
         birth_date: student?.birth_date || "",
-        gender: student?.gender || "",
+        gender: normalizeStudentGender(student?.gender),
         contacts: {
             emergency_contact_name: student?.contacts?.emergency_contact_name || "",
             emergency_contact_phone: student?.contacts?.emergency_contact_phone || "",
@@ -406,7 +436,7 @@ export default function ProfilePage() {
             studentForm.data.religion !== (student?.religion || "") ||
             studentForm.data.emergency_contact !== (student?.emergency_contact || "") ||
             studentForm.data.birth_date !== (student?.birth_date || "") ||
-            studentForm.data.gender !== (student?.gender || "") ||
+            studentForm.data.gender !== normalizeStudentGender(student?.gender) ||
             studentForm.data.contacts.emergency_contact_name !== (student?.contacts?.emergency_contact_name || "") ||
             studentForm.data.contacts.emergency_contact_phone !== (student?.contacts?.emergency_contact_phone || "") ||
             studentForm.data.contacts.emergency_contact_relationship !== (student?.contacts?.emergency_contact_relationship || "") ||
@@ -483,9 +513,25 @@ export default function ProfilePage() {
             onSuccess: () => {
                 toast.success("Student information updated successfully!");
                 setHasChanges(false);
+                router.visit(window.location.pathname, {
+                    replace: true,
+                    preserveScroll: true,
+                    only: ["student", "student_profile_completion", "announcements", "feature_flags"],
+                });
             },
-            onError: () => {
-                toast.error("Failed to update student information. Please check your input.");
+            onError: (errors) => {
+                const errorTab = tabForStudentFormErrors(errors);
+                setStudentProfileTab(errorTab);
+                toast.error("Please check the highlighted student fields.");
+
+                if (typeof window !== "undefined") {
+                    window.setTimeout(() => {
+                        const targetId =
+                            errorTab === "contacts" ? "student-contacts" : errorTab === "education" ? "student-education" : "student-information";
+
+                        document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                }
             },
         });
     };
@@ -564,38 +610,59 @@ export default function ProfilePage() {
                             <Card className={dashboardPanelClass}>
                                 <CardContent className="p-2">
                                     <TabsList className="bg-muted/20 grid h-auto w-full grid-cols-2 gap-1 rounded-lg p-1 sm:grid-cols-3 lg:flex lg:flex-col lg:items-stretch">
-                                        <TabsTrigger value="profile" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                        <TabsTrigger
+                                            value="profile"
+                                            className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3"
+                                        >
                                             <User className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                             Profile
                                         </TabsTrigger>
                                         {id_card && (isFaculty || isStudent) && (
-                                            <TabsTrigger value="id-card" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                            <TabsTrigger
+                                                value="id-card"
+                                                className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3"
+                                            >
                                                 <QrCode className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                                 <span className="truncate">Digital ID</span>
                                             </TabsTrigger>
                                         )}
-                                        <TabsTrigger value="accounts" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                        <TabsTrigger
+                                            value="accounts"
+                                            className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3"
+                                        >
                                             <Plug className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                             <span className="truncate sm:hidden">Security</span>
                                             <span className="hidden truncate sm:inline lg:hidden">Accounts</span>
                                             <span className="hidden truncate lg:inline">Accounts & Security</span>
                                         </TabsTrigger>
-                                        <TabsTrigger value="personalization" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                        <TabsTrigger
+                                            value="personalization"
+                                            className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3"
+                                        >
                                             <Palette className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                             <span className="truncate sm:hidden">Theme</span>
                                             <span className="hidden truncate sm:inline">Personalization</span>
                                         </TabsTrigger>
                                         {experimentalAvailable.length > 0 && (
-                                            <TabsTrigger value="experimental" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                            <TabsTrigger
+                                                value="experimental"
+                                                className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3"
+                                            >
                                                 <Plug className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                                 <span className="truncate">Experimental</span>
                                             </TabsTrigger>
                                         )}
-                                        <TabsTrigger value="connections" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                        <TabsTrigger
+                                            value="connections"
+                                            className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3"
+                                        >
                                             <Share2 className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                             <span className="truncate">Connections</span>
                                         </TabsTrigger>
-                                        <TabsTrigger value="integrations" className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3">
+                                        <TabsTrigger
+                                            value="integrations"
+                                            className="min-w-0 justify-center rounded-lg px-2 py-2 text-xs sm:text-sm lg:w-full lg:justify-start lg:px-3"
+                                        >
                                             <Plug className="mr-1.5 h-4 w-4 shrink-0 lg:mr-2" />
                                             <span className="truncate">Integrations</span>
                                         </TabsTrigger>
@@ -621,13 +688,18 @@ export default function ProfilePage() {
                                                             <div className="flex flex-wrap items-center gap-2">
                                                                 <h2 className="text-sm font-semibold">Student Information</h2>
                                                                 {student_profile_completion && (
-                                                                    <Badge variant={profileCompletion === 100 ? "default" : "secondary"} className="rounded-md text-[10px]">
-                                                                        {student_profile_completion.completed}/{student_profile_completion.total} complete
+                                                                    <Badge
+                                                                        variant={profileCompletion === 100 ? "default" : "secondary"}
+                                                                        className="rounded-md text-[10px]"
+                                                                    >
+                                                                        {student_profile_completion.completed}/{student_profile_completion.total}{" "}
+                                                                        complete
                                                                     </Badge>
                                                                 )}
                                                             </div>
-                                                            <p className="text-muted-foreground mt-1 break-words text-xs leading-relaxed">
-                                                                Keep official contact details clear with examples like +63 912 345 6789, Juan Dela Cruz, Mother, Davao City, and 2024.
+                                                            <p className="text-muted-foreground mt-1 text-xs leading-relaxed break-words">
+                                                                Keep official contact details clear with examples like +63 912 345 6789, Juan Dela
+                                                                Cruz, Mother, Davao City, and 2024.
                                                             </p>
                                                         </div>
                                                         <TabsList className="bg-muted/20 grid h-auto w-full grid-cols-2 gap-1 rounded-lg p-1 sm:grid-cols-4">
@@ -637,29 +709,47 @@ export default function ProfilePage() {
                                                             </TabsTrigger>
                                                             {studentInformationUpdatesEnabled && (
                                                                 <>
-                                                                    <TabsTrigger value="student" className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm">
+                                                                    <TabsTrigger
+                                                                        value="student"
+                                                                        className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm"
+                                                                    >
                                                                         <GraduationCap className="mr-1.5 h-4 w-4 shrink-0" />
                                                                         <span className="truncate">Student</span>
                                                                         {missingBySection("student") > 0 && (
-                                                                            <Badge variant="secondary" className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]">
+                                                                            <Badge
+                                                                                variant="secondary"
+                                                                                className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]"
+                                                                            >
                                                                                 {missingBySection("student")}
                                                                             </Badge>
                                                                         )}
                                                                     </TabsTrigger>
-                                                                    <TabsTrigger value="contacts" className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm">
+                                                                    <TabsTrigger
+                                                                        value="contacts"
+                                                                        className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm"
+                                                                    >
                                                                         <Contact className="mr-1.5 h-4 w-4 shrink-0" />
                                                                         <span className="truncate">Contacts</span>
                                                                         {missingBySection("contacts") > 0 && (
-                                                                            <Badge variant="secondary" className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]">
+                                                                            <Badge
+                                                                                variant="secondary"
+                                                                                className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]"
+                                                                            >
                                                                                 {missingBySection("contacts")}
                                                                             </Badge>
                                                                         )}
                                                                     </TabsTrigger>
-                                                                    <TabsTrigger value="education" className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm">
+                                                                    <TabsTrigger
+                                                                        value="education"
+                                                                        className="min-w-0 rounded-lg px-2 py-2 text-xs sm:text-sm"
+                                                                    >
                                                                         <BookOpen className="mr-1.5 h-4 w-4 shrink-0" />
                                                                         <span className="truncate">Education</span>
                                                                         {missingBySection("education") > 0 && (
-                                                                            <Badge variant="secondary" className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]">
+                                                                            <Badge
+                                                                                variant="secondary"
+                                                                                className="ml-1.5 h-5 rounded-full px-1.5 text-[10px]"
+                                                                            >
                                                                                 {missingBySection("education")}
                                                                             </Badge>
                                                                         )}
@@ -694,7 +784,7 @@ export default function ProfilePage() {
 
                                             {isStudent && !studentInformationUpdatesEnabled && (
                                                 <Card className={dashboardPanelClass}>
-                                                    <CardContent className="p-4 text-sm text-muted-foreground">
+                                                    <CardContent className="text-muted-foreground p-4 text-sm">
                                                         Student information updates are currently unavailable for your account.
                                                     </CardContent>
                                                 </Card>
@@ -718,6 +808,7 @@ export default function ProfilePage() {
                                                             studentForm={{
                                                                 data: studentForm.data,
                                                                 setData: studentForm.setData,
+                                                                errors: studentForm.errors,
                                                                 processing: studentForm.processing,
                                                             }}
                                                             onSubmit={handleStudentSubmit}
@@ -728,6 +819,7 @@ export default function ProfilePage() {
                                                             studentForm={{
                                                                 data: studentForm.data,
                                                                 setData: studentForm.setData,
+                                                                errors: studentForm.errors,
                                                                 processing: studentForm.processing,
                                                             }}
                                                             onSubmit={handleStudentSubmit}

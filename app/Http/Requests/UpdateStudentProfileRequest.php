@@ -58,4 +58,25 @@ final class UpdateStudentProfileRequest extends FormRequest
             'parents.mother_name' => ['nullable', 'string', 'max:255'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'gender' => $this->normalizeGender($this->input('gender')),
+        ]);
+    }
+
+    private function normalizeGender(mixed $gender): ?string
+    {
+        if ($gender === null || $gender === '') {
+            return null;
+        }
+
+        $normalizedGender = str_replace([' ', '-'], '_', mb_strtolower(mb_trim((string) $gender)));
+
+        return match ($normalizedGender) {
+            'male', 'female', 'other', 'prefer_not_to_say' => $normalizedGender,
+            default => (string) $gender,
+        };
+    }
 }

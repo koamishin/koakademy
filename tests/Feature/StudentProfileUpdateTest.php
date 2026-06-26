@@ -77,6 +77,9 @@ it('can update student profile information', function (): void {
             'contacts' => [
                 'emergency_contact_name' => 'Emer Gency',
                 'emergency_contact_phone' => '09123456789',
+                'emergency_contact_relationship' => 'Mother',
+                'facebook' => 'Mariane Jimenez',
+                'personal_contact' => '+63 09511564252',
             ],
             'education' => [
                 'elementary_school' => 'Elementary School',
@@ -107,6 +110,10 @@ it('can update student profile information', function (): void {
     expect($this->student->studentContactsInfo)->not->toBeNull();
     expect($this->student->studentContactsInfo->emergency_contact_name)->toBe('Emer Gency');
     expect($this->student->studentContactsInfo->emergency_contact_phone)->toBe('09123456789');
+    expect($this->student->studentContactsInfo->emergency_contact_relationship)->toBe('Mother');
+    expect($this->student->studentContactsInfo->personal_contact)->toBe('+63 09511564252');
+    $facebookColumn = Schema::hasColumn('student_contacts', 'facebook') ? 'facebook' : 'facebook_contact';
+    expect($this->student->studentContactsInfo->{$facebookColumn})->toBe('Mariane Jimenez');
 
     // Verify Education
     expect($this->student->studentEducationInfo)->not->toBeNull();
@@ -126,6 +133,61 @@ it('can update student profile information', function (): void {
     // Check if user email is also updated
     $this->user->refresh();
     expect($this->user->email)->toBe('updated_student@example.com');
+});
+
+it('can save contact information when the existing student gender is capitalized', function (): void {
+    $this->student->update([
+        'gender' => 'Male',
+    ]);
+
+    $response = $this
+        ->actingAs($this->user)
+        ->put(route('student.profile.student.update'), [
+            'first_name' => $this->student->first_name,
+            'middle_name' => $this->student->middle_name,
+            'last_name' => $this->student->last_name,
+            'email' => $this->student->email,
+            'phone' => $this->student->phone,
+            'address' => $this->student->address,
+            'civil_status' => $this->student->civil_status,
+            'nationality' => $this->student->nationality,
+            'religion' => $this->student->religion,
+            'emergency_contact' => $this->student->emergency_contact,
+            'birth_date' => $this->student->birth_date->format('Y-m-d'),
+            'gender' => 'Male',
+            'contacts' => [
+                'emergency_contact_name' => 'Leslie P. Jimenez',
+                'emergency_contact_phone' => '+63 9852521929',
+                'emergency_contact_relationship' => 'Mother',
+                'facebook' => 'Mariane Jimenez',
+                'personal_contact' => '+63 09511564252',
+            ],
+            'parents' => [
+                'father_name' => 'Luis Jr. D. Jimenez',
+                'mother_name' => 'Leslie P. Jimenez',
+            ],
+        ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('flash.success');
+    $response->assertSessionDoesntHaveErrors();
+
+    $this->student->refresh();
+
+    expect($this->student->gender)->toBe('male');
+    expect($this->student->studentContactsInfo)->not->toBeNull();
+    expect($this->student->studentContactsInfo->emergency_contact_name)->toBe('Leslie P. Jimenez');
+    expect($this->student->studentContactsInfo->emergency_contact_phone)->toBe('+63 9852521929');
+    expect($this->student->studentContactsInfo->emergency_contact_relationship)->toBe('Mother');
+    expect($this->student->studentContactsInfo->personal_contact)->toBe('+63 09511564252');
+    $facebookColumn = Schema::hasColumn('student_contacts', 'facebook') ? 'facebook' : 'facebook_contact';
+    expect($this->student->studentContactsInfo->{$facebookColumn})->toBe('Mariane Jimenez');
+
+    expect($this->student->studentParentInfo)->not->toBeNull();
+    $fatherColumn = Schema::hasColumn('student_parents_info', 'fathers_name') ? 'fathers_name' : 'father_name';
+    $motherColumn = Schema::hasColumn('student_parents_info', 'mothers_name') ? 'mothers_name' : 'mother_name';
+    expect($this->student->studentParentInfo->{$fatherColumn})->toBe('Luis Jr. D. Jimenez');
+    expect($this->student->studentParentInfo->{$motherColumn})->toBe('Leslie P. Jimenez');
 });
 
 it('blocks student information updates when the feature is inactive', function (): void {

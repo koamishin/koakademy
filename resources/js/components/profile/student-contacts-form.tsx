@@ -21,12 +21,15 @@ interface StudentContactsFormProps {
             };
         };
         setData: (key: string, value: any) => void;
+        errors: Record<string, string>;
         processing: boolean;
     };
     onSubmit: (e: React.FormEvent) => void;
 }
 
 export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFormProps) {
+    const errorFor = (key: string) => studentForm.errors[key];
+
     const updateParents = (key: string, value: string) => {
         studentForm.setData("parents", {
             ...studentForm.data.parents,
@@ -61,6 +64,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 onChange={(e) => updateParents("father_name", e.target.value)}
                                 placeholder="Pedro Dela Cruz"
                             />
+                            {errorFor("parents.father_name") && <p className="text-destructive text-sm">{errorFor("parents.father_name")}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="mother_name">Mother&apos;s Name</Label>
@@ -70,6 +74,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 onChange={(e) => updateParents("mother_name", e.target.value)}
                                 placeholder="Maria Dela Cruz"
                             />
+                            {errorFor("parents.mother_name") && <p className="text-destructive text-sm">{errorFor("parents.mother_name")}</p>}
                         </div>
                     </div>
 
@@ -84,6 +89,9 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 onChange={(e) => updateContacts("emergency_contact_name", e.target.value)}
                                 placeholder="Maria Dela Cruz"
                             />
+                            {errorFor("contacts.emergency_contact_name") && (
+                                <p className="text-destructive text-sm">{errorFor("contacts.emergency_contact_name")}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="emergency_contact_phone">Emergency Contact Phone</Label>
@@ -93,6 +101,9 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 onChange={(e) => updateContacts("emergency_contact_phone", e.target.value)}
                                 placeholder="09123456789"
                             />
+                            {errorFor("contacts.emergency_contact_phone") && (
+                                <p className="text-destructive text-sm">{errorFor("contacts.emergency_contact_phone")}</p>
+                            )}
                         </div>
                         <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="emergency_contact_relationship">Emergency Contact Relationship</Label>
@@ -102,6 +113,9 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 onChange={(e) => updateContacts("emergency_contact_relationship", e.target.value)}
                                 placeholder="Mother"
                             />
+                            {errorFor("contacts.emergency_contact_relationship") && (
+                                <p className="text-destructive text-sm">{errorFor("contacts.emergency_contact_relationship")}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="personal_contact">Personal Contact</Label>
@@ -111,6 +125,9 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 onChange={(e) => updateContacts("personal_contact", e.target.value)}
                                 placeholder="+63 912 345 6789"
                             />
+                            {errorFor("contacts.personal_contact") && (
+                                <p className="text-destructive text-sm">{errorFor("contacts.personal_contact")}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="facebook">Facebook Link</Label>
@@ -120,6 +137,7 @@ export function StudentContactsForm({ studentForm, onSubmit }: StudentContactsFo
                                 onChange={(e) => updateContacts("facebook", e.target.value)}
                                 placeholder="https://facebook.com/..."
                             />
+                            {errorFor("contacts.facebook") && <p className="text-destructive text-sm">{errorFor("contacts.facebook")}</p>}
                         </div>
                     </div>
 

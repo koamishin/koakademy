@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Head, Link, router } from "@inertiajs/react";
+import { Head, Link, router, usePoll } from "@inertiajs/react";
 import { KeyRound, Plus, ShieldCheck, Trash2, UserCog } from "lucide-react";
 import { useState } from "react";
 import { AnalyticsData, UserAnalytics } from "./analytics";
@@ -52,6 +52,10 @@ interface PageProps {
 type ActionType = "delete" | "impersonate" | "verify" | "reset_password" | null;
 
 export default function UserIndex({ users, analytics, online_user_ids, filters, options, user }: PageProps) {
+    usePoll(30000, {
+        only: ["analytics", "online_user_ids"],
+    });
+
     const [actionState, setActionState] = useState<{
         type: ActionType;
         userId: number | null;

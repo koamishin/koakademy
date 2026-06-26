@@ -17,12 +17,15 @@ interface StudentEducationFormProps {
             };
         };
         setData: (key: string, value: any) => void;
+        errors: Record<string, string>;
         processing: boolean;
     };
     onSubmit: (e: React.FormEvent) => void;
 }
 
 export function StudentEducationForm({ studentForm, onSubmit }: StudentEducationFormProps) {
+    const errorFor = (key: string) => studentForm.errors[key];
+
     const updateEducation = (key: string, value: string) => {
         studentForm.setData("education", {
             ...studentForm.data.education,
@@ -53,6 +56,9 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 onChange={(e) => updateEducation("elementary_school", e.target.value)}
                                 placeholder="Davao Central Elementary School"
                             />
+                            {errorFor("education.elementary_school") && (
+                                <p className="text-destructive text-sm">{errorFor("education.elementary_school")}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="elementary_year_graduated">Year Graduated</Label>
@@ -62,6 +68,9 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 onChange={(e) => updateEducation("elementary_year_graduated", e.target.value)}
                                 placeholder="2016"
                             />
+                            {errorFor("education.elementary_year_graduated") && (
+                                <p className="text-destructive text-sm">{errorFor("education.elementary_year_graduated")}</p>
+                            )}
                         </div>
 
                         <div className="mt-4 md:col-span-2">
@@ -75,6 +84,7 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 onChange={(e) => updateEducation("high_school", e.target.value)}
                                 placeholder="Davao National High School"
                             />
+                            {errorFor("education.high_school") && <p className="text-destructive text-sm">{errorFor("education.high_school")}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="high_school_year_graduated">Year Graduated</Label>
@@ -84,6 +94,9 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 onChange={(e) => updateEducation("high_school_year_graduated", e.target.value)}
                                 placeholder="2020"
                             />
+                            {errorFor("education.high_school_year_graduated") && (
+                                <p className="text-destructive text-sm">{errorFor("education.high_school_year_graduated")}</p>
+                            )}
                         </div>
 
                         <div className="mt-4 md:col-span-2">
@@ -97,6 +110,9 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 onChange={(e) => updateEducation("senior_high_school", e.target.value)}
                                 placeholder="Davao Senior High School"
                             />
+                            {errorFor("education.senior_high_school") && (
+                                <p className="text-destructive text-sm">{errorFor("education.senior_high_school")}</p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="senior_high_year_graduated">Year Graduated</Label>
@@ -106,6 +122,9 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                                 onChange={(e) => updateEducation("senior_high_year_graduated", e.target.value)}
                                 placeholder="2022"
                             />
+                            {errorFor("education.senior_high_year_graduated") && (
+                                <p className="text-destructive text-sm">{errorFor("education.senior_high_year_graduated")}</p>
+                            )}
                         </div>
                     </div>
 
