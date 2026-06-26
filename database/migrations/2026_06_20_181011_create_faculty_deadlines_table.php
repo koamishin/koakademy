@@ -19,7 +19,7 @@ return new class extends Migration
 
         Schema::create('faculty_deadlines', function (Blueprint $table): void {
             $table->id();
-            $table->string('faculty_id');
+            $table->foreignUuid('faculty_id')->constrained('faculty')->cascadeOnDelete();
             $table->foreignId('class_id')->nullable()->constrained('classes')->nullOnDelete();
             $table->string('title');
             $table->text('description')->nullable();
@@ -29,7 +29,6 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->foreign('faculty_id')->references('id')->on('faculty')->cascadeOnDelete();
             $table->index(['faculty_id', 'due_date']);
             $table->index(['is_active', 'priority']);
         });
