@@ -168,3 +168,104 @@ it('renders the administrator class edit page with existing class data', functio
             ->where('defaults.settings.enable_attendance_tracking', true)
         );
 });
+
+it('rejects administrator class schedule updates that conflict with another class', function () {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $this->actingAs($user);
+
+    $course = Course::factory()->create();
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'IT303',
+        'title' => 'Systems Analysis',
+    ]);
+    $faculty = Faculty::factory()->create();
+    $room = Room::factory()->create(['is_active' => true]);
+
+    $conflictingClass = Classes::factory()->create([
+        'classification' => 'college',
+        'course_codes' => [$course->id],
+        'subject_ids' => [$subject->id],
+        'subject_id' => $subject->id,
+        'subject_code' => 'IT303',
+        'academic_year' => 3,
+        'faculty_id' => $faculty->id,
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'A',
+        'room_id' => $room->id,
+    ]);
+
+    Schedule::factory()->create([
+        'class_id' => $conflictingClass->id,
+        'room_id' => $room->id,
+        'day_of_week' => 'Monday',
+        'start_time' => '08:00',
+        'end_time' => '10:00',
+    ]);
+
+    $class = Classes::factory()->create([
+        'classification' => 'college',
+        'course_codes' => [$course->id],
+        'subject_ids' => [$subject->id],
+        'subject_id' => $subject->id,
+        'subject_code' => 'IT303',
+        'academic_year' => 3,
+        'faculty_id' => $faculty->id,
+        'semester' => 1,
+        'school_year' => '2026 - 2027',
+        'section' => 'B',
+        'room_id' => $room->id,
+    ]);
+
+    $currentSchedule = Schedule::factory()->create([
+        'class_id' => $class->id,
+        'room_id' => $room->id,
+        'day_of_week' => 'Wednesday',
+        'start_time' => '13:00',
+        'end_time' => '14:00',
+    ]);
+
+    $response = $this->patch(route('administrators.classes.update', $class), [
+        'classification' => 'college',
+        'course_codes' => [$course->id],
+        'subject_ids' => [$subject->id],
+        'subject_code' => 'IT303',
+        'academic_year' => 3,
+        'faculty_id' => $faculty->id,
+        'semester' => '1',
+        'school_year' => '2026 - 2027',
+        'section' => 'B',
+        'room_id' => $room->id,
+        'maximum_slots' => 40,
+        'schedules' => [
+            [
+                'day_of_week' => 'Monday',
+                'start_time' => '09:00',
+                'end_time' => '10:30',
+                'room_id' => $room->id,
+            ],
+        ],
+        'settings' => [
+            'background_color' => '#ffffff',
+            'accent_color' => '#3b82f6',
+            'theme' => 'default',
+            'enable_announcements' => true,
+            'enable_grade_visibility' => true,
+            'enable_attendance_tracking' => false,
+            'allow_late_submissions' => false,
+            'enable_discussion_board' => false,
+            'custom' => [],
+        ],
+    ]);
+
+    $response
+        ->assertRedirect()
+        ->assertInvalid(['schedules' => 'conflicts with another class']);
+
+    $currentSchedule->refresh();
+
+    expect($currentSchedule->day_of_week)->toBe('Wednesday');
+    expect($currentSchedule->start_time->format('H:i'))->toBe('13:00');
+    expect($currentSchedule->end_time->format('H:i'))->toBe('14:00');
+});
