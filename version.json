@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.2.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.2.2",
-  "commit": "2ccccb41f4cc0a75794f7059bf6e3110ace165e7",
+  "version": "1.9.0-dev.3.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.3.0",
+  "commit": "249b73a00f0b2597f121982344041628d0a78b59",
   "branch": "master",
-  "timestamp": "2026-06-25T06:59:08Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28152439371",
-  "release_type": "patch",
+  "timestamp": "2026-06-26T10:17:16Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28231483248",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.9.0-dev.2.2 - Fix Docker healthcheck for FrankenPHP",
-    "previous": "1.9.0-dev.2.1"
+    "current": "Version 1.9.0-dev.3.0 - feat: implement polling for user analytics and enhance profile page with new fields and error handling",
+    "previous": "1.9.0-dev.2.2"
   },
   "metadata": {
     "author": "yukazakiri",
