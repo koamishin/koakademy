@@ -65,6 +65,7 @@
         "marcelweidum/filament-passkeys": "4.0",
         "meilisearch/meilisearch-php": "^1.16",
         "moataz-01/filament-notification-sound": "^1.0",
+        "mozex/laravel-scout-bulk-actions": "^1.7",
         "owenvoke/blade-fontawesome": "^2.9",
         "predis/predis": "^3.2",
         "pusher/pusher-php-server": "^7.2",

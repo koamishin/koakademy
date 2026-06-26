@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "45a85d1108e4ffff6e446d3731ef1deb",
+    "content-hash": "659c7f5d2cf2027bb2fe4278658bb602",
     "packages": [
         {
             "name": "achyutn/filament-log-viewer",
@@ -9662,6 +9662,90 @@
                 }
             ],
             "time": "2026-01-02T08:56:05+00:00"
+        },
+        {
+            "name": "mozex/laravel-scout-bulk-actions",
+            "version": "1.7.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mozex/laravel-scout-bulk-actions.git",
+                "reference": "08c28fc788875ae5681b7089ee39735f7ddb1bde"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mozex/laravel-scout-bulk-actions/zipball/08c28fc788875ae5681b7089ee39735f7ddb1bde",
+                "reference": "08c28fc788875ae5681b7089ee39735f7ddb1bde",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^11.29|^12.12|^13.0",
+                "laravel/prompts": "^0.1.15|^0.2.0|^0.3.4",
+                "laravel/scout": "^10.17|^11.0",
+                "php": "^8.2.0",
+                "spatie/laravel-package-tools": "^1.19.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.22.0",
+                "orchestra/testbench": "^9.2|^10.0|^11.0",
+                "pestphp/pest": "^3.8.2|^4.0.0",
+                "pestphp/pest-plugin-arch": "^3.1.1|^4.0.0",
+                "phpstan/phpstan": "^2.1",
+                "spatie/ray": "^1.41"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Mozex\\ScoutBulkActions\\ScoutBulkActionsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Mozex\\ScoutBulkActions\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mozex",
+                    "email": "hello@mozex.dev",
+                    "homepage": "https://mozex.dev",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Import, flush, and queue-import all your Laravel Scout searchable models at once. Auto-discovers models, runs in bulk, tracks progress.",
+            "homepage": "https://github.com/mozex/laravel-scout-bulk-actions",
+            "keywords": [
+                "artisan",
+                "bulk",
+                "bulk-import",
+                "eloquent",
+                "flush",
+                "import",
+                "indexing",
+                "laravel",
+                "queue",
+                "queue-import",
+                "reindex",
+                "scout",
+                "search",
+                "searchable"
+            ],
+            "support": {
+                "issues": "https://github.com/mozex/laravel-scout-bulk-actions/issues",
+                "source": "https://github.com/mozex/laravel-scout-bulk-actions/tree/1.7.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/mozex",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-04-22T10:14:33+00:00"
         },
         {
             "name": "mtdowling/jmespath.php",
@@ -23447,5 +23531,5 @@
         "php": ">=8.5 <8.6"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

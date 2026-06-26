@@ -14,11 +14,11 @@ final class NotificationChannelServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        if (! Schema::hasTable('general_settings')) {
-            return;
-        }
-
         try {
+            if (! Schema::hasTable('general_settings')) {
+                return;
+            }
+
             $settings = GeneralSetting::query()->first();
 
             if (! $settings) {

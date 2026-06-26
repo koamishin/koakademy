@@ -247,6 +247,15 @@ MEILISEARCH_KEY=your-master-key
 For production, always set a `MEILISEARCH_KEY` and configure the same key as `MEILI_MASTER_KEY` on the Meilisearch container. Without a master key, Meilisearch runs in development mode and exposes all API endpoints without authentication.
 :::
 
+After enabling Meilisearch, sync index settings and run record imports intentionally. KoAkademy does not rebuild Scout indexes during container startup.
+
+```bash
+php artisan scout:sync-index-settings
+php artisan scout:queue-import-all --chunk=500 --queue=default --force
+```
+
+For Docker Swarm, run the queued import as a one-off service instead of putting it in the app startup command. See [Docker Search Indexing](/getting-started/docker#search-indexing).
+
 ## Branding
 
 Runtime branding is loaded from database settings, not compiled into the image. After your first deploy, visit the admin panel to customize:

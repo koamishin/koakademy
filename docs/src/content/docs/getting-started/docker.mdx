@@ -358,6 +358,57 @@ GOTENBERG_URL=http://gotenberg:3000
 The `app` container runs FrankenPHP, Horizon, Pulse, and Nightwatch together via Supervisor when `QUEUE_CONNECTION=redis`. You do **not** need separate `horizon` or `pulse` containers unless you are horizontally scaling workers across multiple hosts.
 :::
 
+## Search Indexing
+
+KoAkademy does not run full Scout imports during container startup. This keeps Docker Compose and Docker Swarm deployments fast and prevents every replica from trying to rebuild Meilisearch indexes during a rollout.
+
+After enabling Meilisearch, sync index settings first:
+
+```bash
+docker exec koakademy-app php artisan scout:sync-index-settings
+```
+
+Then rebuild records only when you intentionally need to, such as after the first Meilisearch deploy, after adding a new searchable model, or after changing `toSearchableArray()`:
+
+```bash
+docker exec koakademy-app php artisan scout:queue-import-all --chunk=500 --queue=default --force
+```
+
+The `scout:queue-import-all` command discovers every model configured in `config/scout-bulk-actions.php` and dispatches chunked import jobs. Keep Horizon running while the jobs process.
+
+### Docker Swarm One-Off Task
+
+For Swarm, run indexing as a temporary one-off service from a manager node. Use the same image tag, overlay network, environment, secrets, and configs as the application service.
+
+```bash
+docker service create \
+  --name koakademy-scout-index \
+  --restart-condition none \
+  --replicas 1 \
+  --network <stack>_<overlay-network> \
+  --env-file .env.production \
+  --with-registry-auth \
+  <your-app-image:tag> \
+  php artisan scout:queue-import-all --chunk=500 --queue=default --force
+```
+
+Watch the task:
+
+```bash
+docker service logs -f koakademy-scout-index
+docker service ps koakademy-scout-index
+```
+
+Remove the temporary service after it finishes dispatching jobs:
+
+```bash
+docker service rm koakademy-scout-index
+```
+
+:::tip
+The default Horizon supervisor listens to the `default` and `assessments` queues. Use `--queue=default` unless you add a dedicated indexing queue to `config/horizon.php`.
+:::
+
 ## Scaling Workers Separately
 
 If you need to scale Horizon or Pulse workers independently (for example, on a different host or with different resource limits), run dedicated worker containers:
@@ -423,7 +474,7 @@ curl -s http://localhost:8000/health
 # {"status":"ok","timestamp":"2026-06-10T12:00:00+00:00"}
 ```
 
-This endpoint is used internally by the container's startup logic (`is_http_url_reachable`) to detect when Octane is ready to serve traffic — for example, before dispatching post-start Scout indexing jobs.
+This endpoint is used internally by the container's startup logic (`is_http_url_reachable`) to detect when Octane is ready to serve traffic.
 
 ### Checking Health Status
 
