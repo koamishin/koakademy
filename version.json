@@ -1,14 +1,14 @@
 {
-  "version": "1.9.0-dev.3.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.3.0",
-  "commit": "249b73a00f0b2597f121982344041628d0a78b59",
+  "version": "1.9.0-dev.4.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.4.0",
+  "commit": "d4afa922de3801f79508b64ea6824fff38eb4219",
   "branch": "master",
-  "timestamp": "2026-06-26T10:17:16Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28231483248",
+  "timestamp": "2026-06-27T12:50:19Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28289507970",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.9.0-dev.3.0 - feat: implement polling for user analytics and enhance profile page with new fields and error handling",
-    "previous": "1.9.0-dev.2.2"
+    "current": "Version 1.9.0-dev.4.0 - feat(queue): replace Horizon with Station",
+    "previous": "1.9.0-dev.3.0"
   },
   "metadata": {
     "author": "yukazakiri",
