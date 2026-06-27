@@ -158,12 +158,12 @@ CACHE_STORE=redis
 QUEUE_CONNECTION=redis
 ```
 
-If you use Redis queues, run a worker or Horizon:
+If you use Redis queues, run a worker or Station:
 
 ```bash
 php artisan queue:work
 # or
-php artisan horizon
+php artisan station:work redis --queue=default,assessments --workers=3 --memory=512 --timeout=60 --tries=1
 ```
 
 ## Mail

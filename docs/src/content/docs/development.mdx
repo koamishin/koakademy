@@ -20,7 +20,7 @@ php artisan serve
 If you use Redis queues:
 
 ```bash
-php artisan horizon
+php artisan station:work redis --queue=default,assessments --workers=3 --memory=512 --timeout=60 --tries=1
 # or
 php artisan queue:work
 ```

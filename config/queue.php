@@ -36,7 +36,7 @@ return [
     | used by your application. An example configuration is provided for
     | each backend supported by Laravel. You're also free to add more.
     |
-    | Drivers: "sync", "database", "beanstalkd", "sqs", "redis", "null"
+    | Drivers: "sync", "database", "beanstalkd", "sqs", "redis", "station-redis", "null"
     |
     */
 
@@ -76,20 +76,20 @@ return [
         ],
 
         'redis' => [
-            'driver' => 'redis',
+            'driver' => 'station-redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
-            'block_for' => null,
+            'block_for' => (int) env('REDIS_QUEUE_BLOCK_FOR', 5),
             'after_commit' => false,
         ],
 
         'redis-pdf' => [
-            'driver' => 'redis',
+            'driver' => 'station-redis',
             'connection' => 'queue-pdf',
             'queue' => env('REDIS_PDF_QUEUE', 'pdf-generation'),
             'retry_after' => (int) env('REDIS_PDF_QUEUE_RETRY_AFTER', 7200),
-            'block_for' => null,
+            'block_for' => (int) env('REDIS_PDF_QUEUE_BLOCK_FOR', 5),
             'after_commit' => false,
         ],
 

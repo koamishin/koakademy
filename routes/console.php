@@ -10,15 +10,14 @@ Artisan::command('inspire', function (): void {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Schedule Horizon metrics snapshots every 5 minutes
-Schedule::command('horizon:snapshot')
-    ->everyFiveMinutes()
-    ->when(static function (): bool {
-        $queueConnection = mb_strtolower((string) config('queue.default', 'database'));
-        $horizonEnabled = filter_var(env('HORIZON_ENABLED', true), FILTER_VALIDATE_BOOL);
+Schedule::command('station:prune')
+    ->daily()
+    ->withoutOverlapping();
 
-        return $queueConnection === 'redis' || $horizonEnabled;
-    });
+Schedule::command('station:alerts:check')
+    ->everyFiveMinutes()
+    ->when(static fn (): bool => (bool) config('station.alerts.enabled', false))
+    ->withoutOverlapping();
 
 Schedule::command('migrate:fresh --seed --force')
     ->daily()

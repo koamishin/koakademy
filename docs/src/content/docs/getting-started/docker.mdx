@@ -355,7 +355,7 @@ GOTENBERG_URL=http://gotenberg:3000
 :::
 
 :::note
-The `app` container runs FrankenPHP, Horizon, Pulse, and Nightwatch together via Supervisor when `QUEUE_CONNECTION=redis`. You do **not** need separate `horizon` or `pulse` containers unless you are horizontally scaling workers across multiple hosts.
+The `app` container runs FrankenPHP, Station, Pulse, and Nightwatch together via Supervisor when `QUEUE_CONNECTION=redis`. You do **not** need separate `station` or `pulse` containers unless you are horizontally scaling workers across multiple hosts.
 :::
 
 ## Search Indexing
@@ -374,7 +374,7 @@ Then rebuild records only when you intentionally need to, such as after the firs
 docker exec koakademy-app php artisan scout:queue-import-all --chunk=500 --queue=default --force
 ```
 
-The `scout:queue-import-all` command discovers every model configured in `config/scout-bulk-actions.php` and dispatches chunked import jobs. Keep Horizon running while the jobs process.
+The `scout:queue-import-all` command discovers every model configured in `config/scout-bulk-actions.php` and dispatches chunked import jobs. Keep Station running while the jobs process.
 
 ### Docker Swarm One-Off Task
 
@@ -406,22 +406,22 @@ docker service rm koakademy-scout-index
 ```
 
 :::tip
-The default Horizon supervisor listens to the `default` and `assessments` queues. Use `--queue=default` unless you add a dedicated indexing queue to `config/horizon.php`.
+The default Station supervisor listens to the `default` and `assessments` queues. Use `--queue=default` unless you add a dedicated indexing queue to `config/station.php`.
 :::
 
 ## Scaling Workers Separately
 
-If you need to scale Horizon or Pulse workers independently (for example, on a different host or with different resource limits), run dedicated worker containers:
+If you need to scale Station or Pulse workers independently (for example, on a different host or with different resource limits), run dedicated worker containers:
 
 ```yaml
-  horizon:
+  station:
     image: yukazaki/koakademy:latest
-    container_name: koakademy-horizon
+    container_name: koakademy-station
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      CONTAINER_MODE: horizon
+      CONTAINER_MODE: station
     depends_on:
       - pgsql
       - redis
@@ -431,7 +431,7 @@ If you need to scale Horizon or Pulse workers independently (for example, on a d
       - koakademy
 ```
 
-Use `CONTAINER_MODE=horizon` to run only the Horizon queue worker, bypassing the web server entirely. The same pattern works for `scheduler` and `nightwatch`.
+Use `CONTAINER_MODE=station` to run only the Station queue workers, bypassing the web server entirely. The same pattern works for `scheduler` and `nightwatch`.
 
 ## Available Container Modes
 
@@ -439,8 +439,8 @@ The KoAkademy image supports different container modes via the `CONTAINER_MODE` 
 
 | Mode | Use Case | Command |
 |---|---|---|
-| `http` (default) | Web server with Octane, Horizon, Pulse, and Nightwatch | `docker run ... yukazaki/koakademy:latest` |
-| `horizon` | Queue worker with Horizon only | `docker run -e CONTAINER_MODE=horizon ...` |
+| `http` (default) | Web server with Octane, Station, Pulse, and Nightwatch | `docker run ... yukazaki/koakademy:latest` |
+| `station` | Queue workers with Station only | `docker run -e CONTAINER_MODE=station ...` |
 | `scheduler` | Cron scheduler only | `docker run -e CONTAINER_MODE=scheduler ...` |
 | `worker` | General queue worker only | `docker run -e CONTAINER_MODE=worker ...` |
 | `nightwatch` | Nightwatch monitoring only | `docker run -e CONTAINER_MODE=nightwatch ...` |
@@ -460,7 +460,7 @@ The KoAkademy image includes a built-in `HEALTHCHECK` instruction that runs ever
 | Mode | Health Check |
 |---|---|
 | `http` | Runs `php artisan octane:status` — verifies the Octane server is accepting requests |
-| `horizon` | Runs `php artisan horizon:status` — verifies the Horizon process is active |
+| `station` | Runs `php artisan station:status` — verifies the Station process is active |
 | `scheduler` | Checks that the Supercronic process is running via Supervisor |
 | `nightwatch` | Checks that the Nightwatch agent is running via Supervisor |
 | `worker` | Checks that the queue worker is running via Supervisor |

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Enums\UserRole;
 use App\Models\Account;
 use App\Policies\AccountPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -35,5 +36,6 @@ final class AuthServiceProvider extends ServiceProvider
         Gate::define('create-accounts', fn ($user) => $user->is_admin ?? false);
         Gate::define('update-accounts', fn ($user) => $user->is_admin ?? false);
         Gate::define('delete-accounts', fn ($user) => $user->is_admin ?? false);
+        Gate::define('viewStation', fn ($user = null): bool => $user?->role === UserRole::SuperAdmin);
     }
 }

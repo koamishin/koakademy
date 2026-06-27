@@ -19,7 +19,7 @@ Common causes by container mode:
 |---|---|---|
 | `http` | Octane server not started or crashed | Check logs: `docker logs koakademy-app --tail 100` |
 | `http` | Octane taking too long to boot | Increase `start_period` in Compose healthcheck config |
-| `horizon` | Horizon process not running | Verify `QUEUE_CONNECTION=redis` and Redis is reachable |
+| `station` | Station process not running | Verify `QUEUE_CONNECTION=redis` and Redis is reachable |
 | `scheduler` | Supercronic process crashed | Check Supervisor logs: `docker exec koakademy-app supervisorctl status` |
 | `nightwatch` | Nightwatch agent not running | Verify Nightwatch is enabled and configured |
 | `worker` | Worker command undefined or crashed | Set `WORKER_COMMAND` environment variable |

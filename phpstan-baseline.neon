@@ -31748,12 +31748,6 @@ parameters:
 			path: app/Providers/Filament/AdminPanelProvider.php
 
 		-
-			message: '#^Cannot call method isSuperAdmin\(\) on App\\Models\\Account\|App\\Models\\User\|null\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Providers/HorizonServiceProvider.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Contracts\\Auth\\Authenticatable\:\:\$email\.$#'
 			identifier: property.notFound
 			count: 1

@@ -132,7 +132,7 @@ Just want to run it? Start with Docker below. Want to contribute code? Jump to [
 This quick start uses the smallest practical setup: KoAkademy + SQLite + Redis.
 
 - SQLite is the default database.
-- Redis is included because the production image uses Horizon for queues.
+- Redis is included because the production image uses Station workers for queues.
 
 <details open>
 <summary><strong>One copy-paste quick start</strong></summary>
@@ -389,7 +389,7 @@ For the minimal Docker setup, these are the main values you should set:
 * `APP_URL` — public URL used for generated links.
 * `PORTAL_HOST` — portal route hostname. Use `localhost` for local testing.
 * `ADMIN_HOST` — admin route hostname. Use `localhost` for local testing.
-* `REDIS_HOST` and `QUEUE_CONNECTION=redis` — needed because Horizon runs in the production image.
+* `REDIS_HOST` and `QUEUE_CONNECTION=redis` — needed because Station workers use the Redis queue backend in the production image.
 
 The Docker image runs migrations by default (`RUN_MIGRATIONS=true`) and listens on port `8000`.
 
