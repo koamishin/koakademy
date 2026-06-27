@@ -1,18 +1,18 @@
 {
-  "version": "1.9.0-dev.4.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.9.0-dev.4.0",
-  "commit": "d4afa922de3801f79508b64ea6824fff38eb4219",
+  "version": "1.10.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0",
+  "commit": "fecebeb67206562a3a7e2b1ed4e3cc18aa03020f",
   "branch": "master",
-  "timestamp": "2026-06-27T12:50:19Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28289507970",
-  "release_type": "feature",
+  "timestamp": "2026-06-27T13:16:04Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28290176683",
+  "release_type": "official",
   "changelog": {
-    "current": "Version 1.9.0-dev.4.0 - feat(queue): replace Horizon with Station",
-    "previous": "1.9.0-dev.3.0"
+    "current": "Version 1.10.0 - manual release",
+    "previous": "1.9.0-dev.4.0"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Auto Pre-release and Docker Tag",
+    "workflow": "Manual Official Release",
     "repository": "yukazakiri/koakademy"
   }
 }
