@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.0.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.0.1",
-  "commit": "19e2fcec75d47706271a829ec9ba3e5b9dc470f3",
+  "version": "1.10.0-dev.0.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.0.2",
+  "commit": "55aa16e967bcbeaf55981c129698bdce6d191796",
   "branch": "master",
-  "timestamp": "2026-06-27T13:54:25Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28291068892",
-  "release_type": "patch",
+  "timestamp": "2026-06-27T14:11:50Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28291509619",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.0.1 - Redesign changelog admin layout",
-    "previous": "1.10.0"
+    "current": "Version 1.10.0-dev.0.2 - fix: allow station access for spatie super admins",
+    "previous": "1.10.0-dev.0.1"
   },
   "metadata": {
     "author": "yukazakiri",
