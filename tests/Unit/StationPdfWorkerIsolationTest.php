@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Gate;
+use Spatie\Permission\Models\Role;
 
 uses()->group('station');
 
@@ -45,6 +46,15 @@ test('station dashboard is guarded by the station authorization gate', function 
     expect(Gate::forUser($user)->allows('viewStation'))->toBeTrue()
         ->and(Gate::forUser($admin)->allows('viewStation'))->toBeFalse()
         ->and(Gate::forUser($student)->allows('viewStation'))->toBeFalse();
+});
+
+test('station dashboard allows users with the spatie super admin role', function (): void {
+    Role::firstOrCreate(['name' => App\Enums\UserRole::SuperAdmin->value, 'guard_name' => 'web']);
+
+    $user = App\Models\User::factory()->create(['role' => App\Enums\UserRole::Admin]);
+    $user->assignRole(App\Enums\UserRole::SuperAdmin);
+
+    expect(Gate::forUser($user)->allows('viewStation'))->toBeTrue();
 });
 
 test('station maintenance is scheduled without horizon snapshot', function (): void {

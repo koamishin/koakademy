@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Enums\UserRole;
 use App\Models\Account;
+use App\Models\User;
 use App\Policies\AccountPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
@@ -36,6 +37,11 @@ final class AuthServiceProvider extends ServiceProvider
         Gate::define('create-accounts', fn ($user) => $user->is_admin ?? false);
         Gate::define('update-accounts', fn ($user) => $user->is_admin ?? false);
         Gate::define('delete-accounts', fn ($user) => $user->is_admin ?? false);
-        Gate::define('viewStation', fn ($user = null): bool => $user?->role === UserRole::SuperAdmin);
+        Gate::define('viewStation', fn ($user = null): bool => $user instanceof User && self::canViewStation($user));
+    }
+
+    private static function canViewStation(User $user): bool
+    {
+        return $user->role === UserRole::SuperAdmin || $user->hasRole(UserRole::SuperAdmin);
     }
 }
