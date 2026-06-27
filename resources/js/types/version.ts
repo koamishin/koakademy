@@ -44,7 +44,9 @@ export interface ChangelogProps {
         avatar: string | null;
         role: string;
     };
+    layout?: "admin" | "portal";
     version: string;
     versionInfo?: VersionInfo;
     changelog: ChangelogEntry[];
+    github_repo?: string;
 }

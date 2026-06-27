@@ -21,12 +21,19 @@ final class ChangelogController extends Controller
     public function __invoke(Request $request, ChangelogService $changelogService, VersionService $versionService): Response
     {
         $user = Auth::user();
+        $canAccessAdminPortal = $user?->canAccessAdminPortal() ?? false;
 
-        // Get changelog entries (excluding pre-releases for public view)
-        $changelog = $changelogService->getChangelog(20, includePrereleases: false);
+        // Authenticated users can see development and beta releases. Public
+        // visitors only see stable releases.
+        $changelog = $changelogService->getChangelog(20, includePrereleases: $user !== null);
 
         // Get version info for the current release
         $versionInfo = $versionService->getVersionInfo();
+        $version = config('app.version', '1.0.0');
+
+        if ($changelog->isEmpty()) {
+            $changelog = collect([$this->fallbackEntry($versionInfo, $version)]);
+        }
 
         return Inertia::render('changelog', [
             'user' => $user ? [
@@ -40,10 +47,46 @@ final class ChangelogController extends Controller
                 'avatar' => null,
                 'role' => 'guest',
             ],
-            'version' => config('app.version', '1.0.0'),
+            'layout' => $canAccessAdminPortal ? 'admin' : 'portal',
+            'version' => $version,
             'versionInfo' => $versionInfo,
             'changelog' => $changelog->toArray(),
             'github_repo' => config('services.github.repo', 'dccp-developers/DccpAdminV3'),
         ]);
+    }
+
+    /**
+     * Build a useful release entry when GitHub releases are unavailable.
+     *
+     * @param  array{version: string, release_type: string, commit: string|null, build_url: string|null, timestamp: string|null, is_latest: bool}  $versionInfo
+     * @return array{version: string, date: string, type: string, changes: array<int, array{type: string, description: string}>, github_url: null}
+     */
+    private function fallbackEntry(array $versionInfo, string $version): array
+    {
+        return [
+            'version' => $versionInfo['version'] ?? $version,
+            'date' => $this->fallbackDate($versionInfo['timestamp']),
+            'type' => $versionInfo['release_type'] ?? 'patch',
+            'changes' => [
+                [
+                    'type' => 'improvement',
+                    'description' => 'Current application version from the deployed build metadata.',
+                ],
+            ],
+            'github_url' => null,
+        ];
+    }
+
+    private function fallbackDate(?string $timestamp): string
+    {
+        if (! $timestamp) {
+            return now()->format('F j, Y');
+        }
+
+        try {
+            return \Carbon\Carbon::parse($timestamp)->format('F j, Y');
+        } catch (\Throwable) {
+            return now()->format('F j, Y');
+        }
     }
 }
