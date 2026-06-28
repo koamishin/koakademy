@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.0.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.0.2",
-  "commit": "55aa16e967bcbeaf55981c129698bdce6d191796",
+  "version": "1.10.0-dev.1.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.0",
+  "commit": "4bca3b200b59bf12909fc45c83b33bda501d4617",
   "branch": "master",
-  "timestamp": "2026-06-27T14:11:50Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28291509619",
-  "release_type": "bugfix",
+  "timestamp": "2026-06-28T13:15:50Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28323276757",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.0.2 - fix: allow station access for spatie super admins",
-    "previous": "1.10.0-dev.0.1"
+    "current": "Version 1.10.0-dev.1.0 - feat(institutions): add school level onboarding",
+    "previous": "1.10.0-dev.0.2"
   },
   "metadata": {
     "author": "yukazakiri",
