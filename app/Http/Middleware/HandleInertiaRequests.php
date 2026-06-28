@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Enums\SchoolLevel;
 use App\Features\Toggles\StudentAvatarUpload;
 use App\Features\Toggles\StudentInformationUpdates;
 use App\Features\Toggles\StudentSignaturePad;
+use App\Models\GeneralSetting;
+use App\Models\School;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\AnalyticsSettingsService;
 use App\Services\FacultyClassShareService;
+use App\Services\GeneralSettingsService;
 use App\Services\ModuleAdminNavigationService;
 use App\Services\NotificationShareService;
 use App\Services\OnboardingShareService;
@@ -20,6 +24,7 @@ use App\Services\StudentClassShareService;
 use App\Services\StudentProfileCompletionService;
 use App\Support\AdministratorSidebarCounts;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Middleware;
 use Laravel\Pennant\Feature;
 use Modules\Announcement\Services\AnnouncementDataService;
@@ -101,6 +106,7 @@ final class HandleInertiaRequests extends Middleware
                 'unresolvedHelpTicketsCount' => $onboardingService->getUnresolvedHelpTicketsCount($user),
                 'adminSidebarCounts' => fn () => $administratorSidebarCounts->resolve($request),
                 'moduleAdminRoutes' => $moduleAdminNavigationService->getRoutes(),
+                'institutionOnboarding' => fn () => $this->getInstitutionOnboardingData($request, $user),
             ],
             [
                 'announcements' => fn () => $this->getSharedAnnouncements(
@@ -168,6 +174,49 @@ final class HandleInertiaRequests extends Middleware
         ];
 
         return $announcements;
+    }
+
+    /**
+     * @return array{needs_school_level: bool, school: array{id: int, name: string, code: string|null}|null, school_level_options: array<int, array{value: string, label: string, description: string}>, update_endpoint: string|null}|null
+     */
+    private function getInstitutionOnboardingData(Request $request, ?User $user): ?array
+    {
+        if (! $user instanceof User || ! $request->is('administrators/*')) {
+            return null;
+        }
+
+        if (! $user->can('updateSchool', GeneralSetting::class)) {
+            return null;
+        }
+
+        if (! Schema::hasTable('schools') || ! Schema::hasColumn('schools', 'school_level')) {
+            return null;
+        }
+
+        $generalSettingsService = app(GeneralSettingsService::class);
+        $activeSchoolId = $generalSettingsService->getActiveSchoolId();
+        $school = $activeSchoolId
+            ? School::query()->find($activeSchoolId)
+            : School::query()->where('is_active', true)->first();
+
+        $school ??= School::query()->first();
+
+        if (! $school instanceof School) {
+            return null;
+        }
+
+        $schoolLevel = $school->getRawOriginal('school_level');
+
+        return [
+            'needs_school_level' => blank($schoolLevel),
+            'school' => [
+                'id' => $school->id,
+                'name' => $school->name,
+                'code' => $school->code,
+            ],
+            'school_level_options' => SchoolLevel::optionsForFrontend(),
+            'update_endpoint' => route('administrators.system-management.school-level.update'),
+        ];
     }
 
     private function resolveAnnouncementLocation(Request $request): string

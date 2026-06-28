@@ -22,6 +22,7 @@ import { router, useForm } from "@inertiajs/react";
 import { AlertTriangle, Building2, Calendar, Check, GraduationCap, Loader2, Mail, MapPin, Pencil, Phone, Plus, Save, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { route } from "ziggy-js";
 
 import { submitSystemForm } from "./form-submit";
 import SystemManagementLayout from "./layout";
@@ -30,6 +31,7 @@ import type { School, SystemManagementPageProps } from "./types";
 interface CreateSchoolFormData {
     name: string;
     code: string;
+    school_level: string;
     description: string;
     location: string;
     phone: string;
@@ -42,11 +44,21 @@ interface SchoolDetailsFormData {
     school_id: string;
     name: string;
     code: string;
+    school_level: string;
     description: string;
     location: string;
     phone: string;
     email: string;
 }
+
+const SCHOOL_LEVEL_OPTIONS = [
+    { value: "higher_education", label: "College / University", description: "Undergraduate, graduate, and university-level programs." },
+    { value: "junior_high", label: "Middle School / Junior High School", description: "Middle school or junior high school operations." },
+    { value: "senior_high", label: "Senior High School", description: "Senior high school programs, usually grades 11 to 12." },
+    { value: "elementary", label: "Elementary / Grade School", description: "Elementary or grade school operations." },
+];
+
+const schoolLevelLabel = (value?: string | null): string => SCHOOL_LEVEL_OPTIONS.find((option) => option.value === value)?.label ?? "Not configured";
 
 export default function SystemManagementSchoolPage({
     user,
@@ -68,6 +80,7 @@ export default function SystemManagementSchoolPage({
         school_id: active_school?.id?.toString() || "",
         name: active_school?.name || "",
         code: active_school?.code || "",
+        school_level: active_school?.school_level || "",
         description: active_school?.description || "",
         location: active_school?.location || "",
         phone: active_school?.phone || "",
@@ -76,6 +89,7 @@ export default function SystemManagementSchoolPage({
     const createSchoolForm = useForm<CreateSchoolFormData>({
         name: "",
         code: "",
+        school_level: "",
         description: "",
         location: "",
         phone: "",
@@ -86,6 +100,7 @@ export default function SystemManagementSchoolPage({
     const editSchoolForm = useForm<CreateSchoolFormData>({
         name: "",
         code: "",
+        school_level: "",
         description: "",
         location: "",
         phone: "",
@@ -118,6 +133,7 @@ export default function SystemManagementSchoolPage({
             school_id: active_school.id.toString(),
             name: active_school.name,
             code: active_school.code,
+            school_level: active_school.school_level || "",
             description: active_school.description || "",
             location: active_school.location || "",
             phone: active_school.phone || "",
@@ -143,6 +159,7 @@ export default function SystemManagementSchoolPage({
         editSchoolForm.setData({
             name: school.name,
             code: school.code,
+            school_level: school.school_level || "",
             description: school.description || "",
             location: school.location || "",
             phone: school.phone || "",
@@ -412,6 +429,30 @@ export default function SystemManagementSchoolPage({
 
                                                 <div className="space-y-2.5">
                                                     <Label
+                                                        htmlFor="school_level"
+                                                        className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+                                                    >
+                                                        School Level
+                                                    </Label>
+                                                    <Select
+                                                        value={schoolDetailsForm.data.school_level}
+                                                        onValueChange={(value) => schoolDetailsForm.setData("school_level", value ?? "")}
+                                                    >
+                                                        <SelectTrigger id="school_level" className="bg-background">
+                                                            <SelectValue placeholder="Choose school level" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {SCHOOL_LEVEL_OPTIONS.map((option) => (
+                                                                <SelectItem key={option.value} value={option.value}>
+                                                                    {option.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div className="space-y-2.5">
+                                                    <Label
                                                         htmlFor="school_description"
                                                         className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
                                                     >
@@ -527,7 +568,7 @@ export default function SystemManagementSchoolPage({
                                     </Label>
                                     <Select
                                         value={academicCalendarForm.data.semester.toString()}
-                                        onValueChange={(value) => academicCalendarForm.setData("semester", parseInt(value))}
+                                        onValueChange={(value) => academicCalendarForm.setData("semester", parseInt(value ?? "1"))}
                                     >
                                         <SelectTrigger id="system_semester" className="bg-background">
                                             <SelectValue placeholder="Select semester" />
@@ -635,6 +676,9 @@ export default function SystemManagementSchoolPage({
                                                 <Badge variant={school.is_active ? "default" : "secondary"} className="px-1.5 text-[10px]">
                                                     {school.is_active ? "Active" : "Inactive"}
                                                 </Badge>
+                                                <Badge variant="outline" className="px-1.5 text-[10px]">
+                                                    {schoolLevelLabel(school.school_level)}
+                                                </Badge>
                                                 {active_school?.id === school.id && (
                                                     <Badge className="border-blue-200 bg-blue-50 px-1.5 text-[10px] text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                                         Operating
@@ -734,6 +778,26 @@ export default function SystemManagementSchoolPage({
                             </div>
                         </div>
                         <div className="space-y-2">
+                            <Label htmlFor="new_school_level" className="text-muted-foreground text-xs font-semibold uppercase">
+                                School Level
+                            </Label>
+                            <Select
+                                value={createSchoolForm.data.school_level}
+                                onValueChange={(value) => createSchoolForm.setData("school_level", value ?? "")}
+                            >
+                                <SelectTrigger id="new_school_level">
+                                    <SelectValue placeholder="Choose school level" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SCHOOL_LEVEL_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="new_school_description" className="text-muted-foreground text-xs font-semibold uppercase">
                                 Description
                             </Label>
@@ -796,7 +860,7 @@ export default function SystemManagementSchoolPage({
                                     id="new_school_dean_email"
                                     type="email"
                                     value={createSchoolForm.data.dean_email}
-                                    onChange={(event) => createSchoolForm.setData("email", event.target.value)}
+                                    onChange={(event) => createSchoolForm.setData("dean_email", event.target.value)}
                                 />
                             </div>
                         </div>
@@ -804,7 +868,7 @@ export default function SystemManagementSchoolPage({
                             <Button type="button" variant="outline" onClick={() => setIsAddSchoolOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={createSchoolForm.processing}>
+                            <Button type="submit" disabled={createSchoolForm.processing || !createSchoolForm.data.school_level}>
                                 {createSchoolForm.processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                 Create
                             </Button>
@@ -844,6 +908,24 @@ export default function SystemManagementSchoolPage({
                                     className="uppercase"
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="edit_school_level" className="text-muted-foreground text-xs font-semibold uppercase">
+                                School Level
+                            </Label>
+                            <Select value={editSchoolForm.data.school_level} onValueChange={(value) => editSchoolForm.setData("school_level", value ?? "")}>
+                                <SelectTrigger id="edit_school_level">
+                                    <SelectValue placeholder="Choose school level" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {SCHOOL_LEVEL_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="space-y-2">
@@ -922,7 +1004,7 @@ export default function SystemManagementSchoolPage({
                             <Button type="button" variant="outline" onClick={() => setIsEditSchoolOpen(false)}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={editSchoolForm.processing}>
+                            <Button type="submit" disabled={editSchoolForm.processing || !editSchoolForm.data.school_level}>
                                 {editSchoolForm.processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Update Profile
                             </Button>

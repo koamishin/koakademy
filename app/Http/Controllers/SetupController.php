@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\SchoolLevel;
 use App\Enums\UserRole;
 use App\Models\GeneralSetting;
 use App\Models\School;
@@ -16,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
@@ -83,6 +85,7 @@ final class SetupController extends Controller
             // Step 2: Institution (required name & code)
             'school_name' => ['required', 'string', 'max:255'],
             'school_code' => ['required', 'string', 'max:50', 'unique:schools,code'],
+            'school_level' => ['required', Rule::enum(SchoolLevel::class)],
             'school_description' => ['nullable', 'string', 'max:1000'],
             'school_email' => ['nullable', 'string', 'email', 'max:255'],
             'school_phone' => ['nullable', 'string', 'max:50'],
@@ -121,6 +124,7 @@ final class SetupController extends Controller
             $school = School::create([
                 'name' => $request->input('school_name'),
                 'code' => $request->input('school_code'),
+                'school_level' => $request->input('school_level'),
                 'description' => $request->input('school_description'),
                 'email' => $request->input('school_email'),
                 'phone' => $request->input('school_phone'),

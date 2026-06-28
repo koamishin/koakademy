@@ -72,6 +72,29 @@ const THEME_COLORS = [
     { value: "#3f3f46", label: "Zinc" },
 ];
 
+const SCHOOL_LEVELS = [
+    {
+        value: "higher_education",
+        label: "College / University",
+        description: "Undergraduate, graduate, and university-level programs.",
+    },
+    {
+        value: "junior_high",
+        label: "Middle School / Junior High School",
+        description: "Middle school or junior high school operations.",
+    },
+    {
+        value: "senior_high",
+        label: "Senior High School",
+        description: "Senior high school programs, usually grades 11 to 12.",
+    },
+    {
+        value: "elementary",
+        label: "Elementary / Grade School",
+        description: "Elementary or grade school operations.",
+    },
+];
+
 /* ── Stable field components defined OUTSIDE the page component ── */
 
 interface FieldProps {
@@ -338,6 +361,7 @@ export default function Setup() {
         // Step 2: Institution
         school_name: "",
         school_code: "",
+        school_level: "",
         school_description: "",
         school_email: "",
         school_phone: "",
@@ -392,6 +416,7 @@ export default function Setup() {
         const errs: string[] = [];
         if (!data.school_name.trim()) errs.push("Please provide an institution name.");
         if (!data.school_code.trim()) errs.push("Please provide an institution code.");
+        if (!data.school_level) errs.push("Please choose the institution's school level.");
         if (errs.length) {
             errs.forEach((e) => toast.error(e));
             return;
@@ -423,7 +448,7 @@ export default function Setup() {
             onError: (errs) => {
                 toast.error("Please correct the errors and try again.");
                 if (errs.admin_name || errs.admin_email || errs.admin_password) goToStep(1);
-                else if (errs.school_name || errs.school_code || errs.school_email) goToStep(2);
+                else if (errs.school_name || errs.school_code || errs.school_level || errs.school_email) goToStep(2);
                 else if (errs.school_starting_date || errs.school_ending_date || errs.semester) goToStep(3);
             },
         });
@@ -777,6 +802,58 @@ export default function Setup() {
                                                             error={errors.school_email}
                                                         />
                                                     </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-foreground text-sm font-medium">
+                                                            School Level
+                                                            <span className="text-destructive ml-0.5">*</span>
+                                                        </Label>
+                                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                            {SCHOOL_LEVELS.map((level) => {
+                                                                const selected = data.school_level === level.value;
+
+                                                                return (
+                                                                    <button
+                                                                        key={level.value}
+                                                                        type="button"
+                                                                        onClick={() => setData("school_level", level.value)}
+                                                                        className={[
+                                                                            "border-border bg-background text-left transition-colors",
+                                                                            "hover:border-primary/50 focus-visible:ring-primary rounded-lg border p-4 focus-visible:ring-2 focus-visible:outline-none",
+                                                                            selected ? "border-primary bg-primary/5 ring-primary/20 ring-1" : "",
+                                                                            errors.school_level ? "border-destructive" : "",
+                                                                        ]
+                                                                            .filter(Boolean)
+                                                                            .join(" ")}
+                                                                        aria-pressed={selected}
+                                                                    >
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div
+                                                                                className={[
+                                                                                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                                                                                    selected ? "border-primary bg-primary" : "border-muted-foreground/40",
+                                                                                ].join(" ")}
+                                                                            >
+                                                                                {selected && <ShieldCheck className="text-primary-foreground h-3 w-3" />}
+                                                                            </div>
+                                                                            <div className="space-y-1">
+                                                                                <p className="text-foreground text-sm font-medium">{level.label}</p>
+                                                                                <p className="text-muted-foreground text-xs leading-relaxed">{level.description}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        {errors.school_level && (
+                                                            <motion.p
+                                                                initial={{ opacity: 0, y: -4 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                className="text-destructive text-xs"
+                                                            >
+                                                                {errors.school_level}
+                                                            </motion.p>
+                                                        )}
+                                                    </div>
                                                     <div className="space-y-1.5">
                                                         <Label htmlFor="school_description" className="text-foreground text-sm font-medium">
                                                             Description
@@ -883,7 +960,7 @@ export default function Setup() {
                                                         Current Semester
                                                         <span className="text-destructive ml-0.5">*</span>
                                                     </Label>
-                                                    <Select value={data.semester} onValueChange={(val) => setData("semester", val)}>
+                                                    <Select value={data.semester} onValueChange={(val) => setData("semester", val ?? "")}>
                                                         <SelectTrigger
                                                             id="semester"
                                                             className={[
@@ -1161,7 +1238,7 @@ export default function Setup() {
                                                             <Label htmlFor="currency" className="text-foreground text-sm font-medium">
                                                                 Currency
                                                             </Label>
-                                                            <Select value={data.currency} onValueChange={(val) => setData("currency", val)}>
+                                                            <Select value={data.currency} onValueChange={(val) => setData("currency", val ?? "")}>
                                                                 <SelectTrigger
                                                                     id="currency"
                                                                     className="border-border bg-background text-foreground hover:border-primary/60 h-11 transition-colors"

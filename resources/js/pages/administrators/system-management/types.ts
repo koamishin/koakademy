@@ -1,6 +1,5 @@
 import type { AnalyticsConfig, AnalyticsProviderSettings } from "@/types/analytics";
 import type { User } from "@/types/user";
-import type { SystemManagementSectionKey } from "./layout";
 
 export type SystemManagementSectionKey =
     | "school"
@@ -46,6 +45,7 @@ export interface School {
     id: number;
     name: string;
     code: string;
+    school_level?: string | null;
     description?: string;
     dean_name?: string;
     dean_email?: string;
@@ -313,6 +313,8 @@ export interface SystemManagementAccess {
     active_section: SystemManagementSectionKey;
     sections: Record<SystemManagementSectionKey, SystemManagementSectionAccess>;
 }
+
+export type SanityConfig = Record<string, unknown>;
 
 export interface SystemManagementPageProps {
     user: User;

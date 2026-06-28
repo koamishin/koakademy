@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Administrators;
 
+use App\Enums\SchoolLevel;
 use App\Models\GeneralSetting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,7 @@ final class UpdateSchoolRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('schools', 'name')->ignore($schoolId)],
             'code' => ['required', 'string', 'max:50', Rule::unique('schools', 'code')->ignore($schoolId)],
+            'school_level' => ['required', Rule::enum(SchoolLevel::class)],
             'description' => ['nullable', 'string'],
             'location' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],

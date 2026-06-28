@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Administrators;
 
+use App\Enums\SchoolLevel;
 use App\Models\GeneralSetting;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class StoreSchoolRequest extends FormRequest
 {
@@ -15,13 +17,14 @@ final class StoreSchoolRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, string|Rule>>
      */
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:255', 'unique:schools,name'],
             'code' => ['required', 'string', 'max:50', 'unique:schools,code'],
+            'school_level' => ['required', Rule::enum(SchoolLevel::class)],
             'description' => ['nullable', 'string'],
             'location' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],

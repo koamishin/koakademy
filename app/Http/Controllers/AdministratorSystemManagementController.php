@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\NotificationChannel;
+use App\Enums\SchoolLevel;
 use App\Http\Requests\Administrators\StoreSchoolRequest;
 use App\Http\Requests\Administrators\UpdateApiManagementRequest;
 use App\Http\Requests\Administrators\UpdateEnrollmentPipelineRequest;
@@ -142,6 +143,7 @@ final class AdministratorSystemManagementController extends Controller
         School::create([
             'name' => $validated['name'],
             'code' => $validated['code'],
+            'school_level' => $validated['school_level'],
             'description' => $validated['description'] ?? null,
             'location' => $validated['location'] ?? null,
             'phone' => $validated['phone'] ?? null,
@@ -184,6 +186,7 @@ final class AdministratorSystemManagementController extends Controller
             'school_id' => 'required|exists:schools,id',
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50',
+            'school_level' => ['required', Rule::enum(SchoolLevel::class)],
             'description' => 'nullable|string',
             'location' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:50',
@@ -194,6 +197,7 @@ final class AdministratorSystemManagementController extends Controller
         $school->update([
             'name' => $validated['name'],
             'code' => $validated['code'],
+            'school_level' => $validated['school_level'],
             'description' => $validated['description'] ?? null,
             'location' => $validated['location'] ?? null,
             'phone' => $validated['phone'] ?? null,
@@ -210,6 +214,7 @@ final class AdministratorSystemManagementController extends Controller
         $school->update([
             'name' => $validated['name'],
             'code' => $validated['code'],
+            'school_level' => $validated['school_level'],
             'description' => $validated['description'] ?? null,
             'location' => $validated['location'] ?? null,
             'phone' => $validated['phone'] ?? null,
@@ -219,6 +224,22 @@ final class AdministratorSystemManagementController extends Controller
         ]);
 
         return Redirect::back()->with('success', 'School record updated successfully.');
+    }
+
+    public function updateSchoolLevel(Request $request): RedirectResponse
+    {
+        $this->authorize('updateSchool', GeneralSetting::class);
+
+        $validated = $request->validate([
+            'school_id' => ['required', 'integer', 'exists:schools,id'],
+            'school_level' => ['required', Rule::enum(SchoolLevel::class)],
+        ]);
+
+        School::query()
+            ->whereKey($validated['school_id'])
+            ->update(['school_level' => $validated['school_level']]);
+
+        return Redirect::back()->with('success', 'Institution school level configured successfully.');
     }
 
     public function updateSchoolStatus(UpdateSchoolStatusRequest $request, School $school)

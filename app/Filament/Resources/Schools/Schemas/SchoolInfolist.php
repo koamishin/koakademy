@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Schools\Schemas;
 
+use App\Enums\SchoolLevel;
 use Exception;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -31,6 +32,12 @@ final class SchoolInfolist
                             ->label('School Code')
                             ->badge()
                             ->color('primary'),
+
+                        TextEntry::make('school_level')
+                            ->label('School Level')
+                            ->badge()
+                            ->color(fn (?SchoolLevel $state): string|array|null => $state?->getColor() ?? 'warning')
+                            ->formatStateUsing(fn (?SchoolLevel $state): string => $state?->getLabel() ?? 'Not configured'),
 
                         TextEntry::make('description')
                             ->label('Description')

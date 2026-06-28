@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\SchoolLevel;
 use App\Models\School;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Override;
@@ -58,6 +59,7 @@ final class SchoolFactory extends Factory
         return [
             'name' => $name,
             'code' => $code,
+            'school_level' => SchoolLevel::HigherEducation,
             'description' => $this->faker->paragraph(3),
             'dean_name' => $this->faker->name(),
             'dean_email' => $this->faker->safeEmail(),

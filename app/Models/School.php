@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\SchoolLevel;
 use Database\Factories\SchoolFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -18,6 +19,7 @@ use Override;
  * @property int $id
  * @property string $name
  * @property string $code
+ * @property SchoolLevel|null $school_level
  * @property string|null $description
  * @property string|null $dean_name
  * @property string|null $dean_email
@@ -52,6 +54,7 @@ use Override;
  * @method static Builder<static>|School whereMetadata($value)
  * @method static Builder<static>|School whereName($value)
  * @method static Builder<static>|School wherePhone($value)
+ * @method static Builder<static>|School whereSchoolLevel($value)
  * @method static Builder<static>|School whereUpdatedAt($value)
  * @method static Builder<static>|School active()
  *
@@ -68,6 +71,7 @@ final class School extends Model
     protected $fillable = [
         'name',
         'code',
+        'school_level',
         'description',
         'dean_name',
         'dean_email',
@@ -268,6 +272,7 @@ final class School extends Model
     protected function casts(): array
     {
         return [
+            'school_level' => SchoolLevel::class,
             'is_active' => 'boolean',
             'metadata' => 'array',
             'created_at' => 'datetime',

@@ -1,5 +1,6 @@
 import { AdminHeader } from "@/components/administrators/admin-header";
 import { AdministratorSidebar } from "@/components/administrators/admin-sidebar";
+import { InstitutionOnboarding, InstitutionSchoolLevelOnboarding } from "@/components/administrators/institution-school-level-onboarding";
 import { AnalyticsScripts } from "@/components/analytics-scripts";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { GlobalCommandPalette } from "@/components/global-command-palette";
@@ -11,7 +12,9 @@ import { usePage } from "@inertiajs/react";
 import React from "react";
 
 interface PageProps {
+    [key: string]: unknown;
     announcements: any[];
+    institutionOnboarding?: InstitutionOnboarding;
     auth?: {
         user?: User | null;
     };
@@ -24,7 +27,7 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ user, title, children }: AdminLayoutProps) {
-    const { announcements, auth } = usePage<PageProps>().props;
+    const { announcements, auth, institutionOnboarding } = usePage<PageProps>().props;
     const resolvedUser = auth?.user ?? user;
 
     if (!resolvedUser) {
@@ -49,6 +52,7 @@ export default function AdminLayout({ user, title, children }: AdminLayoutProps)
                     </div>
                 </SidebarInset>
                 <GlobalCommandPalette user={resolvedUser} />
+                <InstitutionSchoolLevelOnboarding onboarding={institutionOnboarding ?? null} />
             </SidebarProvider>
         </ThemeProvider>
     );

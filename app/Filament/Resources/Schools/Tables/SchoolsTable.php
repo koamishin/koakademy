@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Schools\Tables;
 
+use App\Enums\SchoolLevel;
 use App\Models\School;
 use Exception;
 use Filament\Actions\BulkActionGroup;
@@ -44,6 +45,13 @@ final class SchoolsTable
                     ->sortable()
                     ->badge()
                     ->color('primary'),
+
+                TextColumn::make('school_level')
+                    ->label('Level')
+                    ->badge()
+                    ->color(fn (?SchoolLevel $state): string|array|null => $state?->getColor() ?? 'warning')
+                    ->formatStateUsing(fn (?SchoolLevel $state): string => $state?->getLabel() ?? 'Not configured')
+                    ->sortable(),
 
                 TextColumn::make('dean_name')
                     ->label('Dean')
@@ -112,6 +120,10 @@ final class SchoolsTable
                     ->placeholder('All schools')
                     ->trueLabel('Active schools')
                     ->falseLabel('Inactive schools'),
+
+                SelectFilter::make('school_level')
+                    ->label('School Level')
+                    ->options(SchoolLevel::asSelectOptions()),
 
                 SelectFilter::make('has_departments')
                     ->label('Department Status')

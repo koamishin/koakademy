@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Schools\Schemas;
 
+use App\Enums\SchoolLevel;
 use Exception;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -41,6 +43,14 @@ final class SchoolForm
                             ->helperText('Short abbreviation for the school')
                             ->rules(['alpha_num'])
                             ->afterStateUpdated(fn (string $state, callable $set) => $set('code', mb_strtoupper($state))),
+
+                        Select::make('school_level')
+                            ->label('School Level')
+                            ->options(SchoolLevel::asSelectOptions())
+                            ->default(SchoolLevel::HigherEducation->value)
+                            ->required()
+                            ->native(false)
+                            ->helperText('Primary education level this institution operates.'),
 
                         Textarea::make('description')
                             ->label('Description')

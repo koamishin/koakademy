@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
+use App\Enums\SchoolLevel;
 use App\Models\GeneralSetting;
+use App\Models\School;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+
+beforeEach(function (): void {
+    $this->withoutVite();
+    config(['inertia.testing.ensure_pages_exist' => false]);
+});
 
 it('shows the setup screen when the database is empty', function (): void {
-    truncateAllSetupTables();
-
     $this->get('/setup')->assertOk();
 
     expect(GeneralSetting::query()->exists())->toBeFalse();
@@ -32,47 +35,51 @@ it('blocks access to setup after setup is complete', function (): void {
     $this->actingAs($user)->get('/setup')->assertForbidden();
 });
 
-function truncateAllSetupTables(): void
+it('stores the selected school level during setup', function (): void {
+    $this->post('/setup', validSetupPayload([
+        'school_level' => SchoolLevel::SeniorHigh->value,
+    ]))->assertRedirect('/');
+
+    $school = School::query()->first();
+
+    expect($school)->not->toBeNull();
+    expect($school?->school_level)->toBe(SchoolLevel::SeniorHigh);
+    expect(GeneralSetting::query()->first()?->is_setup)->toBeTrue();
+});
+
+it('requires a school level during setup', function (): void {
+    $payload = validSetupPayload();
+    unset($payload['school_level']);
+
+    $this->post('/setup', $payload)
+        ->assertSessionHasErrors('school_level');
+});
+
+it('rejects an invalid school level during setup', function (): void {
+    $this->post('/setup', validSetupPayload([
+        'school_level' => 'preschool',
+    ]))->assertSessionHasErrors('school_level');
+});
+
+function validSetupPayload(array $overrides = []): array
 {
-    $skipTables = [
-        'migrations',
-        'failed_jobs',
-        'password_reset_tokens',
-        'personal_access_tokens',
-        'cache',
-        'cache_locks',
-        'sessions',
-        'job_batches',
-        'jobs',
-        'telescope_entries',
-        'telescope_entries_tags',
-        'telescope_monitoring',
-        'pulse_entries',
-        'pulse_aggregates',
-        'pulse_values',
-    ];
-
-    $tables = array_diff(Schema::getConnection()->getSchemaBuilder()->getTableListing(), $skipTables);
-    $driver = DB::getDriverName();
-
-    if ($driver === 'pgsql') {
-        foreach ($tables as $table) {
-            $wrapped = DB::getQueryGrammar()->wrapTable($table);
-            DB::statement(sprintf('TRUNCATE TABLE %s RESTART IDENTITY CASCADE', $wrapped));
-        }
-
-        return;
-    }
-
-    if ($driver === 'mysql') {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-    }
-
-    foreach ($tables as $table) {
-        DB::table($table)->truncate();
-    }
-
-    if ($driver === 'mysql') {
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
-    }
+    return array_merge([
+        'admin_name' => 'System Administrator',
+        'admin_email' => 'admin@example.edu',
+        'admin_password' => 'password123',
+        'admin_password_confirmation' => 'password123',
+        'school_name' => 'Example Academy',
+        'school_code' => 'EXA',
+        'school_level' => SchoolLevel::HigherEducation->value,
+        'school_description' => 'Example institution.',
+        'school_email' => 'info@example.edu',
+        'school_phone' => '+63 2 1234 5678',
+        'school_location' => 'Main Campus',
+        'dean_name' => 'Dr. Jane Smith',
+        'dean_email' => 'dean@example.edu',
+        'school_starting_date' => '2026-06-01',
+        'school_ending_date' => '2027-03-31',
+        'semester' => '1',
+        'curriculum_year' => '2026-2027',
+    ], $overrides);
 }
