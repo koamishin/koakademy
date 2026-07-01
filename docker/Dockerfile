@@ -167,4 +167,4 @@ EXPOSE 2019
 
 ENTRYPOINT ["start-container"]
 
-HEALTHCHECK --start-period=5s --interval=1s --timeout=3s --retries=10 CMD healthcheck || exit 1
+HEALTHCHECK --start-period=60s --interval=30s --timeout=10s --retries=5 CMD healthcheck || exit 1
