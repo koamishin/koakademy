@@ -8,6 +8,7 @@ use App\Models\Resource;
 use App\Models\StudentEnrollment;
 use App\Models\User;
 use App\Notifications\PdfGenerationCompleted;
+use App\Services\AssessmentFormDataService;
 use App\Services\GeneralSettingsService;
 use App\Services\PdfGenerationService;
 use App\Support\ResourceStorageLocator;
@@ -189,26 +190,7 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
      */
     private function generatePdf(StudentEnrollment $studentEnrollment, PdfGenerationService $pdfService): string
     {
-        $generalSettingsService = new GeneralSettingsService;
-
-        // Prepare data for the view
-        $data = [
-            'student' => $studentEnrollment,
-            'subjects' => $studentEnrollment->SubjectsEnrolled,
-            'school_year' => mb_convert_encoding(
-                $generalSettingsService->getCurrentSchoolYearString() ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'semester' => mb_convert_encoding(
-                $generalSettingsService->getAvailableSemesters()[$generalSettingsService->getCurrentSemester()] ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'tuition' => $studentEnrollment->studentTuition,
-            'general_settings' => $generalSettingsService->getGlobalSettingsModel(),
-            'siteSettings' => app(\App\Settings\SiteSettings::class)->getBrandingArray(),
-        ];
+        $data = app(AssessmentFormDataService::class)->buildViewData($studentEnrollment);
 
         // Generate unique filename
         $randomChars = mb_substr(

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 use App\Enums\UserRole;
 use App\Jobs\SendAssessmentNotificationJob;
+use App\Models\Classes;
 use App\Models\Course;
 use App\Models\Department;
 use App\Models\GeneralSetting;
 use App\Models\Resource;
+use App\Models\Room;
+use App\Models\Schedule;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\StudentTransaction;
@@ -15,6 +18,7 @@ use App\Models\StudentTuition;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\AssessmentFormDataService;
 use App\Services\PdfGenerationService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -350,6 +354,167 @@ it('does not show a duplicate additional total line in the printable assessment 
     expect($previewSource)->not->toContain('Additional Total');
 });
 
+it('returns readable structured schedule entries for assessment previews', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create([
+        'lec_per_unit' => 375,
+        'lab_per_unit' => 2000,
+    ]);
+    $student = Student::factory()->create([
+        'course_id' => $course->id,
+    ]);
+    $enrollment = StudentEnrollment::factory()->create([
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+    ]);
+    $subjectTitle = 'Introduction to Computing with Applied Productivity Tools and Systems Analysis';
+    $roomName = 'Computer Laboratory Room 501 - Main Building Annex';
+    $secondRoomName = 'Lecture Room 302 - West Wing';
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'ITW 101',
+        'title' => $subjectTitle,
+        'units' => 3,
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+    $class = Classes::factory()->create([
+        'subject_id' => $subject->id,
+        'subject_code' => $subject->code,
+        'section' => 'B',
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+        'course_codes' => [(string) $course->id],
+    ]);
+    $room = Room::factory()->create(['name' => $roomName]);
+    $secondRoom = Room::factory()->create(['name' => $secondRoomName]);
+
+    Schedule::factory()->create([
+        'class_id' => $class->id,
+        'room_id' => $room->id,
+        'day_of_week' => 'Monday',
+        'start_time' => '11:00',
+        'end_time' => '12:30',
+    ]);
+    Schedule::factory()->create([
+        'class_id' => $class->id,
+        'room_id' => $secondRoom->id,
+        'day_of_week' => 'Monday',
+        'start_time' => '13:00',
+        'end_time' => '14:00',
+    ]);
+
+    $enrollment->subjectsEnrolled()->create([
+        'student_id' => $student->id,
+        'subject_id' => $subject->id,
+        'class_id' => $class->id,
+        'academic_year' => 1,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+    ]);
+    StudentTuition::query()->create([
+        'student_id' => $student->id,
+        'enrollment_id' => $enrollment->id,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+        'total_lectures' => 1125,
+        'total_laboratory' => 0,
+        'total_miscelaneous_fees' => 3700,
+        'total_tuition' => 1125,
+        'overall_tuition' => 4825,
+        'downpayment' => 1000,
+        'total_balance' => 3825,
+        'discount' => 0,
+        'academic_year' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(portalUrlForAdministrators("/administrators/enrollments/{$enrollment->id}/assessment-preview-data"))
+        ->assertOk()
+        ->assertJsonPath('subjects.0.title', $subjectTitle)
+        ->assertJsonCount(2, 'subjects.0.schedule.monday')
+        ->assertJsonPath('subjects.0.schedule.monday.0.room', $roomName)
+        ->assertJsonPath('subjects.0.schedule.monday.1.room', $secondRoomName);
+});
+
+it('renders full subject and room names in the assessment PDF view', function (): void {
+    $course = Course::factory()->create([
+        'lec_per_unit' => 375,
+        'lab_per_unit' => 2000,
+    ]);
+    $student = Student::factory()->create([
+        'course_id' => $course->id,
+    ]);
+    $enrollment = StudentEnrollment::factory()->create([
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+    ]);
+    $subjectTitle = 'Readings in the Philippine History with Complete Civic Context';
+    $roomName = 'Room 502 - Bonifacio Campus Long Room Name';
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'GE-2',
+        'title' => $subjectTitle,
+        'units' => 3,
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+    $class = Classes::factory()->create([
+        'subject_id' => $subject->id,
+        'subject_code' => $subject->code,
+        'section' => 'A',
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+        'course_codes' => [(string) $course->id],
+    ]);
+    $room = Room::factory()->create(['name' => $roomName]);
+
+    Schedule::factory()->create([
+        'class_id' => $class->id,
+        'room_id' => $room->id,
+        'day_of_week' => 'Wednesday',
+        'start_time' => '10:00',
+        'end_time' => '12:00',
+    ]);
+
+    $enrollment->subjectsEnrolled()->create([
+        'student_id' => $student->id,
+        'subject_id' => $subject->id,
+        'class_id' => $class->id,
+        'academic_year' => 1,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+    ]);
+    StudentTuition::query()->create([
+        'student_id' => $student->id,
+        'enrollment_id' => $enrollment->id,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+        'total_lectures' => 1125,
+        'total_laboratory' => 0,
+        'total_miscelaneous_fees' => 3700,
+        'total_tuition' => 1125,
+        'overall_tuition' => 4825,
+        'downpayment' => 1000,
+        'total_balance' => 3825,
+        'discount' => 0,
+        'academic_year' => 1,
+    ]);
+
+    $view = $this->view(
+        'pdf.assesment-form',
+        app(AssessmentFormDataService::class)->buildViewData($enrollment->fresh())
+    );
+
+    $view
+        ->assertSeeText($subjectTitle)
+        ->assertSeeText('Room: '.$roomName);
+});
+
 it('regenerates a fresh assessment PDF when resending assessment emails', function (): void {
     config(['filesystems.default' => 'assessment-resend-test']);
     Storage::fake('assessment-resend-test');
@@ -576,7 +741,7 @@ it('removes class enrollment when subject is removed from enrollment', function 
     ]);
 
     // Create classes for both subjects
-    $class1 = App\Models\Classes::factory()->create([
+    $class1 = Classes::factory()->create([
         'subject_code' => $subject1->code,
         'subject_id' => $subject1->id,
         'course_codes' => [$course->id],
@@ -584,7 +749,7 @@ it('removes class enrollment when subject is removed from enrollment', function 
         'school_year' => '2025 - 2026',
     ]);
 
-    $class2 = App\Models\Classes::factory()->create([
+    $class2 = Classes::factory()->create([
         'subject_code' => $subject2->code,
         'subject_id' => $subject2->id,
         'course_codes' => [$course->id],
@@ -803,7 +968,7 @@ it('creates class enrollments when storing an enrollment with assigned classes',
         'laboratory' => 0,
     ]);
 
-    $class = App\Models\Classes::factory()->create([
+    $class = Classes::factory()->create([
         'subject_code' => $subject->code,
         'subject_id' => $subject->id,
         'course_codes' => [$course->id],
@@ -869,7 +1034,7 @@ it('only returns sections whose subject code matches exactly when fetching secti
         'laboratory' => 0,
     ]);
 
-    $correctClass = App\Models\Classes::factory()->create([
+    $correctClass = Classes::factory()->create([
         'subject_code' => 'MGMT 1',
         'subject_id' => $mgmt1->id,
         'subject_ids' => [$mgmt1->id],
@@ -879,7 +1044,7 @@ it('only returns sections whose subject code matches exactly when fetching secti
         'section' => 'A',
     ]);
 
-    $falsePositivePrefixClass = App\Models\Classes::factory()->create([
+    $falsePositivePrefixClass = Classes::factory()->create([
         'subject_code' => 'BMGMT 1',
         'subject_id' => $bmgmt1->id,
         'subject_ids' => [$bmgmt1->id],
@@ -889,7 +1054,7 @@ it('only returns sections whose subject code matches exactly when fetching secti
         'section' => 'B',
     ]);
 
-    $falsePositiveCsvClass = App\Models\Classes::factory()->create([
+    $falsePositiveCsvClass = Classes::factory()->create([
         'subject_code' => 'BMGMT 1, BMGMT 1',
         'subject_id' => $bmgmt1->id,
         'subject_ids' => [$bmgmt1->id],
@@ -932,7 +1097,7 @@ it('returns sections whose course_codes store the course id as a string', functi
         'laboratory' => 0,
     ]);
 
-    $stringCodedClass = App\Models\Classes::factory()->create([
+    $stringCodedClass = Classes::factory()->create([
         'subject_code' => 'MGMT 1',
         'subject_id' => $mgmt1->id,
         'subject_ids' => [$mgmt1->id],
@@ -942,7 +1107,7 @@ it('returns sections whose course_codes store the course id as a string', functi
         'section' => 'A',
     ]);
 
-    $intCodedClass = App\Models\Classes::factory()->create([
+    $intCodedClass = Classes::factory()->create([
         'subject_code' => 'MGMT 1',
         'subject_id' => $mgmt1->id,
         'subject_ids' => [$mgmt1->id],
@@ -984,7 +1149,7 @@ it('returns sections whose subject_ids store the subject id as a string in json'
         'laboratory' => 0,
     ]);
 
-    $sectionA = App\Models\Classes::factory()->create([
+    $sectionA = Classes::factory()->create([
         'subject_code' => 'CORDI 101, Cordi 101, cordi 101',
         'subject_id' => $cordi->id,
         'subject_ids' => [(string) $cordi->id],
@@ -994,7 +1159,7 @@ it('returns sections whose subject_ids store the subject id as a string in json'
         'section' => 'A',
     ]);
 
-    $sectionB = App\Models\Classes::factory()->create([
+    $sectionB = Classes::factory()->create([
         'subject_code' => 'cordi 101',
         'subject_id' => $cordi->id,
         'subject_ids' => [(string) $cordi->id],

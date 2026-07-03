@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Models\Classes;
 use App\Models\Resource;
 use App\Models\StudentEnrollment;
+use App\Services\AssessmentFormDataService;
 use App\Services\GeneralSettingsService;
 use App\Services\PdfGenerationService;
 use App\Settings\SiteSettings;
@@ -254,29 +255,7 @@ final class SendClassChangeNotificationJob implements ShouldQueue
      */
     private function generatePdfSynchronously(): string
     {
-        $generalSettingsService = new GeneralSettingsService;
-
-        if (! $this->studentEnrollment->relationLoaded('additionalFees')) {
-            $this->studentEnrollment->load('additionalFees');
-        }
-
-        $data = [
-            'student' => $this->studentEnrollment,
-            'subjects' => $this->studentEnrollment->SubjectsEnrolled,
-            'school_year' => mb_convert_encoding(
-                $generalSettingsService->getCurrentSchoolYearString() ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'semester' => mb_convert_encoding(
-                $generalSettingsService->getAvailableSemesters()[$generalSettingsService->getCurrentSemester()] ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'tuition' => $this->studentEnrollment->studentTuition,
-            'general_settings' => $generalSettingsService->getGlobalSettingsModel(),
-            'siteSettings' => app(SiteSettings::class)->getBrandingArray(),
-        ];
+        $data = app(AssessmentFormDataService::class)->buildViewData($this->studentEnrollment);
 
         $randomChars = mb_substr(
             str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'),
@@ -341,16 +320,8 @@ final class SendClassChangeNotificationJob implements ShouldQueue
                 'disk' => $storageDisk,
                 'file_size' => $storage->size($relativePath),
                 'metadata' => [
-                    'school_year' => mb_convert_encoding(
-                        $generalSettingsService->getCurrentSchoolYearString() ?? '',
-                        'UTF-8',
-                        'auto'
-                    ),
-                    'semester' => mb_convert_encoding(
-                        $generalSettingsService->getAvailableSemesters()[$generalSettingsService->getCurrentSemester()] ?? '',
-                        'UTF-8',
-                        'auto'
-                    ),
+                    'school_year' => $data['school_year'],
+                    'semester' => $data['semester'],
                     'generation_method' => 'class_change_notification',
                 ],
             ]);

@@ -51,12 +51,12 @@ interface AssessmentData {
         lecture_fee: number;
         laboratory_fee: number;
         schedule: {
-            monday: string;
-            tuesday: string;
-            wednesday: string;
-            thursday: string;
-            friday: string;
-            saturday: string;
+            monday: ScheduleEntry[];
+            tuesday: ScheduleEntry[];
+            wednesday: ScheduleEntry[];
+            thursday: ScheduleEntry[];
+            friday: ScheduleEntry[];
+            saturday: ScheduleEntry[];
         };
     }>;
     totals: {
@@ -90,6 +90,13 @@ interface AssessmentData {
         address: string;
     };
     generated_at: string;
+}
+
+interface ScheduleEntry {
+    time: string;
+    section: string;
+    room: string;
+    label: string;
 }
 
 interface PageProps {
@@ -264,9 +271,8 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
       padding: 5px 6px !important;
       text-align: left;
       border: 1px solid #1e3a8a !important;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }
     
     .assessment-doc table th.text-center {
@@ -282,9 +288,8 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
       border: 1px solid #d1d5db !important;
       color: #000000 !important;
       background-color: #ffffff !important;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
+      overflow-wrap: anywhere;
+      white-space: normal;
     }
     
     .assessment-doc table td.text-center {
@@ -314,8 +319,61 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     }
     
     /* Schedule table cell highlighting */
+    .assessment-doc .schedule-table {
+      font-size: 6pt !important;
+    }
+
+    .assessment-doc .schedule-table .subject-col {
+      width: 22% !important;
+    }
+
+    .assessment-doc .schedule-table .day-col {
+      width: 13% !important;
+    }
+
     .assessment-doc .schedule-cell-filled {
       background-color: #dbeafe !important;
+    }
+
+    .assessment-doc .schedule-subject-code {
+      display: block;
+      font-weight: 700 !important;
+      line-height: 1.2 !important;
+    }
+
+    .assessment-doc .schedule-subject-title {
+      display: block;
+      margin-top: 2px !important;
+      color: #374151 !important;
+      line-height: 1.2 !important;
+    }
+
+    .assessment-doc .schedule-entry {
+      padding: 2px 0 !important;
+      border-bottom: 1px solid #bfdbfe !important;
+      text-align: left !important;
+    }
+
+    .assessment-doc .schedule-entry:last-child {
+      border-bottom: 0 !important;
+    }
+
+    .assessment-doc .schedule-time,
+    .assessment-doc .schedule-section,
+    .assessment-doc .schedule-room {
+      display: block !important;
+      line-height: 1.18 !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .assessment-doc .schedule-time {
+      font-weight: 700 !important;
+    }
+
+    .assessment-doc .schedule-room {
+      margin-top: 1px !important;
+      color: #1e3a8a !important;
     }
     
     /* Badge styles */
@@ -707,27 +765,47 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
                                 </table>
 
                                 {/* Class Schedule Table */}
-                                <table>
+                                <table className="schedule-table">
                                     <thead>
                                         <tr>
-                                            <th>Subject</th>
-                                            <th className="text-center">Mon</th>
-                                            <th className="text-center">Tue</th>
-                                            <th className="text-center">Wed</th>
-                                            <th className="text-center">Thu</th>
-                                            <th className="text-center">Fri</th>
-                                            <th className="text-center">Sat</th>
+                                            <th className="subject-col">Subject</th>
+                                            <th className="day-col text-center">Mon</th>
+                                            <th className="day-col text-center">Tue</th>
+                                            <th className="day-col text-center">Wed</th>
+                                            <th className="day-col text-center">Thu</th>
+                                            <th className="day-col text-center">Fri</th>
+                                            <th className="day-col text-center">Sat</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {data.subjects.map((subject, idx) => (
                                             <tr key={idx}>
-                                                <td>{subject.title}</td>
-                                                {daysOfWeek.map((day) => (
-                                                    <td key={day} className={`text-center ${subject.schedule[day] ? "schedule-cell-filled" : ""}`}>
-                                                        {subject.schedule[day] || "-"}
-                                                    </td>
-                                                ))}
+                                                <td>
+                                                    <span className="schedule-subject-code">{subject.code}</span>
+                                                    <span className="schedule-subject-title">{subject.title}</span>
+                                                </td>
+                                                {daysOfWeek.map((day) => {
+                                                    const entries = subject.schedule[day] ?? [];
+
+                                                    return (
+                                                        <td
+                                                            key={day}
+                                                            className={`${entries.length > 0 ? "schedule-cell-filled" : "text-center"}`}
+                                                        >
+                                                            {entries.length > 0
+                                                                ? entries.map((entry, entryIndex) => (
+                                                                      <div key={`${day}-${entryIndex}`} className="schedule-entry">
+                                                                          <span className="schedule-time">{entry.time}</span>
+                                                                          {entry.section && (
+                                                                              <span className="schedule-section">Sec: {entry.section}</span>
+                                                                          )}
+                                                                          <span className="schedule-room">Room: {entry.room}</span>
+                                                                      </div>
+                                                                  ))
+                                                                : "-"}
+                                                        </td>
+                                                    );
+                                                })}
                                             </tr>
                                         ))}
                                     </tbody>

@@ -21,6 +21,7 @@ use App\Models\SubjectEnrollment;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\ApplicantApprovedForRequirements;
+use App\Services\AssessmentFormDataService;
 use App\Services\EnrollmentBillingService;
 use App\Services\EnrollmentPipelineService;
 use App\Services\EnrollmentService;
@@ -858,18 +859,18 @@ final class AdministratorEnrollmentManagementController extends Controller
     /**
      * Get assessment preview data for client-side rendering
      */
-    public function assessmentPreviewData(StudentEnrollment $enrollment, GeneralSettingsService $settingsService): JsonResponse
+    public function assessmentPreviewData(StudentEnrollment $enrollment, AssessmentFormDataService $assessmentFormDataService): JsonResponse
     {
-        return response()->json($this->getAssessmentData($enrollment, $settingsService));
+        return response()->json($assessmentFormDataService->build($enrollment));
     }
 
     /**
      * Show the assessment preview page (immersive, print-friendly)
      */
-    public function assessmentPreview(StudentEnrollment $enrollment, GeneralSettingsService $settingsService): Response
+    public function assessmentPreview(StudentEnrollment $enrollment, AssessmentFormDataService $assessmentFormDataService): Response
     {
         return Inertia::render('administrators/enrollments/assessment-preview', [
-            'data' => $this->getAssessmentData($enrollment, $settingsService),
+            'data' => $assessmentFormDataService->build($enrollment),
             'enrollmentId' => $enrollment->id,
         ]);
     }
@@ -2697,155 +2698,6 @@ final class AdministratorEnrollmentManagementController extends Controller
         );
 
         $this->enrollmentBillingService->syncTuitionBalance($tuition, $downpayment);
-    }
-
-    private function getAssessmentData(StudentEnrollment $enrollment, GeneralSettingsService $settingsService): array
-    {
-        $enrollment->load([
-            'student.Course',
-            'subjectsEnrolled.subject.course',
-            'studentTuition',
-            'additionalFees',
-        ]);
-
-        // Calculate subject data with fees
-        $subjects = $enrollment->subjectsEnrolled->map(function ($se): array {
-            $subject = $se->subject;
-            $isModular = $se->is_modular ?? false;
-            $excludeFromTuition = (bool) $se->exclude_from_tuition;
-            $isNSTP = str_contains(mb_strtoupper($subject->code ?? ''), 'NSTP');
-            $hasLab = ($subject->laboratory ?? 0) !== 0;
-
-            // Calculate lecture fee
-            $totalSubjectUnits = ($subject->lecture ?? 0) + ($subject->laboratory ?? 0);
-            $lectureFee = $totalSubjectUnits * ($subject->course->lec_per_unit ?? 0);
-
-            // Apply NSTP discount
-            if ($isNSTP) {
-                $lectureFee *= 0.5;
-            }
-
-            // Lab fee
-            $laboratoryFee = $hasLab ? (1 * ($subject->course->lab_per_unit ?? 0)) : 0;
-            if ($isModular && $hasLab) {
-                $laboratoryFee /= 2;
-            }
-
-            if ($excludeFromTuition) {
-                $lectureFee = 0;
-                $laboratoryFee = 0;
-            }
-
-            return [
-                'code' => $subject->code,
-                'title' => $subject->title,
-                'units' => $subject->units ?? 0,
-                'is_modular' => $isModular,
-                'exclude_from_tuition' => $excludeFromTuition,
-                'lecture_fee' => $lectureFee,
-                'laboratory_fee' => $laboratoryFee,
-                'class_id' => $se->class_id,
-            ];
-        });
-
-        // Get schedules for each subject
-        $subjectsWithSchedules = $subjects->map(function (array $subject): array {
-            $class = Classes::find($subject['class_id']);
-            $scheduleByDay = [
-                'monday' => '',
-                'tuesday' => '',
-                'wednesday' => '',
-                'thursday' => '',
-                'friday' => '',
-                'saturday' => '',
-            ];
-
-            if ($class) {
-                foreach ($class->Schedule as $schedule) {
-                    $day = mb_strtolower((string) $schedule->day_of_week);
-                    if (array_key_exists($day, $scheduleByDay)) {
-                        $room = $schedule->room->name ?? '';
-                        $section = $class->section ?? '';
-                        $scheduleByDay[$day] = $schedule->start_time->format('g:i').'-'.$schedule->end_time->format('g:i').' '.$section.' ('.$room.')';
-                    }
-                }
-            }
-
-            return array_merge($subject, ['schedule' => $scheduleByDay]);
-        });
-
-        // Calculate totals
-        $totalUnits = $subjects->sum('units');
-        $totalLecture = $subjects->sum('lecture_fee');
-        $totalLaboratory = $subjects->sum('laboratory_fee');
-        $totalModularSubjects = $subjects
-            ->where('is_modular', true)
-            ->where('exclude_from_tuition', false)
-            ->count();
-        $totalModularFee = $totalModularSubjects * 2400;
-
-        // Additional fees
-        $additionalFees = $enrollment->additionalFees->map(fn ($fee): array => [
-            'name' => $fee->fee_name,
-            'amount' => $fee->amount,
-            'is_required' => $fee->is_required,
-        ]);
-        $additionalFeesTotal = $enrollment->additionalFees->sum('amount');
-
-        // Tuition summary
-        $tuition = $enrollment->studentTuition;
-        $totalAmount = $tuition?->overall_tuition ?? ($tuition?->total_lectures + $tuition?->total_laboratory + $tuition?->total_miscelaneous_fees + $additionalFeesTotal);
-        $calculatedBalance = null;
-
-        if ($tuition) {
-            $tuition = $this->enrollmentBillingService->syncTuitionBalance($tuition);
-            $calculatedBalance = $this->enrollmentBillingService->balanceDue($tuition);
-        }
-
-        // General settings
-        $generalSettings = $settingsService->getGlobalSettingsModel();
-        $siteSettings = app(SiteSettings::class);
-
-        return [
-            'student' => [
-                'full_name' => $enrollment->student->full_name,
-                'student_id' => $enrollment->student->student_id,
-                'course_code' => $enrollment->student->Course?->code,
-            ],
-            'enrollment' => [
-                'school_year' => $enrollment->school_year,
-                'semester' => $enrollment->semester,
-                'semester_label' => $settingsService->getAvailableSemesters()[$enrollment->semester] ?? '',
-            ],
-            'subjects' => $subjectsWithSchedules,
-            'totals' => [
-                'units' => $totalUnits,
-                'lecture' => $totalLecture,
-                'laboratory' => $totalLaboratory,
-                'modular_subjects' => $totalModularSubjects,
-                'modular_fee' => $totalModularFee,
-            ],
-            'additional_fees' => $additionalFees,
-            'additional_fees_total' => $additionalFeesTotal,
-            'tuition' => $tuition instanceof StudentTuition ? [
-                'total_lectures' => $tuition->total_lectures,
-                'total_laboratory' => $tuition->total_laboratory,
-                'total_miscelaneous_fees' => $tuition->total_miscelaneous_fees,
-                'discount' => $tuition->discount,
-                'downpayment' => $tuition->downpayment,
-                'overall_tuition' => $tuition->overall_tuition,
-                'total_balance' => $calculatedBalance ?? $tuition->total_balance,
-            ] : null,
-            'total_amount' => $totalAmount,
-            'school' => [
-                'name' => $generalSettings?->school_portal_title ?? $generalSettings?->site_name ?? $siteSettings->getOrganizationName(),
-                'logo' => $this->resolveReportLogoFromSettings($generalSettings?->school_portal_logo, $siteSettings),
-                'contact' => $generalSettings?->support_phone ?? $siteSettings->getSupportPhone() ?? '',
-                'email' => $generalSettings?->support_email ?? $siteSettings->getSupportEmail() ?? '',
-                'address' => $siteSettings->getOrganizationAddress() ?? '',
-            ],
-            'generated_at' => now()->format('m-d-Y'),
-        ];
     }
 
     /**

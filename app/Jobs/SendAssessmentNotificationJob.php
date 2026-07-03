@@ -8,7 +8,7 @@ use App\Models\Resource;
 use App\Models\StudentEnrollment;
 use App\Models\User;
 use App\Notifications\MigrateToStudent;
-use App\Services\GeneralSettingsService;
+use App\Services\AssessmentFormDataService;
 use App\Services\PdfGenerationService;
 use App\Support\StreamedStorage;
 use Exception;
@@ -270,31 +270,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
      */
     private function generatePdfSynchronously(): string
     {
-        $generalSettingsService = new GeneralSettingsService;
-
-        // Load additional fees relationship if not already loaded
-        if (! $this->studentEnrollment->relationLoaded('additionalFees')) {
-            $this->studentEnrollment->load('additionalFees');
-        }
-
-        // Prepare data for the view
-        $data = [
-            'student' => $this->studentEnrollment,
-            'subjects' => $this->studentEnrollment->SubjectsEnrolled,
-            'school_year' => mb_convert_encoding(
-                $generalSettingsService->getCurrentSchoolYearString() ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'semester' => mb_convert_encoding(
-                $generalSettingsService->getAvailableSemesters()[$generalSettingsService->getCurrentSemester()] ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'tuition' => $this->studentEnrollment->studentTuition,
-            'general_settings' => $generalSettingsService->getGlobalSettingsModel(),
-            'siteSettings' => app(\App\Settings\SiteSettings::class)->getBrandingArray(),
-        ];
+        $data = app(AssessmentFormDataService::class)->buildViewData($this->studentEnrollment);
 
         // Generate unique filename
         $randomChars = mb_substr(
@@ -377,16 +353,8 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                 'disk' => $storageDisk,
                 'file_size' => $storage->size($relativePath),
                 'metadata' => [
-                    'school_year' => mb_convert_encoding(
-                        $generalSettingsService->getCurrentSchoolYearString() ?? '',
-                        'UTF-8',
-                        'auto'
-                    ),
-                    'semester' => mb_convert_encoding(
-                        $generalSettingsService->getAvailableSemesters()[$generalSettingsService->getCurrentSemester()] ?? '',
-                        'UTF-8',
-                        'auto'
-                    ),
+                    'school_year' => $data['school_year'],
+                    'semester' => $data['semester'],
                     'generation_method' => 'pdf_generation_service',
                     'generated_at' => format_timestamp_now(),
                 ],

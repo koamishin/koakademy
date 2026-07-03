@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\StudentEnrollment;
-use App\Services\GeneralSettingsService;
+use App\Services\AssessmentFormDataService;
 use App\Services\PdfGenerationService;
 use App\Support\StreamedStorage;
 use Exception;
@@ -40,7 +40,7 @@ final class GenerateBulkAssessmentChunkJob implements ShouldQueue
         $this->onQueue('pdf-generation');
     }
 
-    public function handle(PdfGenerationService $pdfService, GeneralSettingsService $settingsService): void
+    public function handle(PdfGenerationService $pdfService, AssessmentFormDataService $assessmentFormDataService): void
     {
         $storageDisk = (string) config('filesystems.default');
         $tempDirectory = null;
@@ -52,7 +52,15 @@ final class GenerateBulkAssessmentChunkJob implements ShouldQueue
             $enrollments = StudentEnrollment::query()
                 ->withTrashed()
                 ->whereIn('id', $this->enrollmentIds)
-                ->with(['student', 'course', 'subjectsEnrolled.subject', 'studentTuition'])
+                ->with([
+                    'student.Course',
+                    'course',
+                    'subjectsEnrolled.subject.course',
+                    'subjectsEnrolled.class.Schedule.room',
+                    'subjectsEnrolled.class.Room',
+                    'studentTuition',
+                    'additionalFees',
+                ])
                 ->get()
                 ->keyBy('id');
 
@@ -76,7 +84,7 @@ final class GenerateBulkAssessmentChunkJob implements ShouldQueue
 
                 $individualPdfPaths[] = $this->generateIndividualPdf(
                     enrollment: $enrollment,
-                    settingsService: $settingsService,
+                    assessmentFormDataService: $assessmentFormDataService,
                     pdfService: $pdfService,
                     tempDirectory: $tempDirectory,
                     index: $position,
@@ -160,28 +168,12 @@ final class GenerateBulkAssessmentChunkJob implements ShouldQueue
 
     private function generateIndividualPdf(
         StudentEnrollment $enrollment,
-        GeneralSettingsService $settingsService,
+        AssessmentFormDataService $assessmentFormDataService,
         PdfGenerationService $pdfService,
         string $tempDirectory,
         int $index,
     ): string {
-        $data = [
-            'student' => $enrollment,
-            'subjects' => $enrollment->SubjectsEnrolled,
-            'school_year' => mb_convert_encoding(
-                $settingsService->getCurrentSchoolYearString() ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'semester' => mb_convert_encoding(
-                $settingsService->getAvailableSemesters()[$settingsService->getCurrentSemester()] ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'tuition' => $enrollment->studentTuition,
-            'general_settings' => $settingsService->getGlobalSettingsModel(),
-            'siteSettings' => app(\App\Settings\SiteSettings::class)->getBrandingArray(),
-        ];
+        $data = $assessmentFormDataService->buildViewData($enrollment);
 
         $safeStudentLastName = preg_replace('/[^a-zA-Z0-9]/', '_', mb_substr($enrollment->student->last_name ?? 'unknown', 0, 20));
 

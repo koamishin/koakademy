@@ -9,6 +9,7 @@ use App\Models\GeneralSetting;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\User;
+use App\Services\AssessmentFormDataService;
 use App\Services\PdfGenerationService;
 use App\Settings\SiteSettings;
 use App\Support\ResourceStorageLocator;
@@ -452,7 +453,14 @@ final class MigrateToStudent extends Notification implements ShouldQueue
     {
         return StudentEnrollment::query()
             ->withoutGlobalScopes()
-            ->with(['student', 'SubjectsEnrolled', 'studentTuition'])
+            ->with([
+                'student.Course',
+                'SubjectsEnrolled.subject.course',
+                'SubjectsEnrolled.class.Schedule.room',
+                'SubjectsEnrolled.class.Room',
+                'studentTuition',
+                'additionalFees',
+            ])
             ->find($this->record->getKey()) ?? $this->record;
     }
 
@@ -480,25 +488,7 @@ final class MigrateToStudent extends Notification implements ShouldQueue
 
     private function generatePdfWithService(): array
     {
-        $general_settings = GeneralSetting::query()->first();
-
-        // Ensure all data is properly UTF-8 encoded for the Blade view
-        $data = [
-            'student' => $this->record,
-            'subjects' => $this->record->SubjectsEnrolled,
-            'school_year' => mb_convert_encoding(
-                $general_settings->getSchoolYearString() ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'semester' => mb_convert_encoding(
-                $general_settings->getSemester() ?? '',
-                'UTF-8',
-                'auto'
-            ),
-            'tuition' => $this->record->studentTuition,
-            'siteSettings' => app(SiteSettings::class)->getBrandingArray(),
-        ];
+        $data = app(AssessmentFormDataService::class)->buildViewData($this->record);
 
         $randomChars = mb_substr(
             str_shuffle(

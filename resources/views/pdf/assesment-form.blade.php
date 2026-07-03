@@ -2,332 +2,521 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Assessment Form</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
-    <style>
-        /* Ensure Tailwind styles are properly applied */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-        * {
-            font-family: 'Inter', DejaVu Sans, Arial, sans-serif;
-        }
-
-        /* Force background colors to print */
-        * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-    </style>
     <style>
         @page {
-            size: landscape;
-            margin: 5mm;
+            size: A4 landscape;
+            margin: 10mm;
         }
+
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
         body {
-            font-family: DejaVu Sans, Arial, sans-serif;
-            line-height: 1.1;
             margin: 0;
-            padding: 0;
-            color: #333;
-            font-size: 8pt;
+            color: #111827;
+            background: #ffffff;
+            font-family: DejaVu Sans, Arial, sans-serif;
+            font-size: 7pt;
+            line-height: 1.25;
+        }
+
+        .header {
+            display: table;
+            width: 100%;
+            margin-bottom: 7px;
+            padding-bottom: 6px;
+            border-bottom: 1.5px solid #111827;
+        }
+
+        .logo-cell,
+        .header-text {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .logo-cell {
+            width: 58px;
+        }
+
+        .logo {
+            width: 46px;
+            max-height: 46px;
+            object-fit: contain;
+        }
+
+        .header-text {
+            text-align: center;
+        }
+
+        .school-name {
+            margin: 0 0 2px;
+            font-size: 12pt;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .school-details {
+            margin: 0 0 3px;
+            color: #374151;
+            font-size: 6.5pt;
+        }
+
+        .document-title {
+            margin: 0;
+            font-size: 10pt;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .layout {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .left-column,
+        .right-column {
+            display: table-cell;
+            vertical-align: top;
+        }
+
+        .left-column {
+            width: 67%;
+            padding-right: 8px;
+        }
+
+        .right-column {
+            width: 33%;
+            padding-left: 8px;
+            border-left: 1px solid #d1d5db;
+        }
+
+        .student-info,
+        .fees-panel {
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            background: #f9fafb;
+        }
+
+        .student-info {
+            margin-bottom: 7px;
+            padding: 6px 8px;
+        }
+
+        .student-info p {
+            margin: 0 0 2px;
+        }
+
+        table {
+            width: 100%;
+            margin-bottom: 7px;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th {
+            padding: 4px 5px;
+            border: 1px solid #1e3a8a;
+            color: #ffffff;
+            background: #1e40af;
+            font-size: 6.5pt;
+            font-weight: 700;
+            text-align: left;
+        }
+
+        td {
+            padding: 3px 5px;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            vertical-align: top;
+            overflow-wrap: anywhere;
+            word-break: normal;
+            white-space: normal;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .subjects-table .code-column {
+            width: 16%;
+        }
+
+        .subjects-table .title-column {
+            width: 34%;
+        }
+
+        .subjects-table .type-column {
+            width: 13%;
+        }
+
+        .subjects-table .units-column {
+            width: 9%;
+        }
+
+        .subjects-table .fee-column {
+            width: 14%;
+        }
+
+        .schedule-table {
+            font-size: 5.8pt;
+        }
+
+        .schedule-table .subject-column {
+            width: 22%;
+        }
+
+        .schedule-table .day-column {
+            width: 13%;
+        }
+
+        .subject-code {
+            display: block;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .subject-title {
+            display: block;
+            margin-top: 1px;
+            color: #374151;
+            line-height: 1.2;
+        }
+
+        .schedule-cell-filled {
+            background: #dbeafe;
+        }
+
+        .schedule-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid #bfdbfe;
+        }
+
+        .schedule-entry:last-child {
+            border-bottom: 0;
+        }
+
+        .schedule-time,
+        .schedule-section,
+        .schedule-room {
+            display: block;
+            line-height: 1.18;
+        }
+
+        .schedule-time {
+            font-weight: 700;
+        }
+
+        .schedule-room {
+            margin-top: 1px;
+            color: #1e3a8a;
+        }
+
+        .muted {
+            color: #6b7280;
+        }
+
+        .total-row td {
+            background: #e5e7eb;
+            font-weight: 700;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 5.7pt;
+            font-weight: 700;
+        }
+
+        .badge-regular {
+            color: #6b7280;
+        }
+
+        .badge-modular {
+            color: #6b21a8;
+            background: #f3e8ff;
+        }
+
+        .modular-note td {
+            color: #6b21a8;
+            background: #faf5ff;
+            font-size: 6pt;
+        }
+
+        .fees-panel {
+            padding: 7px;
+        }
+
+        .fees-title {
+            margin: 0 0 7px;
+            padding-bottom: 5px;
+            border-bottom: 1.5px solid #1e40af;
+            font-size: 9pt;
+            font-weight: 700;
+        }
+
+        .fee-box,
+        .summary-box {
+            margin-bottom: 7px;
+            padding: 7px;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            background: #ffffff;
+        }
+
+        .summary-box {
+            border-color: #93c5fd;
+            background: #eff6ff;
+        }
+
+        .fee-box p,
+        .summary-box p {
+            margin: 0 0 3px;
+        }
+
+        .box-title {
+            margin-bottom: 4px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 700;
+        }
+
+        .fee-total,
+        .grand-total {
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid #d1d5db;
+            font-weight: 700;
+        }
+
+        .balance {
+            color: #1e40af;
+            font-size: 9pt;
+            font-weight: 700;
+        }
+
+        .required-tag {
+            color: #dc2626;
+            font-size: 5.8pt;
+        }
+
+        .signatures {
+            margin-top: 16px;
+        }
+
+        .signature-line {
+            margin-bottom: 16px;
+        }
+
+        .signature-line div {
+            width: 150px;
+            border-bottom: 1px solid #111827;
+        }
+
+        .signature-line p {
+            margin: 3px 0 0;
+            color: #374151;
+            font-size: 6.5pt;
         }
     </style>
 </head>
-<body class="bg-white mt-0">
-    <div class="max-w-full mx-auto">
-        <!-- Header Section -->
-        @php
-            $pdfLogo = $siteSettings['logo'] ?? (isset($general_settings) && $general_settings?->school_portal_logo ? $general_settings->school_portal_logo : null);
-            $pdfOrgName = $siteSettings['organizationName'] ?? $general_settings?->school_portal_title ?? $general_settings?->site_name ?? config('app.name');
-            $pdfAddress = $siteSettings['organizationAddress'] ?? $general_settings?->school_portal_address ?? null;
-            $pdfPhone = $siteSettings['supportPhone'] ?? $general_settings?->support_phone ?? null;
-            $pdfEmail = $siteSettings['supportEmail'] ?? $general_settings?->support_email ?? null;
-        @endphp
-        <div class="mb-1 flex items-center justify-center gap-2">
-            @if($pdfLogo)
-                <img src="{{ $pdfLogo }}" alt="College Logo" class="w-12">
-            @else
-                <img src="{{ asset('logo.png') }}" alt="College Logo" class="w-12">
-            @endif
-            <div class="text-center flex-1">
-                <h1 class="font-bold text-sm">
-                    {{ $pdfOrgName }}
-                </h1>
-                <p class="text-[7pt]">
-                    @if($pdfPhone || $pdfEmail)
-                        @if($pdfPhone)Tel No. {{ $pdfPhone }}@endif
-                        @if($pdfPhone && $pdfEmail) | @endif
-                        @if($pdfEmail)Email: {{ $pdfEmail }}@endif
-                    @else
-                        {{ $pdfAddress ?? '118 Bonifacio Street, Holyghost Proper, Baguio City' }} | Tel No. 444-5389/442-4160
-                    @endif
-                </p>
-                <p class="text-xs font-bold">Assessment Form</p>
+<body>
+    @php
+        $assessment = $assessment ?? [];
+        $subjects = collect(data_get($assessment, 'subjects', []));
+        $additionalFees = collect(data_get($assessment, 'additional_fees', []));
+        $tuition = data_get($assessment, 'tuition');
+        $school = data_get($assessment, 'school', []);
+        $totals = data_get($assessment, 'totals', []);
+        $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        $dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        $money = fn ($amount): string => 'PHP '.number_format((float) ($amount ?? 0), 2);
+        $studentName = data_get($assessment, 'student.full_name', 'N/A');
+        $studentId = data_get($assessment, 'student.student_id', 'N/A');
+        $courseCode = data_get($assessment, 'student.course_code', 'N/A');
+        $semesterLabel = data_get($assessment, 'enrollment.semester_label', $semester ?? '');
+        $schoolYear = data_get($assessment, 'enrollment.school_year', $school_year ?? '');
+    @endphp
+
+    <div class="header">
+        <div class="logo-cell">
+            <img src="{{ data_get($school, 'logo', asset('logo.png')) }}" alt="School Logo" class="logo">
+        </div>
+        <div class="header-text">
+            <h1 class="school-name">{{ data_get($school, 'name', config('app.name')) }}</h1>
+            <p class="school-details">
+                {{ data_get($school, 'address', '') }}
+                @if(data_get($school, 'contact'))
+                    | Tel: {{ data_get($school, 'contact') }}
+                @endif
+                @if(data_get($school, 'email'))
+                    | Email: {{ data_get($school, 'email') }}
+                @endif
+            </p>
+            <p class="document-title">Assessment Form</p>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="left-column">
+            <div class="student-info">
+                <p><strong>Course:</strong> {{ $courseCode }}</p>
+                <p><strong>Full Name:</strong> {{ $studentName }} | <strong>ID:</strong> {{ $studentId }}</p>
+                <p><strong>Semester/School Year:</strong> {{ $semesterLabel }} {{ $schoolYear }}</p>
+                <p><strong>Date Generated:</strong> {{ data_get($assessment, 'generated_at', now()->format('m-d-Y')) }}</p>
             </div>
+
+            <table class="subjects-table">
+                <thead>
+                    <tr>
+                        <th class="code-column">Code</th>
+                        <th class="title-column">Subject Title</th>
+                        <th class="type-column text-center">Type</th>
+                        <th class="units-column text-center">Units</th>
+                        <th class="fee-column text-right">Lec Fee</th>
+                        <th class="fee-column text-right">Lab Fee</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($subjects as $subject)
+                        <tr>
+                            <td>{{ data_get($subject, 'code', 'N/A') }}</td>
+                            <td>{{ data_get($subject, 'title', 'Unknown Subject') }}</td>
+                            <td class="text-center">
+                                @if(data_get($subject, 'is_modular'))
+                                    <span class="badge badge-modular">Modular</span>
+                                @else
+                                    <span class="badge-regular">Regular</span>
+                                @endif
+                            </td>
+                            <td class="text-center">{{ data_get($subject, 'units', 0) }}</td>
+                            <td class="text-right">{{ number_format((float) data_get($subject, 'lecture_fee', 0), 2) }}</td>
+                            <td class="text-right">{{ number_format((float) data_get($subject, 'laboratory_fee', 0), 2) }}</td>
+                        </tr>
+                    @endforeach
+                    <tr class="total-row">
+                        <td colspan="3">TOTAL</td>
+                        <td class="text-center">{{ data_get($totals, 'units', 0) }}</td>
+                        <td class="text-right">{{ number_format((float) data_get($totals, 'lecture', 0), 2) }}</td>
+                        <td class="text-right">{{ number_format((float) data_get($totals, 'laboratory', 0), 2) }}</td>
+                    </tr>
+                    @if((int) data_get($totals, 'modular_subjects', 0) > 0)
+                        <tr class="modular-note">
+                            <td colspan="6">
+                                * {{ data_get($totals, 'modular_subjects', 0) }} Modular Subject(s) @ {{ $money(2400) }} each = {{ $money(data_get($totals, 'modular_fee', 0)) }}
+                            </td>
+                        </tr>
+                    @endif
+                </tbody>
+            </table>
+
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th class="subject-column">Subject</th>
+                        @foreach ($dayLabels as $dayLabel)
+                            <th class="day-column text-center">{{ $dayLabel }}</th>
+                        @endforeach
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($subjects as $subject)
+                        <tr>
+                            <td>
+                                <span class="subject-code">{{ data_get($subject, 'code', 'N/A') }}</span>
+                                <span class="subject-title">{{ data_get($subject, 'title', 'Unknown Subject') }}</span>
+                            </td>
+                            @foreach ($daysOfWeek as $day)
+                                @php
+                                    $entries = collect(data_get($subject, "schedule.{$day}", []));
+                                @endphp
+                                <td class="{{ $entries->isNotEmpty() ? 'schedule-cell-filled' : 'text-center muted' }}">
+                                    @forelse ($entries as $entry)
+                                        <div class="schedule-entry">
+                                            <span class="schedule-time">{{ data_get($entry, 'time', 'TBA') }}</span>
+                                            @if(data_get($entry, 'section'))
+                                                <span class="schedule-section">Sec: {{ data_get($entry, 'section') }}</span>
+                                            @endif
+                                            <span class="schedule-room">Room: {{ data_get($entry, 'room', 'TBA') }}</span>
+                                        </div>
+                                    @empty
+                                        -
+                                    @endforelse
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
 
-        <div class="flex gap-4">
-            <!-- Left Column -->
-            <div class="w-2/3">
-                <!-- Student Info -->
-                <div class="bg-gray-50 p-1 rounded text-[7pt]">
-                    <p class="mb-0.5"><strong>Course:</strong> {{ $student->getCourse->code ?? $student->course?->code ?? 'N/A' }}</p>
-                    <p class="mb-0.5"><strong>Full Name:</strong> {{ $student->student_name }} : <strong>{{ $student->student->id }}</strong></p>
-                    <p class="mb-0.5"><strong>Semester/School Year:</strong> {{ $semester }} {{ $school_year }}</p>
-                    <p class="mb-0.5"><strong>Date:</strong> {{ now()->format('m-d-Y') }}</p>
+        <div class="right-column">
+            <div class="fees-panel">
+                <h2 class="fees-title">Breakdown of Fees</h2>
+
+                <div class="fee-box">
+                    <p class="box-title">Tuition Fee Details</p>
+                    <p>Sub-Total (Tuition): {{ $money(data_get($totals, 'lecture', 0)) }}</p>
+                    <p>Discount: {{ data_get($tuition, 'discount', 0) }}%</p>
+                    <p class="fee-total">Total Tuition: {{ $money(data_get($tuition, 'total_lectures', 0)) }}</p>
                 </div>
 
-                <!-- Subjects Table -->
-                <div class="overflow-x-auto mb-2">
-                    <table class="w-full text-[7pt]">
-                        <thead>
-                            <tr class="bg-blue-500 text-white">
-                                <th class="border px-1 py-0.5 text-left">Code</th>
-                                <th class="border px-1 py-0.5 text-left">Title</th>
-                                <th class="border px-1 py-0.5 text-center">Type</th>
-                                <th class="border px-1 py-0.5 text-left">Units</th>
-                                <th class="border px-1 py-0.5 text-left">Lec Fee</th>
-                                <th class="border px-1 py-0.5 text-left">Lab Fee</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php
-                                $totalUnits = 0;
-                                $total_lecture = 0;
-                                $total_laboratory = 0;
-                                $totalModularSubjects = 0;
-                                $totalUnits2 = $subjects->sum('subject.units');
-
-                                // Get lec_per_unit from the course for total units calculation
-                                $courseId = $student->course_id ?? ($student->getCourse->id ?? null);
-                                $course = null;
-                                if ($courseId) {
-                                    $course = \App\Models\Course::find($courseId);
-                                }
-                                $lecPerUnit = $course?->lec_per_unit ?? 0;
-                            @endphp
-                            @foreach ($subjects as $subject)
-                                @php
-                                    $isModular = $subject->is_modular ?? false;
-                                    $isNSTP = str_contains(strtoupper($subject->subject->code ?? ''), 'NSTP');
-                                    $hasLab = ($subject->subject->laboratory ?? 0) !== 0;
-
-                                    // Calculate lecture fee WITHOUT modular addition (modular is separate)
-                                    // Lecture fee = (lecture units + lab units) × lec_per_unit
-                                    $totalSubjectUnits = ($subject->subject->lecture ?? 0) + ($subject->subject->laboratory ?? 0);
-                                    $lectureFee = $totalSubjectUnits * ($subject->subject->course->lec_per_unit ?? 0);
-
-                                    // Apply NSTP discount
-                                    if ($isNSTP) {
-                                        $lectureFee *= 0.5;
-                                    }
-
-                                    // Lab fee is 1 × lab_per_unit if subject has laboratory
-                                    $laboratoryFee = $hasLab ? (1 * ($subject->subject->course->lab_per_unit ?? 0)) : 0;
-
-                                    // For modular subjects, divide lab fee by 2
-                                    if ($isModular && $hasLab) {
-                                        $laboratoryFee = $laboratoryFee / 2;
-                                    }
-
-                                    // Count modular subjects
-                                    if ($isModular) {
-                                        $totalModularSubjects++;
-                                    }
-
-                                    // Accumulate totals
-                                    $total_lecture += $lectureFee;
-                                    $total_laboratory += $laboratoryFee;
-                                @endphp
-                                <tr class="hover:bg-gray-50">
-                                    <td class="border px-1 py-0.5">{{ $subject->subject->code ?? 'N/A' }}</td>
-                                    <td class="border px-1 py-0.5">{{ $subject->subject->title ?? 'Unknown Subject' }}</td>
-                                    <td class="border px-1 py-0.5 text-center">
-                                        @if($isModular)
-                                            <span class="bg-purple-100 text-purple-700 px-1 rounded text-[6pt]">Modular</span>
-                                        @else
-                                            <span class="text-gray-500 text-[6pt]">Regular</span>
-                                        @endif
-                                    </td>
-                                    <td class="border px-1 py-0.5">{{ $subject->subject->units }}</td>
-                                    <td class="border px-1 py-0.5">{{ number_format($lectureFee, 2) }}</td>
-                                    <td class="border px-1 py-0.5">{{ number_format($laboratoryFee, 2) }}</td>
-                                </tr>
-                            @endforeach
-                            <tr class="font-bold bg-gray-100">
-                                <td colspan="3" class="border px-1 py-0.5">Total</td>
-                                <td class="border px-1 py-0.5">{{ $totalUnits2 }}</td>
-                                <td class="border px-1 py-0.5">{{ number_format($total_lecture, 2) }}</td>
-                                <td class="border px-1 py-0.5">{{ number_format($total_laboratory, 2) }}</td>
-                            </tr>
-                            @if($totalModularSubjects > 0)
-                            <tr class="bg-purple-50">
-                                <td colspan="6" class="border px-1 py-0.5 text-purple-700 text-[6pt]">
-                                    * {{ $totalModularSubjects }} Modular Subject(s) @ ₱2,400.00 each = ₱{{ number_format($totalModularSubjects * 2400, 2) }}
-                                </td>
-                            </tr>
+                <div class="fee-box">
+                    <p class="box-title">Additional Fees</p>
+                    <p>Laboratory Fee: {{ $money(data_get($tuition, 'total_laboratory', 0)) }}</p>
+                    <p>Miscellaneous Fee: {{ $money(data_get($tuition, 'total_miscelaneous_fees', 0)) }}</p>
+                    @if((int) data_get($totals, 'modular_subjects', 0) > 0)
+                        <p>Modular Fee ({{ data_get($totals, 'modular_subjects', 0) }} subjects): {{ $money(data_get($totals, 'modular_fee', 0)) }}</p>
+                    @endif
+                    @foreach($additionalFees as $fee)
+                        <p>
+                            {{ data_get($fee, 'name', 'Additional Fee') }}: {{ $money(data_get($fee, 'amount', 0)) }}
+                            @if(data_get($fee, 'is_required'))
+                                <span class="required-tag">(Required)</span>
                             @endif
-                        </tbody>
-                    </table>
+                        </p>
+                    @endforeach
                 </div>
 
-                <!-- Schedule Table -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-[6pt]">
-                        <thead>
-                            <tr class="bg-blue-500 text-white">
-                                <th class="border px-1 py-0.5">Title</th>
-                                <th class="border px-1 py-0.5">Mon</th>
-                                <th class="border px-1 py-0.5">Tue</th>
-                                <th class="border px-1 py-0.5">Wed</th>
-                                <th class="border px-1 py-0.5">Thu</th>
-                                <th class="border px-1 py-0.5">Fri</th>
-                                <th class="border px-1 py-0.5">Sat</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($subjects as $subject)
-                                @php
-                                    // Use class_id directly instead of section field for more reliable lookup
-                                    $classId = $subject->class_id;
-                                    $subjectCode = $subject->subject->code;
-
-                                    // First try: exact match by class_id (most reliable)
-                                    $class = \App\Models\Classes::find($classId);
-
-                                    // Fallback only if class ID lookup failed (e.g. old data without class_id)
-                                    if (!$class) {
-                                        $class = \App\Models\Classes::whereRaw('LOWER(TRIM(subject_code)) = LOWER(TRIM(?))', [$subjectCode])
-                                            ->where('school_year', $school_year) // Use variable instead of hardcoded
-                                            ->where('semester', $semester)       // Use variable instead of hardcoded
-                                            ->first();
-                                    }
-
-                                    $daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                                    $scheduleByDay = array_fill_keys($daysOfWeek, '');
-
-                                    if ($class) {
-                                        $schedules = $class->Schedule;
-                                        foreach ($schedules as $schedule) {
-                                            $day = strtolower($schedule->day_of_week);
-                                            $room = $schedule->room->name ?? '';
-                                            $section = $class->section ?? '';
-                                            if (in_array($day, $daysOfWeek)) {
-                                                $scheduleByDay[$day] = $schedule->start_time->format('g:i') . '-' . $schedule->end_time->format('g:i') . ' ' . $section . ' (' . $room . ')';
-                                            }
-                                        }
-                                    }
-                                @endphp
-                                <tr>
-                                    <td class="border px-1 py-0.5">{{ $subject->subject->title }}</td>
-                                    @foreach ($daysOfWeek as $day)
-                                        <td class="border px-1 py-0.5 {{ $scheduleByDay[$day] ? 'bg-blue-100' : '' }}">
-                                            {{ $scheduleByDay[$day] }}
-                                        </td>
-                                    @endforeach
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                <div class="summary-box">
+                    <p class="box-title">Payment Summary</p>
+                    <p>Tuition Fee: {{ $money(data_get($tuition, 'total_lectures', 0)) }}</p>
+                    <p>Laboratory Fee: {{ $money(data_get($tuition, 'total_laboratory', 0)) }}</p>
+                    <p>Miscellaneous Fee: {{ $money(data_get($tuition, 'total_miscelaneous_fees', 0)) }}</p>
+                    @if((float) data_get($assessment, 'additional_fees_total', 0) > 0)
+                        <p>Additional Fees: {{ $money(data_get($assessment, 'additional_fees_total', 0)) }}</p>
+                    @endif
+                    <p class="grand-total">Total Amount: {{ $money(data_get($tuition, 'overall_tuition', data_get($assessment, 'total_amount', 0))) }}</p>
+                    <p>Downpayment: {{ $money(data_get($tuition, 'downpayment', 0)) }}</p>
+                    <p class="balance">Balance: {{ $money(data_get($tuition, 'total_balance', 0)) }}</p>
                 </div>
-            </div>
 
-            <!-- Right Column -->
-            <div class="w-1/3 border-l border-gray-300 pl-1">
-                <div class="bg-gray-50 p-1 rounded">
-                    <h2 class="text-xs font-bold text-gray-800 border-b border-gray-300 pb-0.5 mb-1">Breakdown of Fees</h2>
-
-                    <!-- Tuition Fee Section -->
-                    <div class="bg-white p-1 rounded shadow-sm mb-1 text-[7pt]">
-                        <p class="font-bold mb-1">Tuition Fee Details</p>
-                        <p class="mb-0.5">Sub-Total (tuition fee): ₱{{ number_format($total_lecture, 2) }}</p>
-                        <p class="mb-0.5">Discount: {{ $tuition->discount }}%</p>
-                        <p class="border-t border-gray-200 pt-1 mt-1 font-bold">
-                            Total Tuition Fee: ₱{{ number_format($tuition->total_lectures, 2) }}
-                        </p>
+                <div class="signatures">
+                    <div class="signature-line">
+                        <div></div>
+                        <p>Assessed By</p>
                     </div>
-
-                    <!-- Additional Fees Section -->
-                    <div class="bg-white p-1 rounded shadow-sm mb-1 text-[7pt]">
-                        <p class="font-bold mb-1">Additional Fees</p>
-                        <p class="mb-0.5">Laboratory Fee: ₱{{ number_format($tuition->total_laboratory, 2) }}</p>
-                        <p class="mb-0.5">Miscellaneous Fee: ₱{{ number_format($tuition->total_miscelaneous_fees, 2) }}</p>
-
-                        @php
-                            // Calculate total modular fee (2400 per modular subject)
-                            $totalModularFee = $totalModularSubjects * 2400;
-                        @endphp
-
-                        @if($totalModularSubjects > 0)
-                            <p class="mb-0.5 text-purple-700">Total Modular Fee ({{ $totalModularSubjects }} subjects): ₱{{ number_format($totalModularFee, 2) }}</p>
-                        @endif
-
-                        @if($student->additionalFees && $student->additionalFees->count() > 0)
-                            @php
-                                $additionalFeesTotal = 0;
-                            @endphp
-                            @foreach($student->additionalFees as $fee)
-                                <p class="mb-0.5">{{ $fee->fee_name }}: ₱{{ number_format($fee->amount, 2) }}
-                                    @if($fee->is_required)
-                                        <span class="text-red-600 text-[6pt]">(Required)</span>
-                                    @endif
-                                </p>
-                                @php
-                                    $additionalFeesTotal += $fee->amount;
-                                @endphp
-                            @endforeach
-                          
-                        @endif
+                    <div class="signature-line">
+                        <div></div>
+                        <p>Student Signature</p>
                     </div>
-
-                    <!-- Payment Summary -->
-                    <div class="bg-blue-50 p-1 rounded border border-blue-200 mb-1 text-[7pt]">
-                        <p class="font-bold mb-1">Payment Summary</p>
-                        @php
-                            $additionalFeesTotal = $student->additionalFees ? $student->additionalFees->sum('amount') : 0;
-                            // The tuition record already includes all fees correctly calculated
-                            // Use overall_tuition if available, otherwise calculate from components
-                            $totalAmount = $tuition->overall_tuition ?? ($tuition->total_lectures + $tuition->total_laboratory + $tuition->total_miscelaneous_fees + $additionalFeesTotal);
-                        @endphp
-                        <p class="mb-0.5">Tuition Fee: ₱{{ number_format($tuition->total_lectures, 2) }}</p>
-                        <p class="mb-0.5">Laboratory Fee: ₱{{ number_format($tuition->total_laboratory, 2) }}</p>
-                        <p class="mb-0.5">Miscellaneous Fee: ₱{{ number_format($tuition->total_miscelaneous_fees, 2) }}</p>
-                        @if($totalModularSubjects > 0)
-                            <p class="mb-0.5 text-purple-700 text-[6pt]">* Modular fees ({{ $totalModularSubjects }}) already included in tuition</p>
-                        @endif
-                        @if($additionalFeesTotal > 0)
-                            <p class="mb-0.5">Additional Fees: ₱{{ number_format($additionalFeesTotal, 2) }}</p>
-                        @endif
-                        <p class="border-t border-gray-200 pt-1 mt-1 mb-0.5 font-bold">Total Amount: ₱{{ number_format($totalAmount, 2) }}</p>
-                        <p class="mb-0.5">Downpayment: ₱{{ number_format($tuition->downpayment, 2) }}</p>
-                        <p class="text-sm font-bold text-gray-800">
-                            Balance: ₱{{ number_format($tuition->total_balance ?? ($totalAmount - $tuition->downpayment), 2) }}
-                        </p>
+                    <div class="signature-line">
+                        <div></div>
+                        <p>Registrar</p>
                     </div>
-
-                    <!-- Signatures Section -->
-                    <div class="space-y-6 mt-7">
-                        <div>
-                            <div class="border-b border-black w-48"></div>
-                            <p class="text-[8pt] mt-0.5">Assessed By</p>
-                        </div>
-
-                        <div>
-                            <div class="border-b border-black w-48"></div>
-                            <p class="text-[8pt] mt-0.5">Student Signature</p>
-                        </div>
-
-                        <div>
-                            <div class="border-b border-black w-48"></div>
-                            <p class="text-[8pt] mt-0.5">Registrar</p>
-                        </div>
-
-                        <div>
-                            <div class="border-b border-black w-48"></div>
-                            <p class="text-[8pt] mt-0.5">Cashier</p>
-                        </div>
+                    <div class="signature-line">
+                        <div></div>
+                        <p>Cashier</p>
                     </div>
                 </div>
             </div>
