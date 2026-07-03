@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.1.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.1",
-  "commit": "50244cd68e9dc1a15ae42b56e6fed9e940a402c6",
+  "version": "1.10.0-dev.1.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.2",
+  "commit": "8f2241bdd7ad37244c1075fe538fbdb2b4051732",
   "branch": "master",
-  "timestamp": "2026-07-01T00:45:37Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28485343511",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-03T09:40:51Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28651804035",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.10.0-dev.1.1 - fix: use stable docker healthcheck endpoint",
-    "previous": "1.10.0-dev.1.0"
+    "current": "Version 1.10.0-dev.1.2 - Fix assessment schedule rendering in PDFs and preview",
+    "previous": "1.10.0-dev.1.1"
   },
   "metadata": {
     "author": "yukazakiri",
