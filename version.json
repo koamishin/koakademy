@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.1.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.2",
-  "commit": "8f2241bdd7ad37244c1075fe538fbdb2b4051732",
+  "version": "1.10.0-dev.1.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.3",
+  "commit": "150e8758bcb2ff2c0356327c52ee37282b924294",
   "branch": "master",
-  "timestamp": "2026-07-03T09:40:51Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28651804035",
-  "release_type": "patch",
+  "timestamp": "2026-07-04T09:21:10Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28701601711",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.1.2 - Fix assessment schedule rendering in PDFs and preview",
-    "previous": "1.10.0-dev.1.1"
+    "current": "Version 1.10.0-dev.1.3 - fix(assessments): fit printable form on A4",
+    "previous": "1.10.0-dev.1.2"
   },
   "metadata": {
     "author": "yukazakiri",
