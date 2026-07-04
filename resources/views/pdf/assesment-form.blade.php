@@ -7,7 +7,7 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 10mm;
+            margin: 6mm;
         }
 
         * {
@@ -21,15 +21,15 @@
             color: #111827;
             background: #ffffff;
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 7pt;
-            line-height: 1.25;
+            font-size: 6pt;
+            line-height: 1.14;
         }
 
         .header {
             display: table;
             width: 100%;
-            margin-bottom: 7px;
-            padding-bottom: 6px;
+            margin-bottom: 5px;
+            padding-bottom: 4px;
             border-bottom: 1.5px solid #111827;
         }
 
@@ -40,12 +40,12 @@
         }
 
         .logo-cell {
-            width: 58px;
+            width: 50px;
         }
 
         .logo {
-            width: 46px;
-            max-height: 46px;
+            width: 40px;
+            max-height: 40px;
             object-fit: contain;
         }
 
@@ -54,21 +54,21 @@
         }
 
         .school-name {
-            margin: 0 0 2px;
-            font-size: 12pt;
+            margin: 0 0 1px;
+            font-size: 10.5pt;
             font-weight: 700;
             text-transform: uppercase;
         }
 
         .school-details {
-            margin: 0 0 3px;
+            margin: 0 0 2px;
             color: #374151;
-            font-size: 6.5pt;
+            font-size: 5.6pt;
         }
 
         .document-title {
             margin: 0;
-            font-size: 10pt;
+            font-size: 8.5pt;
             font-weight: 700;
             text-transform: uppercase;
         }
@@ -86,13 +86,13 @@
         }
 
         .left-column {
-            width: 67%;
-            padding-right: 8px;
+            width: 69%;
+            padding-right: 6px;
         }
 
         .right-column {
-            width: 33%;
-            padding-left: 8px;
+            width: 31%;
+            padding-left: 6px;
             border-left: 1px solid #d1d5db;
         }
 
@@ -104,33 +104,33 @@
         }
 
         .student-info {
-            margin-bottom: 7px;
-            padding: 6px 8px;
+            margin-bottom: 5px;
+            padding: 4px 6px;
         }
 
         .student-info p {
-            margin: 0 0 2px;
+            margin: 0 0 1px;
         }
 
         table {
             width: 100%;
-            margin-bottom: 7px;
+            margin-bottom: 5px;
             border-collapse: collapse;
             table-layout: fixed;
         }
 
         th {
-            padding: 4px 5px;
+            padding: 2px 4px;
             border: 1px solid #1e3a8a;
             color: #ffffff;
             background: #1e40af;
-            font-size: 6.5pt;
+            font-size: 5.6pt;
             font-weight: 700;
             text-align: left;
         }
 
         td {
-            padding: 3px 5px;
+            padding: 2px 4px;
             border: 1px solid #d1d5db;
             background: #ffffff;
             vertical-align: top;
@@ -148,35 +148,35 @@
         }
 
         .subjects-table .code-column {
-            width: 16%;
+            width: 15%;
         }
 
         .subjects-table .title-column {
-            width: 34%;
+            width: 37%;
         }
 
         .subjects-table .type-column {
-            width: 13%;
+            width: 11%;
         }
 
         .subjects-table .units-column {
-            width: 9%;
+            width: 7%;
         }
 
         .subjects-table .fee-column {
-            width: 14%;
+            width: 15%;
         }
 
         .schedule-table {
-            font-size: 5.8pt;
+            font-size: 5.1pt;
         }
 
         .schedule-table .subject-column {
-            width: 22%;
+            width: 20%;
         }
 
         .schedule-table .day-column {
-            width: 13%;
+            width: 13.333%;
         }
 
         .subject-code {
@@ -189,7 +189,7 @@
             display: block;
             margin-top: 1px;
             color: #374151;
-            line-height: 1.2;
+            line-height: 1.1;
         }
 
         .schedule-cell-filled {
@@ -197,7 +197,7 @@
         }
 
         .schedule-entry {
-            padding: 2px 0;
+            padding: 1px 0;
             border-bottom: 1px solid #bfdbfe;
         }
 
@@ -209,7 +209,7 @@
         .schedule-section,
         .schedule-room {
             display: block;
-            line-height: 1.18;
+            line-height: 1.1;
         }
 
         .schedule-time {
@@ -234,7 +234,7 @@
             display: inline-block;
             padding: 1px 4px;
             border-radius: 3px;
-            font-size: 5.7pt;
+            font-size: 5.1pt;
             font-weight: 700;
         }
 
@@ -250,25 +250,25 @@
         .modular-note td {
             color: #6b21a8;
             background: #faf5ff;
-            font-size: 6pt;
+            font-size: 5.2pt;
         }
 
         .fees-panel {
-            padding: 7px;
+            padding: 5px;
         }
 
         .fees-title {
-            margin: 0 0 7px;
-            padding-bottom: 5px;
+            margin: 0 0 5px;
+            padding-bottom: 3px;
             border-bottom: 1.5px solid #1e40af;
-            font-size: 9pt;
+            font-size: 7.5pt;
             font-weight: 700;
         }
 
         .fee-box,
         .summary-box {
-            margin-bottom: 7px;
-            padding: 7px;
+            margin-bottom: 5px;
+            padding: 5px;
             border: 1px solid #d1d5db;
             border-radius: 3px;
             background: #ffffff;
@@ -281,52 +281,52 @@
 
         .fee-box p,
         .summary-box p {
-            margin: 0 0 3px;
+            margin: 0 0 1px;
         }
 
         .box-title {
-            margin-bottom: 4px;
-            padding-bottom: 3px;
+            margin-bottom: 2px;
+            padding-bottom: 2px;
             border-bottom: 1px solid #e5e7eb;
             font-weight: 700;
         }
 
         .fee-total,
         .grand-total {
-            margin-top: 4px;
-            padding-top: 4px;
+            margin-top: 3px;
+            padding-top: 3px;
             border-top: 1px solid #d1d5db;
             font-weight: 700;
         }
 
         .balance {
             color: #1e40af;
-            font-size: 9pt;
+            font-size: 7.5pt;
             font-weight: 700;
         }
 
         .required-tag {
             color: #dc2626;
-            font-size: 5.8pt;
+            font-size: 5pt;
         }
 
         .signatures {
-            margin-top: 16px;
+            margin-top: 8px;
         }
 
         .signature-line {
-            margin-bottom: 16px;
+            margin-bottom: 9px;
         }
 
         .signature-line div {
-            width: 150px;
+            width: 120px;
             border-bottom: 1px solid #111827;
         }
 
         .signature-line p {
-            margin: 3px 0 0;
+            margin: 2px 0 0;
             color: #374151;
-            font-size: 6.5pt;
+            font-size: 5.5pt;
         }
     </style>
 </head>

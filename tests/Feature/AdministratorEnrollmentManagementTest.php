@@ -354,6 +354,12 @@ it('does not show a duplicate additional total line in the printable assessment 
     expect($previewSource)->not->toContain('Additional Total');
 });
 
+it('defaults the printable assessment preview to A4 paper', function (): void {
+    $previewSource = file_get_contents(resource_path('js/pages/administrators/enrollments/assessment-preview.tsx'));
+
+    expect($previewSource)->toContain('useState<PaperSize>("a4")');
+});
+
 it('returns readable structured schedule entries for assessment previews', function (): void {
     $user = User::factory()->create(['role' => UserRole::Admin]);
     $course = Course::factory()->create([

@@ -120,7 +120,7 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
         }).format(amount);
     };
 
-    const [paperSize, setPaperSize] = useState<PaperSize>("long");
+    const [paperSize, setPaperSize] = useState<PaperSize>("a4");
     const printRef = useRef<HTMLDivElement>(null);
 
     const handlePrint = useCallback(() => {
@@ -161,8 +161,8 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     
     .assessment-doc {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-      font-size: 8pt !important;
-      line-height: 1.3 !important;
+      font-size: 7pt !important;
+      line-height: 1.18 !important;
       color: #000000 !important;
       background-color: #ffffff !important;
       -webkit-font-smoothing: antialiased;
@@ -195,16 +195,16 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
+      gap: 8px;
+      margin-bottom: 6px;
+      padding-bottom: 5px;
       border-bottom: 2px solid #000000;
       width: 100%;
     }
     
     .assessment-doc .doc-header img {
-      width: 55px;
-      height: 55px;
+      width: 44px;
+      height: 44px;
       object-fit: contain;
     }
     
@@ -214,7 +214,7 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     }
     
     .assessment-doc .doc-header h1 {
-      font-size: 12pt !important;
+      font-size: 10.5pt !important;
       font-weight: 700 !important;
       margin: 0 0 2px 0 !important;
       text-transform: uppercase;
@@ -222,15 +222,15 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     }
     
     .assessment-doc .doc-header .school-info {
-      font-size: 7pt !important;
+      font-size: 6pt !important;
       color: #374151 !important;
       margin: 2px 0 !important;
     }
     
     .assessment-doc .doc-header .doc-title {
-      font-size: 11pt !important;
+      font-size: 9pt !important;
       font-weight: 700 !important;
-      margin-top: 6px !important;
+      margin-top: 3px !important;
       text-transform: uppercase;
       letter-spacing: 1px;
     }
@@ -238,16 +238,16 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     /* Student Info Box */
     .assessment-doc .student-info {
       background-color: #f3f4f6 !important;
-      padding: 10px 12px;
-      border-radius: 4px;
-      font-size: 7.5pt !important;
-      margin-bottom: 10px;
+      padding: 5px 7px;
+      border-radius: 3px;
+      font-size: 6.2pt !important;
+      margin-bottom: 5px;
       border: 1px solid #d1d5db;
       width: 100%;
     }
     
     .assessment-doc .student-info p {
-      margin-bottom: 3px !important;
+      margin-bottom: 1px !important;
       color: #000000 !important;
     }
     
@@ -259,8 +259,8 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     .assessment-doc table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 7pt !important;
-      margin-bottom: 10px;
+      font-size: 6pt !important;
+      margin-bottom: 5px;
       table-layout: fixed; /* Force table layout to respect widths */
     }
     
@@ -268,7 +268,7 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
       background-color: #1e40af !important;
       color: #ffffff !important;
       font-weight: 600 !important;
-      padding: 5px 6px !important;
+      padding: 3px 4px !important;
       text-align: left;
       border: 1px solid #1e3a8a !important;
       overflow-wrap: anywhere;
@@ -284,7 +284,7 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     }
     
     .assessment-doc table td {
-      padding: 4px 6px !important;
+      padding: 2px 4px !important;
       border: 1px solid #d1d5db !important;
       color: #000000 !important;
       background-color: #ffffff !important;
@@ -313,22 +313,22 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     .assessment-doc table tr.modular-note td {
       background-color: #faf5ff !important;
       color: #6b21a8 !important;
-      font-size: 6.5pt !important;
+      font-size: 5.8pt !important;
       font-style: italic;
       white-space: normal; /* Allow wrapping for the note */
     }
     
     /* Schedule table cell highlighting */
     .assessment-doc .schedule-table {
-      font-size: 6pt !important;
+      font-size: 5.2pt !important;
     }
 
     .assessment-doc .schedule-table .subject-col {
-      width: 22% !important;
+      width: 20% !important;
     }
 
     .assessment-doc .schedule-table .day-col {
-      width: 13% !important;
+      width: 13.333% !important;
     }
 
     .assessment-doc .schedule-cell-filled {
@@ -343,13 +343,13 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
 
     .assessment-doc .schedule-subject-title {
       display: block;
-      margin-top: 2px !important;
+      margin-top: 1px !important;
       color: #374151 !important;
       line-height: 1.2 !important;
     }
 
     .assessment-doc .schedule-entry {
-      padding: 2px 0 !important;
+      padding: 1px 0 !important;
       border-bottom: 1px solid #bfdbfe !important;
       text-align: left !important;
     }
@@ -362,7 +362,7 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     .assessment-doc .schedule-section,
     .assessment-doc .schedule-room {
       display: block !important;
-      line-height: 1.18 !important;
+      line-height: 1.12 !important;
       white-space: normal !important;
       overflow-wrap: anywhere !important;
     }
@@ -395,55 +395,55 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     /* Right column - Fees breakdown */
     .assessment-doc .fees-column {
       border-left: 2px solid #d1d5db;
-      padding-left: 12px;
+      padding-left: 7px;
     }
     
     .assessment-doc .fees-section {
       background-color: #f9fafb !important;
-      padding: 10px;
-      border-radius: 4px;
+      padding: 6px;
+      border-radius: 3px;
       height: 100%;
       border: 1px solid #e5e7eb;
     }
     
     .assessment-doc .fees-section h2 {
-      font-size: 10pt !important;
+      font-size: 8pt !important;
       font-weight: 700 !important;
       color: #000000 !important;
       border-bottom: 2px solid #1e40af;
-      padding-bottom: 6px;
-      margin-bottom: 10px !important;
+      padding-bottom: 4px;
+      margin-bottom: 6px !important;
     }
     
     /* Fee boxes */
     .assessment-doc .fee-box {
       background-color: #ffffff !important;
-      padding: 8px 10px;
-      border-radius: 4px;
+      padding: 5px 6px;
+      border-radius: 3px;
       border: 1px solid #d1d5db;
-      margin-bottom: 8px;
-      font-size: 7pt !important;
+      margin-bottom: 5px;
+      font-size: 6pt !important;
       width: 100%;
     }
     
     .assessment-doc .fee-box-title {
       font-weight: 700 !important;
-      margin-bottom: 4px !important;
+      margin-bottom: 2px !important;
       color: #000000 !important;
-      font-size: 7.5pt !important;
+      font-size: 6.5pt !important;
       border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 3px;
+      padding-bottom: 2px;
     }
     
     .assessment-doc .fee-box p {
-      margin-bottom: 3px !important;
+      margin-bottom: 1px !important;
       color: #000000 !important;
     }
     
     .assessment-doc .fee-box .fee-total {
       border-top: 1px solid #d1d5db;
-      padding-top: 4px;
-      margin-top: 4px !important;
+      padding-top: 3px;
+      margin-top: 3px !important;
       font-weight: 700 !important;
     }
     
@@ -460,11 +460,11 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     /* Summary box */
     .assessment-doc .summary-box {
       background-color: #eff6ff !important;
-      padding: 8px 10px;
-      border-radius: 4px;
+      padding: 5px 6px;
+      border-radius: 3px;
       border: 2px solid #93c5fd;
-      margin-bottom: 8px;
-      font-size: 7pt !important;
+      margin-bottom: 5px;
+      font-size: 6pt !important;
       width: 100%;
     }
     
@@ -474,62 +474,62 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
     
     .assessment-doc .summary-box .summary-title {
       font-weight: 700 !important;
-      margin-bottom: 4px !important;
-      font-size: 8pt !important;
+      margin-bottom: 2px !important;
+      font-size: 6.8pt !important;
     }
     
     .assessment-doc .summary-box .grand-total {
       border-top: 2px solid #3b82f6;
-      padding-top: 4px;
-      margin-top: 4px !important;
+      padding-top: 3px;
+      margin-top: 3px !important;
       font-weight: 700 !important;
     }
     
     .assessment-doc .summary-box .balance {
-      font-size: 9pt !important;
+      font-size: 7.5pt !important;
       font-weight: 700 !important;
       color: #1e40af !important;
     }
     
     /* Signatures */
     .assessment-doc .signatures {
-      margin-top: 24px;
+      margin-top: 10px;
       width: 100%;
     }
     
     .assessment-doc .signature-line {
-      margin-bottom: 24px;
+      margin-bottom: 11px;
     }
     
     .assessment-doc .signature-line .line {
       border-bottom: 1px solid #000000;
-      width: 160px;
+      width: 130px;
     }
     
     .assessment-doc .signature-line p {
-      font-size: 7pt !important;
-      margin-top: 3px !important;
+      font-size: 6pt !important;
+      margin-top: 2px !important;
       color: #374151 !important;
     }
     
     /* Layout */
     .assessment-doc .two-column {
       display: flex;
-      gap: 16px;
+      gap: 8px;
       width: 100%;
       flex-direction: row; /* Enforce row */
     }
     
     .assessment-doc .left-column {
-      flex: 0 0 65%; /* Rigid width */
-      width: 65%;
-      max-width: 65%;
+      flex: 0 0 69%; /* Rigid width */
+      width: 69%;
+      max-width: 69%;
     }
     
     .assessment-doc .right-column {
-      flex: 0 0 35%; /* Rigid width */
-      width: 35%;
-      max-width: 35%;
+      flex: 0 0 31%; /* Rigid width */
+      width: 31%;
+      max-width: 31%;
     }
     
     /* ==========================================
@@ -576,7 +576,7 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
         display: block !important;
         width: 100% !important;
         /* Use standard padding for the paper */
-        padding: 10mm !important;
+        padding: 6mm !important;
         margin: 0 !important;
         background: white !important;
         
@@ -596,18 +596,18 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
       .assessment-doc .two-column {
         display: flex !important;
         flex-direction: row !important;
-        gap: 16px !important;
+        gap: 8px !important;
         width: 100% !important;
       }
       
       .assessment-doc .left-column {
-        width: 65% !important;
-        flex: 0 0 65% !important;
+        width: 69% !important;
+        flex: 0 0 69% !important;
       }
       
       .assessment-doc .right-column {
-        width: 35% !important;
-        flex: 0 0 35% !important;
+        width: 31% !important;
+        flex: 0 0 31% !important;
       }
 
       /* 9. Prevent page breaks inside components */
@@ -668,7 +668,7 @@ export default function AssessmentPreview({ data, enrollmentId }: PageProps) {
                         style={{
                             width: selectedPaper.cssWidth,
                             minHeight: selectedPaper.cssHeight,
-                            padding: "8mm",
+                            padding: "6mm",
                             boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
                         }}
                     >
