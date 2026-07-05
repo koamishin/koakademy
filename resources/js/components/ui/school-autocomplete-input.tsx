@@ -1,10 +1,10 @@
-import { Input } from "@/components/ui/input";
 import {
     Command,
     CommandEmpty,
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import {
     Popover,
     PopoverContent,
@@ -21,46 +21,49 @@ declare const route: (
     params?: Record<string, unknown>,
 ) => string;
 
-interface AutocompleteInputProps {
+export interface SchoolOption {
+    name: string;
+    address: string | null;
+}
+
+interface SchoolAutocompleteInputProps {
     value: string;
     onChange: (value: string) => void;
+    fieldName: string;
+    onSelectOption?: (option: SchoolOption) => void;
     placeholder?: string;
     disabled?: boolean;
     className?: string;
     id?: string;
-    fieldName: string;
     debounceMs?: number;
-    onBlur?: (value: string) => void;
 }
 
-export function AutocompleteInput({
+export function SchoolAutocompleteInput({
     value,
     onChange,
+    fieldName,
+    onSelectOption,
     placeholder,
     disabled = false,
     className,
     id,
-    fieldName,
     debounceMs = 300,
-    onBlur,
-}: AutocompleteInputProps) {
+}: SchoolAutocompleteInputProps) {
     const [open, setOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value);
     const [debouncedValue] = useDebounce(inputValue, debounceMs);
-    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [options, setOptions] = useState<SchoolOption[]>([]);
     const [loading, setLoading] = useState(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Sync external value changes (e.g. form reset)
     useEffect(() => {
         setInputValue(value);
     }, [value]);
 
-    // Fetch suggestions when debounced value changes
     useEffect(() => {
         if (disabled || debouncedValue.length < 1) {
-            setSuggestions([]);
+            setOptions([]);
             setOpen(false);
 
             return;
@@ -68,31 +71,29 @@ export function AutocompleteInput({
 
         const controller = new AbortController();
 
-        // Abort any in-flight request before starting a new one
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
 
         abortControllerRef.current = controller;
 
-        const fetchSuggestions = async () => {
+        const fetchOptions = async () => {
             setLoading(true);
 
             try {
                 const response = await axios.get(
-                    route("administrators.students.field-values", {
+                    route("administrators.students.education-school-options", {
                         field: fieldName,
                         search: debouncedValue,
                     }),
                     { signal: controller.signal },
                 );
 
-                const data = response.data;
-                const items: string[] = Array.isArray(data)
-                    ? data
-                    : (data.values ?? data.data ?? []);
+                const items: SchoolOption[] = Array.isArray(response.data)
+                    ? response.data
+                    : (response.data.options ?? response.data.data ?? []);
 
-                setSuggestions(items);
+                setOptions(items);
 
                 if (items.length > 0) {
                     setOpen(true);
@@ -104,21 +105,20 @@ export function AutocompleteInput({
                         (error as { code?: string }).code === "ERR_CANCELED");
 
                 if (!isCancelled) {
-                    setSuggestions([]);
+                    setOptions([]);
                 }
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchSuggestions();
+        fetchOptions();
 
         return () => {
             controller.abort();
         };
-    }, [debouncedValue, fieldName, disabled]);
+    }, [debouncedValue, disabled, fieldName]);
 
-    // Clean up blur timeout on unmount
     useEffect(() => {
         return () => {
             if (blurTimeoutRef.current) {
@@ -128,43 +128,40 @@ export function AutocompleteInput({
     }, []);
 
     const handleInputChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            const newValue = e.target.value;
-            setInputValue(newValue);
-            onChange(newValue);
+        (event: React.ChangeEvent<HTMLInputElement>) => {
+            const nextValue = event.target.value;
+            setInputValue(nextValue);
+            onChange(nextValue);
         },
         [onChange],
     );
 
     const handleSelect = useCallback(
-        (suggestion: string) => {
-            setInputValue(suggestion);
-            onChange(suggestion);
+        (option: SchoolOption) => {
+            setInputValue(option.name);
+            onChange(option.name);
+            onSelectOption?.(option);
             setOpen(false);
         },
-        [onChange],
+        [onChange, onSelectOption],
     );
 
     const handleFocus = useCallback(() => {
-        // If the input was blurred and a close timeout is pending, cancel it
         if (blurTimeoutRef.current) {
             clearTimeout(blurTimeoutRef.current);
             blurTimeoutRef.current = null;
         }
 
-        if (!disabled && inputValue.length >= 1 && suggestions.length > 0) {
+        if (!disabled && inputValue.length >= 1 && options.length > 0) {
             setOpen(true);
         }
-    }, [disabled, inputValue, suggestions]);
+    }, [disabled, inputValue, options]);
 
     const handleBlur = useCallback(() => {
-        onBlur?.(inputValue);
-
-        // Delay closing so clicks on suggestion items can register
         blurTimeoutRef.current = setTimeout(() => {
             setOpen(false);
         }, 200);
-    }, [inputValue, onBlur]);
+    }, []);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -175,48 +172,51 @@ export function AutocompleteInput({
                     role="combobox"
                     aria-expanded={open}
                     aria-autocomplete="list"
-                    aria-controls={
-                        open ? "autocomplete-listbox" : undefined
-                    }
                     value={inputValue}
                     onChange={handleInputChange}
                     placeholder={placeholder}
                     disabled={disabled}
-                    className={className}
+                    className={cn(className)}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     autoComplete="off"
                 />
             </PopoverTrigger>
             <PopoverContent
-                id="autocomplete-listbox"
                 className="w-[--radix-popover-trigger-width] p-0"
                 align="start"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-                onCloseAutoFocus={(e) => e.preventDefault()}
+                onOpenAutoFocus={(event) => event.preventDefault()}
+                onCloseAutoFocus={(event) => event.preventDefault()}
             >
                 <Command shouldFilter={false}>
                     <CommandList>
                         {loading && (
                             <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Searching...
+                                Searching schools...
                             </div>
                         )}
-                        {!loading && suggestions.length === 0 && (
-                            <CommandEmpty>No results found.</CommandEmpty>
+                        {!loading && options.length === 0 && (
+                            <CommandEmpty>No schools found.</CommandEmpty>
                         )}
                         {!loading &&
-                            suggestions.map((suggestion) => (
+                            options.map((option) => (
                                 <CommandItem
-                                    key={suggestion}
-                                    value={suggestion}
-                                    onSelect={() =>
-                                        handleSelect(suggestion)
-                                    }
+                                    key={`${option.name}-${option.address ?? ""}`}
+                                    value={option.name}
+                                    onSelect={() => handleSelect(option)}
                                     className="cursor-pointer"
                                 >
-                                    {suggestion}
+                                    <div className="min-w-0">
+                                        <div className="truncate font-medium">
+                                            {option.name}
+                                        </div>
+                                        {option.address && (
+                                            <div className="truncate text-xs text-muted-foreground">
+                                                {option.address}
+                                            </div>
+                                        )}
+                                    </div>
                                 </CommandItem>
                             ))}
                     </CommandList>

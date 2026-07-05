@@ -1134,7 +1134,7 @@ final class AdministratorStudentManagementController extends Controller
             'elementary_school_address' => ['student_education_info', 'elementary_school_address'],
             'junior_high_school_name' => ['student_education_info', 'junior_high_school_name'],
             'junior_high_school_address' => ['student_education_info', 'junior_high_school_address'],
-            'senior_high_name' => ['student_education_info', 'senior_high_school_name'],
+            'senior_high_name' => ['student_education_info', ['senior_high_name', 'senior_high_school']],
             'senior_high_address' => ['student_education_info', 'senior_high_address'],
             'college_school' => ['student_education_info', 'college_school'],
             'college_course' => ['student_education_info', 'college_course'],
@@ -1150,18 +1150,114 @@ final class AdministratorStudentManagementController extends Controller
         }
 
         [$table, $column] = $allowedFields[$field];
+        $columns = collect(is_array($column) ? $column : [$column])
+            ->filter(fn (string $column): bool => Schema::hasColumn($table, $column))
+            ->values();
         $like = '%'.mb_strtolower($search).'%';
 
-        $results = DB::table($table)
-            ->whereRaw('LOWER('.$column.') LIKE ?', [$like])
-            ->whereNotNull($column)
-            ->where($column, '!=', '')
-            ->distinct()
-            ->orderBy($column)
-            ->limit(15)
-            ->pluck($column);
+        if ($columns->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $results = $columns
+            ->flatMap(fn (string $column): array => DB::table($table)
+                ->whereRaw('LOWER('.$column.') LIKE ?', [$like])
+                ->whereNotNull($column)
+                ->where($column, '!=', '')
+                ->distinct()
+                ->orderBy($column)
+                ->limit(15)
+                ->pluck($column)
+                ->all())
+            ->map(fn (mixed $value): string => mb_trim((string) $value))
+            ->filter()
+            ->unique(fn (string $value): string => mb_strtolower($value))
+            ->sortBy(fn (string $value): string => mb_strtolower($value))
+            ->values()
+            ->take(15);
 
         return response()->json($results);
+    }
+
+    public function educationSchoolOptions(Request $request): JsonResponse
+    {
+        $field = (string) $request->query('field', '');
+        $search = mb_trim((string) $request->query('search', ''));
+
+        if (mb_strlen($search) < 1) {
+            return response()->json([]);
+        }
+
+        $schoolFields = [
+            'elementary_school' => [
+                'names' => ['elementary_school'],
+                'address' => 'elementary_school_address',
+            ],
+            'junior_high_school_name' => [
+                'names' => ['junior_high_school_name', 'high_school'],
+                'address' => 'junior_high_school_address',
+            ],
+            'senior_high_name' => [
+                'names' => ['senior_high_name', 'senior_high_school'],
+                'address' => 'senior_high_address',
+            ],
+            'college_school' => [
+                'names' => ['college_school'],
+                'address' => null,
+            ],
+            'vocational_school' => [
+                'names' => ['vocational_school'],
+                'address' => null,
+            ],
+        ];
+
+        if (! array_key_exists($field, $schoolFields)) {
+            return response()->json([]);
+        }
+
+        $config = $schoolFields[$field];
+        $nameColumns = collect($config['names'])
+            ->filter(fn (string $column): bool => Schema::hasColumn('student_education_info', $column))
+            ->values();
+        $addressColumn = is_string($config['address']) && Schema::hasColumn('student_education_info', $config['address'])
+            ? $config['address']
+            : null;
+
+        if ($nameColumns->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $like = '%'.mb_strtolower($search).'%';
+
+        $options = $nameColumns
+            ->flatMap(function (string $nameColumn) use ($addressColumn, $like): array {
+                $addressSelect = $addressColumn ? $addressColumn.' as address' : 'NULL as address';
+
+                return DB::table('student_education_info')
+                    ->selectRaw($nameColumn.' as name, '.$addressSelect)
+                    ->whereRaw('LOWER('.$nameColumn.') LIKE ?', [$like])
+                    ->whereNotNull($nameColumn)
+                    ->where($nameColumn, '!=', '')
+                    ->limit(25)
+                    ->get()
+                    ->all();
+            })
+            ->map(fn (object $row): array => [
+                'name' => mb_trim((string) $row->name),
+                'address' => isset($row->address) && mb_trim((string) $row->address) !== ''
+                    ? mb_trim((string) $row->address)
+                    : null,
+            ])
+            ->filter(fn (array $option): bool => $option['name'] !== '')
+            ->groupBy(fn (array $option): string => mb_strtolower($option['name']))
+            ->map(fn ($matches): array => $matches
+                ->sortByDesc(fn (array $option): bool => $option['address'] !== null)
+                ->first())
+            ->sortBy(fn (array $option): string => mb_strtolower($option['name']))
+            ->values()
+            ->take(20);
+
+        return response()->json($options);
     }
 
     public function update(Request $request, Student $student): RedirectResponse
@@ -1315,7 +1411,7 @@ final class AdministratorStudentManagementController extends Controller
             $student->address = ($validated['current_address'] ?? null) ?: ($validated['permanent_address'] ?? null);
             $student->emergency_contact = $validated['emergency_contact_name'] ?? null;
             $student->academic_year = $validated['academic_year'];
-            $student->remarks = $validated['remarks'];
+            $student->remarks = $validated['remarks'] ?? null;
             $student->contacts = $this->studentContactsPayload($validated);
 
             // Statistical Data

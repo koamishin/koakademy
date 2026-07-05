@@ -1,6 +1,6 @@
 import AdminLayout from "@/components/administrators/admin-layout";
-import { Badge as BadgeOptional } from "@/components/reui/badge";
 import type { BadgeProps } from "@/components/reui/badge";
+import { Badge as BadgeOptional } from "@/components/reui/badge";
 import { AutocompleteFieldInput } from "@/components/ui/autocomplete-field-input";
 import { AutocompleteInput } from "@/components/ui/autocomplete-input";
 import { Badge } from "@/components/ui/badge";
@@ -13,14 +13,17 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { SchoolAutocompleteInput, type SchoolOption } from "@/components/ui/school-autocomplete-input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PHILIPPINE_CITIES_MUNICIPALITIES, PHILIPPINE_PROVINCES, PHILIPPINE_REGIONS } from "@/data/philippine-geography";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import {
+    AlertCircle,
     ArrowLeft,
     Banknote,
     BookOpen,
@@ -42,6 +45,7 @@ import {
     PenLine,
     Phone,
     RefreshCw,
+    Save,
     School,
     User as UserIcon,
     UserPlus,
@@ -332,8 +336,66 @@ const BLANK_FORM: StudentCreateForm = {
     submit_action: "view",
 };
 
-function capitalizeWords(value: string): string {
-    return value.replace(/\b\w/g, (char) => char.toUpperCase());
+const STUDENT_CREATE_DRAFT_KEY = "koakademy:student-create-draft";
+
+type SectionId = "record" | "required" | "contact" | "family" | "reporting" | "assets";
+
+interface StudentCreateSection {
+    id: SectionId;
+    label: string;
+    description: string;
+    icon: typeof UserIcon;
+    fields: (keyof StudentCreateForm)[];
+    requiredFields: (keyof StudentCreateForm)[];
+}
+
+type StudentCreateDraft = Omit<StudentCreateForm, "picture_1x1" | "signature">;
+
+function buildDraftPayload(data: StudentCreateForm): StudentCreateDraft {
+    const { picture_1x1, signature, ...draft } = data;
+
+    return draft;
+}
+
+function isStudentCreateDraft(value: unknown): value is Partial<StudentCreateDraft> {
+    return typeof value === "object" && value !== null && "student_type" in value;
+}
+
+function hasMeaningfulDraftData(data: StudentCreateForm): boolean {
+    const meaningfulFields: (keyof StudentCreateForm)[] = [
+        "lrn",
+        "first_name",
+        "last_name",
+        "middle_name",
+        "suffix",
+        "birth_date",
+        "email",
+        "phone",
+        "course_id",
+        "shs_strand_id",
+        "current_address",
+        "permanent_address",
+        "emergency_contact_name",
+        "emergency_contact_phone",
+        "facebook_contact",
+        "fathers_name",
+        "mothers_name",
+        "remarks",
+    ];
+
+    return meaningfulFields.some((field) => {
+        const value = data[field];
+
+        return value !== null && value !== "" && value !== false;
+    });
+}
+
+function formatPersonName(value: string): string {
+    return value
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLocaleLowerCase()
+        .replace(/(^|[\s'-])([a-z])/g, (_match, separator: string, character: string) => `${separator}${character.toLocaleUpperCase()}`);
 }
 
 export default function AdministratorStudentCreate({ user, options }: CreateStudentProps) {
@@ -341,7 +403,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
     const [isGeneratingId, setIsGeneratingId] = useState(false);
     const [idGenerationError, setIdGenerationError] = useState<string | null>(null);
 
-    const { data, setData, post, processing, errors, transform } = useForm<StudentCreateForm>({
+    const { data, setData, post, processing, errors, transform, progress } = useForm<StudentCreateForm>({
         ...BLANK_FORM,
         income_bracket_mode: options.default_income_mode || BLANK_FORM.income_bracket_mode,
     });
@@ -349,6 +411,8 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
 
     const formRef = useRef<HTMLFormElement>(null);
     const submitActionRef = useRef("view");
+    const restoredDraftRef = useRef(false);
+    const pendingDraftRestoreRef = useRef(false);
 
     const flags = useFeatureFlags();
     const pictureInputRef = useRef<HTMLInputElement>(null);
@@ -356,6 +420,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
     const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
     const [isDragOverPicture, setIsDragOverPicture] = useState(false);
     const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
+    const [submitErrorSectionId, setSubmitErrorSectionId] = useState<SectionId | null>(null);
 
     const handlePictureFile = useCallback(
         (file: File) => {
@@ -435,6 +500,82 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
     };
 
     useEffect(() => {
+        const storedDraft = window.localStorage.getItem(STUDENT_CREATE_DRAFT_KEY);
+
+        if (!storedDraft) {
+            return;
+        }
+
+        pendingDraftRestoreRef.current = true;
+
+        toast("Restore saved student draft?", {
+            description: "A student creation draft is available on this device.",
+            action: {
+                label: "Restore",
+                onClick: () => {
+                    let parsed: unknown;
+
+                    try {
+                        parsed = JSON.parse(storedDraft) as unknown;
+                    } catch {
+                        pendingDraftRestoreRef.current = false;
+                        window.localStorage.removeItem(STUDENT_CREATE_DRAFT_KEY);
+                        toast.error("Saved draft could not be restored.");
+                        return;
+                    }
+
+                    if (!isStudentCreateDraft(parsed)) {
+                        pendingDraftRestoreRef.current = false;
+                        window.localStorage.removeItem(STUDENT_CREATE_DRAFT_KEY);
+                        toast.error("Saved draft could not be restored.");
+                        return;
+                    }
+
+                    pendingDraftRestoreRef.current = false;
+                    restoredDraftRef.current = true;
+                    setData({
+                        ...BLANK_FORM,
+                        income_bracket_mode: options.default_income_mode || BLANK_FORM.income_bracket_mode,
+                        ...parsed,
+                        picture_1x1: null,
+                        signature: null,
+                    });
+                    toast.success("Student draft restored.");
+                },
+            },
+            cancel: {
+                label: "Discard",
+                onClick: () => {
+                    pendingDraftRestoreRef.current = false;
+                    window.localStorage.removeItem(STUDENT_CREATE_DRAFT_KEY);
+                },
+            },
+        });
+    }, [options.default_income_mode, setData]);
+
+    useEffect(() => {
+        const timeout = window.setTimeout(
+            () => {
+                if (pendingDraftRestoreRef.current) {
+                    return;
+                }
+
+                if (!hasMeaningfulDraftData(data)) {
+                    window.localStorage.removeItem(STUDENT_CREATE_DRAFT_KEY);
+                    return;
+                }
+
+                window.localStorage.setItem(STUDENT_CREATE_DRAFT_KEY, JSON.stringify(buildDraftPayload(data)));
+            },
+            restoredDraftRef.current ? 250 : 1000,
+        );
+
+        restoredDraftRef.current = false;
+
+        return () => window.clearTimeout(timeout);
+    }, [data]);
+
+    useEffect(() => {
         const errorKeys = Object.keys(errors);
         if (errorKeys.length > 0) {
             const firstKey = errorKeys[0];
@@ -493,6 +634,164 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         return val !== "" && val !== false;
     }).length;
     const progressPercent = Math.round((filledRequired / requiredFields.length) * 100);
+    const hasServerErrors = Object.keys(errors).length > 0;
+
+    const sections = useMemo<StudentCreateSection[]>(
+        () => [
+            {
+                id: "record",
+                label: "Record",
+                description: isSHS ? "Type, status, and LRN" : "Type, status, and ID",
+                icon: UserIcon,
+                fields: ["student_type", "status", isSHS ? "lrn" : "student_id"],
+                requiredFields: ["student_type", "status", isSHS ? "lrn" : "student_id"],
+            },
+            {
+                id: "required",
+                label: "Core Info",
+                description: "Identity and academic placement",
+                icon: GraduationCap,
+                fields: [
+                    "first_name",
+                    "middle_name",
+                    "last_name",
+                    "suffix",
+                    "gender",
+                    "birth_date",
+                    "age",
+                    "email",
+                    "phone",
+                    "current_address",
+                    "permanent_address",
+                    isSHS ? "shs_strand_id" : "course_id",
+                    "academic_year",
+                ],
+                requiredFields: ["first_name", "last_name", "gender", "birth_date", isSHS ? "shs_strand_id" : "course_id", "academic_year"],
+            },
+            {
+                id: "contact",
+                label: "Contacts",
+                description: "Guardian, parent, and social contacts",
+                icon: Phone,
+                fields: [
+                    "personal_contact",
+                    "facebook_contact",
+                    "twitter",
+                    "instagram",
+                    "linkedin",
+                    "emergency_contact_name",
+                    "emergency_contact_phone",
+                    "emergency_contact_address",
+                    "emergency_contact_relationship",
+                    "father_occupation",
+                    "father_contact",
+                    "father_email",
+                    "mother_occupation",
+                    "mother_contact",
+                    "mother_email",
+                    "guardian_email",
+                    "family_address",
+                ],
+                requiredFields: [],
+            },
+            {
+                id: "family",
+                label: "Background",
+                description: "Family, personal, and education",
+                icon: School,
+                fields: [
+                    "fathers_name",
+                    "mothers_name",
+                    "birthplace",
+                    "civil_status",
+                    "nationality",
+                    "citizenship",
+                    "religion",
+                    "height",
+                    "weight",
+                    "elementary_school",
+                    "elementary_graduate_year",
+                    "elementary_school_address",
+                    "junior_high_school_name",
+                    "junior_high_graduation_year",
+                    "junior_high_school_address",
+                    "senior_high_name",
+                    "senior_high_graduate_year",
+                    "senior_high_address",
+                    "college_school",
+                    "college_course",
+                    "college_year_graduated",
+                    "vocational_school",
+                    "vocational_course",
+                    "vocational_year_graduated",
+                ],
+                requiredFields: [],
+            },
+            {
+                id: "reporting",
+                label: "Reporting",
+                description: "Compliance, income, status details",
+                icon: Banknote,
+                fields: [
+                    "region_of_origin",
+                    "ethnicity",
+                    "province_of_origin",
+                    "city_of_origin",
+                    "is_indigenous_person",
+                    "indigenous_group",
+                    "is_pwd",
+                    "pwd_type",
+                    "is_solo_parent",
+                    "is_senior_citizen",
+                    "is_magna_carta",
+                    "is_underprivileged",
+                    "is_first_generation",
+                    "income_bracket_mode",
+                    "use_same_parent_income",
+                    "family_income_bracket",
+                    "father_income_bracket",
+                    "mother_income_bracket",
+                    "scholarship_type",
+                    "scholarship_details",
+                    "employment_status",
+                    "employer_name",
+                    "job_position",
+                    "employment_date",
+                    "employed_by_institution",
+                    "attrition_category",
+                    "withdrawal_date",
+                    "dropout_date",
+                    "withdrawal_reason",
+                    "remarks",
+                ],
+                requiredFields: [],
+            },
+            {
+                id: "assets",
+                label: "Assets",
+                description: "Profile photo and signature",
+                icon: Camera,
+                fields: ["picture_1x1", "signature"],
+                requiredFields: [],
+            },
+        ],
+        [isSHS],
+    );
+
+    const sectionByField = useMemo(() => {
+        const mapped = new Map<keyof StudentCreateForm, SectionId>();
+
+        sections.forEach((section) => {
+            section.fields.forEach((field) => mapped.set(field, section.id));
+        });
+
+        return mapped;
+    }, [sections]);
+
+    const scrollToSection = (sectionId: SectionId) => {
+        setCollapsedSections((current) => ({ ...current, [sectionId]: false }));
+        document.getElementById(`student-section-${sectionId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
 
     const fieldError = (field: keyof StudentCreateForm) => (errors[field] ? <p className="text-destructive text-sm">{errors[field]}</p> : null);
 
@@ -506,6 +805,20 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
             setData(field, value as never);
         };
 
+    useEffect(() => {
+        const firstErrorKey = Object.keys(errors)[0] as keyof StudentCreateForm | undefined;
+
+        if (!firstErrorKey) {
+            setSubmitErrorSectionId(null);
+            return;
+        }
+
+        const sectionId = sectionByField.get(firstErrorKey) ?? "required";
+
+        setSubmitErrorSectionId(sectionId);
+        setCollapsedSections((current) => ({ ...current, [sectionId]: false }));
+    }, [errors, sectionByField]);
+
     const selectedIncomeMode = useMemo(() => {
         return options.income_modes.find((mode) => mode.value === data.income_bracket_mode) ?? options.income_modes[0] ?? null;
     }, [options.income_modes, data.income_bracket_mode]);
@@ -513,6 +826,59 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
     const flatCourses = useMemo<ReadonlyArray<Option>>(() => options.courses.flatMap((group) => group.items), [options.courses]);
 
     const activeIncomeBrackets = selectedIncomeMode?.brackets ?? [];
+
+    const selectedRegion = useMemo(
+        () => PHILIPPINE_REGIONS.find((region) => region.value === data.region_of_origin || region.label === data.region_of_origin) ?? null,
+        [data.region_of_origin],
+    );
+
+    const provinceOptions = useMemo(
+        () => (selectedRegion ? PHILIPPINE_PROVINCES.filter((province) => province.regionCode === selectedRegion.code) : []),
+        [selectedRegion],
+    );
+
+    const selectedProvince = useMemo(
+        () => provinceOptions.find((province) => province.name === data.province_of_origin) ?? null,
+        [data.province_of_origin, provinceOptions],
+    );
+
+    const cityOptions = useMemo(() => {
+        if (selectedProvince) {
+            return PHILIPPINE_CITIES_MUNICIPALITIES.filter((city) => city.provinceCode === selectedProvince.code);
+        }
+
+        if (selectedRegion && provinceOptions.length === 0) {
+            return PHILIPPINE_CITIES_MUNICIPALITIES.filter((city) => city.regionCode === selectedRegion.code && city.provinceCode === null);
+        }
+
+        return [];
+    }, [provinceOptions.length, selectedProvince, selectedRegion]);
+
+    const handleRegionChange = (value: string | null) => {
+        if (value === null) {
+            return;
+        }
+
+        setData("region_of_origin", value);
+        setData("province_of_origin", "");
+        setData("city_of_origin", "");
+    };
+
+    const handleProvinceChange = (value: string | null) => {
+        if (value === null) {
+            return;
+        }
+
+        setData("province_of_origin", value);
+        setData("city_of_origin", "");
+    };
+
+    const fillSchoolAddress =
+        (field: "elementary_school_address" | "junior_high_school_address" | "senior_high_address") => (option: SchoolOption) => {
+            if (option.address) {
+                setData(field, option.address);
+            }
+        };
 
     useEffect(() => {
         setData("family_income_bracket", "");
@@ -644,6 +1010,12 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
         formRef.current?.requestSubmit();
     };
 
+    const saveDraft = () => {
+        pendingDraftRestoreRef.current = false;
+        window.localStorage.setItem(STUDENT_CREATE_DRAFT_KEY, JSON.stringify(buildDraftPayload(data)));
+        toast.success("Student draft saved.");
+    };
+
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
 
@@ -661,7 +1033,11 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
 
         post(route("administrators.students.store"), {
             forceFormData: true,
+            onStart: () => {
+                setSubmitErrorSectionId(null);
+            },
             onSuccess: () => {
+                window.localStorage.removeItem(STUDENT_CREATE_DRAFT_KEY);
                 toast.success("Student created successfully");
             },
             onError: (formErrors) => {
@@ -677,69 +1053,31 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
             <Head title="Administrators - Create Student" />
 
             <TooltipProvider>
-                <form ref={formRef} onSubmit={submit} className="mx-auto max-w-6xl space-y-6 pb-10">
-                    <div className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 className="text-2xl font-semibold tracking-tight">Create Student</h1>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <form ref={formRef} onSubmit={submit} className="mx-auto max-w-6xl space-y-4 pb-10">
+                    <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Create Student</h1>
                                 <Badge variant="secondary">{isSHS ? "Senior High" : "College / Program"}</Badge>
                                 {!isSHS && data.student_id && <Badge variant="outline">ID {data.student_id}</Badge>}
-                                <span className="text-muted-foreground text-xs">
-                                    {filledRequired}/{requiredFields.length} req. fields
-                                </span>
+                                {hasServerErrors && (
+                                    <Badge variant="destructive" className="gap-1">
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                        Needs review
+                                    </Badge>
+                                )}
                             </div>
-                            <div className="bg-secondary mt-2 h-1.5 w-full max-w-xs rounded-full">
-                                <div className="bg-primary h-1.5 rounded-full transition-all duration-300" style={{ width: `${progressPercent}%` }} />
-                            </div>
+                            <p className="text-muted-foreground mt-1 text-sm">
+                                Enter the core record first, then let school history and reporting selectors reuse existing data.
+                            </p>
                         </div>
-                        <div className="flex gap-2">
-                            <Link
-                                href={route("administrators.students.index")}
-                                className={buttonVariants({ variant: "outline", className: "gap-2" })}
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Back
-                            </Link>
-                            <div className="flex gap-1">
-                                <Button type="button" disabled={processing} onClick={() => submitWithAction("view")}>
-                                    {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
-                                    {processing ? "Creating..." : "Submit & View"}
-                                </Button>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger
-                                        render={
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="icon"
-                                                disabled={processing}
-                                                aria-label="More create actions"
-                                            />
-                                        }
-                                    >
-                                        <ChevronDown className="h-4 w-4" />
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-64">
-                                        <DropdownMenuItem onClick={() => submitWithAction("view")} className="cursor-pointer">
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            Submit and View the record
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => submitWithAction("create_another")} className="cursor-pointer">
-                                            <UserPlus className="mr-2 h-4 w-4" />
-                                            Submit and create another one
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => submitWithAction("create_enrollment")} className="cursor-pointer">
-                                            <FilePlus2 className="mr-2 h-4 w-4" />
-                                            Submit and create an enrollment
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </div>
+                        <Link href={route("administrators.students.index")} className={buttonVariants({ variant: "outline", className: "gap-2" })}>
+                            <ArrowLeft className="h-4 w-4" />
+                            Back
+                        </Link>
                     </div>
 
-                    <Card>
+                    <Card id="student-section-record" className="scroll-mt-36">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-lg">
                                 <UserIcon className="text-primary h-5 w-5" />
@@ -785,22 +1123,12 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     <SelectTrigger id="status">
                                         <SelectValue>
                                             {(selectedValue: string) => {
-                                                const statusObj = options.statuses.find(
-                                                    (s) => s.value.toString() === selectedValue,
-                                                );
+                                                const statusObj = options.statuses.find((s) => s.value.toString() === selectedValue);
                                                 if (!statusObj) {
-                                                    return (
-                                                        <span className="text-muted-foreground">
-                                                            Select status
-                                                        </span>
-                                                    );
+                                                    return <span className="text-muted-foreground">Select status</span>;
                                                 }
                                                 return (
-                                                    <BadgeOptional
-                                                        variant={getStatusVariant(
-                                                            statusObj.value.toString(),
-                                                        )}
-                                                    >
+                                                    <BadgeOptional variant={getStatusVariant(statusObj.value.toString())}>
                                                         {statusObj.label}
                                                     </BadgeOptional>
                                                 );
@@ -809,17 +1137,8 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                     </SelectTrigger>
                                     <SelectContent alignItemWithTrigger={false}>
                                         {options.statuses.map((status) => (
-                                            <SelectItem
-                                                key={status.value}
-                                                value={status.value.toString()}
-                                            >
-                                                <BadgeOptional
-                                                    variant={getStatusVariant(
-                                                        status.value.toString(),
-                                                    )}
-                                                >
-                                                    {status.label}
-                                                </BadgeOptional>
+                                            <SelectItem key={status.value} value={status.value.toString()}>
+                                                <BadgeOptional variant={getStatusVariant(status.value.toString())}>{status.label}</BadgeOptional>
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -888,7 +1207,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
 
                     <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
                         <div className="space-y-6">
-                            <Card>
+                            <Card id="student-section-required" className="scroll-mt-36">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-lg">
                                         <GraduationCap className="text-primary h-5 w-5" />
@@ -905,7 +1224,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                 id="first_name"
                                                 value={data.first_name}
                                                 onChange={(event) => setData("first_name", event.target.value)}
-                                                onBlur={(event) => setData("first_name", capitalizeWords(event.target.value))}
+                                                onBlur={(event) => setData("first_name", formatPersonName(event.target.value))}
                                             />
                                             {fieldError("first_name")}
                                         </Field>
@@ -920,7 +1239,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                 id="middle_name"
                                                 value={data.middle_name}
                                                 onChange={(event) => setData("middle_name", event.target.value)}
-                                                onBlur={(event) => setData("middle_name", capitalizeWords(event.target.value))}
+                                                onBlur={(event) => setData("middle_name", formatPersonName(event.target.value))}
                                             />
                                         </Field>
                                         <Field>
@@ -931,7 +1250,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                 id="last_name"
                                                 value={data.last_name}
                                                 onChange={(event) => setData("last_name", event.target.value)}
-                                                onBlur={(event) => setData("last_name", capitalizeWords(event.target.value))}
+                                                onBlur={(event) => setData("last_name", formatPersonName(event.target.value))}
                                             />
                                             {fieldError("last_name")}
                                         </Field>
@@ -1185,7 +1504,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 </CardContent>
                             </Card>
 
-                            <Card>
+                            <Card id="student-section-family" className="scroll-mt-36">
                                 <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("family")}>
                                     <div className="flex items-center justify-between">
                                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -1213,6 +1532,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                 id="fathers_name"
                                                 value={data.fathers_name}
                                                 onChange={(value: string) => setData("fathers_name", value)}
+                                                onBlur={(value) => setData("fathers_name", formatPersonName(value))}
                                                 fieldName="fathers_name"
                                             />
                                         </Field>
@@ -1227,6 +1547,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                 id="mothers_name"
                                                 value={data.mothers_name}
                                                 onChange={(value: string) => setData("mothers_name", value)}
+                                                onBlur={(value) => setData("mothers_name", formatPersonName(value))}
                                                 fieldName="mothers_name"
                                             />
                                         </Field>
@@ -1360,11 +1681,12 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                         Optional
                                                     </BadgeOptional>
                                                 </div>
-                                                <AutocompleteFieldInput
+                                                <SchoolAutocompleteInput
                                                     id="elementary_school"
                                                     value={data.elementary_school}
                                                     onChange={(value: string) => setData("elementary_school", value)}
                                                     fieldName="elementary_school"
+                                                    onSelectOption={fillSchoolAddress("elementary_school_address")}
                                                     placeholder="Type or pick a school"
                                                 />
                                             </Field>
@@ -1406,11 +1728,12 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                         Optional
                                                     </BadgeOptional>
                                                 </div>
-                                                <AutocompleteFieldInput
+                                                <SchoolAutocompleteInput
                                                     id="junior_high_school_name"
                                                     value={data.junior_high_school_name}
                                                     onChange={(value: string) => setData("junior_high_school_name", value)}
                                                     fieldName="junior_high_school_name"
+                                                    onSelectOption={fillSchoolAddress("junior_high_school_address")}
                                                     placeholder="Type or pick a school"
                                                 />
                                             </Field>
@@ -1452,11 +1775,12 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                         Optional
                                                     </BadgeOptional>
                                                 </div>
-                                                <AutocompleteFieldInput
+                                                <SchoolAutocompleteInput
                                                     id="senior_high_name"
                                                     value={data.senior_high_name}
                                                     onChange={(value: string) => setData("senior_high_name", value)}
                                                     fieldName="senior_high_name"
+                                                    onSelectOption={fillSchoolAddress("senior_high_address")}
                                                     placeholder="Type or pick a school"
                                                 />
                                             </Field>
@@ -1498,7 +1822,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                         Optional
                                                     </BadgeOptional>
                                                 </div>
-                                                <AutocompleteFieldInput
+                                                <SchoolAutocompleteInput
                                                     id="college_school"
                                                     value={data.college_school}
                                                     onChange={(value: string) => setData("college_school", value)}
@@ -1544,7 +1868,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                         Optional
                                                     </BadgeOptional>
                                                 </div>
-                                                <AutocompleteFieldInput
+                                                <SchoolAutocompleteInput
                                                     id="vocational_school"
                                                     value={data.vocational_school}
                                                     onChange={(value: string) => setData("vocational_school", value)}
@@ -1588,7 +1912,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                 )}
                             </Card>
 
-                            <Card>
+                            <Card id="student-section-reporting" className="scroll-mt-36">
                                 <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("reporting")}>
                                     <div className="flex items-center justify-between">
                                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -1612,13 +1936,13 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                     Optional
                                                 </BadgeOptional>
                                             </div>
-                                            <Select value={data.region_of_origin} onValueChange={setSelectData("region_of_origin")}>
+                                            <Select value={data.region_of_origin} onValueChange={handleRegionChange}>
                                                 <SelectTrigger id="region_of_origin">
                                                     <SelectValue placeholder="Select region" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {options.regions.map((region) => (
-                                                        <SelectItem key={region.value} value={region.value.toString()}>
+                                                    {PHILIPPINE_REGIONS.map((region) => (
+                                                        <SelectItem key={region.code} value={region.value}>
                                                             {region.label}
                                                         </SelectItem>
                                                     ))}
@@ -1647,13 +1971,28 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                     Optional
                                                 </BadgeOptional>
                                             </div>
-                                            <AutocompleteFieldInput
-                                                id="province_of_origin"
+                                            <Select
                                                 value={data.province_of_origin}
-                                                onChange={(value: string) => setData("province_of_origin", value)}
-                                                fieldName="province_of_origin"
-                                                placeholder="Type or pick a province"
-                                            />
+                                                onValueChange={handleProvinceChange}
+                                                disabled={!selectedRegion || provinceOptions.length === 0}
+                                            >
+                                                <SelectTrigger id="province_of_origin">
+                                                    <SelectValue
+                                                        placeholder={
+                                                            selectedRegion && provinceOptions.length === 0
+                                                                ? "No province required"
+                                                                : "Select province"
+                                                        }
+                                                    />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {provinceOptions.map((province) => (
+                                                        <SelectItem key={province.code} value={province.name}>
+                                                            {province.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </Field>
                                         <Field>
                                             <div className="flex items-center justify-between gap-2">
@@ -1662,13 +2001,22 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                     Optional
                                                 </BadgeOptional>
                                             </div>
-                                            <AutocompleteFieldInput
-                                                id="city_of_origin"
+                                            <Select
                                                 value={data.city_of_origin}
-                                                onChange={(value: string) => setData("city_of_origin", value)}
-                                                fieldName="city_of_origin"
-                                                placeholder="Type or pick a city"
-                                            />
+                                                onValueChange={setSelectData("city_of_origin")}
+                                                disabled={!selectedRegion || cityOptions.length === 0}
+                                            >
+                                                <SelectTrigger id="city_of_origin">
+                                                    <SelectValue placeholder="Select city or municipality" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {cityOptions.map((city) => (
+                                                        <SelectItem key={city.code} value={city.name}>
+                                                            {city.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </Field>
                                         <div className="flex items-center gap-3 rounded-md border p-3 md:col-span-2">
                                             <Checkbox
@@ -2102,7 +2450,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                         </div>
 
                         <div className="space-y-6">
-                            <Card>
+                            <Card id="student-section-contact" className="scroll-mt-36">
                                 <CardHeader className="cursor-pointer select-none" onClick={() => toggleSection("contact")}>
                                     <div className="flex items-center justify-between">
                                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -2203,6 +2551,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                                                 id="emergency_contact_name"
                                                 value={data.emergency_contact_name}
                                                 onChange={(value: string) => setData("emergency_contact_name", value)}
+                                                onBlur={(value) => setData("emergency_contact_name", formatPersonName(value))}
                                                 fieldName="emergency_contact_name"
                                             />
                                         </Field>
@@ -2401,7 +2750,7 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
                         </div>
 
                         {/* Right sidebar: Picture & Signature */}
-                        <div className="space-y-6">
+                        <div id="student-section-assets" className="scroll-mt-36 space-y-6">
                             {flags.studentAvatarUpload && (
                                 <Card className="overflow-hidden">
                                     <CardHeader className="pb-3">
@@ -2536,21 +2885,49 @@ export default function AdministratorStudentCreate({ user, options }: CreateStud
 
                     {/* Sticky bottom bar */}
                     <div className="bg-background/95 sticky bottom-0 z-10 -mx-4 -mb-6 border-t px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
-                        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-                            <div className="flex items-center gap-3 text-sm">
-                                <span className="text-muted-foreground hidden sm:inline">
-                                    {filledRequired}/{requiredFields.length} required fields complete
-                                </span>
-                                <div className="bg-secondary h-1.5 w-24 rounded-full sm:w-32">
-                                    <div
-                                        className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                                        style={{ width: `${progressPercent}%` }}
-                                    />
+                        <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0 space-y-2 text-sm">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <span className="text-muted-foreground">
+                                        {filledRequired}/{requiredFields.length} required fields complete
+                                    </span>
+                                    <div className="bg-secondary h-1.5 w-28 rounded-full sm:w-36">
+                                        <div
+                                            className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                                            style={{ width: `${progressPercent}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-xs font-medium tabular-nums">{progressPercent}%</span>
+                                    {submitErrorSectionId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => scrollToSection(submitErrorSectionId)}
+                                            className="text-destructive inline-flex items-center gap-1 text-xs font-medium hover:underline"
+                                        >
+                                            <AlertCircle className="h-3.5 w-3.5" />
+                                            Fix {sections.find((section) => section.id === submitErrorSectionId)?.label}
+                                        </button>
+                                    )}
                                 </div>
-                                <span className="text-xs font-medium tabular-nums">{progressPercent}%</span>
+                                {progress && (
+                                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                                        <span className="text-primary font-medium">Uploading attachments</span>
+                                        <div className="bg-secondary h-1.5 w-32 rounded-full">
+                                            <div
+                                                className="bg-primary h-1.5 rounded-full transition-all duration-300"
+                                                style={{ width: `${progress.percentage}%` }}
+                                            />
+                                        </div>
+                                        <span className="tabular-nums">{progress.percentage}%</span>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-muted-foreground hidden text-xs lg:inline">Ctrl+Enter to submit</span>
+                                <Button type="button" variant="outline" disabled={processing} onClick={saveDraft}>
+                                    <Save className="h-4 w-4" />
+                                    Save draft
+                                </Button>
                                 <div className="flex gap-1">
                                     <Button type="button" disabled={processing} onClick={() => submitWithAction("view")}>
                                         {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}

@@ -27,6 +27,13 @@ function studentCreatePayload(Course $course, array $overrides = []): array
     ], $overrides);
 }
 
+function insertStudentEducationHistory(array $attributes): void
+{
+    $columns = array_flip(Schema::getColumnListing('student_education_info'));
+
+    DB::table('student_education_info')->insert(array_intersect_key($attributes, $columns));
+}
+
 it('displays active and inactive courses correctly on student create page', function (): void {
     $user = User::factory()->create(['role' => UserRole::Admin]);
 
@@ -51,12 +58,15 @@ it('displays active and inactive courses correctly on student create page', func
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/students/create', false)
-            ->has('options.courses', 2)
-            ->where('options.courses.0.value', $activeCourse->id)
-            ->where('options.courses.0.is_active', true)
-            ->where('options.courses.1.value', $inactiveCourse->id)
-            ->where('options.courses.1.is_active', false)
-            ->where('options.courses.1.label', 'INACTIVE - Inactive Course (Inactive)')
+            ->where('options.courses', function ($courseGroups) use ($activeCourse, $inactiveCourse): bool {
+                $courses = $courseGroups
+                    ->flatMap(fn (array $group): array => $group['items'])
+                    ->keyBy('value');
+
+                return $courses->get($activeCourse->id)['is_active'] === true
+                    && $courses->get($inactiveCourse->id)['is_active'] === false
+                    && $courses->get($inactiveCourse->id)['label'] === 'INACTIVE - Inactive Course (Inactive)';
+            })
             ->has('options.religions', 2)
             ->where('options.religions.0.value', "Baha'i Faith")
             ->where('options.religions.0.label', "Baha'i Faith")
@@ -67,6 +77,62 @@ it('displays active and inactive courses correctly on student create page', func
             ->where('options.income_modes.1.value', 'annual')
             ->where('options.income_modes.1.brackets.0.value', 'below_250k')
         );
+});
+
+it('finds senior high autocomplete values from compatible senior high school columns', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $hasLegacySeniorHighSchool = Schema::hasColumn('student_education_info', 'senior_high_school');
+    $hasSeniorHighName = Schema::hasColumn('student_education_info', 'senior_high_name');
+
+    insertStudentEducationHistory([
+        ($hasLegacySeniorHighSchool ? 'senior_high_school' : 'senior_high_name') => 'Baguio Legacy Senior High School',
+    ]);
+    insertStudentEducationHistory([
+        ($hasSeniorHighName ? 'senior_high_name' : 'senior_high_school') => 'University of Baguio Senior High',
+    ]);
+
+    $response = actingAs($user)->getJson(route('administrators.students.field-values', [
+        'field' => 'senior_high_name',
+        'search' => 'baguio',
+    ]));
+
+    $response
+        ->assertOk()
+        ->assertJsonFragment(['Baguio Legacy Senior High School'])
+        ->assertJsonFragment(['University of Baguio Senior High']);
+});
+
+it('returns school autocomplete options with paired addresses', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $seniorHighColumn = Schema::hasColumn('student_education_info', 'senior_high_name')
+        ? 'senior_high_name'
+        : 'senior_high_school';
+
+    insertStudentEducationHistory([
+        $seniorHighColumn => 'Baguio City National High School',
+        'senior_high_address' => 'Governor Pack Road, Baguio City',
+    ]);
+
+    $response = actingAs($user)->getJson(route('administrators.students.education-school-options', [
+        'field' => 'senior_high_name',
+        'search' => 'baguio',
+    ]));
+
+    $response->assertOk();
+
+    if (! Schema::hasColumn('student_education_info', 'senior_high_address')) {
+        $response->assertJsonFragment([
+            'name' => 'Baguio City National High School',
+            'address' => null,
+        ]);
+
+        return;
+    }
+
+    $response->assertJsonFragment([
+        'name' => 'Baguio City National High School',
+        'address' => 'Governor Pack Road, Baguio City',
+    ]);
 });
 
 it('stores related student information from the create page', function (): void {
