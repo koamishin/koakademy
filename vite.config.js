@@ -75,6 +75,7 @@ export default defineConfig({
         }),
     ],
     resolve: {
+        dedupe: ["react", "react-dom"],
         alias: [
             { find: "@/components", replacement: path.resolve(__dirname, "resources/js/components") },
             { find: "@/context", replacement: path.resolve(__dirname, "resources/js/Context") },
