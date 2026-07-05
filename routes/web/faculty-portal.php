@@ -51,6 +51,7 @@ Route::middleware(['auth', 'faculty.verified', 'faculty.only', 'ensure.feature']
 
             return Inertia::render('faculty/dashboard', [
                 'user' => [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'avatar' => $faculty ? $faculty->getFilamentAvatarUrl() : ($user->avatar_url ?? null),

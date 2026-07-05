@@ -16,7 +16,18 @@ export interface OnboardingProgress {
     isDismissed: boolean;
     startedAt?: string;
     completedAt?: string;
+    lastSeenAt?: string;
 }
+
+type StoredOnboardingProgress = Partial<OnboardingProgress> & {
+    completed_steps?: string[];
+    checklist_state?: Record<string, boolean>;
+    current_step_index?: number;
+    is_dismissed?: boolean;
+    started_at?: string;
+    completed_at?: string;
+    last_seen_at?: string;
+};
 
 interface OnboardingContextValue {
     variant: string;
@@ -35,6 +46,7 @@ interface OnboardingContextValue {
     completeStep: (stepId: string) => void;
     toggleChecklistItem: (itemId: string) => void;
     dismissOnboarding: () => void;
+    finishOnboarding: (stepId?: string) => void;
     trackEvent: (event: string, metadata?: Record<string, unknown>) => void;
 }
 
@@ -55,6 +67,22 @@ interface OnboardingProviderProps {
     checklist: OnboardingChecklistItem[];
     totalSteps?: number; // Optional, defaults to 100 to allow dynamic steps
     enabled?: boolean;
+}
+
+function normalizeProgress(progress?: StoredOnboardingProgress | null): OnboardingProgress | null {
+    if (!progress) {
+        return null;
+    }
+
+    return {
+        completedSteps: progress.completedSteps ?? progress.completed_steps ?? [],
+        checklistState: progress.checklistState ?? progress.checklist_state ?? {},
+        currentStepIndex: progress.currentStepIndex ?? progress.current_step_index ?? 0,
+        isDismissed: progress.isDismissed ?? progress.is_dismissed ?? false,
+        startedAt: progress.startedAt ?? progress.started_at,
+        completedAt: progress.completedAt ?? progress.completed_at,
+        lastSeenAt: progress.lastSeenAt ?? progress.last_seen_at,
+    };
 }
 
 export function OnboardingProvider({
@@ -94,11 +122,13 @@ export function OnboardingProvider({
                 });
 
                 if (response.ok) {
-                    const data = (await response.json()) as { progress?: OnboardingProgress };
-                    if (data.progress) {
-                        setProgress(data.progress);
-                        setCurrentStepIndex(data.progress.currentStepIndex ?? 0);
-                        if (data.progress.isDismissed) {
+                    const data = (await response.json()) as { progress?: StoredOnboardingProgress };
+                    const loadedProgress = normalizeProgress(data.progress);
+
+                    if (loadedProgress) {
+                        setProgress(loadedProgress);
+                        setCurrentStepIndex(loadedProgress.currentStepIndex ?? 0);
+                        if (loadedProgress.isDismissed) {
                             setIsOpen(false);
                         }
                         setIsLoading(false);
@@ -113,7 +143,14 @@ export function OnboardingProvider({
             const stored = window.localStorage.getItem(storageKey);
             if (stored) {
                 try {
-                    const parsed = JSON.parse(stored) as OnboardingProgress;
+                    const parsed = normalizeProgress(JSON.parse(stored) as StoredOnboardingProgress);
+
+                    if (!parsed) {
+                        setIsOpen(true);
+                        setIsLoading(false);
+                        return;
+                    }
+
                     setProgress(parsed);
                     setCurrentStepIndex(parsed.currentStepIndex ?? 0);
                     if (parsed.isDismissed) {
@@ -222,6 +259,22 @@ export function OnboardingProvider({
         setIsOpen(false);
     }, [progress, persistProgress]);
 
+    const finishOnboarding = useCallback(
+        (stepId?: string) => {
+            const completedSteps = stepId ? [...new Set([...progress.completedSteps, stepId])] : progress.completedSteps;
+            const updated = {
+                ...progress,
+                completedSteps,
+                currentStepIndex,
+                isDismissed: true,
+            };
+
+            persistProgress(updated);
+            setIsOpen(false);
+        },
+        [currentStepIndex, progress, persistProgress]
+    );
+
     const trackEvent = useCallback((event: string, metadata?: Record<string, unknown>) => {
         // Analytics tracking - can be integrated with analytics service
         if (typeof window !== "undefined" && "gtag" in window) {
@@ -257,6 +310,7 @@ export function OnboardingProvider({
             completeStep,
             toggleChecklistItem,
             dismissOnboarding,
+            finishOnboarding,
             trackEvent,
         }),
         [
@@ -276,6 +330,7 @@ export function OnboardingProvider({
             completeStep,
             toggleChecklistItem,
             dismissOnboarding,
+            finishOnboarding,
             trackEvent,
         ]
     );

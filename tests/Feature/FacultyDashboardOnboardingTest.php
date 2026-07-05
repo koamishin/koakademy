@@ -24,6 +24,7 @@ it('marks faculty users with no onboarding progress as new on dashboard props', 
         ->assertOk()
         ->assertInertia(fn (Assert $page): Assert => $page
             ->component('faculty/dashboard')
+            ->where('user.id', $user->id)
             ->where('is_new_user', true)
         );
 });

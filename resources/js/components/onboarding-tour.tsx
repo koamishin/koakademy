@@ -129,7 +129,7 @@ function computeTooltipPosition(
 }
 
 export function OnboardingTour({ steps, className }: OnboardingTourProps) {
-    const { isOpen, currentStepIndex, nextStep, previousStep, dismissOnboarding, completeStep, trackEvent } = useOnboarding();
+    const { isOpen, currentStepIndex, nextStep, previousStep, dismissOnboarding, finishOnboarding, completeStep, trackEvent } = useOnboarding();
 
     const currentStep = steps[currentStepIndex];
     const isLastStep = currentStepIndex === steps.length - 1;
@@ -177,14 +177,14 @@ export function OnboardingTour({ steps, className }: OnboardingTourProps) {
     }, [missingTargetMs, currentStep, completeStep, nextStep]);
 
     const handleNext = useCallback(() => {
-        if (currentStep) completeStep(currentStep.id);
         trackEvent(isLastStep ? "completed" : "step_advanced", { step: currentStepIndex + 1 });
         if (isLastStep) {
-            dismissOnboarding();
+            finishOnboarding(currentStep?.id);
         } else {
+            if (currentStep) completeStep(currentStep.id);
             nextStep();
         }
-    }, [isLastStep, currentStep, completeStep, nextStep, dismissOnboarding, trackEvent, currentStepIndex]);
+    }, [isLastStep, currentStep, completeStep, nextStep, finishOnboarding, trackEvent, currentStepIndex]);
 
     const handlePrev = useCallback(() => {
         trackEvent("step_back", { step: currentStepIndex - 1 });
