@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.1.4",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.4",
-  "commit": "54ac5c0d674a80781a8d176693af1c329f813db0",
+  "version": "1.10.0-dev.1.5",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.5",
+  "commit": "e24f9663787befdd531ed957639ebc7caad19322",
   "branch": "master",
-  "timestamp": "2026-07-05T02:02:43Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28726134966",
-  "release_type": "chore",
+  "timestamp": "2026-07-05T08:06:36Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28734073501",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.10.0-dev.1.4 - chore: update deps",
-    "previous": "1.10.0-dev.1.3"
+    "current": "Version 1.10.0-dev.1.5 - Fix onboarding persistence across dashboards",
+    "previous": "1.10.0-dev.1.4"
   },
   "metadata": {
     "author": "yukazakiri",
