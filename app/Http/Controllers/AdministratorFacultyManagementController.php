@@ -25,6 +25,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -584,7 +585,7 @@ final class AdministratorFacultyManagementController extends Controller
                 ->from('users')
                 ->whereColumn('users.email', 'faculty.email')
                 ->where(function ($nested): void {
-                    $nested->whereColumn('users.record_id', 'faculty.id')
+                    $nested->whereColumn('users.record_id', DB::raw('cast(faculty.id as varchar)'))
                         ->orWhereColumn('users.faculty_id_number', 'faculty.faculty_id_number');
                 });
         });
@@ -597,7 +598,7 @@ final class AdministratorFacultyManagementController extends Controller
                 ->from('users')
                 ->whereColumn('users.email', 'faculty.email')
                 ->where(function ($nested): void {
-                    $nested->whereColumn('users.record_id', 'faculty.id')
+                    $nested->whereColumn('users.record_id', DB::raw('cast(faculty.id as varchar)'))
                         ->orWhereColumn('users.faculty_id_number', 'faculty.faculty_id_number');
                 });
         });
