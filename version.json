@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.1.5",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.5",
-  "commit": "e24f9663787befdd531ed957639ebc7caad19322",
+  "version": "1.10.0-dev.1.6",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.6",
+  "commit": "c20c25ea19e29e03b917a576a633797b8824d06b",
   "branch": "master",
-  "timestamp": "2026-07-05T08:06:36Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28734073501",
+  "timestamp": "2026-07-05T08:56:52Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28735308253",
   "release_type": "patch",
   "changelog": {
-    "current": "Version 1.10.0-dev.1.5 - Fix onboarding persistence across dashboards",
-    "previous": "1.10.0-dev.1.4"
+    "current": "Version 1.10.0-dev.1.6 - Feat: add education-school options route and UI",
+    "previous": "1.10.0-dev.1.5"
   },
   "metadata": {
     "author": "yukazakiri",
