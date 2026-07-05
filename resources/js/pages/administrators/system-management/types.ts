@@ -12,6 +12,7 @@ export type SystemManagementSectionKey =
     | "api"
     | "notifications"
     | "grading"
+    | "identifiers"
     | "pulse";
 
 export interface GradingConfigPayload {
@@ -285,6 +286,16 @@ export interface ApiManagementConfig {
     public_settings_fields: string[];
 }
 
+export interface IdSequenceConfig {
+    key: "student" | "staff";
+    label: string;
+    start_number: number;
+    next_number: number;
+    increment_by: number;
+    padding: number | null;
+    preview: string;
+}
+
 export interface PublicApiFieldDefinition {
     label: string;
     description: string;
@@ -330,6 +341,10 @@ export interface SystemManagementPageProps {
     enrollment_stats: EnrollmentStatsSettings;
     api_management: ApiManagementConfig;
     grading_config: GradingConfigPayload;
+    id_sequences: {
+        student: IdSequenceConfig;
+        staff: IdSequenceConfig;
+    };
     courses_with_subjects: CourseWithSubjects[];
     available_enrollment_courses?: EnrollmentCourseOption[];
     public_api_url: string;

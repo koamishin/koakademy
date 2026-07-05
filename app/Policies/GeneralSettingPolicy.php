@@ -120,6 +120,16 @@ final class GeneralSettingPolicy
         return $this->canUpdateSection($user, 'grading');
     }
 
+    public function viewIdentifiers(User $user): bool
+    {
+        return $this->canViewSection($user, 'identifiers');
+    }
+
+    public function updateIdentifiers(User $user): bool
+    {
+        return $this->canUpdateSection($user, 'identifiers');
+    }
+
     private function canViewSection(User $user, string $section): bool
     {
         if ($this->hasFullSystemManagementAccess($user)) {

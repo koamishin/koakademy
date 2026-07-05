@@ -343,6 +343,7 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/system-management/mail', [App\Http\Controllers\AdministratorSystemManagementController::class, 'mail'])->name('system-management.mail.index');
         Route::get('/system-management/api', [App\Http\Controllers\AdministratorSystemManagementController::class, 'api'])->name('system-management.api.index');
         Route::get('/system-management/pulse', [App\Http\Controllers\AdministratorSystemManagementController::class, 'pulse'])->name('system-management.pulse.index');
+        Route::get('/system-management/identifiers', [App\Http\Controllers\AdministratorSystemManagementController::class, 'identifiers'])->name('system-management.identifiers.index');
         Route::post('/system-management/school', [App\Http\Controllers\AdministratorSystemManagementController::class, 'storeSchool'])->name('system-management.school.store');
         Route::put('/system-management/school', [App\Http\Controllers\AdministratorSystemManagementController::class, 'updateSchool'])->name('system-management.school.update');
         Route::put('/system-management/school-details', [App\Http\Controllers\AdministratorSystemManagementController::class, 'updateSchoolDetails'])->name('system-management.school-details.update');
@@ -364,6 +365,7 @@ Route::middleware(['auth', 'administrators.only'])
         Route::put('/system-management/notifications', [App\Http\Controllers\AdministratorSystemManagementController::class, 'updateNotificationChannels'])->name('system-management.notifications.update');
         Route::get('/system-management/grading', [App\Http\Controllers\AdministratorSystemManagementController::class, 'grading'])->name('system-management.grading.index');
         Route::put('/system-management/grading', [App\Http\Controllers\AdministratorSystemManagementController::class, 'updateGrading'])->name('system-management.grading.update');
+        Route::put('/system-management/identifiers', [App\Http\Controllers\AdministratorSystemManagementController::class, 'updateIdentifiers'])->name('system-management.identifiers.update');
 
         // Help Tickets
         Route::get('/help-tickets', [App\Http\Controllers\AdministratorHelpTicketController::class, 'index'])->name('help-tickets.index');

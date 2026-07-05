@@ -19,6 +19,7 @@ use App\Models\FacultyDeadline;
 use App\Models\User;
 use App\Notifications\AdminFacultyNoticeNotification;
 use App\Services\ClassAssignmentService;
+use App\Services\IdentifierGenerator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -187,6 +188,11 @@ final class AdministratorFacultyManagementController extends Controller
     public function store(StoreFacultyRequest $request): RedirectResponse
     {
         $data = $request->validated();
+        $identifierGenerator = app(IdentifierGenerator::class);
+
+        if (($data['faculty_id_number'] ?? null) === $identifierGenerator->previewStaffId()) {
+            $data['faculty_id_number'] = $identifierGenerator->generateStaffId();
+        }
 
         if ($request->hasFile('photo')) {
             $data['photo_url'] = $request->file('photo')->storePublicly('faculty-photos', 'public');
@@ -973,19 +979,7 @@ final class AdministratorFacultyManagementController extends Controller
 
     private function generateNextFacultyIdNumber(): string
     {
-        $latestFaculty = Faculty::query()
-            ->whereNotNull('faculty_id_number')
-            ->whereRaw("faculty_id_number ~ '^[0-9]+$'")
-            ->orderByRaw('CAST(faculty_id_number AS INTEGER) DESC')
-            ->first();
-
-        if (! $latestFaculty || ! $latestFaculty->faculty_id_number) {
-            return '1';
-        }
-
-        $latestId = (int) $latestFaculty->faculty_id_number;
-
-        return (string) ($latestId + 1);
+        return app(IdentifierGenerator::class)->previewStaffId();
     }
 
     private function getUserProps(): array

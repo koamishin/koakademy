@@ -12,6 +12,7 @@ use App\Enums\StudentType;
 use App\Models\Concerns\BelongsToSchool;
 use App\Models\Concerns\HasAcademicPeriodScope;
 use App\Services\GeneralSettingsService;
+use App\Services\IdentifierGenerator;
 use Exception;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
@@ -290,60 +291,11 @@ final class Student extends Model
     ];
 
     /**
-     * Generate the next available 6-digit student ID.
-     * Uses prefixes based on student type: College (2), SHS (3), TESDA (4)
-     * Generates ID in format: [prefix][5-digit number] = 6-digit total
+     * Generate the next available configured student ID.
      */
     public static function generateNextId(?StudentType $studentType = null): int
     {
-        // Default to College if no type specified
-        if (! $studentType instanceof StudentType) {
-            $studentType = StudentType::College;
-        }
-
-        if ($studentType === StudentType::College) {
-            $minId = 200000;
-            $maxId = 209999; // IDs must start with 20
-        } else {
-            $prefix = $studentType->getIdPrefix();
-            $minId = (int) ($prefix.'00000');
-            $maxId = (int) ($prefix.'99999');
-        }
-
-        try {
-            // Find the highest existing student_id for this prefix
-            $query = self::withTrashed()
-                ->where('student_id', '>=', $minId)
-                ->where('student_id', '<=', $maxId);
-
-            if ($studentType === StudentType::College) {
-                $query->whereRaw('LENGTH(CAST(student_id AS VARCHAR)) = 6');
-            }
-
-            $maxStudentId = $query->max('student_id');
-
-            $nextId = $maxStudentId ? (int) $maxStudentId + 1 : $minId;
-
-            // Validate that the generated ID is not a duplicate
-            while (self::withTrashed()->where('student_id', $nextId)->exists()) {
-                $nextId++;
-            }
-
-            // Ensure we don't exceed the range for this type
-            if ($nextId > $maxId) {
-                throw new Exception("No available student IDs in range {$minId}-{$maxId} for student type {$studentType->value}");
-            }
-
-            return $nextId;
-        } catch (Exception $e) {
-            Log::error('Error generating student ID', [
-                'error' => $e->getMessage(),
-                'student_type' => $studentType->value,
-            ]);
-
-            // Fallback: return minimum ID for the type
-            return $minId;
-        }
+        return app(IdentifierGenerator::class)->generateStudentId();
     }
 
     /**

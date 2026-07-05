@@ -31,6 +31,7 @@ use App\Models\StudentTuition;
 use App\Models\Subject;
 use App\Models\SubjectEnrollment;
 use App\Services\GeneralSettingsService;
+use App\Services\IdentifierGenerator;
 use App\Services\StudentIdUpdateService;
 use App\Settings\SiteSettings;
 use Exception;
@@ -821,6 +822,12 @@ final class AdministratorStudentManagementController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $identifierGenerator = app(IdentifierGenerator::class);
+
+        if ($request->input('student_type') !== StudentType::SeniorHighSchool->value && blank($request->input('student_id'))) {
+            $request->merge(['student_id' => $identifierGenerator->previewStudentId()]);
+        }
+
         $validated = $request->validate([
             'student_type' => ['required', Rule::enum(StudentType::class)],
             'first_name' => ['required', 'string', 'max:100'],
@@ -949,7 +956,7 @@ final class AdministratorStudentManagementController extends Controller
             $validated['guardian_relationship'] = $validated['emergency_contact_relationship'];
         }
 
-        $student = DB::transaction(function () use ($validated): Student {
+        $student = DB::transaction(function () use ($identifierGenerator, $validated): Student {
             $studentType = StudentType::from($validated['student_type']);
             $status = StudentStatus::from($validated['status']);
             $birthDate = Carbon::parse($validated['birth_date']);
@@ -1011,7 +1018,10 @@ final class AdministratorStudentManagementController extends Controller
                 $student->student_id = $validated['lrn'];
                 $student->shs_strand_id = $validated['shs_strand_id'];
             } else {
-                $student->student_id = $validated['student_id'];
+                $submittedStudentId = (int) $validated['student_id'];
+                $student->student_id = $submittedStudentId === $identifierGenerator->previewStudentId()
+                    ? $identifierGenerator->generateStudentId()
+                    : $submittedStudentId;
                 $student->course_id = $validated['course_id'];
             }
 
@@ -1068,7 +1078,7 @@ final class AdministratorStudentManagementController extends Controller
         ]);
     }
 
-    public function generateId(Request $request): JsonResponse
+    public function generateId(Request $request, IdentifierGenerator $identifierGenerator): JsonResponse
     {
         $type = StudentType::tryFrom($request->query('type'));
 
@@ -1076,7 +1086,11 @@ final class AdministratorStudentManagementController extends Controller
             return response()->json(['id' => null], 400);
         }
 
-        $nextId = Student::generateNextId($type);
+        if ($type === StudentType::SeniorHighSchool) {
+            return response()->json(['id' => null]);
+        }
+
+        $nextId = $identifierGenerator->previewStudentId();
 
         return response()->json(['id' => $nextId]);
     }

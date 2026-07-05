@@ -53,7 +53,7 @@ it('renders faculty operations index with filters sorting and capped pagination 
         ]))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-            ->component('administrators/faculties/index')
+            ->component('administrators/faculties/index', false)
             ->where('filters.search', 'Ada')
             ->where('filters.department', 'CCS')
             ->where('filters.sort', 'department')

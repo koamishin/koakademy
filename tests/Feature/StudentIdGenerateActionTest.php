@@ -144,14 +144,14 @@ it('handles mixed student types sharing same prefix correctly', function () {
         'status' => 'enrolled',
     ]);
 
-    // Test generation for each type - should all find the highest ID + 1
+    // Test generation for each type - all non-SHS types share the configured student sequence.
     $collegeId = Student::generateNextId(StudentType::College);
     $tesdaId = Student::generateNextId(StudentType::TESDA);
     $dhrtId = Student::generateNextId(StudentType::DHRT);
 
     expect($collegeId)->toBe(200103);
-    expect($tesdaId)->toBe(200103);
-    expect($dhrtId)->toBe(200103);
+    expect($tesdaId)->toBe(200104);
+    expect($dhrtId)->toBe(200105);
 
     // All should be unique 6-digit numbers starting with 2
     expect(mb_strlen((string) $collegeId))->toBe(6);

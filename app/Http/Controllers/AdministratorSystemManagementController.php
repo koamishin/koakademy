@@ -19,6 +19,7 @@ use App\Services\AnalyticsSettingsService;
 use App\Services\EnrollmentPipelineService;
 use App\Services\GeneralSettingsService;
 use App\Services\GradingSystemService;
+use App\Services\IdentifierGenerator;
 use App\Services\LogoConversionService;
 use App\Services\SocialiteProviderService;
 use App\Settings\SiteSettings;
@@ -102,6 +103,36 @@ final class AdministratorSystemManagementController extends Controller
     public function grading(): Response
     {
         return $this->renderSystemManagementPage('administrators/system-management/grading', 'grading', 'viewGrading');
+    }
+
+    public function identifiers(): Response
+    {
+        return $this->renderSystemManagementPage('administrators/system-management/identifiers', 'identifiers', 'viewIdentifiers');
+    }
+
+    public function updateIdentifiers(Request $request, IdentifierGenerator $identifierGenerator): RedirectResponse
+    {
+        $this->authorize('updateIdentifiers', GeneralSetting::class);
+
+        $validated = $request->validate([
+            'student' => ['required', 'array:start_number,next_number,increment_by,padding'],
+            'student.start_number' => ['required', 'integer', 'min:1', 'max:999999'],
+            'student.next_number' => ['required', 'integer', 'min:1', 'max:999999'],
+            'student.increment_by' => ['required', 'integer', 'min:1', 'max:1000'],
+            'student.padding' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'staff' => ['required', 'array:start_number,next_number,increment_by,padding'],
+            'staff.start_number' => ['required', 'integer', 'min:1', 'max:999999999'],
+            'staff.next_number' => ['required', 'integer', 'min:1', 'max:999999999'],
+            'staff.increment_by' => ['required', 'integer', 'min:1', 'max:1000'],
+            'staff.padding' => ['nullable', 'integer', 'min:1', 'max:12'],
+        ]);
+
+        $identifierGenerator->updateConfiguration([
+            IdentifierGenerator::Student => $validated['student'],
+            IdentifierGenerator::Staff => $validated['staff'],
+        ]);
+
+        return Redirect::back()->with('success', 'Identifier sequences updated successfully.');
     }
 
     public function updateGrading(Request $request): RedirectResponse
@@ -895,6 +926,7 @@ final class AdministratorSystemManagementController extends Controller
             'enrollment_stats' => $this->enrollmentPipelineService->getStatsConfiguration(),
             'api_management' => $generalSettingsService->getApiManagementConfig(),
             'grading_config' => app(GradingSystemService::class)->getConfig(),
+            'id_sequences' => app(IdentifierGenerator::class)->configuration(),
             'courses_with_subjects' => app(GradingSystemService::class)->getCoursesWithSubjects(),
             'available_enrollment_courses' => Course::query()
                 ->where('is_active', true)
@@ -977,6 +1009,7 @@ final class AdministratorSystemManagementController extends Controller
                 'api' => 'updateApi',
                 'notifications' => 'updateNotifications',
                 'grading' => 'updateGrading',
+                'identifiers' => 'updateIdentifiers',
                 default => 'viewAny',
             }, GeneralSetting::class);
 
@@ -991,6 +1024,7 @@ final class AdministratorSystemManagementController extends Controller
                 'api' => 'viewApi',
                 'notifications' => 'viewNotifications',
                 'grading' => 'viewGrading',
+                'identifiers' => 'viewIdentifiers',
                 'pulse' => 'viewPulse',
             }, GeneralSetting::class);
 
