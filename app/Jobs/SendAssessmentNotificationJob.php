@@ -36,21 +36,28 @@ final class SendAssessmentNotificationJob implements ShouldQueue
 
     private string $jobId;
 
+    private int $enrollmentId;
+
+    private ?StudentEnrollment $studentEnrollment = null;
+
     /**
      * Create a new job instance.
      */
     public function __construct(
-        private StudentEnrollment $studentEnrollment,
+        StudentEnrollment|int $studentEnrollment,
         ?string $jobId = null
     ) {
+        $this->enrollmentId = $studentEnrollment instanceof StudentEnrollment
+            ? (int) $studentEnrollment->getKey()
+            : $studentEnrollment;
         $this->jobId = $jobId ?? uniqid('assessment_', true);
         $this->onConnection((string) config('queue.assessment_notification_connection', config('queue.default')));
         $this->onQueue((string) config('queue.assessment_notification_queue', 'default'));
 
         Log::info('SendAssessmentNotificationJob created', [
-            'enrollment_id' => $this->studentEnrollment->id,
+            'enrollment_id' => $this->enrollmentId,
             'job_id' => $this->jobId,
-            'student_email' => $this->studentEnrollment->student?->email,
+            'student_email' => $studentEnrollment instanceof StudentEnrollment ? $studentEnrollment->student?->email : null,
             'connection' => $this->connection,
             'queue' => $this->queue,
         ]);
@@ -62,15 +69,17 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     public function handle(): void
     {
         try {
+            $this->studentEnrollment = $this->freshStudentEnrollment();
+
             Log::info('Starting assessment notification job', [
                 'job_id' => $this->jobId,
-                'enrollment_id' => $this->studentEnrollment->id,
+                'enrollment_id' => $this->enrollmentId,
             ]);
 
             if (! $this->studentEnrollment->student?->email) {
                 throw new Exception(
                     'Student email not found for enrollment ID: '.
-                        $this->studentEnrollment->id
+                        $this->enrollmentId
                 );
             }
 
@@ -90,7 +99,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
 
             Log::info('Assessment email sent with pre-validated PDF attachment path.', [
                 'job_id' => $this->jobId,
-                'enrollment_id' => $this->studentEnrollment->id,
+                'enrollment_id' => $this->enrollmentId,
                 'assessment_path' => $assessmentPath,
             ]);
 
@@ -99,7 +108,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                 $admins = User::role('super_admin')->get();
                 Log::info('Preparing to send success notification', [
                     'job_id' => $this->jobId,
-                    'enrollment_id' => $this->studentEnrollment->id,
+                    'enrollment_id' => $this->enrollmentId,
                     'admin_count' => $admins->count(),
                 ]);
 
@@ -117,7 +126,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                     'Success notification sent to database via Filament notifications',
                     [
                         'job_id' => $this->jobId,
-                        'enrollment_id' => $this->studentEnrollment->id,
+                        'enrollment_id' => $this->enrollmentId,
                         'admin_count' => $admins->count(),
                     ]
                 );
@@ -126,7 +135,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                     'Exception occurred while sending success notification',
                     [
                         'job_id' => $this->jobId,
-                        'enrollment_id' => $this->studentEnrollment->id,
+                        'enrollment_id' => $this->enrollmentId,
                         'error' => $notifException->getMessage(),
                         'trace' => $notifException->getTraceAsString(),
                     ]
@@ -135,12 +144,12 @@ final class SendAssessmentNotificationJob implements ShouldQueue
 
             Log::info('Assessment notification job completed successfully', [
                 'job_id' => $this->jobId,
-                'enrollment_id' => $this->studentEnrollment->id,
+                'enrollment_id' => $this->enrollmentId,
             ]);
         } catch (Exception $exception) {
             Log::error('Assessment notification job failed', [
                 'job_id' => $this->jobId,
-                'enrollment_id' => $this->studentEnrollment->id,
+                'enrollment_id' => $this->enrollmentId,
                 'error' => $exception->getMessage(),
                 'trace' => $exception->getTraceAsString(),
             ]);
@@ -150,7 +159,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                 $admins = User::role('super_admin')->get();
                 Log::info('Preparing to send failure notification', [
                     'job_id' => $this->jobId,
-                    'enrollment_id' => $this->studentEnrollment->id,
+                    'enrollment_id' => $this->enrollmentId,
                     'admin_count' => $admins->count(),
                     'error_message' => $exception->getMessage(),
                 ]);
@@ -158,7 +167,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
                 foreach ($admins as $admin) {
                     Notification::make()
                         ->title('Assessment Resend Failed')
-                        ->body(sprintf('Assessment notification failed for enrollment #%s: %s', $this->studentEnrollment->id, $exception->getMessage()))
+                        ->body(sprintf('Assessment notification failed for enrollment #%s: %s', $this->enrollmentId, $exception->getMessage()))
                         ->danger()
                         ->icon('heroicon-o-x-circle')
                         ->persistent()
@@ -167,14 +176,14 @@ final class SendAssessmentNotificationJob implements ShouldQueue
 
                 Log::info('Failure notification sent to admins', [
                     'job_id' => $this->jobId,
-                    'enrollment_id' => $this->studentEnrollment->id,
+                    'enrollment_id' => $this->enrollmentId,
                 ]);
             } catch (Exception $notifException) {
                 Log::error(
                     'Exception occurred while sending failure notification',
                     [
                         'job_id' => $this->jobId,
-                        'enrollment_id' => $this->studentEnrollment->id,
+                        'enrollment_id' => $this->enrollmentId,
                         'error' => $notifException->getMessage(),
                         'trace' => $notifException->getTraceAsString(),
                     ]
@@ -192,7 +201,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     {
         Log::error('Assessment notification job failed permanently', [
             'job_id' => $this->jobId,
-            'enrollment_id' => $this->studentEnrollment->id,
+            'enrollment_id' => $this->enrollmentId,
             'error' => $throwable->getMessage(),
         ]);
 
@@ -201,7 +210,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
             $admins = User::role('super_admin')->get();
             Log::info('Preparing to send permanent failure notification', [
                 'job_id' => $this->jobId,
-                'enrollment_id' => $this->studentEnrollment->id,
+                'enrollment_id' => $this->enrollmentId,
                 'admin_count' => $admins->count(),
                 'exception_message' => $throwable->getMessage(),
             ]);
@@ -209,7 +218,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
             foreach ($admins as $admin) {
                 Notification::make()
                     ->title('Assessment Resend Failed Permanently')
-                    ->body(sprintf('Assessment notification job for enrollment #%s failed permanently after all retries: %s', $this->studentEnrollment->id, $throwable->getMessage()))
+                    ->body(sprintf('Assessment notification job for enrollment #%s failed permanently after all retries: %s', $this->enrollmentId, $throwable->getMessage()))
                     ->danger()
                     ->icon('heroicon-o-exclamation-triangle')
                     ->persistent()
@@ -218,14 +227,14 @@ final class SendAssessmentNotificationJob implements ShouldQueue
 
             Log::info('Permanent failure notification sent to admins', [
                 'job_id' => $this->jobId,
-                'enrollment_id' => $this->studentEnrollment->id,
+                'enrollment_id' => $this->enrollmentId,
             ]);
         } catch (Exception $exception) {
             Log::error(
                 'Exception occurred while sending permanent failure notification',
                 [
                     'job_id' => $this->jobId,
-                    'enrollment_id' => $this->studentEnrollment->id,
+                    'enrollment_id' => $this->enrollmentId,
                     'error' => $exception->getMessage(),
                     'trace' => $exception->getTraceAsString(),
                 ]
@@ -248,7 +257,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
     {
         Log::info('Generating fresh assessment PDF for resend.', [
             'job_id' => $this->jobId,
-            'enrollment_id' => $this->studentEnrollment->id,
+            'enrollment_id' => $this->enrollmentId,
         ]);
 
         try {
@@ -256,7 +265,7 @@ final class SendAssessmentNotificationJob implements ShouldQueue
         } catch (Exception $exception) {
             Log::error('Assessment PDF regeneration failed during resend.', [
                 'job_id' => $this->jobId,
-                'enrollment_id' => $this->studentEnrollment->id,
+                'enrollment_id' => $this->enrollmentId,
                 'error' => $exception->getMessage(),
                 'trace' => $exception->getTraceAsString(),
             ]);
@@ -270,6 +279,10 @@ final class SendAssessmentNotificationJob implements ShouldQueue
      */
     private function generatePdfSynchronously(): string
     {
+        if (! $this->studentEnrollment instanceof StudentEnrollment) {
+            $this->studentEnrollment = $this->freshStudentEnrollment();
+        }
+
         $data = app(AssessmentFormDataService::class)->buildViewData($this->studentEnrollment);
 
         // Generate unique filename
@@ -390,5 +403,13 @@ final class SendAssessmentNotificationJob implements ShouldQueue
         ]);
 
         return $relativePath;
+    }
+
+    private function freshStudentEnrollment(): StudentEnrollment
+    {
+        return StudentEnrollment::query()
+            ->withoutGlobalScopes()
+            ->with(['student', 'SubjectsEnrolled', 'studentTuition', 'additionalFees'])
+            ->findOrFail($this->enrollmentId);
     }
 }

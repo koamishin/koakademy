@@ -19,7 +19,6 @@ use App\Models\Subject;
 use App\Models\SubjectEnrollment;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Notifications\MigrateToStudent; // Alias Filament Action
 use App\Notifications\StudentEnrolledVerified;
 use Exception;
 use Filament\Actions\Action;
@@ -558,24 +557,11 @@ final readonly class EnrollmentService
 
             DB::commit();
 
-            try {
-                if ($studentEmail) {
-                    NotificationFacade::route(
-                        'mail',
-                        $studentEmail
-                    )->notify(new MigrateToStudent($studentEnrollment));
-                } else {
-                    Log::warning(
-                        'Student email not found for MigrateToStudent notification.',
-                        ['enrollment_id' => $studentEnrollment->id]
-                    );
-                }
-            } catch (Exception $exception) {
-                Log::error('Enrollment completed, but confirmation email failed to queue.', [
-                    'enrollment_id' => $studentEnrollment->id,
-                    'exception' => $exception,
-                ]);
-            }
+            $this->dispatchAssessmentNotificationAfterVerification(
+                $studentEnrollment,
+                'cashier_verification',
+                $studentEmail
+            );
 
             return true;
         } catch (Exception $exception) {
@@ -950,19 +936,6 @@ final readonly class EnrollmentService
                 }
             }
 
-            // Send Notifications
-            if ($studentEnrollment->student?->email) {
-                NotificationFacade::route(
-                    'mail',
-                    $studentEnrollment->student->email
-                )->notify(new MigrateToStudent($studentEnrollment));
-            } else {
-                Log::warning(
-                    'Student email not found for MigrateToStudent notification (no-receipt verification).',
-                    ['enrollment_id' => $studentEnrollment->id]
-                );
-            }
-
             $pipeline = app(EnrollmentPipelineService::class);
 
             // Mark enrollment/student as fully enrolled once payment is verified
@@ -1001,6 +974,11 @@ final readonly class EnrollmentService
                 ->send();
 
             DB::commit();
+
+            $this->dispatchAssessmentNotificationAfterVerification(
+                $studentEnrollment,
+                'cashier_no_receipt_verification'
+            );
 
             return true;
         } catch (Exception $exception) {
@@ -1111,5 +1089,48 @@ final readonly class EnrollmentService
         $studentEnrollment->student->update([
             'status' => StudentStatus::Enrolled->value,
         ]);
+    }
+
+    private function dispatchAssessmentNotificationAfterVerification(
+        StudentEnrollment $studentEnrollment,
+        string $reason,
+        ?string $studentEmail = null
+    ): void {
+        try {
+            $studentEnrollment->loadMissing('student');
+            $studentEmail ??= $studentEnrollment->student?->email;
+
+            if (! $studentEmail) {
+                Log::warning(
+                    'Student email not found for assessment notification after verification.',
+                    [
+                        'enrollment_id' => $studentEnrollment->id,
+                        'reason' => $reason,
+                    ]
+                );
+
+                return;
+            }
+
+            $jobId = uniqid('assessment_'.$reason.'_', true);
+
+            dispatch(new SendAssessmentNotificationJob(
+                $studentEnrollment->id,
+                $jobId
+            ));
+
+            Log::info('Assessment notification job dispatched after verification.', [
+                'enrollment_id' => $studentEnrollment->id,
+                'job_id' => $jobId,
+                'student_email' => $studentEmail,
+                'reason' => $reason,
+            ]);
+        } catch (Exception $exception) {
+            Log::error('Enrollment completed, but assessment notification job failed to dispatch.', [
+                'enrollment_id' => $studentEnrollment->id,
+                'reason' => $reason,
+                'exception' => $exception,
+            ]);
+        }
     }
 }
