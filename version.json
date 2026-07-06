@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.1.6",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.6",
-  "commit": "c20c25ea19e29e03b917a576a633797b8824d06b",
+  "version": "1.10.0-dev.1.7",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.7",
+  "commit": "d64bae6e5a66cd245d6462ba04a478e3b12e1b18",
   "branch": "master",
-  "timestamp": "2026-07-05T08:56:52Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28735308253",
-  "release_type": "patch",
+  "timestamp": "2026-07-06T05:31:24Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28769790220",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.1.6 - Feat: add education-school options route and UI",
-    "previous": "1.10.0-dev.1.5"
+    "current": "Version 1.10.0-dev.1.7 - fix: queue assessment pdf emails after verification",
+    "previous": "1.10.0-dev.1.6"
   },
   "metadata": {
     "author": "yukazakiri",
