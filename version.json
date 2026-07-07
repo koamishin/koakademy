@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.1.7",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.1.7",
-  "commit": "d64bae6e5a66cd245d6462ba04a478e3b12e1b18",
+  "version": "1.10.0-dev.2.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.2.0",
+  "commit": "50fe386392b33ea3346bdd882c7620770af5fa9b",
   "branch": "master",
-  "timestamp": "2026-07-06T05:31:24Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28769790220",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-07T03:45:38Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28839736061",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.1.7 - fix: queue assessment pdf emails after verification",
-    "previous": "1.10.0-dev.1.6"
+    "current": "Version 1.10.0-dev.2.0 - feat: add class schedule change notifications",
+    "previous": "1.10.0-dev.1.7"
   },
   "metadata": {
     "author": "yukazakiri",
