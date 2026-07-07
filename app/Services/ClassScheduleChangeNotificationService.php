@@ -348,7 +348,7 @@ final class ClassScheduleChangeNotificationService
 
         foreach ($pending as $studentNotification) {
             $studentNotification->loadMissing([
-                'scheduleChange.class',
+                'scheduleChange.class.faculty',
                 'scheduleChange.changedBy',
                 'user',
             ]);
@@ -367,6 +367,10 @@ final class ClassScheduleChangeNotificationService
                 newSchedule: $this->summarize((array) $change->new_schedule),
                 changedByUserId: $change->changed_by_user_id,
                 changedByName: $change->changedBy?->name,
+                subjectTitle: $class->subject_title,
+                section: $class->section,
+                facultyName: $class->faculty?->full_name,
+                changedAt: $change->created_at,
             );
 
             if ($studentNotification->user instanceof User) {

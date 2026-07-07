@@ -12,7 +12,7 @@
 <body>
     @routes
     @inertia
-    <script src="{{ asset('vendor/station/js/app.js') }}" defer></script>
+    <script type="module" src="{{ asset('vendor/station/js/app.js') }}" defer></script>
 </body>
 
 </html>
