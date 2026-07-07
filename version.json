@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.2.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.2.1",
-  "commit": "2f6348d43fa54c9cac2b60964ccc8ae2bc3331d0",
+  "version": "1.10.0-dev.2.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.2.2",
+  "commit": "fec08e173bb6685d929176e8519bb0a5c0403a56",
   "branch": "master",
-  "timestamp": "2026-07-07T05:12:00Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28842949673",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-07T14:17:30Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/28872699062",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.10.0-dev.2.1 - fix(classes): show active curricula in class course picker",
-    "previous": "1.10.0-dev.2.0"
+    "current": "Version 1.10.0-dev.2.2 - Enhance class schedule change notification",
+    "previous": "1.10.0-dev.2.1"
   },
   "metadata": {
     "author": "yukazakiri",
