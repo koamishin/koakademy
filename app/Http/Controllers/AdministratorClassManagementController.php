@@ -1158,12 +1158,10 @@ final class AdministratorClassManagementController extends Controller
      */
     private function buildClassFormOptions(): array
     {
-        $enrollmentCourseIds = app(GeneralSettingsService::class)
-            ->getGlobalSettingsModel()?->enrollment_courses ?? [];
-
         $courses = Course::query()
-            ->when($enrollmentCourseIds !== [], fn ($query) => $query->whereIn('id', $enrollmentCourseIds))
+            ->where('is_active', true)
             ->orderBy('code')
+            ->orderBy('curriculum_year')
             ->get(['id', 'code', 'curriculum_year']);
 
         $courseLabelById = $courses

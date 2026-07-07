@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\Classes;
 use App\Models\Course;
 use App\Models\Faculty;
+use App\Models\GeneralSetting;
 use App\Models\Room;
 use App\Models\Schedule;
 use App\Models\Subject;
@@ -166,6 +167,53 @@ it('renders the administrator class edit page with existing class data', functio
             ->where('defaults.schedules.0.end_time', '11:30')
             ->where('defaults.settings.accent_color', '#ef4444')
             ->where('defaults.settings.enable_attendance_tracking', true)
+        );
+});
+
+it('shows active old curriculum courses on the administrator class edit page even when they are not enrollment courses', function () {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $this->actingAs($user);
+
+    $oldCourse = Course::factory()->create([
+        'code' => 'BSITWEB18',
+        'curriculum_year' => '2018 - 2019',
+        'is_active' => true,
+    ]);
+    $newCourse = Course::factory()->create([
+        'code' => 'BSITWEB24',
+        'curriculum_year' => '2024 - 2025',
+        'is_active' => true,
+    ]);
+
+    GeneralSetting::factory()->create([
+        'enrollment_courses' => [$newCourse->id],
+    ]);
+
+    $subject = Subject::factory()->create([
+        'course_id' => $oldCourse->id,
+        'code' => 'WEB101',
+        'title' => 'Web Development Fundamentals',
+    ]);
+
+    $class = Classes::factory()->create([
+        'classification' => 'college',
+        'course_codes' => [$oldCourse->id],
+        'subject_ids' => [$subject->id],
+        'subject_id' => $subject->id,
+        'subject_code' => 'WEB101',
+        'academic_year' => 1,
+    ]);
+
+    $this->get(route('administrators.classes.edit', $class))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/classes/create', false)
+            ->where('mode', 'edit')
+            ->where('defaults.course_codes.0', $oldCourse->id)
+            ->where('options.courses.0.id', $oldCourse->id)
+            ->where('options.courses.0.label', 'BSITWEB18 (2018 - 2019)')
+            ->where('options.courses.1.id', $newCourse->id)
+            ->where('options.courses.1.label', 'BSITWEB24 (2024 - 2025)')
         );
 });
 
