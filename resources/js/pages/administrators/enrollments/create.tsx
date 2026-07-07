@@ -1,4 +1,14 @@
 import AdminLayout from "@/components/administrators/admin-layout";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,6 +128,16 @@ interface AdditionalFee {
     id: string;
     fee_name: string;
     amount: number;
+}
+
+interface PendingOverloadConfirmation {
+    mode: "select" | "submit";
+    subjectId?: number;
+    classId?: number;
+    sections: Array<{
+        subject_code: string;
+        section: SectionOption;
+    }>;
 }
 
 interface EnrollmentSubject {
@@ -277,6 +297,8 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
     const [submitting, setSubmitting] = useState(false);
     const [notifyStudent, setNotifyStudent] = useState(false);
     const [changeReason, setChangeReason] = useState("");
+    const [confirmedOverloadClassIds, setConfirmedOverloadClassIds] = useState<number[]>([]);
+    const [pendingOverloadConfirmation, setPendingOverloadConfirmation] = useState<PendingOverloadConfirmation | null>(null);
 
     // Refs for debouncing
     const studentSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -464,6 +486,47 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
         setSubjectsEnrolled((prev) => prev.map((s) => (s.subject_id === subjectId ? { ...s, ...updates } : s)));
     };
 
+    const getSelectedFullSections = useCallback(() => {
+        return subjectsEnrolled
+            .map((subject) => {
+                const section = subject.section_options.find((option) => option.id === subject.class_id);
+
+                return section?.is_full
+                    ? {
+                          subject_code: subject.subject_code,
+                          section,
+                      }
+                    : null;
+            })
+            .filter((section): section is { subject_code: string; section: SectionOption } => Boolean(section));
+    }, [subjectsEnrolled]);
+
+    const handleSectionChange = (subject: SubjectEnrollment, value: string | null) => {
+        if (value === null) {
+            return;
+        }
+
+        if (value === "none") {
+            updateSubject(subject.subject_id, { class_id: null });
+            return;
+        }
+
+        const classId = parseInt(value);
+        const section = subject.section_options.find((option) => option.id === classId);
+
+        if (section?.is_full && !confirmedOverloadClassIds.includes(classId)) {
+            setPendingOverloadConfirmation({
+                mode: "select",
+                subjectId: subject.subject_id,
+                classId,
+                sections: [{ subject_code: subject.subject_code, section }],
+            });
+            return;
+        }
+
+        updateSubject(subject.subject_id, { class_id: classId });
+    };
+
     // Toggle modular
     const toggleModular = (subjectId: number, isModular: boolean) => {
         const subject = subjectsEnrolled.find((s) => s.subject_id === subjectId);
@@ -539,9 +602,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
     }, [subjectOptions, subjectSearch]);
 
     // Submit form
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
+    const submitEnrollment = (forceOverload = false) => {
         if (!selectedStudent) {
             toast.error("Please select a student");
             return;
@@ -549,6 +610,17 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
 
         if (subjectsEnrolled.length === 0) {
             toast.error("Please add at least one subject");
+            return;
+        }
+
+        const selectedFullSections = getSelectedFullSections();
+        const hasUnconfirmedFullSection = selectedFullSections.some(({ section }) => !confirmedOverloadClassIds.includes(section.id));
+
+        if (!forceOverload && hasUnconfirmedFullSection) {
+            setPendingOverloadConfirmation({
+                mode: "submit",
+                sections: selectedFullSections.filter(({ section }) => !confirmedOverloadClassIds.includes(section.id)),
+            });
             return;
         }
 
@@ -575,6 +647,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             discount: parseInt(discount),
             downpayment,
             additional_fees: fees,
+            force_overload: forceOverload || selectedFullSections.some(({ section }) => confirmedOverloadClassIds.includes(section.id)),
             ...(isEdit && { notify_student: notifyStudent, change_reason: changeReason }),
         };
 
@@ -594,6 +667,28 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
         } else {
             router.post(route("administrators.enrollments.store"), payload, options);
         }
+    };
+
+    // Submit form
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        submitEnrollment();
+    };
+
+    const confirmOverloadEnrollment = () => {
+        if (!pendingOverloadConfirmation) return;
+
+        const classIds = pendingOverloadConfirmation.sections.map(({ section }) => section.id);
+        setConfirmedOverloadClassIds((prev) => Array.from(new Set([...prev, ...classIds])));
+
+        if (pendingOverloadConfirmation.mode === "select" && pendingOverloadConfirmation.subjectId && pendingOverloadConfirmation.classId) {
+            updateSubject(pendingOverloadConfirmation.subjectId, { class_id: pendingOverloadConfirmation.classId });
+            setPendingOverloadConfirmation(null);
+            return;
+        }
+
+        setPendingOverloadConfirmation(null);
+        submitEnrollment(true);
     };
 
     useEffect(() => {
@@ -978,15 +1073,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                             ) : subject.section_options.length > 0 ? (
                                                                 <Select
                                                                     value={subject.class_id?.toString() ?? "none"}
-                                                                    onValueChange={(val) => {
-                                                                        if (val === null) {
-                                                                            return;
-                                                                        }
-
-                                                                        updateSubject(subject.subject_id, {
-                                                                            class_id: val === "none" ? null : parseInt(val),
-                                                                        });
-                                                                    }}
+                                                                    onValueChange={(val) => handleSectionChange(subject, val)}
                                                                 >
                                                                     <SelectTrigger className="h-9 w-[190px]">
                                                                         <SelectValue placeholder="Select section" />
@@ -994,11 +1081,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                                                     <SelectContent>
                                                                         <SelectItem value="none">No section</SelectItem>
                                                                         {subject.section_options.map((section) => (
-                                                                            <SelectItem
-                                                                                key={section.id}
-                                                                                value={section.id.toString()}
-                                                                                disabled={section.is_full}
-                                                                            >
+                                                                            <SelectItem key={section.id} value={section.id.toString()}>
                                                                                 {section.label}
                                                                             </SelectItem>
                                                                         ))}
@@ -1428,6 +1511,47 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                     </div>
                 </div>
             </form>
+
+            <AlertDialog
+                open={Boolean(pendingOverloadConfirmation)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setPendingOverloadConfirmation(null);
+                    }
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Force enroll into full class?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            The selected class has no available slots. Confirming will overload the class and enroll the student anyway.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    {pendingOverloadConfirmation && (
+                        <div className="space-y-2 rounded-md border bg-orange-50 p-3 text-sm dark:bg-orange-950/20">
+                            {pendingOverloadConfirmation.sections.map(({ subject_code, section }) => (
+                                <div key={`${subject_code}-${section.id}`} className="space-y-1">
+                                    <div className="font-medium">
+                                        {subject_code} - Section {section.section}
+                                    </div>
+                                    <div className="text-muted-foreground text-xs">
+                                        {section.enrolled_count}/{section.max_slots} slots filled
+                                        {section.faculty ? ` • ${section.faculty}` : ""}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmOverloadEnrollment} disabled={submitting} className="bg-orange-600 hover:bg-orange-700">
+                            Confirm overload
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </AdminLayout>
     );
 }

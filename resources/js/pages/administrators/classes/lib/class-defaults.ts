@@ -34,6 +34,7 @@ export type ClassSettings = {
     enable_attendance_tracking: boolean;
     allow_late_submissions: boolean;
     enable_discussion_board: boolean;
+    notify_students_on_schedule_changes: boolean;
     custom: Record<string, string>;
     banner_image: File | null;
 };
@@ -131,6 +132,7 @@ export function buildClassDefaults(defaults: ClassDefaultsInput): ClassFormData 
             enable_attendance_tracking: false,
             allow_late_submissions: false,
             enable_discussion_board: false,
+            notify_students_on_schedule_changes: true,
             custom: {},
             banner_image: null,
         },

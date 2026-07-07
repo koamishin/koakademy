@@ -47,6 +47,7 @@ final class CreateHandler extends Handlers
             'enable_attendance_tracking',
             'allow_late_submissions',
             'enable_discussion_board',
+            'notify_students_on_schedule_changes',
             'custom',
         ];
 

@@ -6,6 +6,8 @@ namespace App\Filament\Resources\Classes\Api\Handlers;
 
 use App\Filament\Resources\Classes\Api\Requests\UpdateClassesRequest;
 use App\Filament\Resources\Classes\ClassesResource;
+use App\Models\User;
+use App\Services\ClassScheduleChangeNotificationService;
 use Override;
 use Rupadana\ApiService\Http\Handlers;
 
@@ -42,6 +44,11 @@ final class UpdateHandler extends Handlers
             return self::sendNotFoundResponse();
         }
 
+        $scheduleChangeNotifications = app(ClassScheduleChangeNotificationService::class);
+        $oldScheduleSnapshot = $request->has('schedules')
+            ? $scheduleChangeNotifications->snapshot($model)
+            : null;
+
         // Separate settings fields from regular model attributes
         $settingsFields = [
             'background_color',
@@ -53,6 +60,7 @@ final class UpdateHandler extends Handlers
             'enable_attendance_tracking',
             'allow_late_submissions',
             'enable_discussion_board',
+            'notify_students_on_schedule_changes',
             'custom',
         ];
 
@@ -97,6 +105,12 @@ final class UpdateHandler extends Handlers
                     ]);
                 }
             }
+
+            $scheduleChangeNotifications->notifyIfChanged(
+                $model,
+                $oldScheduleSnapshot ?? [],
+                $request->user() instanceof User ? $request->user() : null
+            );
         }
 
         return self::sendSuccessResponse($model, 'Successfully Update Resource');

@@ -767,6 +767,10 @@ final class ClassesTable
                                         Toggle::make('settings.enable_discussion_board')
                                             ->label('Enable Discussion Board')
                                             ->default(false),
+
+                                        Toggle::make('settings.notify_students_on_schedule_changes')
+                                            ->label('Notify Schedule Changes')
+                                            ->default(true),
                                     ]),
 
                                     KeyValue::make('settings.custom')

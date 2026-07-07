@@ -70,6 +70,7 @@ type ClassSettingsFormData = {
     enable_attendance_tracking: boolean;
     allow_late_submissions: boolean;
     enable_discussion_board: boolean;
+    notify_students_on_schedule_changes: boolean;
     custom: Record<string, string>;
     banner_image: File | null;
 };
@@ -106,6 +107,7 @@ type SelectedClass = {
         enable_attendance_tracking?: boolean;
         allow_late_submissions?: boolean;
         enable_discussion_board?: boolean;
+        notify_students_on_schedule_changes?: boolean;
         custom?: Record<string, string>;
     };
     schedules: ClassSchedule[];
@@ -741,6 +743,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
             enable_attendance_tracking: false,
             allow_late_submissions: false,
             enable_discussion_board: false,
+            notify_students_on_schedule_changes: true,
             custom: {} as Record<string, string>,
             banner_image: null as File | null,
         },
@@ -786,6 +789,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 enable_attendance_tracking: selected_class.settings.enable_attendance_tracking ?? false,
                 allow_late_submissions: selected_class.settings.allow_late_submissions ?? false,
                 enable_discussion_board: selected_class.settings.enable_discussion_board ?? false,
+                notify_students_on_schedule_changes: selected_class.settings.notify_students_on_schedule_changes ?? true,
                 custom: selected_class.settings.custom ?? {},
                 banner_image: null as File | null,
             },
@@ -913,6 +917,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 | "enable_attendance_tracking"
                 | "allow_late_submissions"
                 | "enable_discussion_board"
+                | "notify_students_on_schedule_changes"
             >;
             label: string;
             desc: string;
@@ -929,6 +934,11 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                 key: "enable_discussion_board",
                 label: "Enable discussion board",
                 desc: "Open a forum for students and faculty to discuss subject matter.",
+            },
+            {
+                key: "notify_students_on_schedule_changes",
+                label: "Notify schedule changes",
+                desc: "Automatically notify enrolled students whenever this class schedule changes.",
             },
         ];
 
@@ -1895,6 +1905,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                                         { key: "enable_attendance_tracking", label: "Attendance" },
                                                         { key: "allow_late_submissions", label: "Late submissions" },
                                                         { key: "enable_discussion_board", label: "Discussion board" },
+                                                        { key: "notify_students_on_schedule_changes", label: "Schedule alerts" },
                                                     ] as const
                                                 ).map((toggle) => (
                                                     <Badge key={toggle.key} variant={selected_class.settings[toggle.key] ? "default" : "outline"}>

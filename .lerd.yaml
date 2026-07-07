@@ -13,3 +13,7 @@ services:
 workers:
     - horizon
     - schedule
+    - vite
+    - queue
+reload_workers:
+    - horizon

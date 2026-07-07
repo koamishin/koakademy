@@ -33,12 +33,24 @@ const themes: Array<{ value: ClassSettings["theme"]; label: string; description:
     { value: "vibrant", label: "Vibrant", description: "High-energy accents" },
 ];
 
-const featureToggles: Array<{ key: keyof Pick<ClassSettings, "enable_announcements" | "enable_grade_visibility" | "enable_attendance_tracking" | "allow_late_submissions" | "enable_discussion_board">; label: string }> = [
+const featureToggles: Array<{
+    key: keyof Pick<
+        ClassSettings,
+        | "enable_announcements"
+        | "enable_grade_visibility"
+        | "enable_attendance_tracking"
+        | "allow_late_submissions"
+        | "enable_discussion_board"
+        | "notify_students_on_schedule_changes"
+    >;
+    label: string;
+}> = [
     { key: "enable_announcements", label: "Announcements" },
     { key: "enable_grade_visibility", label: "Grade visibility" },
     { key: "enable_attendance_tracking", label: "Attendance tracking" },
     { key: "allow_late_submissions", label: "Late submissions" },
     { key: "enable_discussion_board", label: "Discussion board" },
+    { key: "notify_students_on_schedule_changes", label: "Schedule alerts" },
 ];
 
 function optionLabel(options: Array<{ id?: number | string; value?: string; label: string }>, value: number | string | null): string {

@@ -128,6 +128,7 @@ final class Classes extends Model
             'enable_attendance_tracking' => false,
             'allow_late_submissions' => false,
             'enable_discussion_board' => false,
+            'notify_students_on_schedule_changes' => true,
 
             // Custom Preferences
             'custom' => [],
@@ -191,6 +192,11 @@ final class Classes extends Model
     public function class_enrollments()
     {
         return $this->hasMany(ClassEnrollment::class, 'class_id', 'id');
+    }
+
+    public function scheduleChanges()
+    {
+        return $this->hasMany(ClassScheduleChange::class, 'class_id', 'id');
     }
 
     /**

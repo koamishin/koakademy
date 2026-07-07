@@ -148,6 +148,8 @@ Route::middleware(['auth', 'administrators.only'])
         Route::post('/enrollments/{enrollment}/retry-enrollment', [AdministratorEnrollmentManagementController::class, 'retryEnrollment'])->whereNumber('enrollment')->name('enrollments.retry-enrollment');
         Route::post('/enrollments/{enrollment}/resend-assessment', [AdministratorEnrollmentManagementController::class, 'resendAssessment'])->whereNumber('enrollment')->name('enrollments.resend-assessment');
         Route::post('/enrollments/{enrollment}/create-assessment-pdf', [AdministratorEnrollmentManagementController::class, 'createAssessmentPdf'])->whereNumber('enrollment')->name('enrollments.create-assessment-pdf');
+        Route::get('/enrollments/{enrollment}/class-schedule-changes/preview', [AdministratorEnrollmentManagementController::class, 'classScheduleChangesPreview'])->whereNumber('enrollment')->name('enrollments.class-schedule-changes.preview');
+        Route::post('/enrollments/{enrollment}/class-schedule-changes/notify', [AdministratorEnrollmentManagementController::class, 'notifyClassScheduleChanges'])->whereNumber('enrollment')->name('enrollments.class-schedule-changes.notify');
         Route::get('/enrollments/{enrollment}/assessment-preview-data', [AdministratorEnrollmentManagementController::class, 'assessmentPreviewData'])->whereNumber('enrollment')->name('enrollments.assessment-preview-data');
         Route::get('/enrollments/{enrollment}/assessment-preview', [AdministratorEnrollmentManagementController::class, 'assessmentPreview'])->whereNumber('enrollment')->name('enrollments.assessment-preview');
         Route::get('/enrollments/{enrollment}/edit', [AdministratorEnrollmentManagementController::class, 'edit'])->whereNumber('enrollment')->name('enrollments.edit');

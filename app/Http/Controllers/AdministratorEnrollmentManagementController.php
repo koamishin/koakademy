@@ -22,6 +22,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Notifications\ApplicantApprovedForRequirements;
 use App\Services\AssessmentFormDataService;
+use App\Services\ClassScheduleChangeNotificationService;
 use App\Services\EnrollmentBillingService;
 use App\Services\EnrollmentPipelineService;
 use App\Services\EnrollmentService;
@@ -51,6 +52,7 @@ final class AdministratorEnrollmentManagementController extends Controller
         private readonly EnrollmentService $enrollmentService,
         private readonly EnrollmentPipelineService $enrollmentPipelineService,
         private readonly EnrollmentBillingService $enrollmentBillingService,
+        private readonly ClassScheduleChangeNotificationService $classScheduleChangeNotificationService,
     ) {}
 
     public function index(GeneralSettingsService $settingsService): Response|RedirectResponse
@@ -511,6 +513,8 @@ final class AdministratorEnrollmentManagementController extends Controller
                 (float) $enrollment->additionalFees->sum('amount')
             )
             : null;
+        $pendingScheduleChangeNotifications = $this->classScheduleChangeNotificationService
+            ->pendingNotificationsForEnrollment($enrollment);
 
         return Inertia::render('administrators/enrollments/show', [
             'user' => Auth::user(),
@@ -564,6 +568,8 @@ final class AdministratorEnrollmentManagementController extends Controller
                     'created_at' => $res->created_at->toDateTimeString(),
                     'download_url' => route('assessment.download', ['record' => $enrollment->id], false),
                 ]),
+                'pending_class_schedule_changes' => $this->classScheduleChangeNotificationService
+                    ->previewPendingNotifications($pendingScheduleChangeNotifications),
             ],
             'auth' => [
                 'user' => Auth::user(),
@@ -596,6 +602,43 @@ final class AdministratorEnrollmentManagementController extends Controller
                 'next_step' => $this->enrollmentPipelineService->getNextStep($enrollment->status),
             ],
             'enrollment_stats' => $this->enrollmentPipelineService->getStatsConfiguration(),
+        ]);
+    }
+
+    public function classScheduleChangesPreview(StudentEnrollment $enrollment): JsonResponse
+    {
+        $enrollment->loadMissing('student');
+
+        return response()->json([
+            'student' => [
+                'id' => $enrollment->student->id,
+                'full_name' => $enrollment->student->full_name,
+                'email' => $enrollment->student->email,
+            ],
+            'changes' => $this->classScheduleChangeNotificationService->previewPendingNotifications(
+                $this->classScheduleChangeNotificationService->pendingNotificationsForEnrollment($enrollment)
+            ),
+        ]);
+    }
+
+    public function notifyClassScheduleChanges(StudentEnrollment $enrollment): RedirectResponse
+    {
+        $user = Auth::user();
+        $result = $this->classScheduleChangeNotificationService->notifyPendingForEnrollment(
+            $enrollment,
+            $user instanceof User ? $user : null
+        );
+
+        if ($result['count'] === 0) {
+            return back()->with('flash', ['info' => 'There are no pending class schedule changes to notify for this student.']);
+        }
+
+        return back()->with('flash', [
+            'success' => sprintf(
+                'Queued %d class schedule change notification%s for this student.',
+                $result['count'],
+                $result['count'] === 1 ? '' : 's'
+            ),
         ]);
     }
 
@@ -1144,6 +1187,7 @@ final class AdministratorEnrollmentManagementController extends Controller
             'additional_fees.*.amount' => ['required_with:additional_fees', 'numeric', 'min:0'],
             'notify_student' => ['nullable', 'boolean'],
             'change_reason' => ['nullable', 'string', 'max:1000'],
+            'force_overload' => ['nullable', 'boolean'],
         ]);
 
         if ((int) $validated['student_id'] !== (int) $enrollment->student_id) {
@@ -1151,6 +1195,12 @@ final class AdministratorEnrollmentManagementController extends Controller
         }
 
         try {
+            $this->ensureClassCapacityForSubjects(
+                $validated['subjects'],
+                (int) $validated['student_id'],
+                (bool) ($validated['force_overload'] ?? false)
+            );
+
             /** @var array<int, array{subject_code: string, subject_title: string, old_class_id: int|null, new_class_id: int|null, old_section: string, new_section: string}> $classChanges */
             $classChanges = [];
 
@@ -1368,10 +1418,11 @@ final class AdministratorEnrollmentManagementController extends Controller
             'additional_fees' => ['nullable', 'array'],
             'additional_fees.*.fee_name' => ['required_with:additional_fees', 'string'],
             'additional_fees.*.amount' => ['required_with:additional_fees', 'numeric', 'min:0'],
+            'force_overload' => ['nullable', 'boolean'],
         ]);
 
         try {
-            $result = DB::transaction(function () use ($validated, $settingsService): array {
+            $result = $this->withoutEnrollmentSearchSyncing(fn (): array => DB::transaction(function () use ($validated, $settingsService): array {
                 $student = Student::with('Course')->findOrFail($validated['student_id']);
                 $schoolYear = $settingsService->getCurrentSchoolYearString();
 
@@ -1385,6 +1436,12 @@ final class AdministratorEnrollmentManagementController extends Controller
                 if ($existingEnrollment) {
                     throw new Exception('Student already has an enrollment for this semester.');
                 }
+
+                $this->ensureClassCapacityForSubjects(
+                    $validated['subjects'],
+                    $student->id,
+                    (bool) ($validated['force_overload'] ?? false)
+                );
 
                 // Create the enrollment record
                 $enrollment = StudentEnrollment::query()->create([
@@ -1455,7 +1512,9 @@ final class AdministratorEnrollmentManagementController extends Controller
                     'enrollment' => $enrollment,
                     'student' => $student,
                 ];
-            });
+            }));
+
+            $this->syncCreatedEnrollmentToSearch($result['enrollment']);
 
             return redirect()
                 ->route('administrators.enrollments.show', $result['enrollment']->id)
@@ -2901,5 +2960,81 @@ final class AdministratorEnrollmentManagementController extends Controller
             'by_year_level' => $byYearLevel,
             'by_status' => $byStatus,
         ];
+    }
+
+    /**
+     * @param  array<int, array{class_id?: int|string|null}>  $subjects
+     *
+     * @throws Exception
+     */
+    private function ensureClassCapacityForSubjects(array $subjects, int $studentId, bool $forceOverload): void
+    {
+        if ($forceOverload) {
+            return;
+        }
+
+        $classIds = collect($subjects)
+            ->pluck('class_id')
+            ->filter()
+            ->map(fn (mixed $classId): int => (int) $classId)
+            ->unique()
+            ->values();
+
+        if ($classIds->isEmpty()) {
+            return;
+        }
+
+        $classes = Classes::query()
+            ->whereIn('id', $classIds)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($classIds as $classId) {
+            $class = $classes->get($classId);
+            if (! $class instanceof Classes || ! $class->maximum_slots) {
+                continue;
+            }
+
+            $enrolledCount = ClassEnrollment::query()
+                ->where('class_id', $classId)
+                ->where('student_id', '!=', $studentId)
+                ->count();
+
+            if ($enrolledCount >= $class->maximum_slots) {
+                throw new Exception(sprintf(
+                    'Section %s is full. Confirm overload enrollment to force this student into the class.',
+                    (string) $class->section
+                ));
+            }
+        }
+    }
+
+    private function syncCreatedEnrollmentToSearch(StudentEnrollment $enrollment): void
+    {
+        if (config('scout.driver') === 'database') {
+            return;
+        }
+
+        try {
+            $enrollment->searchable();
+
+            $enrollment->loadMissing('subjectsEnrolled');
+            $enrollment->subjectsEnrolled->each->searchable();
+        } catch (Throwable $e) {
+            Log::warning('Enrollment was created but search indexing failed.', [
+                'enrollment_id' => $enrollment->id,
+                'scout_driver' => config('scout.driver'),
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function withoutEnrollmentSearchSyncing(Closure $callback): mixed
+    {
+        return StudentEnrollment::withoutSyncingToSearch(
+            fn (): mixed => SubjectEnrollment::withoutSyncingToSearch(
+                fn (): mixed => ClassEnrollment::withoutSyncingToSearch($callback)
+            )
+        );
     }
 }

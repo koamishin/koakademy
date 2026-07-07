@@ -173,8 +173,14 @@ final class ClassesInfolist
                                     ->boolean()
                                     ->trueIcon('heroicon-o-check-circle')
                                     ->falseIcon('heroicon-o-x-circle'),
+
+                                IconEntry::make('settings.notify_students_on_schedule_changes')
+                                    ->label('Schedule Alerts')
+                                    ->boolean()
+                                    ->trueIcon('heroicon-o-check-circle')
+                                    ->falseIcon('heroicon-o-x-circle'),
                             ])
-                            ->columns(5),
+                            ->columns(6),
 
                         Fieldset::make('Custom Preferences')
                             ->schema([

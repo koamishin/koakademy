@@ -18,6 +18,8 @@ use App\Models\ShsStrand;
 use App\Models\ShsTrack;
 use App\Models\StrandSubject;
 use App\Models\Subject;
+use App\Models\User;
+use App\Services\ClassScheduleChangeNotificationService;
 use App\Services\GeneralSettingsService;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -447,6 +449,8 @@ final class AdministratorClassManagementController extends Controller
     public function update(UpdateClassRequest $request, Classes $class): \Illuminate\Http\RedirectResponse
     {
         $validated = $request->validated();
+        $scheduleChangeNotifications = app(ClassScheduleChangeNotificationService::class);
+        $oldScheduleSnapshot = null;
 
         $classification = $validated['classification'] ?? $class->classification ?? 'college';
 
@@ -495,6 +499,7 @@ final class AdministratorClassManagementController extends Controller
 
         $schedules = null;
         if (array_key_exists('schedules', $validated)) {
+            $oldScheduleSnapshot = $scheduleChangeNotifications->snapshot($class);
             $schedules = Arr::wrap($validated['schedules']);
             unset($validated['schedules']);
         }
@@ -513,6 +518,12 @@ final class AdministratorClassManagementController extends Controller
                     'room_id' => $scheduleData['room_id'],
                 ]);
             }
+
+            $scheduleChangeNotifications->notifyIfChanged(
+                $class,
+                $oldScheduleSnapshot ?? [],
+                Auth::user() instanceof User ? Auth::user() : null
+            );
         }
 
         return redirect()->route('administrators.classes.index')->with('flash', [
@@ -760,6 +771,7 @@ final class AdministratorClassManagementController extends Controller
                         'enable_attendance_tracking' => (bool) ($settings['enable_attendance_tracking'] ?? false),
                         'allow_late_submissions' => (bool) ($settings['allow_late_submissions'] ?? false),
                         'enable_discussion_board' => (bool) ($settings['enable_discussion_board'] ?? false),
+                        'notify_students_on_schedule_changes' => (bool) ($settings['notify_students_on_schedule_changes'] ?? true),
                     ],
                     'custom' => (array) ($settings['custom'] ?? []),
                 ],
@@ -1134,6 +1146,7 @@ final class AdministratorClassManagementController extends Controller
                 'enable_attendance_tracking' => (bool) ($settings['enable_attendance_tracking'] ?? false),
                 'allow_late_submissions' => (bool) ($settings['allow_late_submissions'] ?? false),
                 'enable_discussion_board' => (bool) ($settings['enable_discussion_board'] ?? false),
+                'notify_students_on_schedule_changes' => (bool) ($settings['notify_students_on_schedule_changes'] ?? true),
                 'custom' => (array) ($settings['custom'] ?? []),
                 'banner_image' => null,
             ],

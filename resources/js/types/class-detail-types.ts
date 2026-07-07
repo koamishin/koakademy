@@ -184,5 +184,6 @@ export interface ClassSettings {
     enable_performance_analytics: boolean;
     allow_late_submissions: boolean;
     enable_discussion_board: boolean;
+    notify_students_on_schedule_changes: boolean;
     start_date: string | null;
 }

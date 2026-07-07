@@ -892,6 +892,7 @@ final class FacultyClassController extends Controller
             'enable_attendance_tracking' => ['required', 'boolean'],
             'allow_late_submissions' => ['required', 'boolean'],
             'enable_discussion_board' => ['required', 'boolean'],
+            'notify_students_on_schedule_changes' => ['required', 'boolean'],
             'start_date' => ['nullable', 'date'],
         ]);
 

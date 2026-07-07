@@ -728,6 +728,11 @@ final class ClassesForm
                                             ->label('Enable Discussion Board')
                                             ->default(false)
                                             ->helperText('Allow student discussions in this class'),
+
+                                        Toggle::make('settings.notify_students_on_schedule_changes')
+                                            ->label('Notify Schedule Changes')
+                                            ->default(true)
+                                            ->helperText('Automatically notify enrolled students when this class schedule changes'),
                                     ])
                                     ->columns(2),
 

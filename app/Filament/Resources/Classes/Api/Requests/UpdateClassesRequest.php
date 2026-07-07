@@ -62,6 +62,7 @@ final class UpdateClassesRequest extends FormRequest
             'settings.enable_attendance_tracking' => 'nullable|boolean',
             'settings.allow_late_submissions' => 'nullable|boolean',
             'settings.enable_discussion_board' => 'nullable|boolean',
+            'settings.notify_students_on_schedule_changes' => 'nullable|boolean',
             'settings.custom' => 'nullable|array',
         ];
     }

@@ -142,6 +142,19 @@ interface EnrollmentData {
         created_at: string;
         download_url: string;
     }>;
+    pending_class_schedule_changes: Array<{
+        id: number;
+        class_id: number | null;
+        class_title: string;
+        subject_code: string | null;
+        subject_title: string | null;
+        section: string | null;
+        faculty: string | null;
+        old_schedule: string[];
+        new_schedule: string[];
+        changed_by: string | null;
+        changed_at: string | null;
+    }>;
 }
 
 interface RecentDeletion {
@@ -219,8 +232,10 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
 
     const [activeTab, setActiveTab] = useState("classes");
     const [showUndoDialog, setShowUndoDialog] = useState(false);
+    const [showScheduleChangesDialog, setShowScheduleChangesDialog] = useState(false);
     const [selectedDeletions, setSelectedDeletions] = useState<number[]>([]);
     const [restoringSubjects, setRestoringSubjects] = useState(false);
+    const pendingScheduleChanges = enrollment.pending_class_schedule_changes ?? [];
 
     const pendingStatus = enrollment_pipeline.pending_status;
     const departmentStep = enrollment_pipeline.steps.find((step) => step.action_type === "department_verification") ?? null;
@@ -298,6 +313,21 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
         );
     };
 
+    const handleNotifyClassScheduleChanges = () => {
+        router.post(
+            route("administrators.enrollments.class-schedule-changes.notify", enrollment.id),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowScheduleChangesDialog(false);
+                    toast.success("Class schedule change notification queued");
+                },
+                onError: () => toast.error("Failed to notify student"),
+            },
+        );
+    };
+
     const handleAdvancePipelineStep = () => {
         router.post(
             route("administrators.enrollments.advance-pipeline-step", enrollment.id),
@@ -353,6 +383,67 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
     return (
         <AdminLayout user={user} title="Enrollment Management">
             <Head title={`Enrollment • ${enrollment.student.full_name}`} />
+
+            <Dialog open={showScheduleChangesDialog} onOpenChange={setShowScheduleChangesDialog}>
+                <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Notify student for class schedule changes</DialogTitle>
+                        <DialogDescription>
+                            Preview the schedule updates that will be sent to {enrollment.student.full_name}
+                            {enrollment.student.email ? ` at ${enrollment.student.email}` : ""}.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {pendingScheduleChanges.map((change) => (
+                            <div key={change.id} className="rounded-lg border p-4">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <div className="font-medium">{change.class_title}</div>
+                                        <div className="text-muted-foreground text-sm">
+                                            {[change.subject_code, change.subject_title, change.section ? `Section ${change.section}` : null]
+                                                .filter(Boolean)
+                                                .join(" • ")}
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline">{change.changed_at ?? "Pending"}</Badge>
+                                </div>
+                                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <div className="text-muted-foreground mb-2 text-xs font-medium uppercase">Previous schedule</div>
+                                        <ul className="space-y-1 text-sm">
+                                            {(change.old_schedule.length > 0 ? change.old_schedule : ["No previous schedule."]).map((item) => (
+                                                <li key={item}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <div className="text-muted-foreground mb-2 text-xs font-medium uppercase">New schedule</div>
+                                        <ul className="space-y-1 text-sm">
+                                            {(change.new_schedule.length > 0 ? change.new_schedule : ["No scheduled meetings."]).map((item) => (
+                                                <li key={item}>{item}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div className="text-muted-foreground mt-3 text-xs">
+                                    {change.faculty ? `Faculty: ${change.faculty}` : "Faculty: TBA"}
+                                    {change.changed_by ? ` • Changed by ${change.changed_by}` : ""}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <DialogFooter>
+                        <Button type="button" variant="ghost" onClick={() => setShowScheduleChangesDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="button" onClick={handleNotifyClassScheduleChanges} disabled={pendingScheduleChanges.length === 0}>
+                            Notify Student
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <div className="space-y-6 pb-20">
                 {/* Minimal Header */}
@@ -547,6 +638,11 @@ export default function ShowEnrollment({ user, enrollment, auth, recent_deletion
                                                 {enrollment.status === completionStatus && (
                                                     <DropdownMenuItem onClick={handleResendAssessment}>
                                                         <FileText className="mr-2 h-4 w-4" /> Resend Assessment Email
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {pendingScheduleChanges.length > 0 && (
+                                                    <DropdownMenuItem onClick={() => setShowScheduleChangesDialog(true)}>
+                                                        <CalendarDays className="mr-2 h-4 w-4" /> Notify student for Class Schedule changes
                                                     </DropdownMenuItem>
                                                 )}
                                                 {departmentStep && enrollment.status === departmentVerifiedStatus && auth.can_verify_head && (
