@@ -3,14 +3,16 @@ import { OnboardingChecklistWidget } from "@/components/onboarding-checklist";
 import { OnboardingProvider, type OnboardingChecklistItem } from "@/components/onboarding-context";
 import { OnboardingTour, type TourStep } from "@/components/onboarding-tour";
 import { SemesterSelectorProps } from "@/components/semester-selector";
+import { GradesPanel } from "@/components/student/grades-panel";
 import StudentLayout from "@/components/student/student-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useGradingConfig } from "@/hooks/use-grading-config";
+import { computeGwa, detectGradeScale, formatGwa, isPassingGrade } from "@/lib/gwa";
 import { cn } from "@/lib/utils";
 import { type User } from "@/types/user";
 import { Head, Link, router, usePage } from "@inertiajs/react";
@@ -36,7 +38,6 @@ import {
     type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface Branding {
     currency: string;
@@ -57,6 +58,7 @@ interface ClassInfo {
     faculty_name: string;
     schedule: string;
     room: string;
+    units?: number;
     grades: GradeInfo;
 }
 
@@ -315,14 +317,6 @@ function getNextClass(classes: ClassInfo[]): { classItem: ClassInfo; segment: Sc
     return candidates.sort((a, b) => a.score - b.score)[0] ?? null;
 }
 
-function getGradeTone(grade: number | null): string {
-    if (!grade) {
-        return "text-muted-foreground";
-    }
-
-    return grade <= 3 ? "text-emerald-500" : "text-rose-500";
-}
-
 function StatTile({
     icon: Icon,
     label,
@@ -378,6 +372,13 @@ function StatTile({
 function CourseCard({ classItem, index }: { classItem: ClassInfo; index: number }) {
     const accent = classAccents[index % classAccents.length];
     const average = classItem.grades.average;
+    const gradingConfig = useGradingConfig();
+    const averageTone =
+        average === null
+            ? "text-muted-foreground"
+            : isPassingGrade(average, detectGradeScale(average), gradingConfig)
+              ? "text-emerald-500"
+              : "text-rose-500";
 
     return (
         <Card className={`${dashboardCardClass} group overflow-hidden hover:-translate-y-0.5`}>
@@ -414,7 +415,9 @@ function CourseCard({ classItem, index }: { classItem: ClassInfo; index: number 
                     </div>
                     <div className="text-right">
                         <p className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">Average</p>
-                        <p className={`mt-1 font-mono text-lg font-semibold ${getGradeTone(average)}`}>{average ?? "N/A"}</p>
+                        <p className={cn("mt-1 font-mono text-lg font-semibold tabular-nums", averageTone)}>
+                            {average ?? "—"}
+                        </p>
                     </div>
                 </div>
             </CardContent>
@@ -762,7 +765,7 @@ function MobileStudentDashboard({
                     <MobileMetricCard
                         icon={Trophy}
                         label="GWA"
-                        value={gwa || "N/A"}
+                        value={gwa || "—"}
                         detail={gwa ? `${gradedCount} graded subjects` : "No grades posted"}
                         tone="bg-amber-500/10 text-amber-500"
                     />
@@ -979,31 +982,26 @@ export default function StudentDashboard({ user, is_new_user, student_data, id_c
         return "Good evening";
     }, []);
 
-    const gwa = useMemo(() => {
-        const classesWithGrades = student_data.enrolled_classes.filter((classItem) => classItem.grades.average !== null);
-
-        if (classesWithGrades.length === 0) {
-            return null;
-        }
-
-        const total = classesWithGrades.reduce((sum, classItem) => sum + (classItem.grades.average ?? 0), 0);
-
-        return (total / classesWithGrades.length).toFixed(2);
-    }, [student_data.enrolled_classes]);
-
-    const gradedCount = student_data.enrolled_classes.filter((classItem) => classItem.grades.average !== null).length;
-    const gradeProgress = student_data.enrolled_classes.length > 0 ? (gradedCount / student_data.enrolled_classes.length) * 100 : 0;
+    const gradingConfig = useGradingConfig();
+    const gwaResult = useMemo(
+        () =>
+            computeGwa(
+                student_data.enrolled_classes.map((classItem) => ({
+                    // Fall back to 1 unit so unweighted averages still work when units are missing.
+                    units: classItem.units && classItem.units > 0 ? classItem.units : 1,
+                    grade: classItem.grades.average,
+                    code: classItem.subject_code,
+                    title: classItem.subject_title,
+                    id: classItem.id,
+                })),
+                { config: gradingConfig },
+            ),
+        [student_data.enrolled_classes, gradingConfig],
+    );
+    const gwa = gwaResult.gwa !== null ? formatGwa(gwaResult, gradingConfig) : null;
+    const gradedCount = gwaResult.gradedCount;
     const nextClass = useMemo(() => getNextClass(student_data.enrolled_classes), [student_data.enrolled_classes]);
     const urgentAnnouncements = student_data.announcements.filter((announcement) => announcement.type === "important").length;
-    const chartData = useMemo(
-        () =>
-            student_data.enrolled_classes.map((classItem) => ({
-                name: classItem.subject_code,
-                grade: classItem.grades.average ?? 0,
-                hasGrade: classItem.grades.average !== null,
-            })),
-        [student_data.enrolled_classes],
-    );
 
     const handleRefreshQr = async () => {
         setIsRefreshingQr(true);
@@ -1108,7 +1106,7 @@ export default function StudentDashboard({ user, is_new_user, student_data, id_c
                     <StatTile
                         icon={Trophy}
                         label="GWA"
-                        value={gwa || "N/A"}
+                        value={gwa || "—"}
                         detail={gwa ? `${gradedCount} graded subjects` : "No grades posted"}
                         tone="bg-amber-500/10 text-amber-500"
                     />
@@ -1224,106 +1222,7 @@ export default function StudentDashboard({ user, is_new_user, student_data, id_c
                             </TabsContent>
 
                             <TabsContent value="grades" className="space-y-4">
-                                <Card className={dashboardPanelClass}>
-                                    <CardHeader className="pb-3">
-                                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                                            <CardTitle className="flex items-center gap-2 text-base">
-                                                <TrendingUp className="text-primary h-4 w-4" />
-                                                Grade Overview
-                                            </CardTitle>
-                                            <div className="min-w-[180px]">
-                                                <div className="mb-1 flex items-center justify-between text-xs">
-                                                    <span className="text-muted-foreground">Posted grades</span>
-                                                    <span>
-                                                        {gradedCount}/{student_data.enrolled_classes.length}
-                                                    </span>
-                                                </div>
-                                                <Progress value={gradeProgress} className="h-2" />
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="h-[260px] md:h-[280px]">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={chartData} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                                                    <XAxis
-                                                        dataKey="name"
-                                                        axisLine={false}
-                                                        tickLine={false}
-                                                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                                                    />
-                                                    <YAxis
-                                                        axisLine={false}
-                                                        tickLine={false}
-                                                        tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-                                                        domain={[0, 5]}
-                                                        reversed
-                                                    />
-                                                    <Tooltip
-                                                        cursor={{ fill: "hsl(var(--muted))" }}
-                                                        content={({ active, payload }) => {
-                                                            if (!active || !payload?.length) {
-                                                                return null;
-                                                            }
-
-                                                            const data = payload[0].payload as { name: string; grade: number; hasGrade: boolean };
-
-                                                            return (
-                                                                <div className="bg-popover rounded-lg border p-3 text-sm shadow-lg">
-                                                                    <p className="font-semibold">{data.name}</p>
-                                                                    <p className="text-muted-foreground mt-1 text-xs">
-                                                                        Average: {data.hasGrade ? data.grade : "Not posted"}
-                                                                    </p>
-                                                                </div>
-                                                            );
-                                                        }}
-                                                    />
-                                                    <Bar dataKey="grade" radius={[6, 6, 0, 0]} barSize={36}>
-                                                        {chartData.map((entry, index) => (
-                                                            <Cell
-                                                                key={entry.name}
-                                                                fill={entry.hasGrade ? `var(--chart-${(index % 5) + 1})` : "hsl(var(--muted))"}
-                                                            />
-                                                        ))}
-                                                    </Bar>
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <div className="grid gap-3 md:grid-cols-2">
-                                    {student_data.enrolled_classes.map((classItem) => (
-                                        <Card key={classItem.id} className={dashboardCardClass}>
-                                            <CardContent className="space-y-3 p-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-semibold">{classItem.subject_title}</p>
-                                                        <p className="text-muted-foreground font-mono text-xs">{classItem.subject_code}</p>
-                                                    </div>
-                                                    <p className={`font-mono text-lg font-semibold ${getGradeTone(classItem.grades.average)}`}>
-                                                        {classItem.grades.average ?? "N/A"}
-                                                    </p>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-2 text-center">
-                                                    <div className="bg-muted/55 rounded-md p-2">
-                                                        <p className="text-muted-foreground text-[10px] uppercase">Prelim</p>
-                                                        <p className="font-mono text-sm">{classItem.grades.prelim ?? "N/A"}</p>
-                                                    </div>
-                                                    <div className="bg-muted/55 rounded-md p-2">
-                                                        <p className="text-muted-foreground text-[10px] uppercase">Midterm</p>
-                                                        <p className="font-mono text-sm">{classItem.grades.midterm ?? "N/A"}</p>
-                                                    </div>
-                                                    <div className="bg-muted/55 rounded-md p-2">
-                                                        <p className="text-muted-foreground text-[10px] uppercase">Finals</p>
-                                                        <p className="font-mono text-sm">{classItem.grades.finals ?? "N/A"}</p>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
+                                <GradesPanel classes={student_data.enrolled_classes} gwaResult={gwaResult} />
                             </TabsContent>
                         </Tabs>
                     </div>

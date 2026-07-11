@@ -74,6 +74,7 @@ final class StudentDashboardController extends Controller
                     'faculty_name' => $class->faculty?->full_name ?? 'TBA',
                     'schedule' => $schedule,
                     'room' => $class->room?->name ?? 'TBA',
+                    'units' => $units,
                     'grades' => [
                         'prelim' => $enrollment->prelim_grade,
                         'midterm' => $enrollment->midterm_grade,
