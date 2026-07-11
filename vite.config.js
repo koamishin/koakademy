@@ -1,6 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import legacy from "@vitejs/plugin-legacy";
 import react from "@vitejs/plugin-react";
+import { wayfinder } from "@laravel/vite-plugin-wayfinder";
 import laravel from "laravel-vite-plugin";
 import fs from "node:fs";
 import path from "node:path";
@@ -48,6 +49,7 @@ export default defineConfig({
                 };
             },
         },
+        wayfinder(),
         tailwindcss({
             config: {
                 content: [
