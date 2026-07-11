@@ -49,7 +49,7 @@ export default defineConfig({
                 };
             },
         },
-        wayfinder(),
+        process.env.WAYFINDER_GENERATE !== "false" && wayfinder(),
         tailwindcss({
             config: {
                 content: [

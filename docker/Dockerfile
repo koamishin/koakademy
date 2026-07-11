@@ -30,6 +30,7 @@ RUN mkdir -p \
     storage/logs \
     bootstrap/cache
 RUN composer dump-autoload --optimize --classmap-authoritative --no-dev --no-scripts
+RUN php artisan wayfinder:generate --no-interaction
 
 # -----------------------------------------------------------------------------
 # Stage 2: Build Frontend Assets
@@ -39,9 +40,11 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --no-save
 COPY . .
-# Copy vendor directory for Filament assets
+# Copy PHP dependencies and generated Wayfinder files.
 COPY --from=vendor /app/vendor ./vendor
-RUN bun run build
+COPY --from=vendor /app/resources/js/actions ./resources/js/actions
+COPY --from=vendor /app/resources/js/routes ./resources/js/routes
+RUN WAYFINDER_GENERATE=false bun run build
 
 # -----------------------------------------------------------------------------
 # Stage 3: Final Runtime Image
