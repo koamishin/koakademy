@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -54,10 +53,21 @@ interface ProgressSummary {
     percentage: number;
 }
 
+interface SchoolBranding {
+    name: string;
+    address: string;
+    logo: string;
+    tagline: string;
+    email: string;
+    phone: string;
+}
+
 interface StudentClassesProps {
     user: UserType;
     student_name: string;
+    student_number: string;
     course_name: string;
+    school: SchoolBranding;
     progress: ProgressSummary;
     curriculum: Curriculum;
     faculty_data: {
@@ -218,14 +228,17 @@ const AcademicStatCard = ({
     const bgTone = tone.split(" ").find((c) => c.startsWith("bg-")) ?? "bg-primary/10";
 
     return (
-        <Card className={cn("border-border/40 bg-card/60 relative overflow-hidden rounded-xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card", className)}>
+        <Card
+            className={cn(
+                "border-border/40 bg-card/60 hover:border-primary/40 hover:bg-card relative overflow-hidden rounded-xl shadow-sm transition-all duration-300",
+                className,
+            )}
+        >
             <CardContent className="p-3 sm:p-5">
                 <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
                         <p className="text-foreground/50 text-[9px] font-bold tracking-wider uppercase sm:text-xs">{label}</p>
-                        <p className="text-foreground mt-0.5 truncate text-lg font-bold tracking-tight sm:text-2xl leading-none">
-                            {value}
-                        </p>
+                        <p className="text-foreground mt-0.5 truncate text-lg leading-none font-bold tracking-tight sm:text-2xl">{value}</p>
                     </div>
                     <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12", bgTone)}>
                         <Icon className={cn("h-4 w-4 sm:h-7 sm:w-7", iconTone)} strokeWidth={2} />
@@ -242,17 +255,30 @@ const AcademicStatCard = ({
 const CurriculumPrintView = ({
     curriculum,
     student_name,
+    student_number,
     course_name,
     progress,
+    school,
 }: {
     curriculum: Curriculum;
     student_name: string;
+    student_number: string;
     course_name: string;
     progress: ProgressSummary;
+    school: SchoolBranding;
 }) => {
     const printFrameRef = useRef<HTMLDivElement>(null);
     const printRootRef = useRef<HTMLDivElement>(null);
-    const [printScale, setPrintScale] = useState(1.12);
+    const [printScale, setPrintScale] = useState(1);
+    const generatedOn = useMemo(
+        () =>
+            new Intl.DateTimeFormat("en-PH", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+            }).format(new Date()),
+        [],
+    );
 
     // Group by Year
     const yearGroups = useMemo(() => {
@@ -264,7 +290,6 @@ const CurriculumPrintView = ({
 
             Object.entries(sems).forEach(([semStr, subs]) => {
                 const sem = parseInt(semStr);
-                // Filter out subjects if needed, or keep all
                 groups[year][sem] = subs as CurriculumSubject[];
             });
         });
@@ -284,7 +309,7 @@ const CurriculumPrintView = ({
 
             const availableHeight = frame.clientHeight;
             const contentHeight = root.scrollHeight;
-            const preferredScale = 1.12;
+            const preferredScale = 1;
 
             if (!availableHeight || !contentHeight) {
                 setPrintScale(preferredScale);
@@ -293,10 +318,10 @@ const CurriculumPrintView = ({
 
             const availableWidth = frame.clientWidth;
             const contentWidth = root.scrollWidth;
-            const maxScaleByHeight = (availableHeight / contentHeight) * 0.992;
-            const maxScaleByWidth = contentWidth > 0 ? (availableWidth / contentWidth) * 0.992 : preferredScale;
+            const maxScaleByHeight = (availableHeight / contentHeight) * 0.996;
+            const maxScaleByWidth = contentWidth > 0 ? (availableWidth / contentWidth) * 0.996 : preferredScale;
             const nextScale = Math.min(preferredScale, maxScaleByHeight, maxScaleByWidth);
-            setPrintScale(Math.max(0.82, Number(nextScale.toFixed(3))));
+            setPrintScale(Math.max(0.78, Number(nextScale.toFixed(3))));
         };
 
         const frameId = window.requestAnimationFrame(calculateScale);
@@ -306,102 +331,141 @@ const CurriculumPrintView = ({
             window.cancelAnimationFrame(frameId);
             window.removeEventListener("resize", calculateScale);
         };
-    }, [curriculum, course_name, progress.earned, progress.percentage, progress.total, student_name]);
+    }, [curriculum, course_name, progress.earned, progress.percentage, progress.total, school.name, student_name, student_number]);
+
+    const statusLabel = (status: CurriculumSubject["status"]): string => {
+        if (status === "completed") return "C";
+        if (status === "ongoing") return "IP";
+        if (status === "failed") return "F";
+        return "P";
+    };
 
     const SemesterTable = ({ title, subjects }: { title: string; subjects: CurriculumSubject[] }) => (
-        <div className="w-full">
-            <h3 className="mb-0.5 border-y border-black bg-gray-100 px-1 py-0 text-center text-[7px] font-bold uppercase">{title}</h3>
-            <table className="w-full border-collapse text-[8px] leading-tight">
+        <section className="checklist-semester w-full">
+            <h3 className="border-x border-t border-[#536274] bg-[#e7ebef] px-1.5 py-[2px] text-center text-[7.5px] font-bold tracking-[0.12em] text-[#172b46] uppercase">
+                {title}
+            </h3>
+            <table className="w-full border-collapse text-[7.5px] leading-[1.15]">
                 <thead>
-                    <tr className="border-b border-black">
-                        <th className="w-14 px-1 py-0 text-left">Code</th>
-                        <th className="px-1 py-0 text-left">Description</th>
-                        <th className="w-7 px-1 py-0 text-center">U</th>
-                        <th className="w-7 px-1 py-0 text-center">G</th>
+                    <tr className="bg-[#f5f6f7] text-[6.5px] tracking-[0.08em] text-[#4a5563] uppercase">
+                        <th className="w-[16%] border border-[#7a8795] px-1.5 py-[2px] text-left">Code</th>
+                        <th className="border border-[#7a8795] px-1.5 py-[2px] text-left">Course description</th>
+                        <th className="w-[6%] border border-[#7a8795] px-1 py-[2px] text-center">Units</th>
+                        <th className="w-[7%] border border-[#7a8795] px-1 py-[2px] text-center">Grade</th>
+                        <th className="w-[6%] border border-[#7a8795] px-1 py-[2px] text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {subjects?.map((sub) => (
-                        <tr key={sub.id} className="border-b border-gray-200 last:border-0">
-                            <td className="px-1 py-0 align-top font-mono">{sub.code}</td>
-                            <td className="px-1 py-0 align-top">{sub.title}</td>
-                            <td className="px-1 py-0 text-center align-top">{sub.units}</td>
-                            <td
-                                className={`px-1 py-0 text-center align-top font-bold ${
-                                    sub.grade !== null ? "bg-emerald-100/90 text-emerald-800" : ""
-                                }`}
-                            >
-                                {sub.grade || "—"}
-                            </td>
-                        </tr>
-                    )) || (
+                    {subjects?.length ? (
+                        subjects.map((sub) => (
+                            <tr key={sub.id} className="even:bg-[#f8f9fa]">
+                                <td className="border border-[#a7afb8] px-1.5 py-[2px] align-top font-mono font-semibold whitespace-nowrap">
+                                    {sub.code}
+                                </td>
+                                <td className="border border-[#a7afb8] px-1.5 py-[2px] align-top">{sub.title}</td>
+                                <td className="border border-[#a7afb8] px-1 py-[2px] text-center align-top tabular-nums">{sub.units}</td>
+                                <td className="border border-[#a7afb8] px-1 py-[2px] text-center align-top font-semibold tabular-nums">
+                                    {sub.grade ?? "—"}
+                                </td>
+                                <td className="border border-[#a7afb8] px-1 py-[2px] text-center align-top font-bold">{statusLabel(sub.status)}</td>
+                            </tr>
+                        ))
+                    ) : (
                         <tr>
-                            <td colSpan={4} className="py-0.5 text-center text-gray-400 italic">
+                            <td colSpan={5} className="border border-[#a7afb8] py-1 text-center text-gray-500 italic">
                                 No subjects
                             </td>
                         </tr>
                     )}
                 </tbody>
             </table>
-        </div>
+        </section>
     );
 
     return (
         <div className="print-container bg-white text-black">
-            <div className="print-frame h-[210mm] w-[297mm] overflow-hidden bg-white p-2.5" ref={printFrameRef}>
+            <div className="print-frame h-[210mm] w-[297mm] overflow-hidden bg-white px-[8mm] py-[6mm]" ref={printFrameRef}>
                 <div
-                    className="print-root h-full font-serif text-[10px] leading-tight"
+                    className="print-root flex h-full flex-col font-sans text-[8px] leading-tight antialiased"
                     ref={printRootRef}
                     style={{ "--print-scale": printScale } as CSSProperties}
                 >
-                    {/* Header */}
-                    <div className="mb-1 border-b border-black pb-0.5 text-center">
-                        <h1 className="text-[16px] font-bold tracking-wide uppercase">Academic Checklist</h1>
-                        <h2 className="text-[10px] font-semibold uppercase">{course_name}</h2>
-                        <div className="mt-0.5 flex items-end justify-between text-[7px]">
-                            <div className="text-left">
-                                <p>
-                                    <span className="font-bold">Student:</span> {student_name}
-                                </p>
-                                <p>
-                                    <span className="font-bold">Date:</span> {new Date().toLocaleDateString()}
-                                </p>
+                    <header className="border-b-[2.5px] border-[#172b46] pb-2">
+                        <div className="grid grid-cols-[58px_1fr_220px] items-center gap-3">
+                            <img src={school.logo} alt={`${school.name} logo`} className="h-[52px] w-[52px] object-contain" />
+                            <div>
+                                <p className="text-[6.5px] font-semibold tracking-[0.2em] text-[#9a6b1f] uppercase">Office of the Registrar</p>
+                                <h1 className="mt-0.5 font-serif text-[15px] leading-none font-bold tracking-[0.06em] text-[#172b46] uppercase">
+                                    {school.name}
+                                </h1>
+                                <p className="mt-1 text-[7px] text-[#566170]">{school.address}</p>
+                                {(school.email || school.phone) && (
+                                    <p className="mt-0.5 text-[6.5px] text-[#6b7280]">{[school.email, school.phone].filter(Boolean).join("  •  ")}</p>
+                                )}
                             </div>
-                            <div className="text-right">
-                                <p>
-                                    <span className="font-bold">Units:</span> {progress.earned} / {progress.total}
+                            <div className="border-l border-[#a7afb8] pl-4 text-right">
+                                <p className="font-serif text-[16px] leading-none font-bold tracking-[0.08em] text-[#172b46] uppercase">
+                                    Academic Checklist
                                 </p>
-                                <p>
-                                    <span className="font-bold">Completion:</span> {progress.percentage}%
+                                <p className="mt-1 text-[6.5px] font-semibold tracking-[0.16em] text-[#9a6b1f] uppercase">
+                                    Curriculum Progress Record
                                 </p>
+                                <p className="mt-1.5 text-[6.5px] text-[#6b7280]">Generated {generatedOn}</p>
                             </div>
                         </div>
-                    </div>
+                    </header>
 
-                    {/* Content */}
-                    <div className="space-y-1">
+                    <section className="mt-2 grid grid-cols-[1fr_1.4fr_92px_92px] border border-[#657383] bg-white">
+                        <DocumentField label="Student number" value={student_number} />
+                        <DocumentField label="Student name" value={student_name} />
+                        <DocumentField label="Units earned" value={`${progress.earned} / ${progress.total}`} align="center" />
+                        <DocumentField label="Completion" value={`${progress.percentage}%`} align="center" last />
+                        <div className="col-span-4 border-t border-[#a7afb8] px-2 py-1">
+                            <span className="mr-2 text-[6px] font-bold tracking-[0.12em] text-[#6b7280] uppercase">Program</span>
+                            <span className="font-semibold text-[#172b46]">{course_name}</span>
+                        </div>
+                    </section>
+
+                    <main className="mt-2 flex-1 space-y-1.5">
                         {sortedYears.map((year) => (
-                            <div key={year} className="break-inside-avoid border border-black px-1 pt-0.5 pb-0.5">
-                                <h2 className="mb-0.5 border-b border-black pb-0 text-[7px] font-bold uppercase">Year Level {year}</h2>
-
-                                <div className="grid grid-cols-2 gap-0.5">
+                            <section key={year} className="checklist-year break-inside-avoid">
+                                <div className="flex items-center justify-between bg-[#172b46] px-2 py-[2.5px] text-white">
+                                    <h2 className="text-[7px] font-bold tracking-[0.16em] uppercase">{yearLabel(year)}</h2>
+                                    <span className="text-[6px] tracking-[0.12em] text-white/75 uppercase">Curriculum sequence</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1">
                                     <SemesterTable title="1st Semester" subjects={yearGroups[year][1]} />
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         <SemesterTable title="2nd Semester" subjects={yearGroups[year][2]} />
                                         {yearGroups[year][3] && yearGroups[year][3].length > 0 && (
                                             <SemesterTable title="Summer" subjects={yearGroups[year][3]} />
                                         )}
                                     </div>
                                 </div>
-                            </div>
+                            </section>
                         ))}
-                    </div>
+                    </main>
 
-                    {/* Footer */}
-                    <div className="mt-1 flex items-center justify-between border-t border-black pt-0.5 text-[6px] text-gray-500">
-                        <p>System Generated Report</p>
-                        <p>Page 1 of 1</p>
-                    </div>
+                    <footer className="mt-2 grid grid-cols-[1fr_auto_1fr] items-end gap-5 border-t border-[#657383] pt-1.5 text-[6.5px] text-[#566170]">
+                        <div>
+                            <p className="font-bold tracking-[0.08em] text-[#172b46] uppercase">Status legend</p>
+                            <p className="mt-0.5">C — Completed&nbsp;&nbsp; IP — In progress&nbsp;&nbsp; F — Failed&nbsp;&nbsp; P — Pending</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="font-semibold text-[#172b46]">System-generated academic checklist</p>
+                            <p className="mt-0.5">For academic advising and student reference • Page 1 of 1</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-5 text-center">
+                            <div>
+                                <div className="h-4 border-b border-[#657383]" />
+                                <p className="mt-1 font-semibold uppercase">Academic adviser</p>
+                            </div>
+                            <div>
+                                <div className="h-4 border-b border-[#657383]" />
+                                <p className="mt-1 font-semibold uppercase">Registrar</p>
+                            </div>
+                        </div>
+                    </footer>
                 </div>
             </div>
 
@@ -413,25 +477,51 @@ const CurriculumPrintView = ({
                 }
 
                 @media print {
-                    @page { margin: 6mm 8mm; size: landscape; }
+                    @page { margin: 0; size: A4 landscape; }
                     html, body {
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                         background: #fff !important;
                     }
                     .print-container, .print-frame {
-                        width: 100% !important;
-                        height: auto !important;
+                        width: 297mm !important;
+                        height: 210mm !important;
                         margin: 0 !important;
-                        padding: 0 !important;
                     }
+                    .checklist-year, .checklist-semester { break-inside: avoid; page-break-inside: avoid; }
                 }
             `}</style>
         </div>
     );
 };
 
-export default function StudentClasses({ user, student_name, course_name, progress, curriculum, faculty_data }: StudentClassesProps) {
+const DocumentField = ({
+    label,
+    value,
+    align = "left",
+    last = false,
+}: {
+    label: string;
+    value: string;
+    align?: "left" | "center";
+    last?: boolean;
+}) => (
+    <div className={cn("px-2 py-1", !last && "border-r border-[#a7afb8]", align === "center" && "text-center")}>
+        <p className="text-[6px] font-bold tracking-[0.1em] text-[#6b7280] uppercase">{label}</p>
+        <p className="mt-0.5 truncate font-semibold text-[#172b46] tabular-nums">{value}</p>
+    </div>
+);
+
+export default function StudentClasses({
+    user,
+    student_name,
+    student_number,
+    course_name,
+    school,
+    progress,
+    curriculum,
+    faculty_data,
+}: StudentClassesProps) {
     const { url } = usePage();
     const [selectedYear, setSelectedYear] = useState<number | "all">("all");
     const [searchQuery, setSearchQuery] = useState(() => {
@@ -536,7 +626,7 @@ export default function StudentClasses({ user, student_name, course_name, progre
             <Head title="My Academics" />
 
             {/* Mobile Header Background */}
-            <div className="bg-primary/10 md:hidden relative h-[110px] w-full overflow-hidden px-4 pt-5">
+            <div className="bg-primary/10 relative h-[110px] w-full overflow-hidden px-4 pt-5 md:hidden">
                 <div className="bg-primary/20 absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl" />
                 <div className="bg-primary/10 absolute -bottom-12 -left-12 h-40 w-40 rounded-full blur-2xl" />
                 <div className="relative">
@@ -551,10 +641,7 @@ export default function StudentClasses({ user, student_name, course_name, progre
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className={cn(
-                    "mx-auto flex w-full max-w-7xl flex-col gap-2.5 p-3.5 pb-20 md:gap-6 md:p-6",
-                    "relative z-20 -mt-10 md:mt-0"
-                )}
+                className={cn("mx-auto flex w-full max-w-7xl flex-col gap-2.5 p-3.5 pb-20 md:gap-6 md:p-6", "relative z-20 -mt-10 md:mt-0")}
             >
                 {/* Hero Section */}
                 <Card className={cn(dashboardPanelClass, "relative overflow-hidden")}>
@@ -564,14 +651,18 @@ export default function StudentClasses({ user, student_name, course_name, progre
 
                     <CardContent className="relative z-10 space-y-3 p-3 sm:p-5 md:space-y-6 md:p-6">
                         <div className="flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
-                            <div className="space-y-1 sm:space-y-2 md:block hidden">
-                                <Badge variant="outline" className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs">
+                            <div className="hidden space-y-1 sm:space-y-2 md:block">
+                                <Badge
+                                    variant="outline"
+                                    className="border-border/60 bg-background/60 w-fit rounded-full px-2 py-0.5 text-[9px] sm:px-3 sm:py-1 sm:text-xs"
+                                >
                                     <Sparkles className="text-primary mr-1.5 h-3 w-3" />
                                     My Academics
                                 </Badge>
                                 <div>
                                     <h1 className="text-foreground text-xl leading-tight font-bold tracking-tight sm:text-3xl md:text-4xl">
-                                        Academic <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Journey</span>
+                                        Academic{" "}
+                                        <span className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-transparent">Journey</span>
                                     </h1>
                                     <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-[11px] sm:text-sm">
                                         <GraduationCap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -580,20 +671,18 @@ export default function StudentClasses({ user, student_name, course_name, progre
                                 </div>
                             </div>
 
-                            <div className="md:hidden block w-full">
+                            <div className="block w-full md:hidden">
                                 <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase">Enrolled Course</p>
-                                <p className="text-foreground mt-1 text-sm font-bold leading-tight">
-                                    {course_name}
-                                </p>
+                                <p className="text-foreground mt-1 text-sm leading-tight font-bold">{course_name}</p>
                             </div>
 
                             {/* View Switcher Controls */}
-                            <div className="border-border/60 bg-muted/70 grid w-full grid-cols-2 gap-1 rounded-xl border p-1 sm:w-auto shadow-sm">
+                            <div className="border-border/60 bg-muted/70 grid w-full grid-cols-2 gap-1 rounded-xl border p-1 shadow-sm sm:w-auto">
                                 <Button
                                     variant={viewMode === "interactive" ? "default" : "ghost"}
                                     size="sm"
                                     onClick={() => setViewMode("interactive")}
-                                    className="gap-2 rounded-md h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm"
+                                    className="h-8 gap-2 rounded-md px-3 text-xs sm:h-9 sm:px-4 sm:text-sm"
                                 >
                                     <LayoutGridIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     <span>Interactive</span>
@@ -602,7 +691,7 @@ export default function StudentClasses({ user, student_name, course_name, progre
                                     variant={viewMode === "document" ? "default" : "ghost"}
                                     size="sm"
                                     onClick={() => setViewMode("document")}
-                                    className="gap-2 rounded-md h-8 px-3 text-xs sm:h-9 sm:px-4 sm:text-sm"
+                                    className="h-8 gap-2 rounded-md px-3 text-xs sm:h-9 sm:px-4 sm:text-sm"
                                 >
                                     <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     <span>Document</span>
@@ -613,23 +702,25 @@ export default function StudentClasses({ user, student_name, course_name, progre
                         {/* Progress Stats (Only show in Interactive Mode) */}
                         {viewMode === "interactive" && (
                             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid gap-3 md:grid-cols-2 md:gap-4">
-                                <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
+                                <Card className="border-border/40 bg-card/60 hover:border-primary/40 hover:bg-card relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300">
                                     <CardContent className="p-4 sm:p-5">
                                         <div className="flex items-start justify-between">
                                             <div className="min-w-0 flex-1">
-                                                <h3 className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">Course Completion</h3>
+                                                <h3 className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">
+                                                    Course Completion
+                                                </h3>
                                                 <div className="mt-1 flex items-baseline gap-2 sm:mt-2">
-                                                    <span className="text-foreground text-xl font-bold tracking-tight sm:text-2xl md:text-3xl leading-none">
+                                                    <span className="text-foreground text-xl leading-none font-bold tracking-tight sm:text-2xl md:text-3xl">
                                                         {progress.percentage}%
                                                     </span>
                                                     <span className="text-foreground/45 text-[10px] font-medium sm:text-xs">Complete</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-amber-500/10 text-amber-500 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 sm:h-14 sm:w-14">
                                                 <Trophy className="h-5 w-5 sm:h-8 sm:w-8" strokeWidth={2} />
                                             </div>
                                         </div>
-                                        
+
                                         <div className="mt-4 space-y-2 sm:mt-6">
                                             <div className="text-foreground/45 flex justify-between text-[10px] font-bold sm:text-xs">
                                                 <span>{progress.earned} Units Earned</span>
@@ -640,29 +731,39 @@ export default function StudentClasses({ user, student_name, course_name, progre
                                                     initial={{ width: 0 }}
                                                     animate={{ width: `${progress.percentage}%` }}
                                                     transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-                                                    className="bg-amber-500 h-full rounded-full shadow-[0_0_10px_rgba(245,158,11,0.3)]"
+                                                    className="h-full rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]"
                                                 />
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
 
-                                <Card className="border-border/40 bg-card/60 relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-card">
+                                <Card className="border-border/40 bg-card/60 hover:border-primary/40 hover:bg-card relative overflow-hidden rounded-2xl shadow-sm transition-all duration-300">
                                     <CardContent className="p-4 sm:p-5">
                                         <div className="flex items-start justify-between">
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">Overall GWA</p>
+                                                <p className="text-foreground/50 text-[10px] font-bold tracking-wider uppercase sm:text-xs">
+                                                    Overall GWA
+                                                </p>
                                                 <div
                                                     className={cn(
-                                                        "mt-1 font-mono text-xl font-bold tracking-tight sm:mt-2 sm:text-2xl md:text-3xl leading-none",
+                                                        "mt-1 font-mono text-xl leading-none font-bold tracking-tight sm:mt-2 sm:text-2xl md:text-3xl",
                                                         gwaToneClass(overallGwa, gradingConfig),
                                                     )}
                                                 >
                                                     {formatGwa(overallGwa, gradingConfig)}
                                                 </div>
                                             </div>
-                                            <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14", gwaToneClass(overallGwa, gradingConfig).replace("text-", "bg-").replace("500", "500/10"))}>
-                                                <Sparkles className={cn("h-5 w-5 sm:h-8 sm:w-8", gwaToneClass(overallGwa, gradingConfig))} strokeWidth={2} />
+                                            <div
+                                                className={cn(
+                                                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14",
+                                                    gwaToneClass(overallGwa, gradingConfig).replace("text-", "bg-").replace("500", "500/10"),
+                                                )}
+                                            >
+                                                <Sparkles
+                                                    className={cn("h-5 w-5 sm:h-8 sm:w-8", gwaToneClass(overallGwa, gradingConfig))}
+                                                    strokeWidth={2}
+                                                />
                                             </div>
                                         </div>
                                         <p className="text-foreground/45 mt-4 line-clamp-1 text-[10px] font-medium sm:mt-6 sm:text-xs">
@@ -871,24 +972,35 @@ export default function StudentClasses({ user, student_name, course_name, progre
                             >
                                 <Card className={`${dashboardPanelClass} overflow-hidden`}>
                                     <div className="bg-muted/35 flex flex-col justify-between gap-3 border-b p-4 sm:flex-row sm:items-center print:hidden">
-                                        <div className="text-muted-foreground text-sm">
-                                            <span className="text-foreground font-semibold">Print Preview</span> • Scaled to fit A4/Letter size
+                                        <div>
+                                            <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                                                <FileText className="text-primary h-4 w-4" />
+                                                Official-style document preview
+                                            </div>
+                                            <p className="text-muted-foreground mt-1 text-xs">
+                                                A4 landscape • System-generated student reference copy
+                                            </p>
                                         </div>
-                                        <Button onClick={() => handlePrint()} className="gap-2 shadow-sm">
+                                        <Button
+                                            onClick={() => handlePrint()}
+                                            className="min-h-10 gap-2 shadow-sm transition-transform active:scale-[0.96]"
+                                        >
                                             <Printer className="h-4 w-4" />
                                             Print / Save as PDF
                                         </Button>
                                     </div>
-                                    <div className="bg-background/40 flex justify-center overflow-auto p-4 md:p-8">
+                                    <div className="bg-muted/20 flex justify-start overflow-auto p-4 sm:justify-center md:p-8">
                                         <div
-                                            className="h-[210mm] w-[297mm] max-w-none bg-white shadow-xl print:h-auto print:w-auto print:shadow-none"
+                                            className="h-[210mm] w-[297mm] max-w-none shrink-0 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18),0_0_0_1px_rgba(15,23,42,0.08)] print:h-auto print:w-auto print:shadow-none"
                                             ref={componentRef}
                                         >
                                             <CurriculumPrintView
                                                 curriculum={curriculum}
                                                 student_name={student_name}
+                                                student_number={student_number}
                                                 course_name={course_name}
                                                 progress={progress}
+                                                school={school}
                                             />
                                         </div>
                                     </div>

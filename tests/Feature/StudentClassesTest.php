@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\UserRole;
+use App\Features\Toggles\StudentClasses as StudentClassesFeature;
 use App\Models\Classes;
 use App\Models\Course;
 use App\Models\Faculty;
@@ -11,10 +13,11 @@ use App\Models\Subject;
 use App\Models\SubjectEnrollment;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Pennant\Feature;
 
 test('student can view classes (my academics) page', function () {
     // Create student user
-    $user = User::factory()->create(['role' => 'student']);
+    $user = User::factory()->create(['role' => UserRole::Student]);
 
     // Create student record
     $course = Course::factory()->create();
@@ -54,6 +57,8 @@ test('student can view classes (my academics) page', function () {
         'semester' => 1,
     ]);
 
+    Feature::activateForEveryone(StudentClassesFeature::class);
+
     // Enroll student in term
     $enrollment = App\Models\StudentEnrollment::create([
         'student_id' => $student->id,
@@ -90,6 +95,10 @@ test('student can view classes (my academics) page', function () {
         ->assertStatus(200)
         ->assertInertia(fn (Assert $page) => $page
             ->component('student/classes/index')
+            ->where('student_number', (string) ($student->student_id ?: $student->id))
+            ->has('school.name')
+            ->has('school.address')
+            ->has('school.logo')
             ->has('faculty_data.classes', 1)
             ->where('faculty_data.classes.0.id', $class->id)
             ->has('curriculum')
@@ -97,8 +106,34 @@ test('student can view classes (my academics) page', function () {
         );
 });
 
+test('student without a linked record receives safe checklist document props', function () {
+    $user = User::factory()->create(['role' => UserRole::Student]);
+
+    Feature::activateForEveryone(StudentClassesFeature::class);
+
+    config(['inertia.testing.ensure_pages_exist' => false]);
+
+    $this->actingAs($user)
+        ->get(route('student.classes.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('student/classes/index')
+            ->where('student_name', $user->name)
+            ->where('student_number', 'N/A')
+            ->where('course_name', 'N/A')
+            ->has('school.name')
+            ->has('school.logo')
+            ->where('progress.earned', 0)
+            ->where('progress.total', 0)
+            ->where('progress.percentage', 0)
+            ->where('curriculum', [])
+            ->where('faculty_data.classes', [])
+            ->where('rooms', [])
+        );
+});
+
 test('non-student cannot view classes page', function () {
-    $user = User::factory()->create(['role' => 'faculty']);
+    $user = User::factory()->create(['role' => UserRole::Instructor]);
 
     $this->actingAs($user)
         ->get(route('student.classes.index'))

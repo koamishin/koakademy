@@ -8,12 +8,15 @@ use App\Models\Student;
 use App\Models\Subject;
 use App\Models\SubjectEnrollment;
 use App\Models\User;
+use App\Services\SchoolBrandingService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 final class StudentClassesController extends Controller
 {
+    public function __construct(private readonly SchoolBrandingService $schoolBranding) {}
+
     public function __invoke(Request $request): Response
     {
         /** @var User $user */
@@ -32,15 +35,19 @@ final class StudentClassesController extends Controller
             'avatar' => $user->getFilamentAvatarUrl(),
             'role' => $user->role?->value ?? 'student',
         ];
+        $school = $this->schoolBranding->resolve();
 
         if (! $student) {
             return Inertia::render('student/classes/index', [
                 'user' => $userData,
                 'student_name' => $user->name,
+                'student_number' => 'N/A',
                 'course_name' => 'N/A',
+                'school' => $school,
                 'progress' => ['earned' => 0, 'total' => 0, 'percentage' => 0],
                 'curriculum' => [],
-                'current_classes' => [],
+                'faculty_data' => ['classes' => [], 'stats' => []],
+                'rooms' => [],
             ]);
         }
 
@@ -236,7 +243,9 @@ final class StudentClassesController extends Controller
         return Inertia::render('student/classes/index', [
             'user' => $userData,
             'student_name' => $student->full_name ?? $user->name,
+            'student_number' => (string) ($student->student_id ?: $student->id),
             'course_name' => $student->Course?->title ?? 'N/A',
+            'school' => $school,
             'progress' => [
                 'earned' => $earnedUnits,
                 'total' => $totalUnits,
