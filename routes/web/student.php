@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\ApiKeyController;
 use App\Http\Controllers\DigitalIdCardController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StatementOfAccountIssuanceController;
 use App\Http\Controllers\StudentDashboardController;
 use App\Http\Controllers\StudentGlobalSearchController;
 use App\Http\Controllers\UserSettingController;
@@ -73,6 +74,9 @@ Route::middleware(['auth', 'student.only', 'ensure.feature'])->prefix('student')
     Route::get('/schedule', App\Http\Controllers\StudentScheduleController::class)->name('schedule');
     Route::get('/tuition', [App\Http\Controllers\StudentTuitionController::class, 'index'])->name('tuition.index');
     Route::get('/tuition/soa', [App\Http\Controllers\StudentTuitionController::class, 'soa'])->name('tuition.soa');
+    Route::post('/tuition/soa/issuances', [StatementOfAccountIssuanceController::class, 'store'])->name('tuition.soa.issuances.store');
+    Route::get('/tuition/soa/issuances/{issuance}', [StatementOfAccountIssuanceController::class, 'show'])->name('tuition.soa.issuances.show');
+    Route::get('/tuition/soa/issuances/{issuance}/download', [StatementOfAccountIssuanceController::class, 'download'])->name('tuition.soa.issuances.download');
 
     // Announcements
     Route::get('/announcements', [PortalAnnouncementController::class, 'index'])->name('announcements.index');

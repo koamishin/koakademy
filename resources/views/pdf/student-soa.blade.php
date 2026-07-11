@@ -205,6 +205,28 @@
             font-size: 8.2pt;
         }
 
+        .verification {
+            margin-top: 10px;
+            border: 1px solid #0f172a;
+            background: #f8fafc;
+        }
+
+        .verification td {
+            padding: 7px;
+            vertical-align: middle;
+            font-size: 8pt;
+        }
+
+        .verification .qr {
+            width: 72px;
+            text-align: center;
+        }
+
+        .verification img {
+            width: 62px;
+            height: 62px;
+        }
+
         .signatories {
             margin-top: 20px;
             width: 100%;
@@ -248,21 +270,21 @@
     $semester = (int) ($filters['semester'] ?? 1);
     $semesterLabel = $semester === 1 ? '1st Semester' : ($semester === 2 ? '2nd Semester' : 'Semester '.$semester);
     $schoolYear = (string) ($filters['school_year'] ?? '');
-    $documentNo = $studentNo.'-'.preg_replace('/\s|-/u', '', $schoolYear).'-'.$semester;
+    $documentNo = $document_number ?? ($studentNo.'-'.preg_replace('/\s|-/u', '', $schoolYear).'-'.$semester);
 
-    $assessmentTotal = (float) ($tuition?->overall_tuition ?? 0);
-    $ledgerBalance = (float) ($tuition?->total_balance ?? 0);
+    $assessmentTotal = (float) data_get($tuition, 'overall_tuition', 0);
+    $ledgerBalance = (float) data_get($tuition, 'total_balance', 0);
     $paymentHistoryTotal = collect($transactions)->sum(fn (array $row): float => (float) ($row['amount'] ?? 0));
     $ledgerPaid = $tuition ? max(0, $assessmentTotal - $ledgerBalance) : $paymentHistoryTotal;
     $totalPayments = $tuition ? $ledgerPaid : $paymentHistoryTotal;
     $balanceDue = $tuition ? $ledgerBalance : max(0, $assessmentTotal - $paymentHistoryTotal);
 
-    $lectureFee = (float) ($tuition?->total_lectures ?? 0);
-    $laboratoryFee = (float) ($tuition?->total_laboratory ?? 0);
-    $tuitionSubtotal = (float) ($tuition?->total_tuition ?? 0);
-    $miscellaneousFee = (float) ($tuition?->total_miscelaneous_fees ?? 0);
+    $lectureFee = (float) data_get($tuition, 'total_lectures', 0);
+    $laboratoryFee = (float) data_get($tuition, 'total_laboratory', 0);
+    $tuitionSubtotal = (float) data_get($tuition, 'total_tuition', 0);
+    $miscellaneousFee = (float) data_get($tuition, 'total_miscelaneous_fees', 0);
     $adjustmentAmount = $tuition ? $assessmentTotal - ($tuitionSubtotal + $miscellaneousFee) : 0;
-    $transactionsForPrint = collect($transactions)->take(12)->all();
+    $transactionsForPrint = collect($transactions)->all();
 @endphp
 
 <div class="document-shell">
@@ -270,8 +292,8 @@
         <table class="school-row">
             <tr>
                 <td class="logo-wrap">
-                    @if (! empty($school['logo']))
-                        <img src="{{ $school['logo'] }}" alt="School logo" class="school-logo">
+                    @if (! empty($school['logo_embedded'] ?? $school['logo'] ?? null))
+                        <img src="{{ $school['logo_embedded'] ?? $school['logo'] }}" alt="School logo" class="school-logo">
                     @endif
                 </td>
                 <td class="school-meta">
@@ -299,7 +321,7 @@
 
     <table class="meta">
         <tr>
-            <td><strong>Control No.:</strong> SOA-{{ $documentNo }}</td>
+            <td><strong>Document No.:</strong> {{ $documentNo }}</td>
             <td class="right"><strong>Date Issued:</strong> {{ $generated_at }}</td>
         </tr>
     </table>
@@ -347,10 +369,10 @@
                                 <td class="money">{{ $formatMoney($adjustmentAmount) }}</td>
                             </tr>
                         @endif
-                        @if ((int) ($tuition->discount ?? 0) > 0)
+                        @if ((int) data_get($tuition, 'discount', 0) > 0)
                             <tr>
                                 <td>Discount Applied</td>
-                                <td class="money">{{ (int) $tuition->discount }}%</td>
+                                <td class="money">{{ (int) data_get($tuition, 'discount', 0) }}%</td>
                             </tr>
                         @endif
                         <tr class="emphasis">
@@ -427,6 +449,20 @@
         <strong>Certification:</strong>
         This document certifies that the foregoing figures reflect the recorded financial status of the student as of the date and time of issuance.
     </section>
+
+    @if (! empty($qr_code ?? null))
+        <table class="verification">
+            <tr>
+                <td class="qr"><img src="{{ $qr_code }}" alt="Document verification QR code"></td>
+                <td>
+                    <strong>VERIFY THIS OFFICIAL DOCUMENT</strong><br>
+                    Scan the QR code and confirm that the document number, masked student identity, academic term, and financial totals match this copy.<br>
+                    Verification code: <strong>{{ $verification_code }}</strong><br>
+                    {{ $verification_url }}
+                </td>
+            </tr>
+        </table>
+    @endif
 
     <table class="signatories">
         <tr>

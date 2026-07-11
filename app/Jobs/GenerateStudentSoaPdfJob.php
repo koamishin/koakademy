@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Models\StatementOfAccountIssuance;
 use App\Models\User;
 use App\Services\PdfGenerationService;
 use App\Support\StreamedStorage;
@@ -36,6 +37,7 @@ final class GenerateStudentSoaPdfJob implements ShouldQueue
         public array $viewData,
         public string $downloadName,
         public int $userId,
+        public ?int $issuanceId = null,
     ) {
         $this->onQueue('pdf-generation');
     }
@@ -70,6 +72,15 @@ final class GenerateStudentSoaPdfJob implements ShouldQueue
             $storagePath = $directory.'/'.$filename;
             StreamedStorage::putFileFromPath($disk, $storagePath, $temporaryFilePath);
 
+            if ($this->issuanceId !== null) {
+                StatementOfAccountIssuance::query()->whereKey($this->issuanceId)->update([
+                    'status' => 'ready',
+                    'disk' => $disk,
+                    'pdf_path' => $storagePath,
+                    'pdf_checksum' => hash_file('sha256', $temporaryFilePath),
+                ]);
+            }
+
             $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
             $outputSize = Storage::disk($disk)->size($storagePath);
 
@@ -99,6 +110,12 @@ final class GenerateStudentSoaPdfJob implements ShouldQueue
                 ])
                 ->sendToDatabase($user)
                 ->send();
+        } catch (Throwable $throwable) {
+            if ($this->issuanceId !== null) {
+                StatementOfAccountIssuance::query()->whereKey($this->issuanceId)->update(['status' => 'failed']);
+            }
+
+            throw $throwable;
         } finally {
             if (file_exists($temporaryFilePath)) {
                 unlink($temporaryFilePath);
@@ -108,6 +125,9 @@ final class GenerateStudentSoaPdfJob implements ShouldQueue
 
     public function failed(Throwable $throwable): void
     {
+        if ($this->issuanceId !== null) {
+            StatementOfAccountIssuance::query()->whereKey($this->issuanceId)->update(['status' => 'failed']);
+        }
         Log::error('Queued student SOA PDF generation failed', [
             'requester_id' => $this->userId,
             'error' => $throwable->getMessage(),

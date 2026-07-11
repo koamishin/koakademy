@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\AppManifestController;
 use App\Http\Controllers\ClassesController;
 use App\Http\Controllers\DigitalIdCardController;
+use App\Http\Controllers\StatementOfAccountVerificationController;
 use App\Models\Faculty;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,9 @@ Route::post('/passkeys/login', [App\Http\Controllers\PasskeyAuthController::clas
 |--------------------------------------------------------------------------
 */
 Route::domain(config('app.portal_host'))->group(function () {
+    Route::get('/verify/soa/{token}', StatementOfAccountVerificationController::class)
+        ->middleware('throttle:30,1')
+        ->name('soa.verify');
 
     // Helper function for building faculty portal data (legacy support)
     if (! function_exists('build_faculty_portal_data')) {

@@ -8,8 +8,8 @@ use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\StudentTuition;
 use App\Services\GeneralSettingsService;
+use App\Services\StatementOfAccountService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -191,107 +191,10 @@ final class StudentTuitionController extends Controller
         }
 
         $settings = app(GeneralSettingsService::class);
-
-        // Get filter inputs or defaults
         $semester = (int) $request->input('semester', $settings->getCurrentSemester());
         $schoolYear = $request->input('school_year', $settings->getCurrentSchoolYearString());
+        $viewData = app(StatementOfAccountService::class)->build($student, (string) $schoolYear, $semester);
 
-        // Fetch Tuition Record with Enrollment
-        /** @var StudentTuition|null $tuition */
-        $tuition = StudentTuition::with('enrollment.student')
-            ->where('student_id', $student->id)
-            ->where('semester', $semester)
-            ->where('school_year', $schoolYear)
-            ->first();
-
-        // Fallback via enrollment
-        if (! $tuition) {
-            $enrollment = StudentEnrollment::where('student_id', $student->id)
-                ->where('semester', $semester)
-                ->where('school_year', $schoolYear)
-                ->first();
-
-            if ($enrollment) {
-                $tuition = StudentTuition::with('enrollment.student')
-                    ->where('enrollment_id', $enrollment->id)
-                    ->first();
-            }
-        }
-
-        // Append formatted attributes if tuition exists
-        if ($tuition) {
-            $tuition->append([
-                'formatted_total_balance',
-                'formatted_overall_tuition',
-                'formatted_total_tuition',
-                'formatted_semester',
-                'formatted_total_lectures',
-                'formatted_total_laboratory',
-                'formatted_total_miscelaneous_fees',
-                'formatted_downpayment',
-                'formatted_discount',
-                'formatted_total_paid',
-                'payment_progress',
-                'payment_status',
-                'status_class',
-            ]);
-        }
-
-        // Fetch Transactions
-        $transactions = collect();
-        $enrollment = $tuition?->enrollment;
-
-        if (! $enrollment) {
-            $enrollment = StudentEnrollment::where('student_id', $student->id)
-                ->where('semester', $semester)
-                ->where('school_year', $schoolYear)
-                ->first();
-        }
-
-        if ($enrollment) {
-            $enrollment->setRelation('student', $student);
-            $transactions = $enrollment->enrollmentTransactions()
-                ->with('transaction')
-                ->get();
-        }
-
-        // Map transactions
-        $mappedTransactions = $transactions->map(function ($t): array {
-            $transaction = $t->relationLoaded('transaction') && $t->transaction ? $t->transaction : $t;
-
-            return [
-                'id' => $t->id,
-                'date' => ($transaction->created_at ?? $t->created_at)?->format('M d, Y'),
-                'description' => $transaction->description ?? 'Tuition Payment',
-                'amount' => $transaction->total_amount,
-                'status' => $t->status ?? $transaction->status,
-                'invoice' => $transaction->invoicenumber,
-                'method' => $transaction->payment_method,
-            ];
-        });
-
-        // Get school info from general settings
-        $generalSettings = DB::table('general_settings')->first();
-
-        return Inertia::render('student/tuition/soa', [
-            'student' => [
-                'id' => $student->id,
-                'name' => $student->full_name ?? $student->name,
-                'email' => $student->email,
-                'course' => $student->course?->name ?? $student->course?->course_name ?? $student->course?->code ?? 'N/A',
-            ],
-            'tuition' => $tuition,
-            'transactions' => $mappedTransactions,
-            'filters' => [
-                'semester' => $semester,
-                'school_year' => $schoolYear,
-            ],
-            'school' => [
-                'name' => $generalSettings?->school_portal_title ?? $generalSettings?->site_name ?? app(\App\Settings\SiteSettings::class)->getOrganizationName(),
-                'address' => app(\App\Settings\SiteSettings::class)->getOrganizationAddress() ?? '',
-                'logo' => $generalSettings?->school_portal_logo ?? '/web-app-manifest-192x192.png',
-            ],
-            'generated_at' => now()->format('F d, Y h:i A'),
-        ]);
+        return Inertia::render('student/tuition/soa', $viewData + ['official' => false]);
     }
 }

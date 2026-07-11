@@ -1,0 +1,14 @@
+import { Head } from "@inertiajs/react";
+import { AlertTriangle, Ban, CheckCircle2, ShieldX } from "lucide-react";
+
+interface DocumentData { document_number: string; student: string; student_number: string; term: string; assessment: number; payments: number; balance: number; currency: string; issued_at: string; school: string }
+export default function VerifySoa({ status, document }: { status: "valid" | "revoked" | "invalid" | "integrity_failed"; document?: DocumentData }) {
+    const valid = status === "valid";
+    const Icon = valid ? CheckCircle2 : status === "revoked" ? Ban : status === "integrity_failed" ? ShieldX : AlertTriangle;
+    const title = valid ? "Official record verified" : status === "revoked" ? "Document revoked" : status === "integrity_failed" ? "Integrity check failed" : "Document not found";
+    return <><Head title="SOA Verification" /><main className="flex min-h-screen items-center justify-center bg-[#eef1f5] p-4 text-[#182231]"><section className="w-full max-w-xl overflow-hidden rounded-md border border-slate-300 bg-white shadow-xl">
+        <header className={`border-b px-7 py-7 text-center ${valid ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}><Icon className={`mx-auto h-14 w-14 ${valid ? "text-emerald-700" : "text-red-700"}`} /><h1 className="mt-3 font-serif text-2xl font-bold">{title}</h1><p className="mt-1 text-sm text-slate-600">{valid ? "This statement matches the authoritative school record." : "Do not accept this statement as a current official record."}</p></header>
+        {document && <div className="p-7"><p className="text-center text-xs tracking-[0.16em] text-slate-500 uppercase">{document.school}</p><h2 className="mt-2 text-center font-mono text-lg font-bold">{document.document_number}</h2><dl className="mt-6 grid grid-cols-2 border border-slate-300 text-sm">{Object.entries({ Student: document.student, "Student no.": document.student_number, Term: document.term, Issued: document.issued_at }).map(([key, value]) => <div key={key} className="border-b border-slate-200 p-3"><dt className="text-xs text-slate-500 uppercase">{key}</dt><dd className="mt-1 font-semibold">{value}</dd></div>)}</dl><div className="mt-5 grid grid-cols-3 gap-3 text-center">{[["Assessment", document.assessment], ["Payments", document.payments], ["Balance", document.balance]].map(([label, value]) => <div key={String(label)} className="border border-slate-300 p-3"><p className="text-[10px] text-slate-500 uppercase">{label}</p><p className="mt-1 font-mono font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: document.currency }).format(Number(value))}</p></div>)}</div></div>}
+        <footer className="border-t border-slate-200 bg-slate-50 px-6 py-4 text-center text-xs text-slate-500">Verification results are generated directly by the school portal.</footer>
+    </section></main></>;
+}

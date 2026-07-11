@@ -1,448 +1,138 @@
+import { show, store } from "@/actions/App/Http/Controllers/StatementOfAccountIssuanceController";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Head, usePage } from "@inertiajs/react";
-import { ArrowLeft, Printer } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Head } from "@inertiajs/react";
+import axios from "axios";
+import { ArrowLeft, CheckCircle2, Download, FileCheck2, Loader2, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
-interface Branding {
-    currency: string;
-}
+interface Student { id: number; student_no: string; name: string; course: string }
+interface Tuition { total_lectures: number; total_laboratory: number; total_tuition: number; total_miscelaneous_fees: number; discount: number; overall_tuition: number; total_paid: number; total_balance: number }
+interface Transaction { id: number; date: string; description: string; amount: number; invoice?: string | null; method?: string | null }
+interface School { name: string; address: string; logo: string; tagline: string; email: string; phone: string }
+interface Issuance { uuid: string; document_number: string; status: "pending" | "ready" | "failed"; issued_at: string; download_url: string | null }
+interface Props { student: Student | null; tuition: Tuition | null; transactions: Transaction[]; filters: { semester: number; school_year: string }; school: School; generated_at: string; currency_code: string; error?: string }
 
-interface Tuition {
-    total_tuition: number;
-    total_balance: number;
-    total_lectures: number;
-    total_laboratory: number;
-    total_miscelaneous_fees: number;
-    downpayment: number;
-    discount: number;
-    overall_tuition: number;
-    paid: number;
-    formatted_total_balance: string;
-    formatted_overall_tuition: string;
-    formatted_total_tuition: string;
-    formatted_semester: string;
-    formatted_total_lectures: string;
-    formatted_total_laboratory: string;
-    formatted_total_miscelaneous_fees: string;
-    formatted_downpayment: string;
-    formatted_discount: string;
-    formatted_total_paid: string;
-    payment_progress: number;
-    payment_status: string;
-}
+const money = (value: number, currency: string) => new Intl.NumberFormat(currency === "PHP" ? "en-PH" : "en-US", { style: "currency", currency }).format(value || 0);
 
-interface Transaction {
-    id: number;
-    date: string;
-    description: string;
-    amount: string;
-    status: string;
-    invoice: string;
-    method: string;
-}
+export default function StatementOfAccount({ student, tuition, transactions, filters, school, generated_at, currency_code, error }: Props) {
+    const [issuance, setIssuance] = useState<Issuance | null>(null);
+    const [isIssuing, setIsIssuing] = useState(false);
+    const [issueError, setIssueError] = useState<string | null>(null);
+    const paymentTotal = useMemo(() => transactions.reduce((sum, item) => sum + Number(item.amount), 0), [transactions]);
+    const semester = filters.semester === 1 ? "First Semester" : "Second Semester";
 
-interface Student {
-    id: number;
-    name: string;
-    email: string;
-    course: string;
-}
+    useEffect(() => {
+        if (!issuance || issuance.status !== "pending") return;
+        const timer = window.setInterval(async () => {
+            try {
+                const response = await axios.get<{ issuance: Issuance }>(show.url(issuance.uuid));
+                setIssuance(response.data.issuance);
+            } catch {
+                window.clearInterval(timer);
+                setIssueError("The generation status could not be refreshed. Reload this page to check again.");
+            }
+        }, 2500);
+        return () => window.clearInterval(timer);
+    }, [issuance]);
 
-interface School {
-    name: string;
-    address: string;
-    logo: string;
-}
-
-interface Props {
-    student: Student | null;
-    tuition: Tuition | null;
-    transactions: Transaction[];
-    filters: {
-        semester: number;
-        school_year: string;
-    };
-    school: School | null;
-    generated_at: string;
-}
-
-type PaperSize = "letter" | "a4" | "long" | "short";
-
-const PAPER_SIZES: Record<PaperSize, { name: string; css: string; width: string }> = {
-    short: { name: 'Short Bond (8.5" × 11")', css: "letter", width: "8.5in" },
-    letter: { name: 'Letter (8.5" × 11")', css: "letter", width: "8.5in" },
-    a4: { name: "A4 (210mm × 297mm)", css: "A4", width: "210mm" },
-    long: { name: 'Long Bond (8.5" × 13")', css: "8.5in 13in", width: "8.5in" },
-};
-
-const parseAmount = (amount: number | string | null | undefined): number => {
-    if (typeof amount === "number") {
-        return Number.isFinite(amount) ? amount : 0;
-    }
-
-    if (typeof amount !== "string") {
-        return 0;
-    }
-
-    const normalized = amount.replace(/[^0-9.-]/g, "");
-    const parsed = Number.parseFloat(normalized);
-
-    return Number.isNaN(parsed) ? 0 : parsed;
-};
-
-export default function StatementOfAccount({ student, tuition, transactions, filters, school, generated_at }: Props) {
-    const { props } = usePage<{ branding?: Branding }>();
-    const currency = props.branding?.currency || "PHP";
-    const [paperSize, setPaperSize] = useState<PaperSize>("short");
-
-    const formatCurrency = (amount: number | string | null | undefined): string => {
-        const symbol = currency === "USD" ? "$" : "₱";
-
-        if (amount === null || amount === undefined || amount === "") {
-            return `${symbol}0.00`;
+    const generateOfficialPdf = async () => {
+        setIsIssuing(true);
+        setIssueError(null);
+        try {
+            const response = await axios.post<{ issuance: Issuance }>(store.url(), { school_year: filters.school_year, semester: filters.semester });
+            setIssuance(response.data.issuance);
+        } catch {
+            setIssueError("The official PDF could not be queued. Please try again.");
+        } finally {
+            setIsIssuing(false);
         }
-
-        const num = parseAmount(amount);
-
-        if (Number.isNaN(num)) {
-            return `${symbol}0.00`;
-        }
-
-        return new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-PH", {
-            style: "currency",
-            currency,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(num);
     };
 
-    const paymentHistoryTotal = useMemo(() => {
-        return transactions.reduce((sum, transaction) => sum + parseAmount(transaction.amount), 0);
-    }, [transactions]);
-
-    const assessmentTotal = tuition ? parseAmount(tuition.overall_tuition) : 0;
-    const ledgerBalance = tuition ? Math.max(0, parseAmount(tuition.total_balance)) : 0;
-    const ledgerPaid = tuition ? Math.max(0, assessmentTotal - ledgerBalance) : paymentHistoryTotal;
-    const totalPayments = tuition ? ledgerPaid : paymentHistoryTotal;
-    const balanceDue = tuition ? ledgerBalance : Math.max(0, assessmentTotal - paymentHistoryTotal);
-    const paymentVariance = Math.abs(totalPayments - paymentHistoryTotal);
-
-    const lectureFee = tuition ? parseAmount(tuition.total_lectures) : 0;
-    const laboratoryFee = tuition ? parseAmount(tuition.total_laboratory) : 0;
-    const tuitionSubtotal = tuition ? parseAmount(tuition.total_tuition) : 0;
-    const miscellaneousFee = tuition ? parseAmount(tuition.total_miscelaneous_fees) : 0;
-    const adjustmentAmount = tuition ? assessmentTotal - (tuitionSubtotal + miscellaneousFee) : 0;
-
-    const semesterLabel = filters.semester === 1 ? "1st Semester" : "2nd Semester";
-    const documentNo = student
-        ? `${student.id}-${filters.school_year.replace(/\s|-/g, "")}-${filters.semester}`
-        : `UNAVAILABLE-${filters.school_year.replace(/\s|-/g, "")}-${filters.semester}`;
-
-    const institutionName = school?.name || "Data Center College of the Philippines";
-    const institutionAddress = school?.address || "Baguio City";
-
-    const handlePrint = (): void => {
-        window.print();
-    };
-
-    const handleBack = (): void => {
-        window.history.back();
-    };
-
-    return (
-        <>
-            <Head title="Statement of Account" />
-
-            <div className="fixed top-4 right-4 z-50 flex items-center gap-3 rounded-lg border border-slate-300 bg-white/95 p-2 shadow-lg backdrop-blur print:hidden">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-600">Paper:</span>
-                    <Select value={paperSize} onValueChange={(value) => setPaperSize(value as PaperSize)}>
-                        <SelectTrigger className="h-8 w-[190px] text-xs">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Object.entries(PAPER_SIZES).map(([key, { name }]) => (
-                                <SelectItem key={key} value={key} className="text-xs">
-                                    {name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <Button variant="outline" size="sm" onClick={handleBack} className="h-8 border-slate-400">
-                    <ArrowLeft className="mr-1 h-3 w-3" />
-                    Back
-                </Button>
-                <Button size="sm" onClick={handlePrint} className="h-8 bg-slate-900 text-white hover:bg-slate-700">
-                    <Printer className="mr-1 h-3 w-3" />
-                    Print
-                </Button>
+    return <>
+        <Head title="Statement of Account" />
+        <div className="min-h-screen bg-[#d8dee7] px-3 py-5 text-[#182231] sm:px-6 sm:py-8">
+            <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-md border border-slate-300 bg-white p-2 shadow-lg print:hidden">
+                <Button variant="outline" size="sm" onClick={() => history.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
+                {issuance?.status === "ready" && issuance.download_url ?
+                    <Button size="sm" asChild><a href={issuance.download_url}><Download className="h-4 w-4" /> Download Official PDF</a></Button> :
+                    <Button size="sm" onClick={generateOfficialPdf} disabled={isIssuing || issuance?.status === "pending" || !tuition}>
+                        {isIssuing || issuance?.status === "pending" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileCheck2 className="h-4 w-4" />}
+                        {issuance?.status === "pending" ? "Generating..." : "Generate Official PDF"}
+                    </Button>}
             </div>
 
-            <div className="min-h-screen bg-slate-300 px-4 py-6 print:bg-white print:px-0 print:py-0">
-                <div className="mx-auto border border-slate-800 bg-white shadow-2xl print:border-0 print:shadow-none" style={{ maxWidth: PAPER_SIZES[paperSize].width }}>
-                    <div
-                        className="soa-document bg-white p-8 text-slate-900 print:p-8"
-                        style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: "10pt", lineHeight: "1.35" }}
-                    >
-                        <header className="border-b-2 border-slate-900 pb-3 text-center">
-                            <div className="mb-2 flex items-center justify-center gap-4">
-                                <img
-                                    src={school?.logo || "/web-app-manifest-192x192.png"}
-                                    alt="School logo"
-                                    className="h-14 w-14 object-contain print:h-12 print:w-12"
-                                    onError={(event) => {
-                                        (event.target as HTMLImageElement).style.display = "none";
-                                    }}
-                                />
-                                <div className="text-center">
-                                    <p className="text-[8pt] tracking-[0.2em] text-slate-600 uppercase">Republic of the Philippines</p>
-                                    <h1 className="text-[16pt] leading-tight font-bold uppercase">{institutionName}</h1>
-                                    <p className="text-[8pt] text-slate-600">{institutionAddress}</p>
-                                </div>
-                            </div>
-                        </header>
-
-                        <section className="mt-4 text-center">
-                            <h2 className="text-[13pt] font-bold tracking-[0.18em] uppercase">Statement of Account</h2>
-                            <p className="mt-0.5 text-[8pt] text-slate-600">Official Financial Record</p>
-                        </section>
-
-                        <section className="mt-3 grid grid-cols-2 text-[8.5pt] text-slate-700">
-                            <p>
-                                <span className="font-bold">Control No.:</span> SOA-{documentNo}
-                            </p>
-                            <p className="text-right">
-                                <span className="font-bold">Date Issued:</span> {generated_at}
-                            </p>
-                        </section>
-
-                        <section className="mt-3">
-                            <table className="w-full border border-slate-800 text-[9.5pt]" style={{ borderCollapse: "collapse" }}>
-                                <tbody>
-                                    <tr>
-                                        <td className="w-[7.5rem] border border-slate-800 bg-slate-100 px-2 py-1 font-bold">Student No.</td>
-                                        <td className="w-[11rem] border border-slate-800 px-2 py-1">{student?.id ?? "N/A"}</td>
-                                        <td className="w-[7.5rem] border border-slate-800 bg-slate-100 px-2 py-1 font-bold">Student Name</td>
-                                        <td className="border border-slate-800 px-2 py-1">{student?.name ?? "N/A"}</td>
-                                    </tr>
-                                    <tr>
-                                        <td className="border border-slate-800 bg-slate-100 px-2 py-1 font-bold">Course</td>
-                                        <td className="border border-slate-800 px-2 py-1">{student?.course ?? "N/A"}</td>
-                                        <td className="border border-slate-800 bg-slate-100 px-2 py-1 font-bold">Term</td>
-                                        <td className="border border-slate-800 px-2 py-1">
-                                            {semesterLabel}, A.Y. {filters.school_year}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </section>
-
-                        {tuition ? (
-                            <>
-                                <section className="mt-4 grid grid-cols-5 gap-3">
-                                    <div className="col-span-3">
-                                        <p className="mb-1 text-[10pt] font-bold tracking-wide uppercase">Assessment of Fees</p>
-                                        <table className="w-full border border-slate-800 text-[9.5pt]" style={{ borderCollapse: "collapse" }}>
-                                            <tbody>
-                                                <tr>
-                                                    <td className="border border-slate-800 px-2 py-1">Lecture Fee</td>
-                                                    <td className="w-36 border border-slate-800 px-2 py-1 text-right font-mono">
-                                                        {formatCurrency(lectureFee)}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="border border-slate-800 px-2 py-1">Laboratory Fee</td>
-                                                    <td className="border border-slate-800 px-2 py-1 text-right font-mono">
-                                                        {formatCurrency(laboratoryFee)}
-                                                    </td>
-                                                </tr>
-                                                <tr className="bg-slate-50">
-                                                    <td className="border border-slate-800 px-2 py-1 font-semibold">Tuition Subtotal</td>
-                                                    <td className="border border-slate-800 px-2 py-1 text-right font-mono font-semibold">
-                                                        {formatCurrency(tuitionSubtotal)}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="border border-slate-800 px-2 py-1">Miscellaneous Fee</td>
-                                                    <td className="border border-slate-800 px-2 py-1 text-right font-mono">
-                                                        {formatCurrency(miscellaneousFee)}
-                                                    </td>
-                                                </tr>
-                                                {Math.abs(adjustmentAmount) >= 0.01 && (
-                                                    <tr>
-                                                        <td className="border border-slate-800 px-2 py-1">Other Adjustments</td>
-                                                        <td className="border border-slate-800 px-2 py-1 text-right font-mono">
-                                                            {formatCurrency(adjustmentAmount)}
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                {tuition.discount > 0 && (
-                                                    <tr>
-                                                        <td className="border border-slate-800 px-2 py-1">Discount Applied</td>
-                                                        <td className="border border-slate-800 px-2 py-1 text-right font-mono">{tuition.discount}%</td>
-                                                    </tr>
-                                                )}
-                                                <tr className="bg-slate-200 font-bold">
-                                                    <td className="border border-slate-800 px-2 py-1.5">TOTAL ASSESSMENT</td>
-                                                    <td className="border border-slate-800 px-2 py-1.5 text-right font-mono">
-                                                        {formatCurrency(assessmentTotal)}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div className="col-span-2">
-                                        <p className="mb-1 text-[10pt] font-bold tracking-wide uppercase">Account Summary</p>
-                                        <table className="w-full border border-slate-800 text-[10pt]" style={{ borderCollapse: "collapse" }}>
-                                            <tbody>
-                                                <tr>
-                                                    <td className="border border-slate-800 bg-slate-100 px-2 py-1">Total Assessment</td>
-                                                    <td className="border border-slate-800 px-2 py-1 text-right font-mono font-semibold">
-                                                        {formatCurrency(assessmentTotal)}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td className="border border-slate-800 bg-slate-100 px-2 py-1">Total Payments</td>
-                                                    <td className="border border-slate-800 px-2 py-1 text-right font-mono font-semibold">
-                                                        {formatCurrency(totalPayments)}
-                                                    </td>
-                                                </tr>
-                                                <tr className="font-bold">
-                                                    <td className="border-2 border-slate-800 bg-slate-200 px-2 py-1.5">BALANCE DUE</td>
-                                                    <td className="border-2 border-slate-800 bg-slate-200 px-2 py-1.5 text-right font-mono text-[12pt]">
-                                                        {formatCurrency(balanceDue)}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        <div className={`mt-2 border border-slate-800 py-1.5 text-center text-[9pt] font-bold ${balanceDue <= 0 ? "bg-emerald-100" : "bg-rose-100"}`}>
-                                            {balanceDue <= 0 ? "ACCOUNT SETTLED" : "ACCOUNT WITH OUTSTANDING BALANCE"}
-                                        </div>
-                                        {paymentVariance >= 0.01 && (
-                                            <p className="mt-2 text-[8pt] text-slate-600 italic">
-                                                Ledger payments: {formatCurrency(totalPayments)} | Listed payment entries: {formatCurrency(paymentHistoryTotal)}
-                                            </p>
-                                        )}
-                                    </div>
-                                </section>
-
-                                <section className="mt-4">
-                                    <p className="mb-1 text-[10pt] font-bold tracking-wide uppercase">Payment History</p>
-                                    <table className="w-full border border-slate-800 text-[8.8pt]" style={{ borderCollapse: "collapse" }}>
-                                        <thead>
-                                            <tr className="bg-slate-100">
-                                                <th className="border border-slate-800 px-2 py-1 text-left font-bold">Date</th>
-                                                <th className="border border-slate-800 px-2 py-1 text-left font-bold">OR No.</th>
-                                                <th className="border border-slate-800 px-2 py-1 text-left font-bold">Particulars</th>
-                                                <th className="w-36 border border-slate-800 px-2 py-1 text-right font-bold">Amount</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {transactions.length > 0 ? (
-                                                transactions.slice(0, 8).map((transaction) => (
-                                                    <tr key={transaction.id}>
-                                                        <td className="border border-slate-800 px-2 py-1">{transaction.date}</td>
-                                                        <td className="border border-slate-800 px-2 py-1 font-mono">{transaction.invoice || "-"}</td>
-                                                        <td className="border border-slate-800 px-2 py-1">{transaction.description}</td>
-                                                        <td className="border border-slate-800 px-2 py-1 text-right font-mono">
-                                                            {formatCurrency(transaction.amount)}
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={4} className="border border-slate-800 px-2 py-3 text-center text-slate-500 italic">
-                                                        No payment records found for the selected term.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                            {transactions.length > 8 && (
-                                                <tr>
-                                                    <td colSpan={4} className="border border-slate-800 px-2 py-1 text-center text-[8pt] text-slate-500 italic">
-                                                        ... and {transactions.length - 8} more transaction(s)
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr className="bg-slate-100 font-bold">
-                                                <td colSpan={3} className="border border-slate-800 px-2 py-1">
-                                                    PAYMENT HISTORY TOTAL
-                                                </td>
-                                                <td className="border border-slate-800 px-2 py-1 text-right font-mono">
-                                                    {formatCurrency(paymentHistoryTotal)}
-                                                </td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </section>
-                            </>
-                        ) : (
-                            <section className="mt-4 border border-slate-700 px-4 py-6 text-center">
-                                <p className="text-[10pt] text-slate-700">No assessment record found for this academic period.</p>
-                            </section>
-                        )}
-
-                        <section className="mt-4 border-t border-slate-400 pt-2 text-justify text-[8.7pt]">
-                            <span className="font-bold uppercase">Certification:</span> This document certifies that the foregoing figures reflect the
-                            recorded financial status of the student as of the date and time of issuance.
-                        </section>
-
-                        <section className="mt-8 grid grid-cols-3 gap-8 text-[8.7pt]">
-                            <div className="text-center">
-                                <div className="mb-1 h-8 border-b border-slate-800" />
-                                <p className="font-bold uppercase">Prepared By</p>
-                                <p className="text-[8pt] text-slate-500">Finance Staff</p>
-                            </div>
-                            <div className="text-center">
-                                <div className="mb-1 h-8 border-b border-slate-800" />
-                                <p className="font-bold uppercase">Verified By</p>
-                                <p className="text-[8pt] text-slate-500">Accounting Officer</p>
-                            </div>
-                            <div className="text-center">
-                                <div className="mb-1 h-8 border-b border-slate-800" />
-                                <p className="font-bold uppercase">Received By</p>
-                                <p className="text-[8pt] text-slate-500">Student / Representative</p>
-                            </div>
-                        </section>
-
-                        <footer className="mt-4 flex justify-between border-t border-slate-300 pt-1 text-[7.5pt] text-slate-500">
-                            <span>Generated: {generated_at}</span>
-                            <span>This is a system-generated official document.</span>
-                        </footer>
+            <main className="soa-page relative mx-auto min-h-[11.69in] w-full max-w-[8.27in] overflow-hidden border border-slate-400 bg-white px-[0.55in] py-[0.45in] shadow-2xl print:min-h-0 print:max-w-none print:border-0 print:shadow-none">
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden print:hidden">
+                    <span className="-rotate-45 text-[58px] font-bold tracking-[0.14em] text-slate-900/[0.035]">PREVIEW</span>
+                </div>
+                <header className="relative grid grid-cols-[74px_1fr_74px] items-center border-b-[3px] border-[#1c3557] pb-4 text-center">
+                    <img src={school.logo} alt={`${school.name} logo`} className="h-[66px] w-[66px] object-contain" />
+                    <div>
+                        <p className="text-[8px] tracking-[0.22em] uppercase">Republic of the Philippines</p>
+                        <h1 className="mt-1 font-serif text-[17px] leading-tight font-bold uppercase">{school.name}</h1>
+                        <p className="mt-1 text-[9px] text-slate-600">{school.address}</p>
+                        {(school.email || school.phone) && <p className="text-[8px] text-slate-500">{[school.email, school.phone].filter(Boolean).join(" • ")}</p>}
                     </div>
-                </div>
-            </div>
+                    <ShieldCheck className="mx-auto h-9 w-9 text-[#1c3557]" />
+                </header>
 
-            <style>{`
-                .soa-document { color: #0f172a !important; background: #ffffff !important; }
-                .soa-document * { color: inherit; }
-                .soa-document table,
-                .soa-document td,
-                .soa-document th { border-color: #0f172a !important; }
-                .soa-document .font-mono { font-family: 'Courier New', Courier, monospace; }
+                <section className="relative mt-5 text-center">
+                    <p className="text-[8px] font-semibold tracking-[0.2em] text-[#9a6b1f] uppercase">Office of Finance</p>
+                    <h2 className="mt-1 font-serif text-[21px] font-bold tracking-[0.12em] uppercase">Statement of Account</h2>
+                    <p className="mt-1 text-[8px] text-slate-500">FINANCIAL RECORD • PREVIEW COPY</p>
+                </section>
 
-                @media print {
-                    @page { size: ${PAPER_SIZES[paperSize].css}; margin: 0.45in; }
+                <section className="relative mt-5 grid grid-cols-2 border-y border-slate-300 py-2 text-[9px]">
+                    <div><span className="text-slate-500 uppercase">Academic term</span><p className="font-semibold">{semester}, A.Y. {filters.school_year}</p></div>
+                    <div className="text-right"><span className="text-slate-500 uppercase">Prepared on</span><p className="font-semibold">{generated_at}</p></div>
+                </section>
 
-                    html,
-                    body {
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                        color-adjust: exact !important;
-                        color: #000 !important;
-                        background: #fff !important;
-                    }
+                {error ? <div className="relative mt-8 border border-red-300 bg-red-50 p-5 text-center text-sm text-red-800">{error}</div> : <>
+                    <section className="relative mt-4 grid grid-cols-12 border border-slate-400 text-[10px]">
+                        <Label>Student number</Label><Value className="col-span-3">{student?.student_no}</Value>
+                        <Label>Student name</Label><Value className="col-span-5">{student?.name}</Value>
+                        <Label>Program</Label><Value className="col-span-9">{student?.course}</Value>
+                    </section>
 
-                    .print\\:hidden { display: none !important; }
-                    .print\\:bg-white { background: #fff !important; }
-                    .print\\:border-0 { border: 0 !important; }
-                    .print\\:shadow-none { box-shadow: none !important; }
-                }
-            `}</style>
-        </>
-    );
+                    {tuition ? <>
+                        <section className="relative mt-5 grid grid-cols-5 gap-5">
+                            <div className="col-span-3"><SectionTitle>Assessment breakdown</SectionTitle><table className="official-table"><tbody>
+                                <AmountRow label="Lecture fees" value={tuition.total_lectures} currency={currency_code} />
+                                <AmountRow label="Laboratory fees" value={tuition.total_laboratory} currency={currency_code} />
+                                <AmountRow label="Tuition subtotal" value={tuition.total_tuition} currency={currency_code} strong />
+                                <AmountRow label="Miscellaneous fees" value={tuition.total_miscelaneous_fees} currency={currency_code} />
+                                <AmountRow label="Total assessment" value={tuition.overall_tuition} currency={currency_code} total />
+                            </tbody></table></div>
+                            <div className="col-span-2"><SectionTitle>Account summary</SectionTitle>
+                                <div className="border border-[#1c3557]">
+                                    <Summary label="Assessment" value={money(tuition.overall_tuition, currency_code)} />
+                                    <Summary label="Payments" value={money(tuition.total_paid, currency_code)} />
+                                    <div className="bg-[#1c3557] px-3 py-3 text-white"><p className="text-[8px] tracking-wider uppercase">Balance due</p><p className="mt-1 font-mono text-[17px] font-bold">{money(tuition.total_balance, currency_code)}</p></div>
+                                </div>
+                                <div className={`mt-2 border px-2 py-2 text-center text-[8px] font-bold tracking-wide uppercase ${tuition.total_balance > 0 ? "border-amber-500 bg-amber-50 text-amber-900" : "border-emerald-500 bg-emerald-50 text-emerald-900"}`}>{tuition.total_balance > 0 ? "Outstanding balance" : "Account settled"}</div>
+                            </div>
+                        </section>
+
+                        <section className="relative mt-5"><SectionTitle>Official payment history</SectionTitle><table className="official-table text-[9px]"><thead><tr><th>Date</th><th>Official receipt</th><th>Particulars</th><th className="text-right">Amount</th></tr></thead><tbody>
+                            {transactions.length ? transactions.map(item => <tr key={item.id}><td>{item.date}</td><td>{item.invoice || "—"}</td><td>{item.description}</td><td className="text-right font-mono">{money(item.amount, currency_code)}</td></tr>) : <tr><td colSpan={4} className="py-5 text-center text-slate-500">No recorded payments for this term.</td></tr>}
+                        </tbody><tfoot><tr><td colSpan={3} className="font-bold uppercase">Recorded payment total</td><td className="text-right font-mono font-bold">{money(paymentTotal, currency_code)}</td></tr></tfoot></table></section>
+                    </> : <div className="relative mt-6 border border-slate-300 p-6 text-center text-sm">No assessment record was found for this academic term.</div>}
+                </>}
+
+                <section className="relative mt-6 border-t border-slate-300 pt-3 text-[8px] leading-relaxed text-slate-600"><strong className="text-slate-800 uppercase">Certification.</strong> This preview reflects the financial records available at the date shown. Only a server-generated PDF carrying a document number and verifiable QR code is an official school record.</section>
+                <section className="relative mt-10 grid grid-cols-3 gap-8 text-center text-[8px]"><Signature label="Prepared by" role="Finance Staff" /><Signature label="Verified by" role="Accounting Officer" /><Signature label="Received by" role="Student / Representative" /></section>
+
+                {issuance && <div className="relative mt-5 flex items-center gap-2 border border-slate-300 bg-slate-50 px-3 py-2 text-[9px] print:hidden">{issuance.status === "ready" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Loader2 className="h-4 w-4 animate-spin text-[#1c3557]" />}<span><strong>{issuance.document_number}</strong> — {issuance.status === "ready" ? "Official PDF ready for download." : "Secure PDF generation in progress."}</span></div>}
+                {issueError && <p className="relative mt-3 text-center text-xs text-red-700 print:hidden">{issueError}</p>}
+            </main>
+        </div>
+        <style>{`@page{size:A4;margin:0}.official-table{width:100%;border-collapse:collapse}.official-table td,.official-table th{border:1px solid #94a3b8;padding:6px 8px}.official-table th{background:#eef2f6;text-align:left;font-size:8px;text-transform:uppercase;letter-spacing:.04em}@media print{body{background:white}.soa-page{padding:.45in .55in}.print\\:hidden{display:none!important}}`}</style>
+    </>;
 }
+
+function Label({ children }: { children: React.ReactNode }) { return <div className="col-span-3 border-r border-b border-slate-400 bg-slate-100 px-2 py-2 font-bold uppercase">{children}</div> }
+function Value({ children, className = "" }: { children: React.ReactNode; className?: string }) { return <div className={`border-b border-slate-400 px-2 py-2 ${className}`}>{children}</div> }
+function SectionTitle({ children }: { children: React.ReactNode }) { return <h3 className="mb-2 border-l-4 border-[#9a6b1f] pl-2 text-[10px] font-bold tracking-[0.08em] uppercase">{children}</h3> }
+function AmountRow({ label, value, currency, strong, total }: { label: string; value: number; currency: string; strong?: boolean; total?: boolean }) { return <tr className={total ? "bg-[#e8edf3] font-bold" : strong ? "bg-slate-50 font-semibold" : ""}><td>{label}</td><td className="text-right font-mono">{money(value, currency)}</td></tr> }
+function Summary({ label, value }: { label: string; value: string }) { return <div className="flex justify-between border-b border-slate-300 px-3 py-2 text-[9px]"><span>{label}</span><strong className="font-mono">{value}</strong></div> }
+function Signature({ label, role }: { label: string; role: string }) { return <div><div className="h-8 border-b border-slate-700" /><p className="mt-1 font-bold uppercase">{label}</p><p className="text-slate-500">{role}</p></div> }
