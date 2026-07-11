@@ -24,6 +24,20 @@ final class BrandingSettingsSeeder extends Seeder
             ]
         );
 
+        if (! DB::table('settings')
+            ->where('group', 'site')
+            ->where('name', 'default_country_code')
+            ->exists()) {
+            DB::table('settings')->insert([
+                'group' => 'site',
+                'name' => 'default_country_code',
+                'locked' => false,
+                'payload' => json_encode('+63', JSON_THROW_ON_ERROR),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         /** @var SiteSettings $settings */
         $settings = app(SiteSettings::class);
 
@@ -54,6 +68,10 @@ final class BrandingSettingsSeeder extends Seeder
 
         if (! $settings->auth_layout) {
             $settings->auth_layout = 'split';
+        }
+
+        if (! $settings->default_country_code) {
+            $settings->default_country_code = '+63';
         }
 
         $settings->save();

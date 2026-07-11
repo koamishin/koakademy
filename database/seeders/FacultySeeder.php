@@ -46,7 +46,7 @@ final class FacultySeeder extends Seeder
                 'first_name' => 'Jennifer',
                 'last_name' => 'Adams',
                 'middle_name' => 'Lynn',
-                'email' => 'j.adams@koakademy.edu',
+                'email' => 'jennifer.adams@koakademy.edu',
                 'password' => Hash::make('password'),
                 'phone_number' => '09211234567',
                 'department' => 'Information Technology',

@@ -30,10 +30,19 @@ RUN mkdir -p \
     storage/logs \
     bootstrap/cache
 RUN composer dump-autoload --optimize --classmap-authoritative --no-dev --no-scripts
-RUN php artisan wayfinder:generate --no-interaction
 
 # -----------------------------------------------------------------------------
-# Stage 2: Build Frontend Assets
+# Stage 2: Generate Wayfinder Files (requires the application's PHP version)
+# -----------------------------------------------------------------------------
+FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION} AS wayfinder
+RUN install-php-extensions zip
+WORKDIR /app
+COPY . .
+COPY --from=vendor /app/vendor ./vendor
+RUN APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= php artisan wayfinder:generate --no-interaction
+
+# -----------------------------------------------------------------------------
+# Stage 3: Build Frontend Assets
 # -----------------------------------------------------------------------------
 FROM oven/bun:1 AS build-assets
 WORKDIR /app
@@ -42,12 +51,12 @@ RUN bun install --no-save
 COPY . .
 # Copy PHP dependencies and generated Wayfinder files.
 COPY --from=vendor /app/vendor ./vendor
-COPY --from=vendor /app/resources/js/actions ./resources/js/actions
-COPY --from=vendor /app/resources/js/routes ./resources/js/routes
+COPY --from=wayfinder /app/resources/js/actions ./resources/js/actions
+COPY --from=wayfinder /app/resources/js/routes ./resources/js/routes
 RUN WAYFINDER_GENERATE=false bun run build
 
 # -----------------------------------------------------------------------------
-# Stage 3: Final Runtime Image
+# Stage 4: Final Runtime Image
 # -----------------------------------------------------------------------------
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION}
 
