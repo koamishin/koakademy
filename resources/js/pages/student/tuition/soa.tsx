@@ -1,6 +1,7 @@
 import { show, store } from "@/actions/App/Http/Controllers/StatementOfAccountIssuanceController";
 import { Button } from "@/components/ui/button";
-import { Head } from "@inertiajs/react";
+import { index as tuitionIndex } from "@/routes/student/tuition";
+import { Head, Link } from "@inertiajs/react";
 import axios from "axios";
 import { ArrowLeft, CheckCircle2, Download, FileCheck2, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -52,7 +53,11 @@ export default function StatementOfAccount({ student, tuition, transactions, fil
         <Head title="Statement of Account" />
         <div className="min-h-screen bg-[#d8dee7] px-3 py-5 text-[#182231] sm:px-6 sm:py-8">
             <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-md border border-slate-300 bg-white p-2 shadow-lg print:hidden">
-                <Button variant="outline" size="sm" onClick={() => history.back()}><ArrowLeft className="h-4 w-4" /> Back</Button>
+                <Button variant="outline" size="sm" asChild>
+                    <Link href={tuitionIndex.url({ query: { school_year: filters.school_year, semester: filters.semester } })}>
+                        <ArrowLeft className="h-4 w-4" /> Back
+                    </Link>
+                </Button>
                 {issuance?.status === "ready" && issuance.download_url ?
                     <Button size="sm" asChild><a href={issuance.download_url}><Download className="h-4 w-4" /> Download Official PDF</a></Button> :
                     <Button size="sm" onClick={generateOfficialPdf} disabled={isIssuing || issuance?.status === "pending" || !tuition}>
