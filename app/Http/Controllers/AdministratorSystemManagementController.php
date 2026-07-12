@@ -9,6 +9,7 @@ use App\Enums\SchoolLevel;
 use App\Http\Requests\Administrators\StoreSchoolRequest;
 use App\Http\Requests\Administrators\UpdateApiManagementRequest;
 use App\Http\Requests\Administrators\UpdateEnrollmentPipelineRequest;
+use App\Http\Requests\Administrators\UpdateSchoolLevelRequest;
 use App\Http\Requests\Administrators\UpdateSchoolRequest;
 use App\Http\Requests\Administrators\UpdateSchoolStatusRequest;
 use App\Models\Course;
@@ -257,18 +258,15 @@ final class AdministratorSystemManagementController extends Controller
         return Redirect::back()->with('success', 'School record updated successfully.');
     }
 
-    public function updateSchoolLevel(Request $request): RedirectResponse
+    public function updateSchoolLevel(UpdateSchoolLevelRequest $request): RedirectResponse
     {
-        $this->authorize('updateSchool', GeneralSetting::class);
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'school_id' => ['required', 'integer', 'exists:schools,id'],
-            'school_level' => ['required', Rule::enum(SchoolLevel::class)],
-        ]);
+        $school = School::query()->findOrFail($validated['school_id']);
+        $school->update(['school_level' => $validated['school_level']]);
 
-        School::query()
-            ->whereKey($validated['school_id'])
-            ->update(['school_level' => $validated['school_level']]);
+        app(GeneralSettingsService::class)->updateActiveSchoolId($school->id);
+        app(\App\Services\TenantContext::class)->setCurrentSchoolId($school->id);
 
         return Redirect::back()->with('success', 'Institution school level configured successfully.');
     }

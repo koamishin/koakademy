@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Enums\SchoolLevel;
 use App\Enums\UserRole;
 use App\Models\Department;
 use App\Models\School;
 use App\Models\User;
+use App\Models\UserSetting;
 use Spatie\Permission\Models\Permission;
 
 use function Pest\Laravel\actingAs;
@@ -50,6 +52,30 @@ it('updates any school record from system management', function (): void {
         ->and($school->code)->toBe('UPD01')
         ->and($school->dean_name)->toBe('Dean Updated')
         ->and($school->dean_email)->toBe('dean.updated@example.com');
+});
+
+it('updates an institution school level from onboarding', function (): void {
+    $admin = User::factory()->create([
+        'role' => UserRole::Admin,
+        'school_id' => null,
+    ]);
+    grantSchoolManagementPermission($admin);
+    $school = School::factory()->create([
+        'school_level' => null,
+    ]);
+
+    actingAs($admin)
+        ->put(route('administrators.system-management.school-level.update'), [
+            'school_id' => $school->id,
+            'school_level' => SchoolLevel::SeniorHigh->value,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $school->refresh();
+
+    expect($school->school_level)->toBe(SchoolLevel::SeniorHigh)
+        ->and(UserSetting::query()->where('user_id', $admin->id)->value('active_school_id'))->toBe($school->id);
 });
 
 it('toggles school active status', function (): void {

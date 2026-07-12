@@ -193,13 +193,13 @@ final class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        $generalSettingsService = app(GeneralSettingsService::class);
-        $activeSchoolId = $generalSettingsService->getActiveSchoolId();
-        $school = $activeSchoolId
-            ? School::query()->find($activeSchoolId)
-            : School::query()->where('is_active', true)->first();
+        $activeSchoolId = app(GeneralSettingsService::class)->getActiveSchoolId();
 
-        $school ??= School::query()->first();
+        if ($activeSchoolId === null) {
+            return null;
+        }
+
+        $school = School::query()->find($activeSchoolId);
 
         if (! $school instanceof School) {
             return null;
