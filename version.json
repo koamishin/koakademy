@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.3.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.3.0",
-  "commit": "a2d5b4ccc31143105fa0daef431b7bc114f8081f",
+  "version": "1.10.0-dev.4.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.4.0",
+  "commit": "d88a962cc1791ef15c0b8d5bf5b43d36afb03faf",
   "branch": "master",
-  "timestamp": "2026-07-12T12:11:27Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29192029804",
+  "timestamp": "2026-07-12T12:40:17Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29192891268",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.3.0 - feat(finance): add queued receipt resend workflow",
-    "previous": "1.10.0-dev.2.3"
+    "current": "Version 1.10.0-dev.4.0 - feat(presence): add online presence service and UI",
+    "previous": "1.10.0-dev.3.0"
   },
   "metadata": {
     "author": "yukazakiri",
