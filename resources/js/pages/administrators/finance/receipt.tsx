@@ -1,163 +1,345 @@
-import AdminLayout from "@/components/administrators/admin-layout";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import type { User } from "@/types/user";
-import { Head, Link, usePage } from "@inertiajs/react";
-import { ArrowLeft, CheckCircle2, Printer } from "lucide-react";
-import { route } from "ziggy-js";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { payments } from "@/routes/administrators/finance";
+import { create, resendReceipt } from "@/routes/administrators/finance/payments";
+import { Head, Link, useForm } from "@inertiajs/react";
+import { ArrowLeft, CheckCircle2, Loader2, Mail, Printer, ReceiptText, RotateCw } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+interface ReceiptInstitution {
+    name: string;
+    description: string | null;
+    support_email: string | null;
+    support_phone: string | null;
+}
+
+interface EmailDelivery {
+    status: "pending" | "sent" | "failed" | "skipped" | null;
+    recipient: string | null;
+    sent_at: string | null;
+    failed_at: string | null;
+    error: string | null;
+}
 
 interface TransactionDetails {
     id: number;
     transaction_number: string;
+    reference_number: string | null;
     date: string;
+    time: string;
+    issued_at: string;
     student_name: string;
     student_id: string;
+    student_email: string | null;
+    student_course: string;
+    student_year_level: number | null;
     amount: number;
     method: string;
+    status: string;
     items: Record<string, number>;
     cashier: string;
     remarks: string | null;
+    currency: string;
+    institution: ReceiptInstitution;
+    email_delivery: EmailDelivery;
 }
 
 interface ReceiptProps {
-    user: User;
     transaction: TransactionDetails;
 }
 
-interface Branding {
-    appName: string;
-    currency: string;
-}
-
-function formatCurrency(amount: number, currency: string = "PHP"): string {
+function formatCurrency(amount: number, currency: string): string {
     return new Intl.NumberFormat(currency === "USD" ? "en-US" : "en-PH", {
         style: "currency",
-        currency: currency,
+        currency,
         minimumFractionDigits: 2,
-    }).format(amount);
+    }).format(amount || 0);
 }
 
-export default function ReceiptPage({ user, transaction }: ReceiptProps) {
-    const { props } = usePage<{ branding?: Branding }>();
-    const appName = props.branding?.appName || "Administrative Portal";
-    const currency = props.branding?.currency || "PHP";
+function formatSettlementLabel(key: string): string {
+    const normalized = key === "tuition_fee" ? "tuition fee payment" : key.replaceAll("_", " ");
+    return normalized.replace(/\b\w/g, (character) => character.toUpperCase());
+}
 
-    const handlePrint = () => {
-        window.print();
+function deliveryVariant(status: EmailDelivery["status"]): "default" | "secondary" | "destructive" | "outline" {
+    if (status === "sent") return "default";
+    if (status === "failed") return "destructive";
+    if (status === "pending") return "secondary";
+    return "outline";
+}
+
+export default function ReceiptPage({ transaction }: ReceiptProps) {
+    const [resendOpen, setResendOpen] = useState(false);
+    const { data, setData, post, processing, errors, clearErrors } = useForm({
+        recipient: transaction.email_delivery.recipient || transaction.student_email || "",
+    });
+
+    const submitResend = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        post(resendReceipt.url(transaction.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setResendOpen(false);
+                toast.success("Receipt email queued for delivery.");
+            },
+            onError: () => toast.error("Check the email address and try again."),
+        });
     };
 
-    return (
-        <AdminLayout user={user} title="Transaction Receipt">
-            <Head title={`Receipt #${transaction.transaction_number}`} />
+    const documentStyles = `
+        @media print {
+            @page { size: A4 portrait; margin: 0; }
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body {
+                visibility: hidden !important;
+                overflow: visible !important;
+            }
+            .print-wrapper {
+                visibility: visible !important;
+                display: block !important;
+                position: fixed !important;
+                inset: 0 !important;
+                z-index: 9999 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+            .receipt-doc {
+                visibility: visible !important;
+                display: block !important;
+                width: 100% !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                transform: none !important;
+            }
+            .receipt-doc section,
+            .receipt-doc table,
+            .receipt-doc tr {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            .no-print { display: none !important; }
+        }
+    `;
 
-            <div className="flex flex-col items-center justify-center py-8 print:block print:py-0">
-                <div className="w-full max-w-md print:w-full print:max-w-none">
-                    {/* Actions - Hidden in Print */}
-                    <div className="mb-6 flex items-center justify-between print:hidden">
-                        <Button variant="outline" asChild>
-                            <Link href={route("administrators.finance.payments")}>
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to Payments
+    return (
+        <>
+            <Head title={`Receipt #${transaction.transaction_number}`}>
+                <style>{documentStyles}</style>
+            </Head>
+
+            <div className="print-wrapper min-h-screen overflow-auto bg-[#525659] px-4 py-8">
+                <div className="no-print fixed top-4 right-4 z-50 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                    <Button variant="outline" asChild className="min-h-10 active:scale-[0.96]">
+                        <Link href={payments.url()} prefetch>
+                            <ArrowLeft data-icon="inline-start" />
+                            Back to payments
+                        </Link>
+                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Dialog
+                            open={resendOpen}
+                            onOpenChange={(open) => {
+                                setResendOpen(open);
+                                clearErrors();
+                            }}
+                        >
+                            <DialogTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    disabled={transaction.email_delivery.status === "pending"}
+                                    className="min-h-10 active:scale-[0.96]"
+                                >
+                                    <RotateCw data-icon="inline-start" />
+                                    Resend receipt
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <form onSubmit={submitResend}>
+                                    <DialogHeader>
+                                        <DialogTitle>Email this receipt</DialogTitle>
+                                        <DialogDescription>
+                                            The address is used for this delivery only and will not change the student record.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="space-y-2 py-5">
+                                        <Label htmlFor="receipt-recipient">Recipient email</Label>
+                                        <Input
+                                            id="receipt-recipient"
+                                            type="email"
+                                            value={data.recipient}
+                                            onChange={(event) => setData("recipient", event.target.value)}
+                                            aria-invalid={Boolean(errors.recipient)}
+                                            placeholder="student@example.com"
+                                            autoFocus
+                                        />
+                                        {errors.recipient && <p className="text-destructive text-sm">{errors.recipient}</p>}
+                                    </div>
+                                    <DialogFooter>
+                                        <Button type="button" variant="outline" onClick={() => setResendOpen(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button type="submit" disabled={processing}>
+                                            {processing ? (
+                                                <>
+                                                    <Loader2 className="size-4 animate-spin" />
+                                                    Queueing…
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Mail className="size-4" />
+                                                    Send receipt
+                                                </>
+                                            )}
+                                        </Button>
+                                    </DialogFooter>
+                                </form>
+                            </DialogContent>
+                        </Dialog>
+                        <Button variant="outline" onClick={() => window.print()} className="min-h-10 active:scale-[0.96]">
+                            <Printer data-icon="inline-start" />
+                            Print
+                        </Button>
+                        <Button asChild className="min-h-10 active:scale-[0.96]">
+                            <Link href={create.url()}>
+                                <ReceiptText data-icon="inline-start" />
+                                New payment
                             </Link>
                         </Button>
-                        <div className="flex gap-2">
-                            <Button variant="outline" onClick={handlePrint}>
-                                <Printer className="mr-2 h-4 w-4" />
-                                Print
-                            </Button>
-                            <Button variant="outline" asChild>
-                                <Link href={route("administrators.finance.payments.create")}>New Transaction</Link>
-                            </Button>
+                    </div>
+                </div>
+
+                <div className="no-print mx-auto mb-5 grid max-w-[210mm] gap-3 pt-14 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <div className="bg-card flex items-start gap-3 rounded-xl border p-4 shadow-xs">
+                        <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+                            <Mail className="size-4" />
+                        </span>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold">E-receipt delivery</p>
+                                <Badge variant={deliveryVariant(transaction.email_delivery.status)} className="capitalize">
+                                    {transaction.email_delivery.status || "Not sent"}
+                                </Badge>
+                            </div>
+                            <p className="text-muted-foreground mt-1 text-sm">
+                                {transaction.email_delivery.status === "sent"
+                                    ? `Sent to ${transaction.email_delivery.recipient} on ${transaction.email_delivery.sent_at}.`
+                                    : transaction.email_delivery.status === "pending"
+                                      ? `Queued for ${transaction.email_delivery.recipient}.`
+                                      : transaction.email_delivery.status === "failed"
+                                        ? transaction.email_delivery.error
+                                        : "No student email was available when the payment was recorded."}
+                            </p>
                         </div>
                     </div>
-
-                    <Card className="print:border-0 print:shadow-none">
-                        <CardHeader className="border-b pb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600 print:hidden">
-                                <CheckCircle2 className="h-6 w-6" />
-                            </div>
-                            <CardTitle className="text-2xl font-bold tracking-wider uppercase">Official Receipt</CardTitle>
-                            <CardDescription className="mt-1 text-xs tracking-widest uppercase">{appName}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6 pt-6">
-                            {/* Transaction Meta */}
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <p className="text-muted-foreground text-xs uppercase">Transaction No.</p>
-                                    <p className="font-mono font-medium">{transaction.transaction_number}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-muted-foreground text-xs uppercase">Date</p>
-                                    <p className="font-medium">{transaction.date}</p>
-                                </div>
-                            </div>
-
-                            {/* Student Info */}
-                            <div className="bg-muted/30 rounded-lg p-4">
-                                <p className="text-muted-foreground mb-1 text-xs uppercase">Received From</p>
-                                <p className="text-lg font-bold">{transaction.student_name}</p>
-                                <p className="text-muted-foreground text-sm">ID: {transaction.student_id}</p>
-                            </div>
-
-                            <Separator />
-
-                            {/* Line Items */}
-                            <div className="space-y-3">
-                                <p className="text-muted-foreground text-xs font-semibold uppercase">Payment Details</p>
-
-                                {Object.entries(transaction.items || {}).map(([key, amount]) => {
-                                    const value = parseFloat(amount as unknown as string);
-                                    if (value <= 0) return null; // Hide zero amounts
-
-                                    return (
-                                        <div key={key} className="flex justify-between text-sm">
-                                            <span className="capitalize">
-                                                {key === "tuition_fee"
-                                                    ? "Tuition Fee Payment"
-                                                    : key === "others"
-                                                      ? "Miscellaneous / Other Fees"
-                                                      : key.replace(/_/g, " ")}
-                                            </span>
-                                            <span className="font-mono">{formatCurrency(value, currency)}</span>
-                                        </div>
-                                    );
-                                })}
-
-                                <Separator className="my-2" />
-
-                                <div className="flex justify-between text-lg font-bold">
-                                    <span>Total Amount</span>
-                                    <span>{formatCurrency(transaction.amount, currency)}</span>
-                                </div>
-                            </div>
-
-                            {/* Additional Info */}
-                            <div className="text-muted-foreground grid grid-cols-2 gap-4 pt-4 text-xs">
-                                <div>
-                                    <span className="block text-[10px] uppercase">Payment Method</span>
-                                    <span className="text-foreground font-medium">{transaction.method}</span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="block text-[10px] uppercase">Cashier</span>
-                                    <span className="text-foreground font-medium">{transaction.cashier}</span>
-                                </div>
-                            </div>
-
-                            {transaction.remarks && (
-                                <div className="text-muted-foreground mt-4 border-t pt-2 text-xs">
-                                    <span className="mb-1 block text-[10px] uppercase">Remarks</span>
-                                    <p>{transaction.remarks}</p>
-                                </div>
-                            )}
-                        </CardContent>
-                        <CardFooter className="bg-muted/10 text-muted-foreground block py-4 text-center text-[10px] print:mt-8">
-                            <p>This is a system generated receipt.</p>
-                            <p className="print:hidden">Thank you for your payment.</p>
-                        </CardFooter>
-                    </Card>
+                    <div className="bg-card flex items-center gap-2 rounded-xl border px-4 py-3 text-sm shadow-xs">
+                        <CheckCircle2 className="size-4 text-emerald-600" />
+                        <span>Payment recorded</span>
+                    </div>
                 </div>
+
+                <article className="receipt-doc mx-auto min-h-[297mm] w-[210mm] max-w-full overflow-hidden border bg-white text-slate-900 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.5)]">
+                    <header className="border-b-[3px] border-slate-900 px-8 py-8 sm:px-12">
+                        <div className="flex items-start justify-between gap-8">
+                            <div>
+                                <p className="text-lg font-bold tracking-wide">{transaction.institution.name}</p>
+                                {transaction.institution.description && (
+                                    <p className="mt-1 max-w-md text-xs text-slate-500">{transaction.institution.description}</p>
+                                )}
+                            </div>
+                            <div className="text-right">
+                                <h1 className="text-2xl font-bold tracking-[0.12em]">OFFICIAL RECEIPT</h1>
+                                <p className="mt-2 font-mono text-sm text-slate-500">No. {transaction.transaction_number}</p>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section className="grid gap-6 border-b border-slate-200 px-8 py-6 sm:grid-cols-3 sm:px-12">
+                        <div>
+                            <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Received from</p>
+                            <p className="mt-1 font-semibold">{transaction.student_name}</p>
+                            <p className="text-xs text-slate-500">Student ID {transaction.student_id}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Date issued</p>
+                            <p className="mt-1 font-semibold">{transaction.date}</p>
+                            <p className="text-xs text-slate-500">{transaction.time}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Reference</p>
+                            <p className="mt-1 font-semibold">{transaction.reference_number || "—"}</p>
+                            <p className="text-xs text-slate-500">{transaction.method}</p>
+                        </div>
+                    </section>
+
+                    <section className="px-8 py-8 sm:px-12">
+                        <table className="w-full border-collapse text-sm">
+                            <thead>
+                                <tr className="border-b border-slate-300 text-left text-[10px] tracking-widest text-slate-500 uppercase">
+                                    <th className="py-3 font-bold">Payment description</th>
+                                    <th className="py-3 text-right font-bold">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.entries(transaction.items).map(([key, amount]) => (
+                                    <tr key={key} className="border-b border-slate-100">
+                                        <td className="py-4">{formatSettlementLabel(key)}</td>
+                                        <td className="py-4 text-right font-medium tabular-nums">{formatCurrency(amount, transaction.currency)}</td>
+                                    </tr>
+                                ))}
+                                <tr>
+                                    <td className="pt-6 text-lg font-bold">Total paid</td>
+                                    <td className="pt-6 text-right text-xl font-bold tabular-nums">
+                                        {formatCurrency(transaction.amount, transaction.currency)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <section className="grid gap-6 border-y border-slate-200 bg-slate-50 px-8 py-5 sm:grid-cols-3 sm:px-12">
+                        <div>
+                            <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Status</p>
+                            <p className="mt-1 font-semibold capitalize">{transaction.status}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Payment method</p>
+                            <p className="mt-1 font-semibold">{transaction.method}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Processed by</p>
+                            <p className="mt-1 font-semibold">{transaction.cashier}</p>
+                        </div>
+                    </section>
+
+                    <section className="px-8 py-7 sm:px-12">
+                        <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Remarks</p>
+                        <div className="mt-2 min-h-14 bg-slate-50 p-4 text-sm text-slate-600">{transaction.remarks || "No additional remarks."}</div>
+                    </section>
+
+                    <footer className="mt-auto flex items-end justify-between gap-6 border-t border-slate-200 px-8 py-6 text-[10px] text-slate-500 sm:px-12">
+                        <div>
+                            <p>This is a system-generated official receipt.</p>
+                            {transaction.institution.support_email && <p>{transaction.institution.support_email}</p>}
+                        </div>
+                        <p>Transaction ID {transaction.id}</p>
+                    </footer>
+                </article>
             </div>
-        </AdminLayout>
+        </>
     );
 }

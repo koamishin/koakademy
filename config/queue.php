@@ -27,6 +27,16 @@ return [
         PHP_OS_FAMILY === 'Windows' ? 'default' : 'pdf-generation'
     ),
 
+    'receipt_email_connection' => env(
+        'RECEIPT_EMAIL_CONNECTION',
+        PHP_OS_FAMILY === 'Windows' ? env('QUEUE_CONNECTION', 'database') : 'redis-pdf'
+    ),
+
+    'receipt_email_queue' => env(
+        'RECEIPT_EMAIL_QUEUE',
+        PHP_OS_FAMILY === 'Windows' ? 'default' : 'pdf-generation'
+    ),
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections

@@ -3,7 +3,15 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
+use App\Jobs\SendTransactionReceiptJob;
+use App\Mail\TransactionReceiptMail;
+use App\Models\Student;
+use App\Models\StudentTransaction;
+use App\Models\Transaction;
 use App\Models\User;
+use App\Services\TransactionReceiptDataService;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -109,6 +117,281 @@ it('shares payment desk summaries and active filters', function (): void {
             ->where('filters.method', 'Cash')
             ->where('filters.status', 'paid')
         );
+});
+
+it('shares the cashier payment entry contract', function (): void {
+    $user = User::factory()->create([
+        'role' => UserRole::Cashier,
+    ]);
+
+    grantFinancePermission($user);
+
+    $this->actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/finance/payments/create'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('administrators/finance/create-payment', false)
+            ->has('user.name')
+            ->has('user.email')
+            ->has('user.role')
+            ->has('items')
+            ->has('currency')
+        );
+});
+
+it('returns a complete student transaction ledger for cashiers', function (): void {
+    $cashier = User::factory()->create([
+        'role' => UserRole::Cashier,
+    ]);
+    $student = Student::factory()->create();
+
+    grantFinancePermission($cashier);
+
+    $transaction = Transaction::query()->create([
+        'description' => 'Partial tuition payment',
+        'payment_method' => 'Cash',
+        'status' => 'paid',
+        'transaction_date' => now(),
+        'settlements' => [
+            'tuition_fee' => 2500,
+            'others' => 0,
+        ],
+        'invoicenumber' => 'OR-2026-001',
+        'user_id' => $cashier->id,
+    ]);
+
+    StudentTransaction::query()->create([
+        'student_id' => $student->id,
+        'transaction_id' => $transaction->id,
+        'amount' => 2500,
+        'status' => 'paid',
+    ]);
+
+    $this->actingAs($cashier)
+        ->getJson(portalUrlForAdministrators("/administrators/finance/api/students/{$student->id}/transactions"))
+        ->assertOk()
+        ->assertJsonPath('summary.count', 1)
+        ->assertJsonPath('summary.total_paid', 2500)
+        ->assertJsonPath('transactions.0.reference_number', 'OR-2026-001')
+        ->assertJsonPath('transactions.0.payment_method', 'Cash')
+        ->assertJsonPath('transactions.0.cashier', $cashier->name)
+        ->assertJsonPath('transactions.0.remarks', 'Partial tuition payment')
+        ->assertJsonPath('transactions.0.settlements.tuition_fee', 2500)
+        ->assertJsonMissingPath('transactions.0.settlements.others')
+        ->assertJsonStructure([
+            'transactions' => [[
+                'id',
+                'transaction_number',
+                'reference_number',
+                'date',
+                'time',
+                'amount',
+                'payment_method',
+                'status',
+                'cashier',
+                'remarks',
+                'settlements',
+                'receipt_url',
+            ]],
+            'summary' => ['count', 'total_paid'],
+        ]);
+});
+
+it('protects student transaction history from users without cashier access', function (): void {
+    $student = Student::factory()->create();
+    $instructor = User::factory()->create([
+        'role' => UserRole::Instructor,
+        'faculty_id_number' => 'FAC-LEDGER-101',
+    ]);
+
+    $this->actingAs($instructor)
+        ->getJson(portalUrlForAdministrators("/administrators/finance/api/students/{$student->id}/transactions"))
+        ->assertForbidden();
+});
+
+it('queues an e-receipt after recording a payment', function (): void {
+    Bus::fake();
+
+    $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+    $student = Student::factory()->create(['email' => 'payer@example.com']);
+    grantFinancePermission($cashier);
+
+    $this->actingAs($cashier)
+        ->post(portalUrlForAdministrators('/administrators/finance/payments'), [
+            'student_id' => $student->id,
+            'payment_method' => 'Cash',
+            'reference_number' => 'OR-AUTO-001',
+            'remarks' => 'Registration payment',
+            'items' => [[
+                'type' => 'fee',
+                'name' => 'Registration Fee',
+                'amount' => 1500,
+                'fee_key' => 'registration_fee',
+            ]],
+        ])
+        ->assertRedirect();
+
+    $transaction = Transaction::query()->latest('id')->firstOrFail();
+
+    expect($transaction->receipt_email_status)->toBe('pending')
+        ->and($transaction->receipt_email_recipient)->toBe('payer@example.com')
+        ->and($transaction->receipt_email_delivery_id)->not->toBeNull();
+
+    Bus::assertDispatched(SendTransactionReceiptJob::class, fn (SendTransactionReceiptJob $job): bool => $job->transactionId === $transaction->id
+        && $job->recipient === 'payer@example.com'
+        && $job->deliveryId === $transaction->receipt_email_delivery_id);
+});
+
+it('records a payment without queueing email when the student has no address', function (): void {
+    Bus::fake();
+
+    $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+    $student = Student::factory()->create(['email' => null]);
+    grantFinancePermission($cashier);
+
+    $this->actingAs($cashier)
+        ->post(portalUrlForAdministrators('/administrators/finance/payments'), [
+            'student_id' => $student->id,
+            'payment_method' => 'Cash',
+            'items' => [[
+                'type' => 'fee',
+                'name' => 'Certification',
+                'amount' => 300,
+                'fee_key' => 'certification',
+            ]],
+        ])
+        ->assertRedirect();
+
+    expect(Transaction::query()->latest('id')->firstOrFail()->receipt_email_status)->toBe('skipped');
+    Bus::assertNotDispatched(SendTransactionReceiptJob::class);
+});
+
+it('allows cashiers to resend a receipt to an override address', function (): void {
+    Bus::fake();
+
+    $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+    grantFinancePermission($cashier);
+    $transaction = Transaction::query()->create([
+        'description' => 'Payment',
+        'payment_method' => 'Cash',
+        'status' => 'paid',
+        'transaction_date' => now(),
+        'settlements' => ['others' => 500],
+        'user_id' => $cashier->id,
+        'receipt_email_status' => 'failed',
+    ]);
+
+    $this->actingAs($cashier)
+        ->post(portalUrlForAdministrators("/administrators/finance/payments/{$transaction->id}/resend-receipt"), [
+            'recipient' => 'corrected@example.com',
+        ])
+        ->assertRedirect();
+
+    $transaction->refresh();
+    expect($transaction->receipt_email_status)->toBe('pending')
+        ->and($transaction->receipt_email_recipient)->toBe('corrected@example.com');
+
+    Bus::assertDispatched(SendTransactionReceiptJob::class, fn (SendTransactionReceiptJob $job): bool => $job->deliveryId === $transaction->receipt_email_delivery_id);
+});
+
+it('prevents duplicate receipt delivery while one is pending', function (): void {
+    Bus::fake();
+
+    $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+    grantFinancePermission($cashier);
+    $transaction = Transaction::query()->create([
+        'description' => 'Payment',
+        'payment_method' => 'Cash',
+        'status' => 'paid',
+        'transaction_date' => now(),
+        'settlements' => ['others' => 500],
+        'user_id' => $cashier->id,
+        'receipt_email_status' => 'pending',
+        'receipt_email_delivery_id' => fake()->uuid(),
+        'receipt_email_recipient' => 'pending@example.com',
+    ]);
+
+    $this->actingAs($cashier)
+        ->post(portalUrlForAdministrators("/administrators/finance/payments/{$transaction->id}/resend-receipt"), [
+            'recipient' => 'duplicate@example.com',
+        ])
+        ->assertRedirect();
+
+    expect($transaction->fresh()->receipt_email_recipient)->toBe('pending@example.com');
+    Bus::assertNotDispatched(SendTransactionReceiptJob::class);
+});
+
+it('shares document and email delivery data on the receipt page', function (): void {
+    $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+    $student = Student::factory()->create(['email' => 'receipt@example.com']);
+    grantFinancePermission($cashier);
+    $transaction = Transaction::query()->create([
+        'description' => 'Tuition payment',
+        'payment_method' => 'Cash',
+        'status' => 'paid',
+        'transaction_date' => now(),
+        'settlements' => ['tuition_fee' => 2000],
+        'user_id' => $cashier->id,
+        'receipt_email_status' => 'sent',
+        'receipt_email_recipient' => 'receipt@example.com',
+        'receipt_emailed_at' => now(),
+    ]);
+    StudentTransaction::query()->create([
+        'student_id' => $student->id,
+        'transaction_id' => $transaction->id,
+        'amount' => 2000,
+        'status' => 'paid',
+    ]);
+
+    $this->actingAs($cashier)
+        ->get(portalUrlForAdministrators("/administrators/finance/payments/{$transaction->id}"))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('administrators/finance/receipt', false)
+            ->where('transaction.student_email', 'receipt@example.com')
+            ->where('transaction.items.tuition_fee', 2000)
+            ->where('transaction.email_delivery.status', 'sent')
+            ->where('transaction.email_delivery.recipient', 'receipt@example.com')
+            ->has('transaction.institution.name')
+        );
+});
+
+it('emails the document receipt with a PDF attachment', function (): void {
+    Mail::fake();
+    config()->set('laravel-pdf.driver', 'gotenberg');
+
+    $cashier = User::factory()->create(['role' => UserRole::Cashier]);
+    $student = Student::factory()->create(['email' => 'attached@example.com']);
+    $deliveryId = fake()->uuid();
+    $transaction = Transaction::query()->create([
+        'description' => 'Document receipt test',
+        'payment_method' => 'Cash',
+        'status' => 'paid',
+        'transaction_date' => now(),
+        'settlements' => ['tuition_fee' => 1250],
+        'user_id' => $cashier->id,
+        'receipt_email_status' => 'pending',
+        'receipt_email_delivery_id' => $deliveryId,
+        'receipt_email_recipient' => 'attached@example.com',
+    ]);
+    StudentTransaction::query()->create([
+        'student_id' => $student->id,
+        'transaction_id' => $transaction->id,
+        'amount' => 1250,
+        'status' => 'paid',
+    ]);
+
+    (new SendTransactionReceiptJob($transaction->id, 'attached@example.com', $deliveryId))
+        ->handle(app(TransactionReceiptDataService::class));
+
+    Mail::assertSent(TransactionReceiptMail::class, function (TransactionReceiptMail $mail): bool {
+        return $mail->hasTo('attached@example.com')
+            && $mail->receipt['amount'] === 1250.0
+            && count($mail->attachments()) === 1;
+    });
+
+    expect($transaction->fresh()->receipt_email_status)->toBe('sent')
+        ->and($transaction->fresh()->receipt_emailed_at)->not->toBeNull();
 });
 
 it('shares billing desk summaries and active filters', function (): void {

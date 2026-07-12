@@ -185,8 +185,10 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/finance/payments', [AdministratorFinanceController::class, 'payments'])->name('finance.payments');
         Route::get('/finance/payments/create', [AdministratorFinanceController::class, 'create'])->name('finance.payments.create');
         Route::post('/finance/payments', [AdministratorFinanceController::class, 'store'])->name('finance.payments.store');
+        Route::post('/finance/payments/{transaction}/resend-receipt', [AdministratorFinanceController::class, 'resendReceipt'])->whereNumber('transaction')->middleware('throttle:6,1')->name('finance.payments.resend-receipt');
         Route::get('/finance/payments/{transaction}', [AdministratorFinanceController::class, 'show'])->name('finance.payments.show');
         Route::get('/finance/api/student-details', [AdministratorFinanceController::class, 'getStudentDetails'])->name('finance.api.student-details');
+        Route::get('/finance/api/students/{student}/transactions', [AdministratorFinanceController::class, 'studentTransactions'])->whereNumber('student')->name('finance.api.student-transactions');
         Route::get('/finance/reports', [AdministratorFinanceController::class, 'reports'])->name('finance.reports');
 
         // Finance Report API Endpoints

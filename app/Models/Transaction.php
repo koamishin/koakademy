@@ -59,6 +59,12 @@ final class Transaction extends Model
         'invoicenumber',
         'signature',
         'user_id',
+        'receipt_email_status',
+        'receipt_email_delivery_id',
+        'receipt_email_recipient',
+        'receipt_emailed_at',
+        'receipt_email_failed_at',
+        'receipt_email_error',
     ];
 
     public function student()
@@ -334,6 +340,8 @@ final class Transaction extends Model
             'transaction_date' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
+            'receipt_emailed_at' => 'datetime',
+            'receipt_email_failed_at' => 'datetime',
         ];
     }
 

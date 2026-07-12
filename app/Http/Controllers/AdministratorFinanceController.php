@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ResendTransactionReceiptRequest;
+use App\Jobs\SendTransactionReceiptJob;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\StudentTransaction;
@@ -12,6 +14,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\EnrollmentBillingService;
 use App\Services\GeneralSettingsService;
+use App\Services\TransactionReceiptDataService;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Exception;
@@ -19,9 +22,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Inventory\Models\InventoryProduct;
+use Throwable;
 
 final class AdministratorFinanceController extends Controller
 {
@@ -375,8 +381,10 @@ final class AdministratorFinanceController extends Controller
         try {
             // 1. Create Transaction
             $transaction = null; // Initialize variable
+            $receiptRecipient = null;
+            $receiptDeliveryId = null;
 
-            DB::transaction(function () use ($validated, $settingsService, &$transaction): void {
+            DB::transaction(function () use ($validated, $settingsService, &$transaction, &$receiptRecipient, &$receiptDeliveryId): void {
                 $student = Student::findOrFail($validated['student_id']);
                 $totalAmount = collect($validated['items'])->sum('amount');
                 $schoolYear = $settingsService->getCurrentSchoolYearString();
@@ -441,6 +449,9 @@ final class AdministratorFinanceController extends Controller
                 // But looking at the example {"tuition_fee":"2500"}, they are strings.
                 $settlements = array_map(fn (int|float $val): string => (string) $val, $settlements);
 
+                $receiptRecipient = $student->email ?: null;
+                $receiptDeliveryId = $receiptRecipient !== null ? (string) Str::uuid() : null;
+
                 $transaction = Transaction::create([
                     'description' => $validated['remarks'] ?? 'Payment for '.implode(', ', array_map(fn (array $i) => $i['name'], $validated['items'])),
                     'payment_method' => $validated['payment_method'],
@@ -449,6 +460,9 @@ final class AdministratorFinanceController extends Controller
                     'settlements' => $settlements,
                     'invoicenumber' => $validated['reference_number'] ?? null,
                     'user_id' => Auth::id(),
+                    'receipt_email_status' => $receiptRecipient !== null ? 'pending' : 'skipped',
+                    'receipt_email_delivery_id' => $receiptDeliveryId,
+                    'receipt_email_recipient' => $receiptRecipient,
                 ]);
 
                 // 2. Link to Student
@@ -493,6 +507,23 @@ final class AdministratorFinanceController extends Controller
             });
 
             if ($transaction) {
+                if ($receiptRecipient !== null && $receiptDeliveryId !== null) {
+                    try {
+                        SendTransactionReceiptJob::dispatch($transaction->id, $receiptRecipient, $receiptDeliveryId)->afterCommit();
+                    } catch (Throwable $throwable) {
+                        Log::error('Unable to queue transaction receipt email.', [
+                            'transaction_id' => $transaction->id,
+                            'delivery_id' => $receiptDeliveryId,
+                            'exception' => $throwable,
+                        ]);
+                        $transaction->update([
+                            'receipt_email_status' => 'failed',
+                            'receipt_email_failed_at' => now(),
+                            'receipt_email_error' => 'The receipt email could not be queued. Please resend it from the receipt page.',
+                        ]);
+                    }
+                }
+
                 return redirect()->route('administrators.finance.payments.show', $transaction->id)->with('flash', [
                     'success' => 'Payment recorded successfully.',
                 ]);
@@ -509,7 +540,7 @@ final class AdministratorFinanceController extends Controller
         }
     }
 
-    public function show(Transaction $transaction): Response|RedirectResponse
+    public function show(Transaction $transaction, TransactionReceiptDataService $receiptDataService): Response|RedirectResponse
     {
         $this->authorizeFinanceAccess();
 
@@ -518,26 +549,67 @@ final class AdministratorFinanceController extends Controller
             return redirect('/login');
         }
 
-        $transaction->load(['student', 'studentTransactions', 'user']);
-
         return Inertia::render('administrators/finance/receipt', [
             'user' => [
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role?->getLabel() ?? 'Administrator',
             ],
-            'transaction' => [
-                'id' => $transaction->id,
-                'transaction_number' => $transaction->transaction_number,
-                'date' => $transaction->transaction_date->format('M d, Y h:i A'),
-                'student_name' => $transaction->student->first()?->full_name ?? 'N/A',
-                'student_id' => $transaction->student->first()?->student_id ?? 'N/A',
-                'amount' => $transaction->raw_total_amount,
-                'method' => $transaction->payment_method,
-                'items' => $transaction->settlements,
-                'cashier' => $transaction->user->name ?? 'System',
-                'remarks' => $transaction->description,
-            ],
+            'transaction' => $receiptDataService->build($transaction),
+        ]);
+    }
+
+    public function resendReceipt(ResendTransactionReceiptRequest $request, Transaction $transaction): RedirectResponse
+    {
+        $this->authorizeFinanceAccess();
+
+        $recipient = (string) $request->validated('recipient');
+        $deliveryId = (string) Str::uuid();
+        $updated = Transaction::query()
+            ->whereKey($transaction->id)
+            ->where(function ($query): void {
+                $query->whereNull('receipt_email_status')
+                    ->orWhere('receipt_email_status', '!=', 'pending');
+            })
+            ->update([
+                'receipt_email_status' => 'pending',
+                'receipt_email_delivery_id' => $deliveryId,
+                'receipt_email_recipient' => $recipient,
+                'receipt_emailed_at' => null,
+                'receipt_email_failed_at' => null,
+                'receipt_email_error' => null,
+            ]);
+
+        if ($updated === 0) {
+            return back()->with('flash', [
+                'error' => 'A receipt email is already pending for this transaction.',
+            ]);
+        }
+
+        try {
+            SendTransactionReceiptJob::dispatch($transaction->id, $recipient, $deliveryId)->afterCommit();
+        } catch (Throwable $throwable) {
+            Log::error('Unable to queue a resent transaction receipt.', [
+                'transaction_id' => $transaction->id,
+                'delivery_id' => $deliveryId,
+                'exception' => $throwable,
+            ]);
+            Transaction::query()
+                ->whereKey($transaction->id)
+                ->where('receipt_email_delivery_id', $deliveryId)
+                ->update([
+                    'receipt_email_status' => 'failed',
+                    'receipt_email_failed_at' => now(),
+                    'receipt_email_error' => 'The receipt email could not be queued. Please try again.',
+                ]);
+
+            return back()->with('flash', [
+                'error' => 'The receipt email could not be queued. Please try again.',
+            ]);
+        }
+
+        return back()->with('flash', [
+            'success' => 'Receipt email queued for delivery.',
         ]);
     }
 
@@ -575,6 +647,47 @@ final class AdministratorFinanceController extends Controller
             'year_level' => $student->academic_year,
             'outstanding_balance' => $outstandingBalance,
             'unpaid_enrollments' => $unpaidEnrollments,
+        ]);
+    }
+
+    public function studentTransactions(Student $student): \Illuminate\Http\JsonResponse
+    {
+        $this->authorizeFinanceAccess();
+
+        $transactions = StudentTransaction::query()
+            ->whereBelongsTo($student)
+            ->with(['transaction.user'])
+            ->latest()
+            ->get()
+            ->map(function (StudentTransaction $studentTransaction): array {
+                $transaction = $studentTransaction->transaction;
+                $settlements = collect($transaction->settlements ?? [])
+                    ->map(fn (mixed $amount): float => (float) $amount)
+                    ->filter(fn (float $amount): bool => $amount > 0)
+                    ->all();
+
+                return [
+                    'id' => $transaction->id,
+                    'transaction_number' => $transaction->transaction_number,
+                    'reference_number' => $transaction->invoicenumber,
+                    'date' => $transaction->transaction_date?->format('M d, Y'),
+                    'time' => $transaction->transaction_date?->format('h:i A'),
+                    'amount' => (float) $studentTransaction->amount,
+                    'payment_method' => $transaction->payment_method,
+                    'status' => $studentTransaction->status,
+                    'cashier' => $transaction->user?->name ?? 'System',
+                    'remarks' => $transaction->description,
+                    'settlements' => $settlements,
+                    'receipt_url' => route('administrators.finance.payments.show', $transaction, false),
+                ];
+            });
+
+        return response()->json([
+            'transactions' => $transactions,
+            'summary' => [
+                'count' => $transactions->count(),
+                'total_paid' => $transactions->sum('amount'),
+            ],
         ]);
     }
 
