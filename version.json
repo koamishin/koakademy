@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.2.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.2.3",
-  "commit": "c61f575e76c0766f69fc6b9eb61de7a7a6143984",
+  "version": "1.10.0-dev.3.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.3.0",
+  "commit": "a2d5b4ccc31143105fa0daef431b7bc114f8081f",
   "branch": "master",
-  "timestamp": "2026-07-12T03:26:45Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29178077110",
-  "release_type": "patch",
+  "timestamp": "2026-07-12T12:11:27Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29192029804",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.2.3 - Update Dockerfile",
-    "previous": "1.10.0-dev.2.2"
+    "current": "Version 1.10.0-dev.3.0 - feat(finance): add queued receipt resend workflow",
+    "previous": "1.10.0-dev.2.3"
   },
   "metadata": {
     "author": "yukazakiri",
