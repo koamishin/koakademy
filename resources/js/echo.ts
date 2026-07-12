@@ -17,6 +17,8 @@ declare global {
 
 const runtimeConfig = window.pusherConfig;
 const pusherKey = runtimeConfig?.key || import.meta.env.VITE_PUSHER_APP_KEY;
+const configuredWebSocketHost = runtimeConfig?.host || import.meta.env.VITE_PUSHER_HOST;
+const webSocketHost = isPusherApiHost(configuredWebSocketHost) ? undefined : configuredWebSocketHost;
 
 if (typeof pusherKey === "string" && pusherKey.length > 0) {
     const scheme = runtimeConfig?.scheme || import.meta.env.VITE_PUSHER_SCHEME || "https";
@@ -28,12 +30,16 @@ if (typeof pusherKey === "string" && pusherKey.length > 0) {
         broadcaster: "pusher",
         key: pusherKey,
         cluster: runtimeConfig?.cluster || import.meta.env.VITE_PUSHER_APP_CLUSTER,
-        wsHost: runtimeConfig?.host || import.meta.env.VITE_PUSHER_HOST || undefined,
+        ...(webSocketHost ? { wsHost: webSocketHost } : {}),
         wsPort: port,
         wssPort: port,
         forceTLS: scheme === "https",
         enabledTransports: ["ws", "wss"],
     });
+}
+
+function isPusherApiHost(host: string | undefined): boolean {
+    return typeof host === "string" && /^api-[a-z0-9-]+\.pusher\.com$/i.test(host);
 }
 
 export default window.Echo;

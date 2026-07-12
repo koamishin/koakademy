@@ -11,6 +11,7 @@ interface OnlinePresenceContextValue {
 }
 
 interface SharedPageProps {
+    [key: string]: unknown;
     auth?: {
         user?: {
             id: number;

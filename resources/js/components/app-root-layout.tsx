@@ -2,6 +2,7 @@ import { AdminMobileBottomNav } from "@/components/administrators/admin-mobile-b
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { AnalyticsScripts } from "@/components/analytics-scripts";
 import { DemoModeBanner } from "@/components/demo-mode-banner";
+import { OnlinePresenceProvider } from "@/contexts/online-presence-context";
 import { FacultyBottomNav } from "@/components/faculty/faculty-bottom-nav";
 import { SeoHead } from "@/components/seo-head";
 import { StudentBottomNav } from "@/components/student/student-bottom-nav";
@@ -23,7 +24,7 @@ export default function AppRootLayout({ children }: { children: React.ReactNode 
     const isPortalUser = user ? isFacultyPortalRole(user.role) || isStudentPortalRole(user.role) || isAdministratorPortalRole(user.role) : false;
 
     return (
-        <>
+        <OnlinePresenceProvider>
             <SeoHead />
             <AnalyticsScripts />
             <DemoModeBanner />
@@ -33,6 +34,6 @@ export default function AppRootLayout({ children }: { children: React.ReactNode 
             {user && isStudentPortalRole(user.role) ? <StudentBottomNav /> : null}
             {user && isAdministratorPortalRole(user.role) ? <AdminMobileBottomNav /> : null}
             <Toaster position="top-right" richColors />
-        </>
+        </OnlinePresenceProvider>
     );
 }

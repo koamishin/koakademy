@@ -1,5 +1,4 @@
 import AppRootLayout from "@/components/app-root-layout";
-import { OnlinePresenceProvider } from "@/contexts/online-presence-context";
 import "@/echo"; // Initialize Laravel Echo for real-time
 import { ThemeProvider } from "@/hooks/use-theme";
 import type { Page } from "@inertiajs/core";
@@ -48,9 +47,7 @@ if (appElement !== null && initialPage !== null) {
             // @ts-ignore
             const inertiaApp = (
                 <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-                    <OnlinePresenceProvider>
-                        <App {...props} />
-                    </OnlinePresenceProvider>
+                    <App {...props} />
                 </ThemeProvider>
             );
 
