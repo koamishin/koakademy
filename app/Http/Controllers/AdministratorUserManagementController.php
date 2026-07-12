@@ -10,6 +10,7 @@ use App\Http\Requests\Administrators\UpdateUserRequest;
 use App\Models\Department;
 use App\Models\School;
 use App\Models\User;
+use App\Services\OnlineUserPresenceService;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,6 +26,8 @@ use Spatie\Permission\Models\Role;
 
 final class AdministratorUserManagementController extends Controller
 {
+    public function __construct(private readonly OnlineUserPresenceService $onlineUserPresence) {}
+
     public function index(Request $request): Response
     {
         $this->authorizeUserManagementAccess();
@@ -70,31 +72,8 @@ final class AdministratorUserManagementController extends Controller
         // Get all users for client-side pagination with TanStack Table
         $users = $query->get();
 
-        $onlineUsers = 0;
-        $onlineUserIds = [];
-        $sessionDriver = config('session.driver');
-        $onlineThreshold = now()->subMinutes(15)->timestamp;
-
-        if ($sessionDriver === 'database' && Schema::hasTable('sessions')) {
-            $onlineUserIds = DB::table('sessions')
-                ->whereNotNull('user_id')
-                ->whereRaw('to_timestamp(last_activity) >= ?', [now()->subMinutes(15)])
-                ->distinct('user_id')
-                ->pluck('user_id')
-                ->map(fn ($id): int => (int) $id)
-                ->values()
-                ->toArray();
-            $onlineUsers = count($onlineUserIds);
-        }
-
-        if ($sessionDriver === 'redis') {
-            $redisConnection = config('session.connection') ?? 'default';
-            $key = config('cache.prefix', '').'online-users';
-            $onlineUserIds = Redis::connection($redisConnection)
-                ->zrangebyscore($key, $onlineThreshold, '+inf');
-            $onlineUserIds = array_values(array_map(intval(...), $onlineUserIds));
-            $onlineUsers = count($onlineUserIds);
-        }
+        $onlineUserIds = $this->onlineUserPresence->onlineUserIds();
+        $onlineUsers = count($onlineUserIds);
 
         return Inertia::render('administrators/users/index', [
             'users' => [

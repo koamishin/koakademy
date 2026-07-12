@@ -11,9 +11,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useOnlinePresence } from "@/contexts/online-presence-context";
 import { Head, Link, router, usePoll } from "@inertiajs/react";
 import { KeyRound, Plus, ShieldCheck, Trash2, UserCog } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnalyticsData, UserAnalytics } from "./analytics";
 import { createColumns, ExtendedUser } from "./columns";
 import { DataTable } from "./data-table";
@@ -52,6 +53,20 @@ interface PageProps {
 type ActionType = "delete" | "impersonate" | "verify" | "reset_password" | null;
 
 export default function UserIndex({ users, analytics, online_user_ids, filters, options, user }: PageProps) {
+    const presence = useOnlinePresence();
+    const liveOnlineUserIds = presence.isReady ? presence.onlineUserIds : online_user_ids;
+    const liveAnalytics = useMemo(
+        () => ({
+            ...analytics,
+            online_users: liveOnlineUserIds.length,
+            online_rate:
+                analytics.total_users > 0
+                    ? Number(((liveOnlineUserIds.length / analytics.total_users) * 100).toFixed(1))
+                    : 0,
+        }),
+        [analytics, liveOnlineUserIds],
+    );
+
     usePoll(30000, {
         only: ["analytics", "online_user_ids"],
     });
@@ -110,7 +125,7 @@ export default function UserIndex({ users, analytics, online_user_ids, filters, 
         setActionState({ type: null, userId: null, userName: null });
     };
 
-    const columns = createColumns({ onAction: openDialog, onlineUserIds: online_user_ids });
+    const columns = createColumns({ onAction: openDialog, onlineUserIds: liveOnlineUserIds });
 
     return (
         <AdminLayout user={user} title="User Management">
@@ -129,9 +144,9 @@ export default function UserIndex({ users, analytics, online_user_ids, filters, 
                     </Button>
                 </div>
 
-                <UserAnalytics stats={analytics} />
+                <UserAnalytics stats={liveAnalytics} />
 
-                <OnlineUsersWidget users={users.data} onlineUserIds={online_user_ids} />
+                <OnlineUsersWidget users={users.data} onlineUserIds={liveOnlineUserIds} />
 
                 <Card>
                     <CardHeader>

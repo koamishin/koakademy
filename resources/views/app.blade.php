@@ -80,6 +80,13 @@
         // Get configurable locale
         $locale = config('app.locale', 'en');
         $ogLocale = str_replace('_', '-', $locale);
+        $pusherConfig = [
+            'key' => config('broadcasting.connections.pusher.key'),
+            'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+            'host' => config('broadcasting.connections.pusher.options.host'),
+            'port' => config('broadcasting.connections.pusher.options.port'),
+            'scheme' => config('broadcasting.connections.pusher.options.scheme'),
+        ];
     @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -136,6 +143,7 @@
     {{-- Expose appName to window for Inertia --}}
     <script>
         window.appName = @json($resolvedAppName);
+        window.pusherConfig = @json($pusherConfig);
     </script>
 
     @if(app()->environment('demo'))

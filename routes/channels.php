@@ -35,3 +35,7 @@ Broadcast::channel('filament-notifications.{userId}', function ($user, $userId) 
 Broadcast::channel('administrators', function (User $user) {
     return $user->isAdministrative();
 });
+
+Broadcast::channel('online-users', function (User $user): array {
+    return ['id' => $user->id];
+});
