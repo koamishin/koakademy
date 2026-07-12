@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.4.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.4.0",
-  "commit": "d88a962cc1791ef15c0b8d5bf5b43d36afb03faf",
+  "version": "1.10.0-dev.4.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.4.1",
+  "commit": "927362aa63b49428792a36c48d3bd843a0c3a172",
   "branch": "master",
-  "timestamp": "2026-07-12T12:40:17Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29192891268",
-  "release_type": "feature",
+  "timestamp": "2026-07-12T14:41:22Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29196577548",
+  "release_type": "patch",
   "changelog": {
-    "current": "Version 1.10.0-dev.4.0 - feat(presence): add online presence service and UI",
-    "previous": "1.10.0-dev.3.0"
+    "current": "Version 1.10.0-dev.4.1 - Enable online presence context and fix Pusher host",
+    "previous": "1.10.0-dev.4.0"
   },
   "metadata": {
     "author": "yukazakiri",
