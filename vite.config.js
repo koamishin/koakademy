@@ -1,5 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
-import legacy from "@vitejs/plugin-legacy";
+
 import react from "@vitejs/plugin-react";
 import { wayfinder } from "@laravel/vite-plugin-wayfinder";
 import laravel from "laravel-vite-plugin";
@@ -49,7 +49,7 @@ export default defineConfig({
                 };
             },
         },
-        process.env.WAYFINDER_GENERATE !== "false" && wayfinder(),
+        wayfinder(),
         tailwindcss({
             config: {
                 content: [
@@ -70,11 +70,7 @@ export default defineConfig({
             ssr: "resources/js/ssr.tsx",
         }),
         react(),
-        legacy({
-            targets: ["defaults"],
-            modernPolyfills: true,
-            renderModernChunks: true,
-        }),
+
     ],
     resolve: {
         dedupe: ["react", "react-dom"],
