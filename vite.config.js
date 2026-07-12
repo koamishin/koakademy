@@ -8,6 +8,7 @@ import path from "node:path";
 import { defineConfig } from "vite";
 
 const CONTROL_CHARS_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
+const shouldGenerateWayfinder = process.env.WAYFINDER_GENERATE !== "false";
 
 // Rolldown plugin so optimizeDeps prebundling (Vite 8+) doesn't choke on
 // the stray control characters shipped inside @tabler/icons-react ESM files.
@@ -49,7 +50,7 @@ export default defineConfig({
                 };
             },
         },
-        wayfinder(),
+        ...(shouldGenerateWayfinder ? [wayfinder()] : []),
         tailwindcss({
             config: {
                 content: [
