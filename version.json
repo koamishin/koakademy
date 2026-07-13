@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.4.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.4.1",
-  "commit": "927362aa63b49428792a36c48d3bd843a0c3a172",
+  "version": "1.10.0-dev.4.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.4.2",
+  "commit": "0399b45c8fc07ac13603e1dc5f40f46ebd79f5da",
   "branch": "master",
-  "timestamp": "2026-07-12T14:41:22Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29196577548",
-  "release_type": "patch",
+  "timestamp": "2026-07-13T10:40:29Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29243323371",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.4.1 - Enable online presence context and fix Pusher host",
-    "previous": "1.10.0-dev.4.0"
+    "current": "Version 1.10.0-dev.4.2 - fix: preserve assessment PDF attachments across workers",
+    "previous": "1.10.0-dev.4.1"
   },
   "metadata": {
     "author": "yukazakiri",
