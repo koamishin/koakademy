@@ -29,6 +29,7 @@ use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -601,42 +602,68 @@ final class AdministratorSystemManagementController extends Controller
     {
         $this->authorize('updateMail', GeneralSetting::class);
 
-        $settings = GeneralSetting::first();
+        $settings = GeneralSetting::query()->firstOrCreate([], [
+            'site_name' => $this->siteSettings->getAppName(),
+        ]);
         $validated = $request->validate([
             'email_from_address' => 'required|email',
-            'email_from_name' => 'required|string',
-            'driver' => 'required|string',
+            'email_from_name' => 'required|string|max:255',
+            'driver' => ['required', 'string', Rule::in(['smtp', 'sequenzy', 'mailgun', 'ses'])],
             'host' => 'nullable|string',
             'port' => 'nullable|integer',
             'username' => 'nullable|string',
-            'password' => 'nullable|string',
+            'password' => 'nullable|string|max:2048',
             'encryption' => 'nullable|string',
+            'sequenzy_api_key' => 'nullable|string|max:2048',
         ]);
 
-        $settings->update([
+        $existingMailSettings = $settings->email_settings ?? [];
+        $emailSettings = Arr::except($validated, [
+            'email_from_address',
+            'email_from_name',
+            'sequenzy_api_key',
+            'password',
+        ]);
+
+        if (filled($validated['password'] ?? null)) {
+            $emailSettings['password'] = $validated['password'];
+        } elseif (filled($existingMailSettings['password'] ?? null)) {
+            $emailSettings['password'] = $existingMailSettings['password'];
+        }
+
+        $settingsUpdates = [
             'email_from_address' => $validated['email_from_address'],
             'email_from_name' => $validated['email_from_name'],
-            'email_settings' => array_diff_key($validated, array_flip(['email_from_address', 'email_from_name'])),
-        ]);
+            'email_settings' => $emailSettings,
+        ];
+
+        if (filled($validated['sequenzy_api_key'] ?? null)) {
+            $settingsUpdates['sequenzy_api_key'] = mb_trim($validated['sequenzy_api_key']);
+        }
+
+        $settings->update($settingsUpdates);
 
         // Update .env file
         $envUpdates = [
             'MAIL_MAILER' => $validated['driver'],
-            'MAIL_HOST' => $validated['host'],
-            'MAIL_PORT' => $validated['port'],
-            'MAIL_USERNAME' => $validated['username'],
-            'MAIL_PASSWORD' => $validated['password'],
-            'MAIL_ENCRYPTION' => $validated['encryption'],
+            'MAIL_HOST' => $validated['host'] ?? null,
+            'MAIL_PORT' => $validated['port'] ?? null,
+            'MAIL_USERNAME' => $validated['username'] ?? null,
+            'MAIL_ENCRYPTION' => $validated['encryption'] ?? null,
             'MAIL_FROM_ADDRESS' => $validated['email_from_address'],
             'MAIL_FROM_NAME' => '"'.$validated['email_from_name'].'"',
         ];
+
+        if (filled($validated['password'] ?? null)) {
+            $envUpdates['MAIL_PASSWORD'] = $validated['password'];
+        }
 
         $this->updateEnvironmentFile($envUpdates);
 
         // Clear config cache
         Artisan::call('config:clear');
 
-        return Redirect::back()->with('success', 'Mail configuration updated and environment synced.');
+        return Redirect::back()->with('success', 'Mail configuration updated successfully.');
     }
 
     public function updateEnrollmentPipeline(UpdateEnrollmentPipelineRequest $request): RedirectResponse
@@ -871,17 +898,22 @@ final class AdministratorSystemManagementController extends Controller
 
         $socialiteConfig = app(SocialiteProviderService::class)->config();
 
-        // Merge mail defaults with DB
-        $mailConfig = $settings->email_settings ?? [];
+        // Merge non-sensitive mail defaults with database settings.
+        $storedMailConfig = $settings->email_settings ?? [];
+        $mailConfig = Arr::except($storedMailConfig, ['password', 'sequenzy_api_key']);
         $mailDefaults = [
             'driver' => config('mail.default'),
             'host' => config('mail.mailers.smtp.host'),
             'port' => config('mail.mailers.smtp.port'),
             'username' => config('mail.mailers.smtp.username'),
-            'password' => config('mail.mailers.smtp.password'),
+            'password' => '',
             'encryption' => config('mail.mailers.smtp.encryption'),
             'email_from_address' => config('mail.from.address'),
             'email_from_name' => config('mail.from.name'),
+            'password_configured' => filled($storedMailConfig['password'] ?? config('mail.mailers.smtp.password')),
+            'api_key_configured' => filled($settings->sequenzy_api_key)
+                || filled(config('services.sequenzy.key'))
+                || filled(config('services.sequenzy.legacy_key')),
         ];
         $finalMailConfig = array_merge($mailDefaults, $mailConfig);
         if ($settings->email_from_address) {
@@ -890,6 +922,12 @@ final class AdministratorSystemManagementController extends Controller
         if ($settings->email_from_name) {
             $finalMailConfig['email_from_name'] = $settings->email_from_name;
         }
+
+        $frontendSettings = $settings->toArray();
+        $frontendSettings['email_settings'] = Arr::except(
+            $settings->email_settings ?? [],
+            ['password', 'sequenzy_api_key'],
+        );
 
         // Auto-detect third party services (excluding those configured elsewhere)
         $allServices = config('services', []);
@@ -910,7 +948,7 @@ final class AdministratorSystemManagementController extends Controller
                 'role' => $user->role?->getLabel() ?? 'Administrator',
                 'permissions' => $permissions,
             ],
-            'general_settings' => $settings,
+            'general_settings' => $frontendSettings,
             'active_school' => $activeSchool,
             'schools' => $schools,
             'access' => [

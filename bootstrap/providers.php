@@ -10,6 +10,7 @@ return [
     App\Providers\Filament\PortalPanelProvider::class,
     App\Providers\NotificationChannelServiceProvider::class,
     App\Providers\PulseServiceProvider::class,
+    App\Providers\SequenzyMailServiceProvider::class,
     App\Providers\TelescopeServiceProvider::class,
     EragLaravelPwa\EragLaravelPwaServiceProvider::class,
     SaaSykit\OpenGraphy\OpenGraphyServiceProvider::class,

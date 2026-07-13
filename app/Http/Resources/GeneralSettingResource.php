@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Arr;
 
 final class GeneralSettingResource extends JsonResource
 {
@@ -32,7 +33,7 @@ final class GeneralSettingResource extends JsonResource
             'seo_title' => $this->seo_title,
             'seo_keywords' => $this->seo_keywords,
             'seo_metadata' => $this->seo_metadata,
-            'email_settings' => $this->email_settings,
+            'email_settings' => Arr::except($this->email_settings ?? [], ['password', 'sequenzy_api_key']),
             'email_from_address' => $this->email_from_address,
             'email_from_name' => $this->email_from_name,
             'social_network' => $this->social_network,

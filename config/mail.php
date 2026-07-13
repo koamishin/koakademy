@@ -67,6 +67,12 @@ return [
             'transport' => 'resend',
         ],
 
+        'sequenzy' => [
+            'transport' => 'sequenzy',
+            'endpoint' => env('SEQUENZY_API_URL', 'https://api.sequenzy.com/api/v1/transactional/send'),
+            'timeout' => (float) env('SEQUENZY_TIMEOUT', 15),
+        ],
+
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),

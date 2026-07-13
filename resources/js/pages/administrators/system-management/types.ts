@@ -129,6 +129,8 @@ export interface MailConfig {
     username: string;
     password: string;
     encryption: string;
+    password_configured: boolean;
+    api_key_configured: boolean;
 }
 
 export type EnrollmentPipelineActionType = "standard" | "department_verification" | "cashier_verification";

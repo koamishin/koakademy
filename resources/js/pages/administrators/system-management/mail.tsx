@@ -23,6 +23,7 @@ interface MailFormData {
     username: string;
     password: string;
     encryption: string;
+    sequenzy_api_key: string;
 }
 
 type TestEmailType = "plain" | "html" | "markdown" | "pdf-attachment";
@@ -55,6 +56,7 @@ export default function SystemManagementMailPage({ user, general_settings, mail_
         username: mail_config?.username || "",
         password: mail_config?.password || "",
         encryption: mail_config?.encryption || "tls",
+        sequenzy_api_key: "",
     });
 
     const handleTestEmail = async (event: FormEvent<HTMLButtonElement>) => {
@@ -126,14 +128,14 @@ export default function SystemManagementMailPage({ user, general_settings, mail_
             access={access}
             activeSection="mail"
             heading="Mail Server"
-            description="Configure SMTP transport and validate outbound delivery."
+            description="Configure outbound email transport and validate delivery."
         >
             <Card>
                 <CardHeader>
                     <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
                             <CardTitle>Mail Configuration</CardTitle>
-                            <CardDescription>Settings are written to database and synchronized to environment values.</CardDescription>
+                            <CardDescription>Sequenzy API keys are encrypted and shared by all application replicas.</CardDescription>
                         </div>
                         <Button
                             onClick={() =>
@@ -183,54 +185,78 @@ export default function SystemManagementMailPage({ user, general_settings, mail_
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="smtp">SMTP</SelectItem>
+                                    <SelectItem value="sequenzy">Sequenzy REST API</SelectItem>
                                     <SelectItem value="mailgun">Mailgun</SelectItem>
                                     <SelectItem value="ses">Amazon SES</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="encryption">Encryption</Label>
-                            <Select value={mailForm.data.encryption || "tls"} onValueChange={(value) => mailForm.setData("encryption", value)}>
-                                <SelectTrigger id="encryption">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="tls">TLS</SelectItem>
-                                    <SelectItem value="ssl">SSL</SelectItem>
-                                    <SelectItem value="none">None</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="host">Host</Label>
-                            <Input id="host" value={mailForm.data.host} onChange={(event) => mailForm.setData("host", event.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="port">Port</Label>
-                            <Input
-                                id="port"
-                                type="number"
-                                value={mailForm.data.port}
-                                onChange={(event) => mailForm.setData("port", Number(event.target.value) || 587)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="username">Username</Label>
-                            <Input
-                                id="username"
-                                value={mailForm.data.username}
-                                onChange={(event) => mailForm.setData("username", event.target.value)}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={mailForm.data.password}
-                                onChange={(event) => mailForm.setData("password", event.target.value)}
-                            />
-                        </div>
+                        {mailForm.data.driver === "sequenzy" ? (
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="sequenzy_api_key">Sequenzy API Key</Label>
+                                <Input
+                                    id="sequenzy_api_key"
+                                    type="password"
+                                    autoComplete="new-password"
+                                    placeholder={mail_config?.api_key_configured ? "Configured - leave blank to keep existing key" : "Enter API key"}
+                                    value={mailForm.data.sequenzy_api_key}
+                                    onChange={(event) => mailForm.setData("sequenzy_api_key", event.target.value)}
+                                />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="encryption">Encryption</Label>
+                                    <Select
+                                        value={mailForm.data.encryption || "tls"}
+                                        onValueChange={(value) => mailForm.setData("encryption", value)}
+                                    >
+                                        <SelectTrigger id="encryption">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="tls">TLS</SelectItem>
+                                            <SelectItem value="ssl">SSL</SelectItem>
+                                            <SelectItem value="none">None</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="host">Host</Label>
+                                    <Input id="host" value={mailForm.data.host} onChange={(event) => mailForm.setData("host", event.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="port">Port</Label>
+                                    <Input
+                                        id="port"
+                                        type="number"
+                                        value={mailForm.data.port}
+                                        onChange={(event) => mailForm.setData("port", Number(event.target.value) || 587)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="username">Username</Label>
+                                    <Input
+                                        id="username"
+                                        value={mailForm.data.username}
+                                        onChange={(event) => mailForm.setData("username", event.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        autoComplete="new-password"
+                                        placeholder={
+                                            mail_config?.password_configured ? "Configured - leave blank to keep existing password" : "Enter password"
+                                        }
+                                        value={mailForm.data.password}
+                                        onChange={(event) => mailForm.setData("password", event.target.value)}
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
                 </CardContent>
             </Card>

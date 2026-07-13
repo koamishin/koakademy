@@ -24,6 +24,11 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'sequenzy' => [
+        'key' => env('SEQUENZY_API_KEY'),
+        'legacy_key' => env('MAIL_PASSWORD'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

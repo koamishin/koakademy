@@ -48,6 +48,7 @@ final class GeneralSetting extends Model
         'seo_keywords',
         'seo_metadata',
         'email_settings',
+        'sequenzy_api_key',
         'email_from_address',
         'email_from_name',
         'social_network',
@@ -76,6 +77,11 @@ final class GeneralSetting extends Model
         'enable_student_transfer_email_notifications',
         'enable_faculty_transfer_email_notifications',
         'is_setup',
+    ];
+
+    #[Override]
+    protected $hidden = [
+        'sequenzy_api_key',
     ];
 
     public static function clearCache(): void
@@ -132,6 +138,7 @@ final class GeneralSetting extends Model
         return [
             'seo_metadata' => 'array',
             'email_settings' => 'array',
+            'sequenzy_api_key' => 'encrypted',
             'social_network' => 'array',
             'analytics_enabled' => 'boolean',
             'analytics_settings' => 'array',
