@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.4.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.4.2",
-  "commit": "0399b45c8fc07ac13603e1dc5f40f46ebd79f5da",
+  "version": "1.10.0-dev.5.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.5.0",
+  "commit": "2955b6596a57407d1d73265343581ecadf747b83",
   "branch": "master",
-  "timestamp": "2026-07-13T10:40:29Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29243323371",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-13T22:10:43Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29288736827",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.4.2 - fix: preserve assessment PDF attachments across workers",
-    "previous": "1.10.0-dev.4.1"
+    "current": "Version 1.10.0-dev.5.0 - feat: add Sequenzy REST mail transport",
+    "previous": "1.10.0-dev.4.2"
   },
   "metadata": {
     "author": "yukazakiri",
