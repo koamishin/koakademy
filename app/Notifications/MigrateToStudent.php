@@ -139,6 +139,20 @@ final class MigrateToStudent extends Notification implements ShouldQueue
         $pdfAttached = false;
         $attachment = $this->resolveAssessmentAttachment($assessmentPath);
 
+        // A queued job may run on a different Swarm node than the one that
+        // created an older local-disk PDF. Regenerate it into shared storage
+        // rather than failing the notification because that node-local file
+        // is unavailable.
+        if ($attachment === null && $this->requiresAttachment) {
+            try {
+                $generated = $this->generatePdf();
+                $assessmentPath = $generated['assessment']['path'] ?? null;
+                $attachment = $this->resolveAssessmentAttachment($assessmentPath);
+            } catch (Exception $exception) {
+                $pdfGenerationError ??= $exception->getMessage();
+            }
+        }
+
         if ($attachment !== null) {
             $mailMessage->attachData($attachment['contents'], $attachment['name'], [
                 'mime' => 'application/pdf',
@@ -312,17 +326,40 @@ final class MigrateToStudent extends Notification implements ShouldQueue
             }
         }
 
-        $storageDisk = (string) config('filesystems.default');
-        $storage = Storage::disk($storageDisk);
-        $storagePaths = array_values(array_unique(array_filter([
-            $assessmentPath,
-            ResourceStorageLocator::normalizeStorageKey($assessmentPath),
-            'assessments/'.basename($assessmentPath),
-            basename($assessmentPath),
-        ])));
+        $diskPaths = [];
+        $addDiskPaths = static function (?string $disk, ?string $path) use (&$diskPaths): void {
+            if ($disk === null || $disk === '' || $path === null || $path === '') {
+                return;
+            }
 
-        foreach ($storagePaths as $storagePath) {
+            foreach (array_unique(array_filter([
+                $path,
+                ResourceStorageLocator::normalizeStorageKey($path),
+                'assessments/'.basename($path),
+                basename($path),
+            ])) as $storagePath) {
+                $diskPaths[$disk.'|'.$storagePath] = [$disk, $storagePath];
+            }
+        };
+
+        $resource = $this->record->resources()
+            ->where('type', 'assessment')
+            ->latest('id')
+            ->first();
+
+        if ($resource !== null) {
+            $addDiskPaths(
+                is_string($resource->disk) && $resource->disk !== '' ? $resource->disk : null,
+                is_string($resource->file_path) ? $resource->file_path : null,
+            );
+        }
+
+        $addDiskPaths((string) config('filesystems.default'), $assessmentPath);
+
+        foreach ($diskPaths as [$storageDisk, $storagePath]) {
             try {
+                $storage = Storage::disk($storageDisk);
+
                 if (! $storage->exists($storagePath)) {
                     continue;
                 }

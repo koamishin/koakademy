@@ -59,6 +59,9 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
         $this->jobId = $jobId ?? uniqid('pdf_', true);
 
         // Set queue name
+        // PDF jobs must use the same Redis connection consumed by the
+        // dedicated station-pdf workers.
+        $this->onConnection((string) config('queue.assessment_notification_connection', config('queue.default')));
         $this->onQueue('pdf-generation');
 
         Log::info('GenerateAssessmentPdfJob created', [

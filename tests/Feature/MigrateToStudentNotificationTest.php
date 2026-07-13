@@ -6,10 +6,12 @@ use App\Enums\EnrollStat;
 use App\Models\Account;
 use App\Models\Course;
 use App\Models\GeneralSetting;
+use App\Models\Resource;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\User;
 use App\Notifications\MigrateToStudent;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
     GeneralSetting::factory()->create([
@@ -111,4 +113,38 @@ it('skips the CTA when a polymorphic Account row exists for the student', functi
 
     expect($html)->toContain('Access Student Portal')
         ->and($html)->not->toContain('Create Your Account');
+});
+
+it('attaches a valid PDF from the resource recorded storage disk', function (): void {
+    $enrollment = makeEnrollmentForNotificationTest();
+    $path = 'assessments/assessment-from-another-node.pdf';
+    $pdf = "%PDF-1.7\nassessment-pdf\n%%EOF";
+
+    Storage::fake('assessment-archive');
+    Storage::fake('default-attachments');
+    config(['filesystems.default' => 'default-attachments']);
+
+    Storage::disk('assessment-archive')->put($path, $pdf);
+
+    Resource::query()->create([
+        'resourceable_id' => $enrollment->id,
+        'resourceable_type' => $enrollment::class,
+        'type' => 'assessment',
+        'file_path' => $path,
+        'file_name' => basename($path),
+        'mime_type' => 'application/pdf',
+        'disk' => 'assessment-archive',
+        'file_size' => mb_strlen($pdf, '8bit'),
+    ]);
+
+    $message = (new MigrateToStudent(
+        $enrollment,
+        $path,
+        requiresAttachment: true,
+    ))->toMail(new stdClass);
+
+    expect($message->rawAttachments)->toHaveCount(1)
+        ->and($message->rawAttachments[0]['name'])->toBe('Assessment_Form_'.$enrollment->id.'.pdf')
+        ->and($message->rawAttachments[0]['data'])->toBe($pdf)
+        ->and($message->rawAttachments[0]['options']['mime'])->toBe('application/pdf');
 });

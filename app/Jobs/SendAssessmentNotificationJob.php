@@ -345,7 +345,9 @@ final class SendAssessmentNotificationJob implements ShouldQueue
             }
         }
 
-        $assessmentPath = $storage->path($relativePath);
+        // Keep the storage-relative key. Absolute paths are node-local and
+        // cannot be resolved reliably by a worker on the other Swarm node.
+        $assessmentPath = $relativePath;
 
         // Save resource record to database
         try {
@@ -358,7 +360,6 @@ final class SendAssessmentNotificationJob implements ShouldQueue
             $resource = Resource::query()->create([
                 'resourceable_id' => $this->studentEnrollment->id,
                 'resourceable_type' => $this->studentEnrollment::class,
-                'name' => $assessmentFilename,
                 'type' => 'assessment',
                 'file_path' => $relativePath, // Store relative path for portability
                 'file_name' => $assessmentFilename,
