@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.6.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.6.0",
-  "commit": "1a33ba676168336c96f5729217dd22d242d7c5ce",
+  "version": "1.10.0-dev.6.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.6.1",
+  "commit": "74295eb02df6f871c607ee98551bccd953ab534c",
   "branch": "master",
-  "timestamp": "2026-07-14T01:22:48Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29298184018",
-  "release_type": "feature",
+  "timestamp": "2026-07-14T05:43:37Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29309091163",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.6.0 - feat: redesign student schedule and prevent conflicts",
-    "previous": "1.10.0-dev.5.0"
+    "current": "Version 1.10.0-dev.6.1 - fix: migrate selects to SmoothUI",
+    "previous": "1.10.0-dev.6.0"
   },
   "metadata": {
     "author": "yukazakiri",
