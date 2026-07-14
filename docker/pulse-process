@@ -1,0 +1,37 @@
+#!/usr/bin/env sh
+set -e
+
+process=${1:-}
+pulse_enabled=$(printf '%s' "${PULSE_ENABLED:-true}" | tr '[:upper:]' '[:lower:]')
+ingest_driver=$(printf '%s' "${PULSE_INGEST_DRIVER:-storage}" | tr '[:upper:]' '[:lower:]')
+
+idle() {
+    echo "$1"
+
+    while :; do
+        sleep 3600
+    done
+}
+
+case "${pulse_enabled}" in
+    false|0|no|off)
+        idle "Pulse is disabled; ${process:-unknown} process is idle."
+        ;;
+esac
+
+case "${process}" in
+    check)
+        exec php /app/artisan pulse:check
+        ;;
+    work)
+        if [ "${ingest_driver}" != "redis" ]; then
+            idle "Pulse ingest driver is ${ingest_driver}; pulse:work is not required."
+        fi
+
+        exec php /app/artisan pulse:work
+        ;;
+    *)
+        echo "Usage: pulse-process <check|work>" >&2
+        exit 64
+        ;;
+esac

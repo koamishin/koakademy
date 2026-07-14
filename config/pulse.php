@@ -66,7 +66,7 @@ return [
         ],
 
         'database' => [
-            'connection' => env('PULSE_DB_CONNECTION'),
+            'connection' => env('PULSE_DB_CONNECTION', 'pulse'),
             'chunk' => 1000,
         ],
     ],
@@ -93,7 +93,7 @@ return [
         ],
 
         'redis' => [
-            'connection' => env('PULSE_REDIS_CONNECTION'),
+            'connection' => env('PULSE_REDIS_CONNECTION', 'pulse'),
             'chunk' => 1000,
         ],
     ],

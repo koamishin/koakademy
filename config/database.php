@@ -102,6 +102,27 @@ return [
             'timezone' => 'UTC',
         ],
 
+        'pulse' => [
+            'driver' => env('PULSE_DB_DRIVER', env('DB_CONNECTION', 'sqlite')),
+            'url' => env('PULSE_DB_URL'),
+            'host' => env('PULSE_DB_HOST', env('DB_HOST', 'pgsql')),
+            'port' => env('PULSE_DB_PORT', env('DB_PORT', '5432')),
+            'database' => env(
+                'PULSE_DB_DATABASE',
+                env('DB_CONNECTION', 'sqlite') === 'sqlite'
+                    ? database_path('pulse.sqlite')
+                    : ((string) env('DB_DATABASE', 'laravel')).'_pulse'
+            ),
+            'username' => env('PULSE_DB_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('PULSE_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => env('PULSE_DB_CHARSET', env('DB_CHARSET', 'utf8')),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('PULSE_DB_SCHEMA', 'public'),
+            'sslmode' => env('PULSE_DB_SSLMODE', 'prefer'),
+            'timezone' => 'UTC',
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
@@ -181,6 +202,15 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_PDF_QUEUE_DB', '3'),
+        ],
+
+        'pulse' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_PULSE_DB', '4'),
         ],
 
     ],

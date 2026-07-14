@@ -70,6 +70,7 @@ test('docker startup scripts are valid posix shell', function (): void {
 
     $scripts = [
         base_path('docker/start-container'),
+        base_path('docker/pulse-process'),
         base_path('docker/docker-scripts/scout-index.sh'),
         base_path('docker/run-scripts.sh'),
     ];
@@ -154,6 +155,50 @@ test('docker startup migrations seed demo environments', function (): void {
     expect($script)->toContain('if [ "${app_env}" = "demo" ]; then');
     expect($script)->toContain('php artisan migrate --seed --force --no-interaction');
     expect($script)->toContain('php artisan migrate --force --no-interaction');
+});
+
+test('docker startup prepares and purges the dedicated pulse database before the app starts', function (): void {
+    $script = file_get_contents(base_path('docker/start-container'));
+
+    expect($script)
+        ->toContain('PULSE_AUTO_CREATE_DATABASE')
+        ->toContain('PULSE_RUN_MIGRATIONS')
+        ->toContain('PULSE_PURGE_ON_START')
+        ->toContain('ensure_pulse_database')
+        ->toContain('--database="${PULSE_DB_CONNECTION}"')
+        ->toContain('--path=database/migrations/2026_03_09_105911_create_pulse_tables.php')
+        ->toContain('pulse:work --stop-when-empty --no-interaction')
+        ->toContain('pulse:clear --force --no-interaction');
+
+    expect(mb_strpos($script, 'prepare_pulse_storage', mb_strpos($script, 'run_primary_startup_tasks()')))
+        ->toBeLessThan(mb_strpos($script, 'run_migrations_if_enabled', mb_strpos($script, 'run_primary_startup_tasks()')));
+});
+
+test('pulse uses a separate database connection by default', function (): void {
+    $database = require base_path('config/database.php');
+    $pulse = require base_path('config/pulse.php');
+
+    expect($database['connections'])->toHaveKey('pulse')
+        ->and($database['connections']['pulse']['database'])->not->toBe($database['connections']['pgsql']['database'])
+        ->and($pulse['storage']['database']['connection'])->toBe('pulse')
+        ->and($database['redis']['pulse']['database'])->not->toBe($database['redis']['default']['database'])
+        ->and($pulse['ingest']['redis']['connection'])->toBe('pulse');
+});
+
+test('supervisor runs pulse server checks and the redis ingest worker', function (): void {
+    $supervisor = file_get_contents(base_path('docker/supervisord.pulse.conf'));
+    $process = file_get_contents(base_path('docker/pulse-process'));
+
+    expect($supervisor)
+        ->toContain('[program:pulse-check]')
+        ->toContain('command=/usr/local/bin/pulse-process check')
+        ->toContain('[program:pulse-work]')
+        ->toContain('command=/usr/local/bin/pulse-process work');
+
+    expect($process)
+        ->toContain('exec php /app/artisan pulse:check')
+        ->toContain('exec php /app/artisan pulse:work')
+        ->toContain('if [ "${ingest_driver}" != "redis" ]; then');
 });
 
 test('scout indexing script stays portable and configurable', function (): void {

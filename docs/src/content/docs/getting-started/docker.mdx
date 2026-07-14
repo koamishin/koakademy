@@ -358,6 +358,30 @@ GOTENBERG_URL=http://gotenberg:3000
 The `app` container runs FrankenPHP, Station, Pulse, and Nightwatch together via Supervisor when `QUEUE_CONNECTION=redis`. You do **not** need separate `station` or `pulse` containers unless you are horizontally scaling workers across multiple hosts.
 :::
 
+### Pulse Startup and Storage
+
+The production image prepares Pulse before FrankenPHP starts. By default, each HTTP container startup:
+
+1. Creates a dedicated PostgreSQL database named `<DB_DATABASE>_pulse` when it does not exist.
+2. Runs the Pulse migration on the `pulse` connection.
+3. Drains pending Redis ingest entries and purges existing Pulse metrics.
+4. Starts both `pulse:check` and `pulse:work` under Supervisor.
+
+Pulse uses Redis database `4` for ingest by default, keeping it separate from the application queues. The PostgreSQL database uses the primary database host and credentials unless you provide `PULSE_DB_HOST`, `PULSE_DB_DATABASE`, `PULSE_DB_USERNAME`, and `PULSE_DB_PASSWORD`.
+
+```ini
+PULSE_ENABLED=true
+PULSE_INGEST_DRIVER=redis
+PULSE_REDIS_CONNECTION=pulse
+PULSE_STORAGE_DRIVER=database
+PULSE_DB_CONNECTION=pulse
+PULSE_AUTO_CREATE_DATABASE=true
+PULSE_RUN_MIGRATIONS=true
+PULSE_PURGE_ON_START=true
+```
+
+`PULSE_PURGE_ON_START=true` clears metrics on every container restart, including automatic restarts. Set it to `false` if metrics should survive redeployments. When the database user cannot create databases, create the Pulse database once through your database provider and set `PULSE_AUTO_CREATE_DATABASE=false`.
+
 ## Search Indexing
 
 KoAkademy does not run full Scout imports during container startup. This keeps Docker Compose and Docker Swarm deployments fast and prevents every replica from trying to rebuild Meilisearch indexes during a rollout.

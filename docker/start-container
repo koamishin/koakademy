@@ -37,6 +37,9 @@ octane_server=${OCTANE_SERVER:-""}
 # RUN_OPTIMIZE: "foreground" (default) | "background" | "false" — rebuild Laravel caches.
 # FORCE_OPTIMIZE_CLEAR: Set to "true" to clear caches before rebuilding them
 # SCOUT_AUTO_DETECT: Set to "false" to disable Scout driver auto-detection
+# PULSE_AUTO_CREATE_DATABASE: Create a missing PostgreSQL Pulse database. Default "true".
+# PULSE_RUN_MIGRATIONS: Run the Pulse migration against its own connection. Default "true".
+# PULSE_PURGE_ON_START: Drain pending ingest records and clear Pulse storage before boot. Default "true".
 run_migrations=${RUN_MIGRATIONS:-"true"}
 production_seeders=${PRODUCTION_SEEDERS:-""}
 run_docker_scripts=${RUN_DOCKER_SCRIPTS:-"false"}
@@ -44,6 +47,9 @@ run_scout_settings=${RUN_SCOUT_SETTINGS:-"true"}
 run_optimize=${RUN_OPTIMIZE:-"foreground"}
 force_optimize_clear=${FORCE_OPTIMIZE_CLEAR:-"false"}
 scout_auto_detect=${SCOUT_AUTO_DETECT:-"true"}
+pulse_auto_create_database=${PULSE_AUTO_CREATE_DATABASE:-"true"}
+pulse_run_migrations=${PULSE_RUN_MIGRATIONS:-"true"}
+pulse_purge_on_start=${PULSE_PURGE_ON_START:-"true"}
 
 # Back-compat: legacy RUN_SCOUT_INDEX=false still disables the remaining Scout
 # settings sync. Truthy values no longer trigger a full import at startup.
@@ -189,6 +195,99 @@ configure_database_connection_defaults() {
     esac
 
     export DB_HOST DB_PORT DB_CONNECTION="${database_connection}"
+}
+
+configure_pulse_database_defaults() {
+    pulse_database_driver=$(printf '%s' "${PULSE_DB_DRIVER:-${database_connection}}" | tr '[:upper:]' '[:lower:]')
+
+    export PULSE_DB_CONNECTION="${PULSE_DB_CONNECTION:-pulse}"
+    export PULSE_DB_DRIVER="${pulse_database_driver}"
+    export PULSE_DB_HOST="${PULSE_DB_HOST:-${DB_HOST:-pgsql}}"
+    export PULSE_DB_PORT="${PULSE_DB_PORT:-${DB_PORT:-5432}}"
+    export PULSE_DB_USERNAME="${PULSE_DB_USERNAME:-${DB_USERNAME:-}}"
+    export PULSE_DB_PASSWORD="${PULSE_DB_PASSWORD:-${DB_PASSWORD:-}}"
+
+    if [ -z "${PULSE_DB_DATABASE:-}" ]; then
+        if [ "${pulse_database_driver}" = "sqlite" ]; then
+            PULSE_DB_DATABASE="database/pulse.sqlite"
+        else
+            PULSE_DB_DATABASE="${DB_DATABASE:-laravel}_pulse"
+        fi
+
+        export PULSE_DB_DATABASE
+    fi
+}
+
+check_pulse_database_connection() {
+    echo "Testing Pulse database connection to ${PULSE_DB_HOST}:${PULSE_DB_PORT}/${PULSE_DB_DATABASE}..."
+
+    PGPASSWORD="${PULSE_DB_PASSWORD}" psql \
+        --host="${PULSE_DB_HOST}" \
+        --port="${PULSE_DB_PORT}" \
+        --username="${PULSE_DB_USERNAME}" \
+        --dbname="${PULSE_DB_DATABASE}" \
+        --no-password \
+        --tuples-only \
+        --command='SELECT 1' >/dev/null 2>&1
+}
+
+ensure_pulse_database() {
+    if ! is_truthy "${PULSE_ENABLED:-true}"; then
+        echo "Pulse is disabled, skipping Pulse database setup."
+        return 0
+    fi
+
+    if [ "${PULSE_STORAGE_DRIVER:-database}" != "database" ]; then
+        echo "Pulse storage driver is not database, skipping Pulse database setup."
+        return 0
+    fi
+
+    if [ "${PULSE_DB_CONNECTION}" != "pulse" ]; then
+        echo "Pulse uses custom connection ${PULSE_DB_CONNECTION}; skipping automatic database creation."
+        return 0
+    fi
+
+    if [ "${pulse_database_driver}" = "sqlite" ]; then
+        mkdir -p "$(dirname "${PULSE_DB_DATABASE}")"
+        touch "${PULSE_DB_DATABASE}"
+        return 0
+    fi
+
+    if [ "${pulse_database_driver}" != "pgsql" ]; then
+        echo "Pulse automatic database creation only supports PostgreSQL; expecting ${PULSE_DB_DATABASE} to exist."
+        return 0
+    fi
+
+    if [ -z "${PULSE_DB_DATABASE}" ] || [ -z "${PULSE_DB_USERNAME}" ]; then
+        echo "PULSE_DB_DATABASE and PULSE_DB_USERNAME are required." >&2
+        return 1
+    fi
+
+    if check_pulse_database_connection; then
+        echo "Pulse database connection successful."
+        return 0
+    fi
+
+    if ! is_truthy "${pulse_auto_create_database}"; then
+        echo "Pulse database is unavailable and PULSE_AUTO_CREATE_DATABASE is disabled." >&2
+        return 1
+    fi
+
+    echo "Creating Pulse database ${PULSE_DB_DATABASE}..."
+
+    PGPASSWORD="${PULSE_DB_PASSWORD}" createdb \
+        --host="${PULSE_DB_HOST}" \
+        --port="${PULSE_DB_PORT}" \
+        --username="${PULSE_DB_USERNAME}" \
+        --maintenance-db="${PULSE_DB_MAINTENANCE_DATABASE:-postgres}" \
+        "${PULSE_DB_DATABASE}" >/dev/null 2>&1 || true
+
+    if ! check_pulse_database_connection; then
+        echo "Unable to create or connect to Pulse database ${PULSE_DB_DATABASE}." >&2
+        return 1
+    fi
+
+    echo "Pulse database is ready."
 }
 
 is_http_url_reachable() {
@@ -495,6 +594,55 @@ run_migrations_if_enabled() {
     run_production_seeders
 }
 
+prepare_pulse_storage() {
+    if ! is_truthy "${PULSE_ENABLED:-true}"; then
+        return 0
+    fi
+
+    if [ "${PULSE_STORAGE_DRIVER:-database}" != "database" ]; then
+        echo "Pulse storage is not database-backed, skipping database preparation."
+        return 0
+    fi
+
+    log_section "Preparing Laravel Pulse"
+
+    ensure_pulse_database
+
+    if is_truthy "${pulse_run_migrations}"; then
+        echo "Running Pulse migrations on ${PULSE_DB_CONNECTION}..."
+
+        php artisan migrate \
+            --database="${PULSE_DB_CONNECTION}" \
+            --path=database/migrations/2026_03_09_105911_create_pulse_tables.php \
+            --force \
+            --no-interaction || {
+                echo "Pulse migration was interrupted; retrying once."
+                sleep 2
+                php artisan migrate \
+                    --database="${PULSE_DB_CONNECTION}" \
+                    --path=database/migrations/2026_03_09_105911_create_pulse_tables.php \
+                    --force \
+                    --no-interaction
+            }
+    else
+        echo "Pulse migrations disabled, skipping."
+    fi
+
+    if ! is_truthy "${pulse_purge_on_start}"; then
+        echo "Pulse startup purge disabled, preserving existing data."
+        return 0
+    fi
+
+    if [ "${PULSE_INGEST_DRIVER:-storage}" = "redis" ]; then
+        echo "Draining pending Pulse Redis ingest data before purge..."
+        php artisan pulse:work --stop-when-empty --no-interaction
+    fi
+
+    echo "Purging existing Pulse data..."
+    php artisan pulse:clear --force --no-interaction
+    echo "Pulse storage is ready."
+}
+
 run_docker_scripts_if_enabled() {
     if [ "${run_docker_scripts}" != "true" ]; then
         return 0
@@ -579,6 +727,7 @@ run_primary_startup_tasks() {
 
     ensure_storage_link
     ensure_vendor_view_dirs
+    prepare_pulse_storage
     run_migrations_if_enabled
     run_docker_scripts_if_enabled
     dispatch_optimize
@@ -594,6 +743,8 @@ bootstrap_container() {
     fix_storage_permissions
     purge_laravel_provider_caches
     resolve_database_connection
+    configure_database_connection_defaults
+    configure_pulse_database_defaults
     echo "Database connection driver: ${database_connection}"
     check_connections
     configure_scout_driver
