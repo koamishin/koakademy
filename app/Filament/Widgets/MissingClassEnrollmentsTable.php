@@ -259,11 +259,13 @@ final class MissingClassEnrollmentsTable extends BaseWidget
                 }
 
                 // Create enrollment
-                ClassEnrollment::create([
-                    'class_id' => $classId,
-                    'student_id' => $student->id,
-                    'status' => true,
-                ]);
+                app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                    (int) $student->id,
+                    (int) $classId,
+                    [
+                        'status' => true,
+                    ],
+                );
 
                 $successCount++;
             } catch (Exception) {

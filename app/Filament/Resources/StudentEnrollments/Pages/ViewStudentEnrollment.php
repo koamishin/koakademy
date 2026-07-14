@@ -530,11 +530,13 @@ final class ViewStudentEnrollment extends ViewRecord
                             }
 
                             // Create the enrollment
-                            \App\Models\ClassEnrollment::create([
-                                'class_id' => $class->id,
-                                'student_id' => $student->id,
-                                'status' => true,
-                            ]);
+                            app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                                (int) $student->id,
+                                (int) $class->id,
+                                [
+                                    'status' => true,
+                                ],
+                            );
 
                             Notification::make()
                                 ->success()

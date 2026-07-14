@@ -802,11 +802,13 @@ final class AdministratorEnrollmentManagementController extends Controller
                 return back()->with('flash', ['error' => 'Class is full. Use force enrollment to override.']);
             }
 
-            ClassEnrollment::create([
-                'class_id' => $class->id,
-                'student_id' => $student->id,
-                'status' => true,
-            ]);
+            app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                (int) $student->id,
+                (int) $class->id,
+                [
+                    'status' => true,
+                ],
+            );
 
             return back()->with('flash', ['success' => "Enrolled in {$class->subject_code}."]);
         } catch (Exception $e) {
@@ -1995,11 +1997,13 @@ final class AdministratorEnrollmentManagementController extends Controller
                             ->exists();
 
                         if (! $classEnrollmentExists) {
-                            ClassEnrollment::query()->create([
-                                'class_id' => $oldData['class_id'],
-                                'student_id' => $oldData['student_id'],
-                                'status' => true,
-                            ]);
+                            app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                                (int) $oldData['student_id'],
+                                (int) $oldData['class_id'],
+                                [
+                                    'status' => true,
+                                ],
+                            );
                         }
                     }
                 }

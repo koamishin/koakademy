@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Classes\Api\Requests;
 
+use App\Rules\NonOverlappingScheduleBlocksRule;
 use App\Rules\ScheduleOverlapRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -45,7 +46,7 @@ final class UpdateClassesRequest extends FormRequest
             'subject_ids.*' => 'nullable|integer',
 
             // Schedule Validation
-            'schedules' => ['sometimes', 'array', new ScheduleOverlapRule],
+            'schedules' => ['sometimes', 'array', new NonOverlappingScheduleBlocksRule, new ScheduleOverlapRule],
             'schedules.*.day_of_week' => 'required_with:schedules|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
             'schedules.*.start_time' => 'required_with:schedules',
             'schedules.*.end_time' => 'required_with:schedules|after:schedules.*.start_time',

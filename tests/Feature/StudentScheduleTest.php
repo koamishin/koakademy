@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\UserRole;
 use App\Features\Toggles\StudentSchedule as StudentScheduleFeature;
+use App\Models\ClassEnrollment;
 use App\Models\Classes;
 use App\Models\Course;
 use App\Models\Faculty;
@@ -71,7 +72,7 @@ test('student can view schedule page', function () {
     ]);
 
     // Enroll student in class
-    App\Models\ClassEnrollment::create([
+    ClassEnrollment::create([
         'class_id' => $class->id,
         'student_id' => $student->id,
     ]);
@@ -95,4 +96,133 @@ test('non-student cannot view schedule page', function () {
     $this->actingAs($user)
         ->get(route('student.schedule'))
         ->assertForbidden();
+});
+
+test('schedule output deduplicates active class enrollments and excludes inactive enrollments', function () {
+    $user = User::factory()->create(['role' => UserRole::Student]);
+    $student = Student::factory()->create(['user_id' => $user->id, 'email' => $user->email]);
+
+    App\Models\GeneralSetting::factory()->createOne([
+        'school_starting_date' => '2026-06-22',
+        'school_ending_date' => '2027-04-30',
+        'semester' => 1,
+    ]);
+
+    $activeClass = Classes::factory()->createOne(['school_year' => '2026 - 2027', 'semester' => 1]);
+    $inactiveClass = Classes::factory()->createOne(['school_year' => '2026 - 2027', 'semester' => 1]);
+
+    ClassEnrollment::factory()->count(2)->create([
+        'student_id' => $student->id,
+        'class_id' => $activeClass->id,
+        'status' => true,
+    ]);
+    ClassEnrollment::factory()->createOne([
+        'student_id' => $student->id,
+        'class_id' => $inactiveClass->id,
+        'status' => false,
+    ]);
+
+    Feature::activateForEveryone(StudentScheduleFeature::class);
+    config(['inertia.testing.ensure_pages_exist' => false]);
+
+    $this->actingAs($user)
+        ->get(route('student.schedule'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('faculty_data.classes', 1)
+            ->where('faculty_data.classes.0.id', $activeClass->id)
+            ->has('schedule_conflicts', 0)
+        );
+
+    expect(ClassEnrollment::query()->where('student_id', $student->id)->count())->toBe(3);
+});
+
+test('schedule reports partial overlaps between different classes regardless of room', function () {
+    $user = User::factory()->create(['role' => UserRole::Student]);
+    $student = Student::factory()->create(['user_id' => $user->id, 'email' => $user->email]);
+    $firstRoom = Room::factory()->createOne();
+    $secondRoom = Room::factory()->createOne();
+
+    App\Models\GeneralSetting::factory()->createOne([
+        'school_starting_date' => '2026-06-22',
+        'school_ending_date' => '2027-04-30',
+        'semester' => 1,
+    ]);
+
+    $firstClass = Classes::factory()->createOne(['school_year' => '2026 - 2027', 'semester' => 1, 'room_id' => $firstRoom->id]);
+    $secondClass = Classes::factory()->createOne(['school_year' => '2026 - 2027', 'semester' => 1, 'room_id' => $secondRoom->id]);
+
+    App\Models\Schedule::factory()->createOne([
+        'class_id' => $firstClass->id,
+        'room_id' => $firstRoom->id,
+        'day_of_week' => 'Monday',
+        'start_time' => '08:00',
+        'end_time' => '10:00',
+    ]);
+    App\Models\Schedule::factory()->createOne([
+        'class_id' => $secondClass->id,
+        'room_id' => $secondRoom->id,
+        'day_of_week' => 'Monday',
+        'start_time' => '09:00',
+        'end_time' => '11:00',
+    ]);
+
+    foreach ([$firstClass, $secondClass] as $class) {
+        ClassEnrollment::factory()->createOne(['student_id' => $student->id, 'class_id' => $class->id, 'status' => true]);
+    }
+
+    Feature::activateForEveryone(StudentScheduleFeature::class);
+    config(['inertia.testing.ensure_pages_exist' => false]);
+
+    $this->actingAs($user)
+        ->get(route('student.schedule'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('schedule_conflicts', 1)
+            ->where('schedule_conflicts.0.day', 'Monday')
+            ->where('schedule_conflicts.0.overlap_start', '09:00')
+            ->where('schedule_conflicts.0.overlap_end', '10:00')
+            ->has('schedule_conflicts.0.classes', 2)
+        );
+});
+
+test('schedule does not report touching times or overlaps within the same class as student conflicts', function () {
+    $user = User::factory()->create(['role' => UserRole::Student]);
+    $student = Student::factory()->create(['user_id' => $user->id, 'email' => $user->email]);
+    $room = Room::factory()->createOne();
+
+    App\Models\GeneralSetting::factory()->createOne([
+        'school_starting_date' => '2026-06-22',
+        'school_ending_date' => '2027-04-30',
+        'semester' => 1,
+    ]);
+
+    $firstClass = Classes::factory()->createOne(['school_year' => '2026 - 2027', 'semester' => 1, 'room_id' => $room->id]);
+    $secondClass = Classes::factory()->createOne(['school_year' => '2026 - 2027', 'semester' => 1, 'room_id' => $room->id]);
+
+    foreach ([
+        [$firstClass, '08:00', '10:00'],
+        [$firstClass, '09:00', '11:00'],
+        [$secondClass, '11:00', '12:00'],
+    ] as [$class, $start, $end]) {
+        App\Models\Schedule::factory()->createOne([
+            'class_id' => $class->id,
+            'room_id' => $room->id,
+            'day_of_week' => 'Tuesday',
+            'start_time' => $start,
+            'end_time' => $end,
+        ]);
+    }
+
+    foreach ([$firstClass, $secondClass] as $class) {
+        ClassEnrollment::factory()->createOne(['student_id' => $student->id, 'class_id' => $class->id, 'status' => true]);
+    }
+
+    Feature::activateForEveryone(StudentScheduleFeature::class);
+    config(['inertia.testing.ensure_pages_exist' => false]);
+
+    $this->actingAs($user)
+        ->get(route('student.schedule'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('schedule_conflicts', 0));
 });

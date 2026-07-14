@@ -111,7 +111,11 @@ final class ClassEnrollmentController extends Controller
                 ], 422);
             }
 
-            $enrollment = ClassEnrollment::create($validated);
+            $enrollment = app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                (int) $validated['student_id'],
+                (int) $validated['class_id'],
+                $validated,
+            );
             $enrollment->load(['class', 'student']);
 
             return response()->json([

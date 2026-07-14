@@ -229,6 +229,48 @@ function parseTimeToMinutes(value: string): number | null {
     return hours * 60 + minutes;
 }
 
+function getInvalidScheduleIndexes(schedules: ClassSchedule[]): Set<number> {
+    const invalidIndexes = new Set<number>();
+
+    schedules.forEach((schedule, index) => {
+        const start = parseTimeToMinutes(schedule.start_time);
+        const end = parseTimeToMinutes(schedule.end_time);
+
+        if (start === null || end === null || end <= start) {
+            invalidIndexes.add(index);
+        }
+    });
+
+    schedules.forEach((schedule, index) => {
+        const start = parseTimeToMinutes(schedule.start_time);
+        const end = parseTimeToMinutes(schedule.end_time);
+
+        if (start === null || end === null || end <= start) {
+            return;
+        }
+
+        schedules.slice(index + 1).forEach((otherSchedule, offset) => {
+            const otherIndex = index + offset + 1;
+            const otherStart = parseTimeToMinutes(otherSchedule.start_time);
+            const otherEnd = parseTimeToMinutes(otherSchedule.end_time);
+
+            if (
+                schedule.day_of_week === otherSchedule.day_of_week &&
+                otherStart !== null &&
+                otherEnd !== null &&
+                otherEnd > otherStart &&
+                start < otherEnd &&
+                end > otherStart
+            ) {
+                invalidIndexes.add(index);
+                invalidIndexes.add(otherIndex);
+            }
+        });
+    });
+
+    return invalidIndexes;
+}
+
 function getTabForFormErrors(errors: Record<string, string>): ClassDialogTab {
     const keys = Object.keys(errors);
 
@@ -313,12 +355,7 @@ function SchedulePlanner({
     };
 
     const activeDays = new Set(schedules.map((schedule) => schedule.day_of_week).filter(Boolean)).size;
-    const invalidBlocks = schedules.filter((schedule) => {
-        const start = parseTimeToMinutes(schedule.start_time);
-        const end = parseTimeToMinutes(schedule.end_time);
-
-        return start === null || end === null || end <= start;
-    }).length;
+    const invalidBlocks = getInvalidScheduleIndexes(schedules).size;
 
     return (
         <div className="space-y-4">
@@ -345,6 +382,12 @@ function SchedulePlanner({
                     </Button>
                 </div>
             </div>
+
+            {invalidBlocks > 0 ? (
+                <div className="border-destructive/40 bg-destructive/5 text-destructive rounded-md border px-3 py-2 text-sm">
+                    Schedule blocks on the same day cannot overlap. Adjust the invalid schedule before saving.
+                </div>
+            ) : null}
 
             <div className="bg-card/50 rounded-xl border p-2 shadow-sm sm:p-3">
                 <div className="overflow-x-auto">
@@ -1734,7 +1777,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                             Cancel
                         </Button>
                         <Button
-                            disabled={editForm.processing || !selected_class}
+                            disabled={editForm.processing || !selected_class || getInvalidScheduleIndexes(editForm.data.schedules).size > 0}
                             onClick={() => {
                                 if (!selected_class) return;
                                 editForm.patch(route("administrators.classes.update", { class: selected_class.id }), {

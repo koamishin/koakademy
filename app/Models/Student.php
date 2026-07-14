@@ -958,10 +958,10 @@ final class Student extends Model
                             break;
                         }
 
-                        ClassEnrollment::query()->create([
-                            'class_id' => $availableClass->id,
-                            'student_id' => $this->id,
-                        ]);
+                        app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                            (int) $this->id,
+                            (int) $availableClass->id,
+                        );
 
                         // If we got here, enrollment was successful
                         $remainingSlots = $maxSlots

@@ -35,13 +35,19 @@ function useLocalStorageState<T>(key: string, initialValue: T): [T, Dispatch<Set
     return [value, setValue];
 }
 
-export function useClassFilters(allClasses: ClassData[], events: ScheduleEvent[], conflictIds: Set<string>, unscheduled: ClassData[]) {
-    const [search, setSearch] = useLocalStorageState<string>("dccp.classes.search", "");
-    const [filterClassification, setFilterClassification] = useLocalStorageState<string>("dccp.classes.filter.classification", "all");
-    const [filterDay, setFilterDay] = useLocalStorageState<string>("dccp.classes.filter.day", "all");
-    const [filterRoom, setFilterRoom] = useLocalStorageState<string>("dccp.classes.filter.room", "all");
-    const [onlyConflicts, setOnlyConflicts] = useLocalStorageState<boolean>("dccp.classes.filter.onlyConflicts", false);
-    const [onlyUnscheduled, setOnlyUnscheduled] = useLocalStorageState<boolean>("dccp.classes.filter.onlyUnscheduled", false);
+export function useClassFilters(
+    allClasses: ClassData[],
+    events: ScheduleEvent[],
+    conflictIds: Set<string>,
+    unscheduled: ClassData[],
+    storagePrefix = "dccp.classes",
+) {
+    const [search, setSearch] = useLocalStorageState<string>(`${storagePrefix}.search`, "");
+    const [filterClassification, setFilterClassification] = useLocalStorageState<string>(`${storagePrefix}.filter.classification`, "all");
+    const [filterDay, setFilterDay] = useLocalStorageState<string>(`${storagePrefix}.filter.day`, "all");
+    const [filterRoom, setFilterRoom] = useLocalStorageState<string>(`${storagePrefix}.filter.room`, "all");
+    const [onlyConflicts, setOnlyConflicts] = useLocalStorageState<boolean>(`${storagePrefix}.filter.onlyConflicts`, false);
+    const [onlyUnscheduled, setOnlyUnscheduled] = useLocalStorageState<boolean>(`${storagePrefix}.filter.onlyUnscheduled`, false);
 
     const filteredClasses = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -56,7 +62,8 @@ export function useClassFilters(allClasses: ClassData[], events: ScheduleEvent[]
 
             if (filterRoom !== "all") {
                 const roomId = classItem.room_id !== undefined && classItem.room_id !== null ? String(classItem.room_id) : "";
-                if (roomId !== filterRoom) {
+                const hasScheduledRoom = (classItem.schedules ?? []).some((schedule) => String(schedule?.room_id ?? "") === filterRoom);
+                if (roomId !== filterRoom && !hasScheduledRoom) {
                     return false;
                 }
             }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Administrators;
 
 use App\Models\Classes;
+use App\Rules\NonOverlappingScheduleBlocksRule;
 use App\Rules\ScheduleOverlapRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -53,7 +54,7 @@ final class UpdateClassRequest extends FormRequest
             'maximum_slots' => ['sometimes', 'nullable', 'integer', 'min:1'],
 
             // Schedule
-            'schedules' => ['sometimes', 'array', new ScheduleOverlapRule($classIdForScheduleExclusion)],
+            'schedules' => ['sometimes', 'array', new NonOverlappingScheduleBlocksRule, new ScheduleOverlapRule($classIdForScheduleExclusion)],
             'schedules.*.day_of_week' => ['required_with:schedules', Rule::in(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])],
             'schedules.*.start_time' => ['required_with:schedules', 'date_format:H:i'],
             'schedules.*.end_time' => ['required_with:schedules', 'date_format:H:i'],

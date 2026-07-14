@@ -4,10 +4,12 @@ import { useMemo } from "react";
 export type DayOfWeek = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 
 export type ClassSchedule = {
+    id?: string | number;
     day_of_week: DayOfWeek | string;
     start_time: string;
     end_time: string;
     room_id?: string | number | null;
+    room?: string | null;
 };
 
 export type AccentVisual = {
@@ -16,6 +18,7 @@ export type AccentVisual = {
 };
 
 export type ScheduleEvent = {
+    scheduleId: string;
     classItem: ClassData;
     day: DayOfWeek;
     startMinutes: number;
@@ -193,6 +196,7 @@ function buildScheduleEvents(
 } {
     const events: ScheduleEvent[] = [];
     const unscheduled: ClassData[] = [];
+    const eventKeys = new Set<string>();
 
     for (const classItem of classes) {
         const schedules = (classItem.schedules ?? []) as unknown[];
@@ -201,12 +205,16 @@ function buildScheduleEvents(
             .map((schedule) => schedule as Partial<ClassSchedule>)
             .filter((schedule) =>
                 Boolean(schedule.day_of_week && schedule.start_time && schedule.end_time && isValidDay(String(schedule.day_of_week))),
-            ) as Array<Required<Pick<ClassSchedule, "day_of_week" | "start_time" | "end_time">> & Partial<Pick<ClassSchedule, "room_id">>>;
+            ) as Array<
+            Required<Pick<ClassSchedule, "day_of_week" | "start_time" | "end_time">> & Partial<Pick<ClassSchedule, "id" | "room_id" | "room">>
+        >;
 
         if (!parsedSchedules.length) {
             unscheduled.push(classItem);
             continue;
         }
+
+        let validEventCount = 0;
 
         for (const schedule of parsedSchedules) {
             const startMinutes = parseTimeToMinutes(String(schedule.start_time));
@@ -217,10 +225,22 @@ function buildScheduleEvents(
             }
 
             const roomId = schedule.room_id !== undefined && schedule.room_id !== null ? String(schedule.room_id) : null;
+            const scheduleId = schedule.id !== undefined ? String(schedule.id) : "";
+            const eventKey = scheduleId
+                ? `${String(classItem.id)}|${scheduleId}`
+                : [classItem.id, schedule.day_of_week, startMinutes, endMinutes, roomId ?? ""].join("|");
 
-            const roomLabel = classItem.room || (roomId ? roomsById.get(roomId) : undefined) || "Room TBA";
+            if (eventKeys.has(eventKey)) {
+                continue;
+            }
+
+            eventKeys.add(eventKey);
+            validEventCount += 1;
+
+            const roomLabel = schedule.room || (roomId ? roomsById.get(roomId) : undefined) || classItem.room || "Room TBA";
 
             events.push({
+                scheduleId: scheduleId || eventKey,
                 classItem,
                 day: String(schedule.day_of_week) as DayOfWeek,
                 startMinutes,
@@ -231,21 +251,31 @@ function buildScheduleEvents(
                 accent: resolveAccentVisual(classItem),
             });
         }
+
+        if (validEventCount === 0) {
+            unscheduled.push(classItem);
+        }
     }
 
     // Conflict detection
     const conflictIds = new Set<string>();
     for (const day of DAYS) {
         const dayEvents = events.filter((event) => event.day === day).sort((a, b) => a.startMinutes - b.startMinutes);
+        let activeEvents: ScheduleEvent[] = [];
 
-        for (let index = 1; index < dayEvents.length; index++) {
-            const previous = dayEvents[index - 1];
-            const current = dayEvents[index];
+        for (const current of dayEvents) {
+            activeEvents = activeEvents.filter((event) => event.endMinutes > current.startMinutes);
 
-            if (previous && current && current.startMinutes < previous.endMinutes) {
+            for (const previous of activeEvents) {
+                if (String(previous.classItem.id) === String(current.classItem.id)) {
+                    continue;
+                }
+
                 conflictIds.add(String(previous.classItem.id));
                 conflictIds.add(String(current.classItem.id));
             }
+
+            activeEvents.push(current);
         }
     }
 

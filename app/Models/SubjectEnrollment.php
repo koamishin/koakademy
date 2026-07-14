@@ -242,11 +242,13 @@ final class SubjectEnrollment extends Model
                 $message = sprintf('Student moved from %s Section %s to Section %s', $oldClass->subject_code, $oldClass->section, $newClass->section);
             } else {
                 // Create new class enrollment if none existed
-                ClassEnrollment::query()->create([
-                    'student_id' => $subjectEnrollment->student_id,
-                    'class_id' => $newClassId,
-                    'status' => true,
-                ]);
+                app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                    (int) $subjectEnrollment->student_id,
+                    (int) $newClassId,
+                    [
+                        'status' => true,
+                    ],
+                );
                 $message = sprintf('Student enrolled in %s Section %s', $newClass->subject_code, $newClass->section);
             }
 

@@ -1,331 +1,362 @@
 import { ClassData } from "@/components/data-table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { DAYS, getDayNameFromDate, ScheduleEvent } from "@/pages/classes/hooks/use-class-schedule";
+import { DAYS, formatTime12Hour, getDayNameFromDate, ScheduleEvent } from "@/pages/classes/hooks/use-class-schedule";
+import { StudentScheduleConflict } from "@/types/student-schedule";
 import { Link } from "@inertiajs/react";
-import { IconBroadcast, IconClock, IconMapPin, IconSchool, IconUser } from "@tabler/icons-react";
+import { IconAlertTriangle, IconBroadcast, IconClock, IconMapPin, IconSchool, IconUser } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 
 interface StudentScheduleBoardProps {
     events: ScheduleEvent[];
     classes: ClassData[];
     filterDay: string;
+    conflicts: StudentScheduleConflict[];
 }
 
-const START_HOUR = 7; // 7 AM
-const END_HOUR = 18; // 6 PM
-const HOUR_HEIGHT = 60; // Pixels per hour
+type PositionedEvent = {
+    event: ScheduleEvent;
+    lane: number;
+    laneCount: number;
+};
 
-export function StudentScheduleBoard({ events, classes, filterDay }: StudentScheduleBoardProps) {
+const START_HOUR = 7;
+const END_HOUR = 18;
+const HOUR_HEIGHT = 56;
+
+function positionDayEvents(dayEvents: ScheduleEvent[]): PositionedEvent[] {
+    const sorted = [...dayEvents].sort((left, right) => left.startMinutes - right.startMinutes || left.endMinutes - right.endMinutes);
+    const positioned: PositionedEvent[] = [];
+    let cluster: ScheduleEvent[] = [];
+    let clusterEnd = -Infinity;
+
+    const flushCluster = () => {
+        if (cluster.length === 0) return;
+
+        const laneEnds: number[] = [];
+        const assigned = cluster.map((event) => {
+            let lane = laneEnds.findIndex((end) => end <= event.startMinutes);
+            if (lane === -1) {
+                lane = laneEnds.length;
+                laneEnds.push(event.endMinutes);
+            } else {
+                laneEnds[lane] = event.endMinutes;
+            }
+
+            return { event, lane };
+        });
+
+        const laneCount = Math.max(1, laneEnds.length);
+        positioned.push(...assigned.map((item) => ({ ...item, laneCount })));
+        cluster = [];
+        clusterEnd = -Infinity;
+    };
+
+    for (const event of sorted) {
+        if (cluster.length > 0 && event.startMinutes >= clusterEnd) {
+            flushCluster();
+        }
+
+        cluster.push(event);
+        clusterEnd = Math.max(clusterEnd, event.endMinutes);
+    }
+
+    flushCluster();
+    return positioned;
+}
+
+function getEventState(event: ScheduleEvent, now: Date) {
+    const currentDay = getDayNameFromDate(now);
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    return {
+        isLive: event.day === currentDay && currentMinutes >= event.startMinutes && currentMinutes < event.endMinutes,
+        isPast: DAYS.indexOf(event.day) < DAYS.indexOf(currentDay) || (event.day === currentDay && currentMinutes >= event.endMinutes),
+    };
+}
+
+export function StudentScheduleBoard({ events, classes, filterDay, conflicts }: StudentScheduleBoardProps) {
     const today = useMemo(() => getDayNameFromDate(new Date()), []);
+    const defaultDay = today === "Sunday" ? "Monday" : today;
+    const [selectedDay, setSelectedDay] = useState<string>(filterDay !== "all" && filterDay !== "" ? filterDay : defaultDay);
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [isMobile, setIsMobile] = useState(false);
 
-    // Update time every minute
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-
-        const checkMobile = () => setIsMobile(window.innerWidth < 768);
-        checkMobile();
-        window.addEventListener("resize", checkMobile);
-
-        return () => {
-            clearInterval(timer);
-            window.removeEventListener("resize", checkMobile);
-        };
+        const timer = window.setInterval(() => setCurrentTime(new Date()), 60_000);
+        return () => window.clearInterval(timer);
     }, []);
 
-    const hours = useMemo(() => {
-        const h = [];
-        for (let i = START_HOUR; i <= END_HOUR; i++) {
-            h.push(i);
-        }
-        return h;
-    }, []);
-
-    const displayDays = useMemo(() => {
+    useEffect(() => {
         if (filterDay !== "all" && filterDay !== "") {
-            return [filterDay];
+            setSelectedDay(filterDay);
         }
-        return DAYS.filter((d) => d !== "Sunday");
     }, [filterDay]);
 
-    // Current time position calculation
-    const currentTimeMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-    const currentDay = getDayNameFromDate(currentTime);
-    const isCurrentTimeVisible = currentTimeMinutes >= START_HOUR * 60 && currentTimeMinutes <= (END_HOUR + 1) * 60;
-    const currentTimeTop = ((currentTimeMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-
-    // Helper to calculate basic vertical position
-    const getEventVerticalPosition = (event: ScheduleEvent) => {
-        const start = event.startMinutes;
-        const end = event.endMinutes;
-        const duration = end - start;
-        const startOffset = start - START_HOUR * 60;
-
-        return {
-            top: (startOffset / 60) * HOUR_HEIGHT,
-            height: (duration / 60) * HOUR_HEIGHT,
-        };
-    };
-
-    // Process events for overlaps per day
-    const getProcessedDayEvents = (dayEvents: ScheduleEvent[]) => {
-        // Sort by start time
-        const sorted = [...dayEvents].sort((a, b) => a.startMinutes - b.startMinutes || b.endMinutes - a.endMinutes - (b.endMinutes - a.endMinutes));
-
-        const columns: ScheduleEvent[][] = [];
-        const eventPositions = new Map<ScheduleEvent, { colIndex: number; totalCols: number }>();
-
-        // Greedy column assignment
-        sorted.forEach((event) => {
-            let placed = false;
-            for (let i = 0; i < columns.length; i++) {
-                const col = columns[i];
-                const lastInCol = col[col.length - 1];
-                // If this event starts after the last one in this column ends, place it here
-                if (lastInCol.endMinutes <= event.startMinutes) {
-                    col.push(event);
-                    eventPositions.set(event, { colIndex: i, totalCols: 1 }); // totalCols updated later
-                    placed = true;
-                    break;
-                }
-            }
-
-            if (!placed) {
-                columns.push([event]);
-                eventPositions.set(event, { colIndex: columns.length - 1, totalCols: 1 });
-            }
-        });
-
-        // Now determines totalCols for each overlapping cluster?
-        // Simplified: The number of columns is the max overlapping at any point.
-        // But simply using `columns.length` as width divisor is safe but maybe too narrow if columns are disparate.
-        // For simple visualization: Width = 100% / columns.length. Left = colIndex * width.
-        // This ensures no overlap visually.
-
-        const totalColumns = columns.length;
-
-        return sorted.map((event) => {
-            const pos = eventPositions.get(event);
-            const vert = getEventVerticalPosition(event);
-            const colIndex = pos?.colIndex ?? 0;
-
-            return {
-                event,
-                style: {
-                    top: `${vert.top}px`,
-                    height: `${vert.height}px`,
-                    left: `${(colIndex / totalColumns) * 100}%`,
-                    width: `${100 / totalColumns}%`,
-                },
-                // Add status
-                isLive: event.day === currentDay && currentTimeMinutes >= event.startMinutes && currentTimeMinutes < event.endMinutes,
-                isPast:
-                    (event.day === currentDay && currentTimeMinutes >= event.endMinutes) || DAYS.indexOf(event.day) < DAYS.indexOf(currentDay as any),
-                isFuture:
-                    (event.day === currentDay && currentTimeMinutes < event.startMinutes) ||
-                    DAYS.indexOf(event.day) > DAYS.indexOf(currentDay as any),
-            };
-        });
-    };
+    const displayDays = useMemo(() => (filterDay !== "all" && filterDay !== "" ? [filterDay] : DAYS), [filterDay]);
+    const conflictScheduleIds = useMemo(
+        () => new Set(conflicts.flatMap((conflict) => conflict.classes.map((classItem) => String(classItem.schedule_id)))),
+        [conflicts],
+    );
+    const scheduledClassIds = useMemo(() => new Set(events.map((event) => String(event.classItem.id))), [events]);
+    const unscheduledClasses = useMemo(
+        () => classes.filter((classItem) => !scheduledClassIds.has(String(classItem.id))),
+        [classes, scheduledClassIds],
+    );
+    const mobileEvents = useMemo(
+        () => events.filter((event) => event.day === selectedDay).sort((left, right) => left.startMinutes - right.startMinutes),
+        [events, selectedDay],
+    );
 
     if (classes.length === 0) {
         return (
-            <div className="text-muted-foreground bg-muted/10 flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-20 text-center">
-                <div className="bg-muted mb-4 rounded-full p-4">
-                    <IconSchool className="h-8 w-8" />
-                </div>
-                <h3 className="text-lg font-semibold">No Classes Enrolled</h3>
-                <p className="mt-1 max-w-xs text-sm">You don't have any classes in your schedule yet.</p>
+            <div className="border-border bg-muted/20 text-muted-foreground flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed px-6 text-center">
+                <IconSchool className="mb-3 size-8" />
+                <h3 className="text-foreground font-semibold">No enrolled classes</h3>
+                <p className="mt-1 text-sm">Your active classes will appear here once enrollment is complete.</p>
             </div>
         );
     }
 
+    const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => START_HOUR + index);
     const totalHeight = (END_HOUR - START_HOUR + 1) * HOUR_HEIGHT;
+    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const currentDay = getDayNameFromDate(currentTime);
+    const currentTimeTop = ((currentMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+    const showCurrentTime = currentMinutes >= START_HOUR * 60 && currentMinutes <= (END_HOUR + 1) * 60;
 
     return (
-        <div className="bg-background/40 flex h-full max-h-[800px] flex-col overflow-hidden rounded-2xl border border-border/40 shadow-sm backdrop-blur-md">
-            {/* Header / Days */}
-            <div className="bg-muted/30 flex shrink-0 divide-x divide-border/30 overflow-hidden border-b border-border/40">
-                <div className="bg-background/40 flex w-12 shrink-0 items-center justify-center border-r border-border/40 p-2 md:w-16 md:p-4">
-                    <IconClock className="text-muted-foreground/60 size-4 md:size-5" />
-                </div>
-                <div className="grid flex-1" style={{ gridTemplateColumns: `repeat(${displayDays.length}, 1fr)` }}>
-                    {displayDays.map((day) => (
-                        <div
+        <>
+            <section className="space-y-3 md:hidden" aria-label="Daily class schedule">
+                <div className="border-border bg-muted/30 grid grid-cols-6 rounded-lg border p-1" aria-label="Choose schedule day">
+                    {DAYS.map((day) => (
+                        <button
                             key={day}
+                            type="button"
+                            onClick={() => setSelectedDay(day)}
                             className={cn(
-                                "flex flex-col items-center justify-center overflow-hidden border-r border-border/30 px-1 py-2.5 text-center transition-all last:border-r-0 md:py-4",
-                                day === today && "bg-primary/5",
+                                "relative flex h-11 min-w-0 flex-col items-center justify-center rounded-md text-xs font-medium",
+                                selectedDay === day ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
                             )}
+                            aria-pressed={selectedDay === day}
                         >
-                            <span
-                                className={cn(
-                                    "w-full truncate text-[10px] font-bold tracking-widest uppercase md:text-[11px]",
-                                    day === today ? "text-primary" : "text-muted-foreground/80",
-                                )}
-                            >
-                                {isMobile ? day.slice(0, 1) : day}
-                            </span>
-                            {day === today && (
-                                <div className="mt-1 flex items-center gap-1.5">
-                                    <div className="bg-primary h-1.5 w-1.5 animate-pulse rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
-                                    <span className="text-primary hidden text-[9px] font-bold tracking-tight md:inline-block">TODAY</span>
-                                </div>
-                            )}
-                        </div>
+                            <span>{day.slice(0, 3)}</span>
+                            {day === today && <span className="bg-primary mt-1 size-1 rounded-full" aria-label="Today" />}
+                        </button>
                     ))}
                 </div>
-            </div>
 
-            {/* Timetable Grid */}
-            <ScrollArea className="flex-1">
-                <div className="relative flex" style={{ height: `${totalHeight}px` }}>
-                    {/* Time Column */}
-                    <div className="bg-background/60 relative z-10 w-12 shrink-0 border-r border-border/40 text-[9px] font-medium backdrop-blur-sm select-none md:w-16 md:text-[10px]">
-                        {hours.map((hour) => (
-                            <div key={hour} className="absolute w-full text-center" style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}>
-                                <span className="text-muted-foreground/60 bg-background/40 relative -top-2 rounded-md px-1.5 py-0.5 backdrop-blur-md">
-                                    {hour > 12 ? `${hour - 12} PM` : hour === 12 ? `12 PM` : `${hour} AM`}
-                                </span>
-                            </div>
-                        ))}
+                <div className="flex items-center justify-between px-1">
+                    <div>
+                        <p className="text-foreground text-sm font-semibold">{selectedDay}</p>
+                        <p className="text-muted-foreground text-xs">
+                            {mobileEvents.length} class{mobileEvents.length === 1 ? "" : "es"}
+                        </p>
                     </div>
+                    {selectedDay === today && <Badge variant="secondary">Today</Badge>}
+                </div>
 
-                    {/* Grid Body */}
-                    <div
-                        className="relative grid flex-1 divide-x divide-border/20"
-                        style={{
-                            gridTemplateColumns: `repeat(${displayDays.length}, 1fr)`,
-                        }}
-                    >
-                        {/* Horizontal Hour Lines Background */}
-                        <div className="pointer-events-none absolute inset-0 z-0 w-full">
-                            {hours.map((hour) => (
-                                <div
-                                    key={hour}
-                                    className="border-border/10 absolute w-full border-t"
-                                    style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Current Time Line */}
-                        {isCurrentTimeVisible && displayDays.includes(currentDay as any) && (
-                            <div
-                                className="pointer-events-none absolute right-0 left-0 z-20 flex items-center"
-                                style={{ top: `${currentTimeTop}px` }}
-                            >
-                                <div className="h-[1.5px] w-12 bg-red-500/30 md:w-16" />
-                                <div className="relative h-[1.5px] flex-1 bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)]">
-                                    <div className="absolute -top-[3.5px] -left-1 h-2.5 w-2.5 rounded-full border-2 border-background bg-red-500 shadow-sm" />
-                                </div>
-                            </div>
-                        )}
-
-                        {displayDays.map((day) => {
-                            const dayEvents = events.filter((e) => e.day === day);
-                            const processedEvents = getProcessedDayEvents(dayEvents);
+                {mobileEvents.length > 0 ? (
+                    <div className="border-border divide-border bg-background divide-y overflow-hidden rounded-lg border">
+                        {mobileEvents.map((event) => {
+                            const { isLive, isPast } = getEventState(event, currentTime);
+                            const hasConflict = conflictScheduleIds.has(event.scheduleId);
 
                             return (
-                                <div key={day} className={cn("relative h-full", day === today && "bg-primary/[0.02]")}>
-                                    {processedEvents.map(({ event, style, isLive, isPast }, idx) => {
-                                        // Dynamic color based on accent or default
-                                        const accentColor = event.classItem.accent_color;
-                                        const isBgClass = accentColor?.includes("bg-");
-                                        const baseColorClass = isBgClass ? accentColor : "bg-primary";
-
-                                        // Check if event is too short for details
-                                        const isShort = event.endMinutes - event.startMinutes < 45;
-
-                                        return (
-                                            <Link
-                                                key={`${event.classItem.id}-${idx}`}
-                                                href={`/student/classes/${event.classItem.id}`}
-                                                className={cn(
-                                                    "group absolute inset-x-0.5 flex flex-col overflow-hidden rounded-lg border border-border/40 transition-all hover:z-30 hover:shadow-xl md:inset-x-1",
-                                                    "p-1.5 md:p-2",
-                                                    isShort ? "justify-center" : "justify-between",
-                                                    isLive
-                                                        ? "bg-background border-primary/50 ring-primary/20 z-20 shadow-lg ring-4"
-                                                        : "bg-card/60 hover:bg-card hover:border-primary/30",
-                                                    isPast && "opacity-50 grayscale-[0.4] hover:opacity-100 hover:grayscale-0",
-                                                )}
-                                                style={{
-                                                    ...style,
-                                                    // If using inline hex color for accent
-                                                    ...(!isBgClass && accentColor
-                                                        ? {
-                                                              borderColor: `${accentColor}40`,
-                                                              backgroundColor: isLive ? undefined : `${accentColor}10`,
-                                                          }
-                                                        : {}),
-                                                }}
-                                            >
-                                                {/* Status Badges */}
-                                                {isLive && (
-                                                    <div className="absolute top-1.5 right-1.5 z-10 flex animate-pulse items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[7px] font-black text-white shadow-sm tracking-tighter">
-                                                        <IconBroadcast className="size-2" />
-                                                        LIVE
-                                                    </div>
-                                                )}
-
-                                                {/* Left Accent Strip */}
-                                                <div
-                                                    className={cn("absolute top-0 bottom-0 left-0 w-1 md:w-1.5 opacity-80", baseColorClass)}
-                                                    style={!isBgClass && accentColor ? { backgroundColor: accentColor } : {}}
-                                                />
-
-                                                <div className="relative flex h-full w-full flex-col pl-2 md:pl-3">
-                                                    <div
-                                                        className={cn(
-                                                            "text-foreground truncate pr-8 text-[10px] leading-tight font-bold group-hover:text-primary transition-colors md:text-[11px]",
-                                                            isLive && "text-primary",
-                                                        )}
-                                                    >
-                                                        {event.classItem.subject_title}
-                                                    </div>
-
-                                                    {!isShort && (
-                                                        <>
-                                                            <div className="text-muted-foreground/80 mt-1 truncate text-[8px] font-medium tracking-tight md:text-[9px]">
-                                                                {event.classItem.subject_code} • {event.classItem.section}
-                                                            </div>
-
-                                                            {event.classItem.faculty_name && (
-                                                                <div className="text-muted-foreground/60 mt-2 flex hidden items-center gap-1 text-[8px] md:flex md:text-[9px]">
-                                                                    <IconUser className="size-3 shrink-0 opacity-70" />
-                                                                    <span className="truncate">{event.classItem.faculty_name}</span>
-                                                                </div>
-                                                            )}
-
-                                                            <div className="mt-auto hidden space-y-1 pt-2 opacity-80 sm:block">
-                                                                <div className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-foreground/80">
-                                                                    <IconClock className="size-3 opacity-70" />
-                                                                    <span className="truncate">
-                                                                        {event.startLabel} - {event.endLabel}
-                                                                    </span>
-                                                                </div>
-                                                                {event.roomLabel && (
-                                                                    <div className="flex items-center gap-1.5 text-[9px] font-medium text-muted-foreground/70">
-                                                                        <IconMapPin className="size-3 opacity-70" />
-                                                                        <span className="truncate">{event.roomLabel}</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
+                                <Link
+                                    key={event.scheduleId}
+                                    href={`/student/classes/${event.classItem.id}`}
+                                    className={cn(
+                                        "hover:bg-muted/30 grid min-h-28 grid-cols-[5.25rem_minmax(0,1fr)] gap-3 px-3 py-4 transition-colors",
+                                        isPast && !isLive && "opacity-65",
+                                        hasConflict && "bg-destructive/5",
+                                    )}
+                                >
+                                    <div className="border-border border-r pr-3 text-right">
+                                        <p className="text-foreground text-sm font-semibold">{formatTime12Hour(event.startMinutes)}</p>
+                                        <p className="text-muted-foreground mt-1 text-xs">{formatTime12Hour(event.endMinutes)}</p>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            {isLive && (
+                                                <Badge className="gap-1 bg-emerald-600 text-white">
+                                                    <IconBroadcast className="size-3" /> Live
+                                                </Badge>
+                                            )}
+                                            {hasConflict && (
+                                                <Badge variant="destructive" className="gap-1">
+                                                    <IconAlertTriangle className="size-3" /> Conflict
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <h3 className="text-foreground mt-1 line-clamp-2 text-sm leading-snug font-semibold">
+                                            {event.classItem.subject_title}
+                                        </h3>
+                                        <p className="text-muted-foreground mt-1 text-xs">
+                                            {event.classItem.subject_code} · Section {event.classItem.section}
+                                        </p>
+                                        <div className="text-muted-foreground mt-3 grid gap-1 text-xs">
+                                            <span className="flex min-w-0 items-center gap-1.5">
+                                                <IconMapPin className="size-3.5 shrink-0" /> <span className="truncate">{event.roomLabel}</span>
+                                            </span>
+                                            <span className="flex min-w-0 items-center gap-1.5">
+                                                <IconUser className="size-3.5 shrink-0" />{" "}
+                                                <span className="truncate">{event.classItem.faculty_name || "Faculty TBA"}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </Link>
                             );
                         })}
                     </div>
+                ) : (
+                    <div className="border-border bg-muted/20 text-muted-foreground flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed px-6 text-center">
+                        <IconClock className="mb-2 size-6" />
+                        <p className="text-foreground text-sm font-medium">No classes on {selectedDay}</p>
+                        <p className="mt-1 text-xs">Choose another day to review the rest of your week.</p>
+                    </div>
+                )}
+
+                {unscheduledClasses.length > 0 && (
+                    <div className="border-border rounded-lg border border-dashed p-3">
+                        <p className="text-foreground text-sm font-medium">Awaiting schedule</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {unscheduledClasses.map((classItem) => (
+                                <Badge key={classItem.id} variant="outline">
+                                    {classItem.subject_code}
+                                </Badge>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </section>
+
+            <section
+                className="border-border bg-background hidden max-w-full min-w-0 overflow-hidden rounded-lg border md:block"
+                aria-label="Weekly class timetable"
+            >
+                <div className="max-h-[760px] overflow-auto">
+                    <div className="min-w-[960px]">
+                        <div className="border-border bg-muted/40 sticky top-0 z-30 flex border-b">
+                            <div className="border-border bg-background sticky left-0 z-40 flex w-16 shrink-0 items-center justify-center border-r">
+                                <IconClock className="text-muted-foreground size-4" />
+                            </div>
+                            <div className="grid flex-1" style={{ gridTemplateColumns: `repeat(${displayDays.length}, minmax(140px, 1fr))` }}>
+                                {displayDays.map((day) => (
+                                    <div
+                                        key={day}
+                                        className={cn(
+                                            "border-border border-r px-2 py-3 text-center last:border-r-0",
+                                            day === today && "bg-primary/5",
+                                        )}
+                                    >
+                                        <span className={cn("text-xs font-semibold", day === today ? "text-primary" : "text-foreground")}>{day}</span>
+                                        {day === today && <span className="text-primary ml-1.5 text-[10px] font-medium">Today</span>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="relative flex" style={{ height: `${totalHeight}px` }}>
+                            <div className="border-border bg-background sticky left-0 z-20 w-16 shrink-0 border-r">
+                                {hours.map((hour) => (
+                                    <span
+                                        key={hour}
+                                        className="text-muted-foreground absolute w-full -translate-y-1/2 text-center text-[10px]"
+                                        style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}
+                                    >
+                                        {formatTime12Hour(hour * 60).replace(":00", "")}
+                                    </span>
+                                ))}
+                            </div>
+
+                            <div
+                                className="relative grid flex-1"
+                                style={{ gridTemplateColumns: `repeat(${displayDays.length}, minmax(140px, 1fr))` }}
+                            >
+                                <div className="pointer-events-none absolute inset-0">
+                                    {hours.map((hour) => (
+                                        <div
+                                            key={hour}
+                                            className="border-border/60 absolute w-full border-t"
+                                            style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}
+                                        />
+                                    ))}
+                                </div>
+
+                                {showCurrentTime && displayDays.includes(currentDay) && (
+                                    <div
+                                        className="pointer-events-none absolute right-0 left-0 z-20 border-t-2 border-red-500"
+                                        style={{ top: `${currentTimeTop}px` }}
+                                    >
+                                        <span className="absolute -top-1.5 -left-1 size-3 rounded-full bg-red-500" />
+                                    </div>
+                                )}
+
+                                {displayDays.map((day) => (
+                                    <div
+                                        key={day}
+                                        className={cn("border-border/60 relative border-r last:border-r-0", day === today && "bg-primary/[0.025]")}
+                                    >
+                                        {positionDayEvents(events.filter((event) => event.day === day)).map(({ event, lane, laneCount }) => {
+                                            const { isLive, isPast } = getEventState(event, currentTime);
+                                            const hasConflict = conflictScheduleIds.has(event.scheduleId);
+                                            const top = ((event.startMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+                                            const height = Math.max(28, ((event.endMinutes - event.startMinutes) / 60) * HOUR_HEIGHT);
+
+                                            return (
+                                                <Link
+                                                    key={event.scheduleId}
+                                                    href={`/student/classes/${event.classItem.id}`}
+                                                    className={cn(
+                                                        "border-border bg-card absolute overflow-hidden rounded-md border p-2 transition-shadow hover:z-20 hover:shadow-md",
+                                                        isLive && "border-emerald-600 ring-2 ring-emerald-600/20",
+                                                        hasConflict && "border-destructive bg-destructive/5",
+                                                        isPast && !isLive && "opacity-60",
+                                                    )}
+                                                    style={{
+                                                        top,
+                                                        height,
+                                                        left: `calc(${(lane / laneCount) * 100}% + 3px)`,
+                                                        width: `calc(${100 / laneCount}% - 6px)`,
+                                                    }}
+                                                >
+                                                    <div className="flex items-start justify-between gap-1">
+                                                        <p className="text-foreground line-clamp-2 text-[11px] leading-tight font-semibold">
+                                                            {event.classItem.subject_title}
+                                                        </p>
+                                                        {hasConflict && (
+                                                            <IconAlertTriangle
+                                                                className="text-destructive size-3.5 shrink-0"
+                                                                aria-label="Schedule conflict"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    {height >= 48 && (
+                                                        <p className="text-muted-foreground mt-1 truncate text-[10px]">
+                                                            {event.classItem.subject_code} · {event.classItem.section}
+                                                        </p>
+                                                    )}
+                                                    {height >= 70 && (
+                                                        <div className="text-muted-foreground mt-2 space-y-1 text-[10px]">
+                                                            <p className="flex items-center gap-1">
+                                                                <IconClock className="size-3" /> {formatTime12Hour(event.startMinutes)}-
+                                                                {formatTime12Hour(event.endMinutes)}
+                                                            </p>
+                                                            <p className="flex items-center gap-1 truncate">
+                                                                <IconMapPin className="size-3 shrink-0" /> {event.roomLabel}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </ScrollArea>
-        </div>
+            </section>
+        </>
     );
 }

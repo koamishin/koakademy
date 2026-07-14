@@ -102,7 +102,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
 
                     {/* Desktop Text Info */}
                     {user && (
-                        <div className="text-muted-foreground hidden items-center gap-2 text-sm sm:flex">
+                        <div className="text-muted-foreground hidden items-center gap-2 text-sm lg:flex">
                             <span className="text-foreground">{user.name}</span>
                             <span className="text-foreground text-xs">•</span>
                             <span className="text-foreground text-xs">{user.role}</span>

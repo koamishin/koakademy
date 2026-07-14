@@ -297,7 +297,7 @@ final class ClassesController extends Controller
             'classification' => 'nullable|string',
             'strand_id' => 'nullable|string',
             'subject_code' => 'nullable|string',
-            'schedules' => ['array', new \App\Rules\ScheduleOverlapRule],
+            'schedules' => ['array', new \App\Rules\NonOverlappingScheduleBlocksRule, new \App\Rules\ScheduleOverlapRule($class->id)],
             'schedules.*.day_of_week' => 'required|string',
             'schedules.*.start_time' => 'required',
             'schedules.*.end_time' => 'required',

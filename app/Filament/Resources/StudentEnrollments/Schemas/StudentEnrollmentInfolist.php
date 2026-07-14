@@ -261,11 +261,13 @@ final class StudentEnrollmentInfolist
                                                                 }
 
                                                                 // Create the enrollment
-                                                                \App\Models\ClassEnrollment::create([
-                                                                    'class_id' => $record['class_id'],
-                                                                    'student_id' => $student->id,
-                                                                    'status' => true,
-                                                                ]);
+                                                                app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                                                                    (int) $student->id,
+                                                                    (int) $record['class_id'],
+                                                                    [
+                                                                        'status' => true,
+                                                                    ],
+                                                                );
 
                                                                 Notification::make()
                                                                     ->success()
@@ -320,11 +322,13 @@ final class StudentEnrollmentInfolist
                                                                 }
 
                                                                 // Create the enrollment
-                                                                \App\Models\ClassEnrollment::create([
-                                                                    'class_id' => $record['class_id'],
-                                                                    'student_id' => $student->id,
-                                                                    'status' => true,
-                                                                ]);
+                                                                app(\App\Services\ClassEnrollmentService::class)->enrollOnce(
+                                                                    (int) $student->id,
+                                                                    (int) $record['class_id'],
+                                                                    [
+                                                                        'status' => true,
+                                                                    ],
+                                                                );
 
                                                                 Notification::make()
                                                                     ->success()
