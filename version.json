@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.6.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.6.1",
-  "commit": "74295eb02df6f871c607ee98551bccd953ab534c",
+  "version": "1.10.0-dev.6.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.6.2",
+  "commit": "054f69c6c7fce6acf181492777c5535a5686ea28",
   "branch": "master",
-  "timestamp": "2026-07-14T05:43:37Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29309091163",
+  "timestamp": "2026-07-14T10:33:02Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29325465919",
   "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.6.1 - fix: migrate selects to SmoothUI",
-    "previous": "1.10.0-dev.6.0"
+    "current": "Version 1.10.0-dev.6.2 - fix: initialize dedicated Pulse storage on startup",
+    "previous": "1.10.0-dev.6.1"
   },
   "metadata": {
     "author": "yukazakiri",
