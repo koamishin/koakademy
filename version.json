@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.5.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.5.0",
-  "commit": "2955b6596a57407d1d73265343581ecadf747b83",
+  "version": "1.10.0-dev.6.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.6.0",
+  "commit": "1a33ba676168336c96f5729217dd22d242d7c5ce",
   "branch": "master",
-  "timestamp": "2026-07-13T22:10:43Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29288736827",
+  "timestamp": "2026-07-14T01:22:48Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29298184018",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.5.0 - feat: add Sequenzy REST mail transport",
-    "previous": "1.10.0-dev.4.2"
+    "current": "Version 1.10.0-dev.6.0 - feat: redesign student schedule and prevent conflicts",
+    "previous": "1.10.0-dev.5.0"
   },
   "metadata": {
     "author": "yukazakiri",
