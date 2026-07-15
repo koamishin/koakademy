@@ -1,0 +1,78 @@
+---
+title: Availability, eligibility, and documents
+description: Configure enrollment channels, dates, student checks, academic safeguards, and required documents in plain language.
+---
+
+# Availability, eligibility, and required documents
+
+These stages decide whether a student may begin or continue the enrollment journey.
+
+## Availability
+
+Availability answers **when and where enrollment can start**.
+
+### Enrollment channels
+
+Select every supported entry path: public registration, administrator-assisted enrollment, continuing enrollment, or API. If the policy engine is not active, legacy channel settings remain authoritative.
+
+### Date window
+
+Choose an opening date, closing date, both, or neither. Leaving the opening date blank means enrollment is available immediately; leaving the closing date blank means it has no policy closing date.
+
+:::note[What this does]
+Students outside the configured channel or date window are blocked before assignment, billing, or approvals begin. Simulation shows the exact blocker without creating an enrollment.
+:::
+
+## Eligibility
+
+Eligibility answers **whether this student is allowed to enroll**. Common checks include:
+
+- Allowed student types, schools, programs, periods, and year levels
+- Clearance or verified records
+- Duplicate enrollment in the same academic period
+- Prerequisites and grades
+- Outstanding balance
+- Unit limit
+- Class capacity
+- Schedule conflict
+
+Use a check only when its required data is reliable. Rules fail closed: if a required fact cannot be obtained, the student is blocked with an actionable message instead of being silently allowed through.
+
+### Sentence-style editing
+
+Each card states the behavior in plain language. Turn it on, choose accepted values, and use **What this does** for impact and examples. Technical identifiers are hidden from the normal workflow.
+
+### Empty allowed lists
+
+For built-in “allowed” checks, an empty selection means all values are accepted. Prefer leaving a check unconfigured over selecting every existing program if future programs should also be allowed.
+
+## Required documents
+
+Each document has:
+
+- A student-facing name
+- Instructions describing format and submission expectations
+- A required switch
+- An automatically generated stable key
+
+:::tip[Write instructions as the student sees them]
+“Upload a clear PDF of both sides; maximum 5 MB” is more useful than “Submit valid ID.”
+:::
+
+## Common scenarios
+
+### Online enrollment only during May
+
+Allow the public channel and set May 1 through May 31. Keep the administrator channel available only if staff should be able to assist outside that window through a separate matching policy.
+
+### Block students with an outstanding balance
+
+Enable the outstanding-balance rule and provide a corrective message such as “Settle or arrange your previous balance with the cashier.” Simulate a clear account and an account with a balance.
+
+### Different documents by student type
+
+Keep universal documents global. Add transferee records in a Transferee scope and senior-high records in the matching student-type scope.
+
+## Troubleshooting blockers
+
+If simulation says a fact is unavailable, confirm that the handler’s source service is configured and that the representative student contains the expected data. Do not weaken a rule simply to make the simulation green; fix the data source or remove the rule intentionally.

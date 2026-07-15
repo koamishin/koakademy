@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\EnrollStat;
+use App\Models\StudentEnrollment;
 use App\Models\User;
 
 final class EnrollmentPipelineService
@@ -64,6 +65,19 @@ final class EnrollmentPipelineService
         $this->configurationCache = $this->sanitizeForStorage($raw);
 
         return $this->configurationCache;
+    }
+
+    /** @return array<string, mixed> */
+    public function getConfigurationFor(StudentEnrollment $enrollment): array
+    {
+        if ($enrollment->workflow_runtime === StudentEnrollment::WorkflowRuntimePolicyV1) {
+            $enrollment->loadMissing('policySnapshot');
+            if ($enrollment->policySnapshot) {
+                return $this->legacyProjection($enrollment->policySnapshot->configuration);
+            }
+        }
+
+        return $this->getConfiguration();
     }
 
     /**
@@ -955,6 +969,46 @@ final class EnrollmentPipelineService
             'cashier_verified_roles' => $cashierStep['allowed_roles'],
             'additional_steps' => $additionalSteps,
         ];
+    }
+
+    /** @param array<string, mixed> $configuration @return array<string, mixed> */
+    private function legacyProjection(array $configuration): array
+    {
+        $policySteps = data_get($configuration, 'workflow.steps', []);
+        if (! is_array($policySteps) || $policySteps === []) {
+            return $this->defaults();
+        }
+
+        $steps = collect($policySteps)->map(function (array $step): array {
+            $actionHandlers = collect($step['actions'] ?? [])->pluck('handler');
+            $actionType = match (true) {
+                $actionHandlers->contains('enrollment.verify_payment') => 'cashier_verification',
+                $actionHandlers->contains('enrollment.verify_academic') => 'department_verification',
+                default => 'standard',
+            };
+            $fallback = collect($step['transitions'] ?? [])->firstWhere('fallback', true);
+
+            return [
+                'key' => $step['key'],
+                'status' => $step['status'] ?? $step['label'],
+                'label' => $step['label'],
+                'color' => $step['color'] ?? 'blue',
+                'allowed_roles' => [],
+                'action_type' => $actionType,
+                'actions' => $this->actionsForActionType($actionType),
+                'next_step_key' => $fallback['to'] ?? null,
+            ];
+        })->values()->all();
+        $entry = collect($policySteps)->firstWhere('entry', true) ?? $policySteps[0];
+        $terminal = collect($policySteps)->firstWhere('terminal', true) ?? $policySteps[array_key_last($policySteps)];
+
+        return $this->appendLegacyAliases([
+            'submitted_label' => $entry['label'] ?? 'Submitted',
+            'steps' => $steps,
+            'entry_step_key' => $entry['key'],
+            'completion_step_key' => $terminal['key'],
+            'automation' => $this->defaults()['automation'],
+        ]);
     }
 
     /**

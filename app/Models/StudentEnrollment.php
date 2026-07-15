@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
 use Override;
@@ -61,6 +63,10 @@ final class StudentEnrollment extends Model
     use Searchable;
     use SoftDeletes;
 
+    public const WorkflowRuntimeLegacy = 'legacy';
+
+    public const WorkflowRuntimePolicyV1 = 'policy_v1';
+
     #[Override]
     protected $table = 'student_enrollment';
 
@@ -75,6 +81,10 @@ final class StudentEnrollment extends Model
         'downpayment',
         'remarks',
         'school_id',
+        'enrollment_policy_snapshot_id',
+        'current_step_key',
+        'terminal_outcome',
+        'deduplication_key',
     ];
 
     #[Override]
@@ -157,6 +167,18 @@ final class StudentEnrollment extends Model
     public function additionalFees()
     {
         return $this->hasMany(AdditionalFee::class, 'enrollment_id');
+    }
+
+    /** @return BelongsTo<EnrollmentPolicySnapshot, $this> */
+    public function policySnapshot(): BelongsTo
+    {
+        return $this->belongsTo(EnrollmentPolicySnapshot::class, 'enrollment_policy_snapshot_id');
+    }
+
+    /** @return HasMany<EnrollmentWorkflowEvent, $this> */
+    public function workflowEvents(): HasMany
+    {
+        return $this->hasMany(EnrollmentWorkflowEvent::class, 'student_enrollment_id');
     }
 
     /**
@@ -521,6 +543,7 @@ final class StudentEnrollment extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
+            'enrollment_policy_snapshot_id' => 'integer',
         ];
     }
 

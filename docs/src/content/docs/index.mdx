@@ -1,102 +1,42 @@
 ---
-title: KoAkademy Documentation
-description: The open-source learning management system built with Laravel, Filament, and React.
+title: KoAkademy Guides
+description: Choose the guide for operating KoAkademy or the separate technical reference for installing and extending it.
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid } from "@astrojs/starlight/components";
 
-# KoAkademy Documentation
+# KoAkademy Guides
 
-Welcome to **KoAkademy** — an open-source, modular learning management system built with Laravel, Filament, and React. From student portals to admin dashboards, everything is designed to work out of the box.
+Choose the documentation area that matches what you are trying to accomplish. Staff guidance and technical implementation details are deliberately separated so school operators do not need to work through developer terminology.
 
 <CardGrid stagger>
-	<Card title="Quick Start" icon="rocket">
-		Self-host with Docker Compose in minutes, or run locally with SQLite.
-	</Card>
-	<Card title="Developer Friendly" icon="seti:php">
-		Built on Laravel 12 with PHP 8.4, Pest testing, and modern tooling.
-	</Card>
-	<Card title="Modern UI" icon="seti:react">
-		React frontend with Inertia, Tailwind CSS, and shadcn/ui components.
-	</Card>
-	<Card title="Production Ready" icon="seti:docker">
-		FrankenPHP + Octane, Station queues, Pulse monitoring, and Docker images.
-	</Card>
+    <Card title="User Guide" icon="open-book">
+        Learn how administrators, registrars, department heads, and cashiers use KoAkademy for daily school operations.
+
+        **Start here:** [Using KoAkademy](./user-guide/introduction/)
+    </Card>
+    <Card title="Enrollment Blueprints" icon="list-checks">
+        Configure availability, eligibility, documents, subjects, classes, tuition, approvals, and notifications without code.
+
+        **Start here:** [Enrollment Policies overview](./enrollment-policies/overview/)
+    </Card>
+    <Card title="Developer Docs" icon="seti:php">
+        Install, deploy, configure, test, contribute to, or extend the KoAkademy application.
+
+        **Start here:** [Developer introduction](./getting-started/introduction/)
+    </Card>
+    <Card title="API Reference" icon="seti:json">
+        Integrate external systems using authenticated student, enrollment, verification, and settings endpoints.
+
+        **Start here:** [API overview](./api/api-overview/)
+    </Card>
+
 </CardGrid>
 
-## Requirements
+## For school staff
 
-KoAkademy ships with sensible defaults that let you run locally without Docker or any external services.
+Start with the **User Guide**, then follow the Enrollment Blueprint guides when you need to configure enrollment. These pages explain the effect of each choice, recommended defaults, safe publication, and what changes only future enrollments.
 
-### Required
+## For technical teams
 
-| Dependency | Version | Purpose |
-|---|---|---|
-| PHP | 8.4+ | Application runtime (extensions: SQLite, PDO, mbstring, bcmath, zip, intl, gd, redis, exif) |
-| Composer | 2.x | PHP dependency manager |
-| Node.js | 22+ | Frontend asset build (not needed for the pre-built Docker image) |
-| Database | — | SQLite (default), PostgreSQL 17, or MySQL 8.4 |
-
-### Optional
-
-| Service | Purpose | Fallback when not used |
-|---|---|---|
-| Redis 7+ | Cache, queues, sessions, Pulse ingest, Station | SQLite / database driver |
-| Meilisearch | Full-text search via Laravel Scout | Collection / database driver |
-| Mailpit / SMTP | Transactional email | Log driver |
-| MinIO / R2 / S3 | Object storage | Local filesystem |
-| Gotenberg | PDF rendering (headless browser) | Cloudflare Browser Rendering or DOMPDF |
-
-## Get Started
-
-KoAkademy is built to be **self-hosted**. The recommended production path uses our pre-built Docker image with Docker Compose.
-
-### Self-host with Docker (recommended)
-
-```bash "Terminal"
-# 1. Create docker-compose.yml (see Installation page for the full file)
-# 2. Copy the production env example
-cp .env.production.example .env
-
-# 3. Generate an app key
-docker run --rm \
-  -e APP_KEY=base64:000000000000000000000000000000000000000000= \
-  yukazaki/koakademy:latest \
-  php artisan key:generate --show
-
-# 4. Start the stack
-docker compose up -d
-
-# 5. Create your admin user
-docker exec -it koakademy-app php artisan make:filament-user
-```
-
-Visit `http://localhost:8000`. Full details: [Installation](/getting-started/installation).
-
-### Local development (for contributors)
-
-If you want to contribute code, you can run KoAkademy locally with just PHP and SQLite — no Docker required:
-
-```bash "Terminal"
-git clone https://github.com/yukazakiri/koakademy.git
-cd koakademy
-composer install
-cp .env.example .env
-touch database/database.sqlite
-php artisan key:generate
-php artisan migrate
-npm install && npm run build
-php artisan serve --host=0.0.0.0 --port=8000
-```
-
-This uses SQLite, database cache, sync queues, and log mail — zero external dependencies.
-
-## Explore the Docs
-
-- **[Introduction](/getting-started/introduction)** — What KoAkademy is and architecture overview
-- **[Installation](/getting-started/installation)** — Self-host with Docker Compose or set up for local development
-- **[Docker Deployment](/getting-started/docker)** — Full production Compose with Meilisearch, Gotenberg, and health checks
-- **[Configuration](/getting-started/configuration)** — Environment variables, domains, and services
-- **[Development](/development)** — Daily contributor workflow, testing, and conventions
-- **[API](/api/api-overview)** — RESTful API for student data, enrollments, and verification
-- **[Contributing](/getting-started/contributing)** — How to contribute to KoAkademy
+Use **Developer Docs** for server requirements, Docker, environment configuration, source-code contribution, handler registration, and testing. Use **API Reference** for integration contracts.

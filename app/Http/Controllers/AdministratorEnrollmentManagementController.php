@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enrollment\EnrollmentWorkflowCoordinator;
 use App\Enums\StudentStatus;
 use App\Exports\EnrollmentReportExport;
 use App\Jobs\GenerateAssessmentPdfJob;
@@ -53,6 +54,7 @@ final class AdministratorEnrollmentManagementController extends Controller
         private readonly EnrollmentPipelineService $enrollmentPipelineService,
         private readonly EnrollmentBillingService $enrollmentBillingService,
         private readonly ClassScheduleChangeNotificationService $classScheduleChangeNotificationService,
+        private readonly EnrollmentWorkflowCoordinator $workflowCoordinator,
     ) {}
 
     public function index(GeneralSettingsService $settingsService): Response|RedirectResponse
@@ -649,33 +651,13 @@ final class AdministratorEnrollmentManagementController extends Controller
             abort(403);
         }
 
-        $nextStep = $this->enrollmentPipelineService->getNextStep($enrollment->status);
-        if ($nextStep === null) {
-            return back()->with('flash', ['error' => 'No next pipeline step is available.']);
+        try {
+            $this->workflowCoordinator->transition($enrollment, $user, null);
+
+            return back()->with('flash', ['success' => 'Advanced to the next pipeline step.']);
+        } catch (Throwable $throwable) {
+            return back()->with('flash', ['error' => $throwable->getMessage()]);
         }
-
-        if (! $this->enrollmentPipelineService->canUserPerformStep($user, $nextStep)) {
-            abort(403);
-        }
-
-        $actionType = $nextStep['action_type'] ?? 'standard';
-
-        if ($actionType === 'cashier_verification') {
-            return back()->with('flash', ['error' => 'This step requires payment verification flow.']);
-        }
-
-        if ($actionType === 'department_verification') {
-            if ($this->enrollmentService->verifyByHeadDept($enrollment)) {
-                return back()->with('flash', ['success' => 'Advanced to the next pipeline step.']);
-            }
-
-            return back()->with('flash', ['error' => 'Failed to advance pipeline step.']);
-        }
-
-        $enrollment->status = $nextStep['status'];
-        $enrollment->save();
-
-        return back()->with('flash', ['success' => 'Advanced to the next pipeline step.']);
     }
 
     public function verifyHeadDept(StudentEnrollment $enrollment): RedirectResponse
@@ -685,21 +667,13 @@ final class AdministratorEnrollmentManagementController extends Controller
             abort(403);
         }
 
-        $departmentStep = $this->enrollmentPipelineService->getStepByActionType('department_verification');
-        if ($departmentStep !== null && ! $this->enrollmentPipelineService->canUserPerformStep($user, $departmentStep)) {
-            abort(403);
-        }
+        try {
+            $this->workflowCoordinator->verifyAcademic($enrollment, $user);
 
-        $nextStep = $this->enrollmentPipelineService->getNextStep($enrollment->status);
-        if (($nextStep['action_type'] ?? null) !== 'department_verification') {
-            return back()->with('flash', ['error' => 'Enrollment is not ready for department verification.']);
-        }
-
-        if ($this->enrollmentService->verifyByHeadDept($enrollment)) {
             return back()->with('flash', ['success' => 'Successfully verified as Head Dept.']);
+        } catch (Throwable $throwable) {
+            return back()->with('flash', ['error' => $throwable->getMessage()]);
         }
-
-        return back()->with('flash', ['error' => 'Verification failed.']);
     }
 
     public function verifyCashier(Request $request, StudentEnrollment $enrollment): RedirectResponse
@@ -707,16 +681,6 @@ final class AdministratorEnrollmentManagementController extends Controller
         $user = Auth::user();
         if (! $user instanceof User) {
             abort(403);
-        }
-
-        $cashierStep = $this->enrollmentPipelineService->getStepByActionType('cashier_verification');
-        if ($cashierStep !== null && ! $this->enrollmentPipelineService->canUserPerformStep($user, $cashierStep)) {
-            abort(403);
-        }
-
-        $nextStep = $this->enrollmentPipelineService->getNextStep($enrollment->status);
-        if (($nextStep['action_type'] ?? null) !== 'cashier_verification') {
-            return back()->with('flash', ['error' => 'Enrollment is not ready for cashier verification.']);
         }
 
         $validated = $request->validate([
@@ -733,11 +697,13 @@ final class AdministratorEnrollmentManagementController extends Controller
             ->filter(fn (mixed $value, int|string $key): bool => is_string($key) && str_starts_with($key, 'separate_fee_') && str_ends_with($key, '_transaction'))
             ->all();
 
-        if ($this->enrollmentService->verifyByCashier($enrollment, [...$validated, ...$separateFeeTransactionFields])) {
-            return back()->with('flash', ['success' => 'Successfully enrolled student.']);
-        }
+        try {
+            $this->workflowCoordinator->verifyPayment($enrollment, $user, [...$validated, ...$separateFeeTransactionFields]);
 
-        return back()->with('flash', ['error' => 'Enrollment failed.']);
+            return back()->with('flash', ['success' => 'Successfully enrolled student.']);
+        } catch (Throwable $throwable) {
+            return back()->with('flash', ['error' => $throwable->getMessage()]);
+        }
     }
 
     public function verifyCashierNoReceipt(Request $request, StudentEnrollment $enrollment): RedirectResponse
@@ -751,6 +717,10 @@ final class AdministratorEnrollmentManagementController extends Controller
             'confirm_payment' => 'required|accepted',
         ]);
 
+        if ($enrollment->workflow_runtime === StudentEnrollment::WorkflowRuntimePolicyV1) {
+            return back()->with('flash', ['error' => 'No-receipt enrollment is unavailable for policy workflows. Use a configured transition.']);
+        }
+
         if ($this->enrollmentService->verifyByCashierWithoutReceipt($enrollment, $data)) {
             return back()->with('flash', ['success' => 'Student enrolled without receipt.']);
         }
@@ -760,20 +730,30 @@ final class AdministratorEnrollmentManagementController extends Controller
 
     public function undoCashierVerification(StudentEnrollment $enrollment): RedirectResponse
     {
-        if ($this->enrollmentService->undoCashierVerification($enrollment->id)) {
-            return back()->with('flash', ['success' => 'Cashier verification undone.']);
-        }
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
 
-        return back()->with('flash', ['error' => 'Undo failed.']);
+        try {
+            $this->workflowCoordinator->reopen($enrollment, $user, null, 'Cashier verification correction.');
+
+            return back()->with('flash', ['success' => 'Cashier verification undone.']);
+        } catch (Throwable $throwable) {
+            return back()->with('flash', ['error' => $throwable->getMessage()]);
+        }
     }
 
     public function undoHeadDeptVerification(StudentEnrollment $enrollment): RedirectResponse
     {
-        if ($this->enrollmentService->undoHeadDeptVerification($enrollment)) {
-            return back()->with('flash', ['success' => 'Head Dept verification undone.']);
-        }
+        $user = Auth::user();
+        abort_unless($user instanceof User, 403);
 
-        return back()->with('flash', ['error' => 'Undo failed.']);
+        try {
+            $this->workflowCoordinator->reopen($enrollment, $user, null, 'Academic verification correction.');
+
+            return back()->with('flash', ['success' => 'Head Dept verification undone.']);
+        } catch (Throwable $throwable) {
+            return back()->with('flash', ['error' => $throwable->getMessage()]);
+        }
     }
 
     public function enrollInClass(Request $request, StudentEnrollment $enrollment): RedirectResponse
@@ -925,6 +905,9 @@ final class AdministratorEnrollmentManagementController extends Controller
         if (! Auth::user()->hasRole('super_admin')) {
             abort(403);
         }
+        if ($enrollment->workflow_runtime !== StudentEnrollment::WorkflowRuntimeLegacy) {
+            return back()->with('flash', ['error' => 'Quick enrollment is available only for legacy workflows.']);
+        }
 
         $request->validate([
             'remarks' => 'required|string',
@@ -933,8 +916,9 @@ final class AdministratorEnrollmentManagementController extends Controller
         ]);
 
         try {
-            $enrollment->status = $this->enrollmentPipelineService->getDepartmentVerifiedStatus();
-            $enrollment->save();
+            $actor = Auth::user();
+            abort_unless($actor instanceof User, 403);
+            $this->workflowCoordinator->verifyAcademic($enrollment, $actor);
 
             $success = $this->enrollmentService->verifyByCashierWithoutReceipt($enrollment, [
                 'remarks' => '⚡ QUICK ENROLL: '.$request->input('remarks'),
@@ -1446,7 +1430,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                 );
 
                 // Create the enrollment record
-                $enrollment = StudentEnrollment::query()->create([
+                $enrollment = $this->workflowCoordinator->create([
                     'student_id' => $student->id,
                     'course_id' => $student->course_id,
                     'status' => $this->enrollmentPipelineService->getPendingStatus(),

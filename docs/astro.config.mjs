@@ -25,7 +25,25 @@ export default defineConfig({
             sidebar: [
                 { label: "Home", link: "/" },
                 {
-                    label: "Getting Started",
+                    label: "User Guide",
+                    items: [{ slug: "user-guide/introduction" }],
+                },
+                {
+                    label: "Enrollment Blueprints",
+                    items: [
+                        { slug: "enrollment-policies/overview" },
+                        { slug: "enrollment-policies/quick-start" },
+                        { slug: "enrollment-policies/scopes-inheritance" },
+                        { slug: "enrollment-policies/availability-eligibility-documents" },
+                        { slug: "enrollment-policies/subjects-classes-tuition" },
+                        { slug: "enrollment-policies/approvals-notifications" },
+                        { slug: "enrollment-policies/simulation-publication" },
+                        { slug: "enrollment-policies/troubleshooting-deployment" },
+                    ],
+                },
+                {
+                    label: "Developer Docs",
+                    collapsed: true,
                     items: [
                         { slug: "getting-started/introduction" },
                         { slug: "getting-started/installation" },
@@ -33,27 +51,18 @@ export default defineConfig({
                         { slug: "getting-started/configuration" },
                         { slug: "getting-started/troubleshooting" },
                         { slug: "getting-started/contributing" },
+                        { slug: "development" },
+                        { slug: "development/enrollment-policy-extensions" },
                     ],
                 },
                 {
-                    label: "Development",
-                    items: [{ slug: "development" }],
-                },
-                {
-                    label: "API",
+                    label: "Developer API",
+                    collapsed: true,
                     items: [
                         { slug: "api/api-overview" },
                         { slug: "api/developer-api" },
                         { slug: "api/student-api" },
                         { slug: "api/student-verification-api" },
-                    ],
-                },
-                {
-                    label: "Superpowers",
-                    collapsed: true,
-                    items: [
-                        { slug: "superpowers/plans/2026-05-16-feature-toggles-restructure" },
-                        { slug: "superpowers/specs/2026-05-16-feature-toggles-restructure-design" },
                     ],
                 },
             ],

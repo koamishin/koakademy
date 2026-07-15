@@ -41,6 +41,7 @@ final class StudentEnrollmentFactory extends Factory
             ]),
             'school_year' => '2024 - 2025',
             'remarks' => $this->faker->optional(0.3)->sentence(),
+            'school_id' => \App\Models\School::factory(),
             'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
         ];
     }
@@ -54,6 +55,16 @@ final class StudentEnrollmentFactory extends Factory
             'status' => EnrollStat::VerifiedByCashier->value,
             'created_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
         ]);
+    }
+
+    public function legacyWorkflow(): static
+    {
+        return $this->state(fn (): array => ['workflow_runtime' => StudentEnrollment::WorkflowRuntimeLegacy]);
+    }
+
+    public function policyWorkflow(): static
+    {
+        return $this->state(fn (): array => ['workflow_runtime' => StudentEnrollment::WorkflowRuntimePolicyV1]);
     }
 
     /**

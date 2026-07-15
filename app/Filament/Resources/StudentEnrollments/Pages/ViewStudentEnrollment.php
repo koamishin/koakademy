@@ -176,7 +176,9 @@ final class ViewStudentEnrollment extends ViewRecord
                 ->visible(function (StudentEnrollment $record): bool {
                     $pipeline = app(EnrollmentPipelineService::class);
 
-                    return $pipeline->isPending($record->status) && Auth::user()->hasRole('super_admin');
+                    return $record->workflow_runtime === StudentEnrollment::WorkflowRuntimeLegacy
+                        && $pipeline->isPending($record->status)
+                        && Auth::user()->hasRole('super_admin');
                 })
                 ->requiresConfirmation()
                 ->modalIcon('heroicon-o-bolt')
@@ -187,9 +189,10 @@ final class ViewStudentEnrollment extends ViewRecord
                     EnrollmentService $enrollmentService
                 ): void {
                     try {
-                        // First, mark as verified by head dept (without creating signature)
-                        $record->status = app(EnrollmentPipelineService::class)->getDepartmentVerifiedStatus();
-                        $record->save();
+                        $actor = Auth::user();
+                        if ($actor instanceof \App\Models\User) {
+                            app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->verifyAcademic($record, $actor);
+                        }
 
                         // Then use the no-receipt verification
                         $success = $enrollmentService->verifyByCashierWithoutReceipt(
@@ -251,9 +254,10 @@ final class ViewStudentEnrollment extends ViewRecord
                     EnrollmentService $enrollmentService
                 ): void {
                     $signature = $data['signature'] ?? null;
-                    $success = $enrollmentService->verifyByHeadDept(
-                        $record
-                    );
+                    $actor = Auth::user();
+                    $success = $record->workflow_runtime === StudentEnrollment::WorkflowRuntimePolicyV1 && $actor instanceof \App\Models\User
+                        ? app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->verifyAcademic($record, $actor)->successful
+                        : $enrollmentService->verifyByHeadDept($record);
                     if (! $success) {
                         $this->halt();
                     }
@@ -352,10 +356,10 @@ final class ViewStudentEnrollment extends ViewRecord
                     array $data,
                     EnrollmentService $enrollmentService
                 ) {
-                    $success = $enrollmentService->verifyByCashier(
-                        $record,
-                        $data
-                    );
+                    $actor = Auth::user();
+                    $success = $record->workflow_runtime === StudentEnrollment::WorkflowRuntimePolicyV1 && $actor instanceof \App\Models\User
+                        ? app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->verifyPayment($record, $actor, $data)->successful
+                        : $enrollmentService->verifyByCashier($record, $data);
                     if ($success) {
                         return redirect()->route(
                             'filament.admin.resources.students.index'
@@ -395,7 +399,9 @@ final class ViewStudentEnrollment extends ViewRecord
                 ->visible(function (StudentEnrollment $record): bool {
                     $pipeline = app(EnrollmentPipelineService::class);
 
-                    return $pipeline->isDepartmentVerified($record->status) && Auth::user()->hasRole('super_admin');
+                    return $record->workflow_runtime === StudentEnrollment::WorkflowRuntimeLegacy
+                        && $pipeline->isDepartmentVerified($record->status)
+                        && Auth::user()->hasRole('super_admin');
                 })
                 ->requiresConfirmation()
                 ->modalIcon('heroicon-o-exclamation-triangle')
@@ -655,29 +661,13 @@ final class ViewStudentEnrollment extends ViewRecord
                         return $pipeline->canUserPerformStep($user, $nextStep);
                     })
                     ->action(function (StudentEnrollment $record): void {
-                        $pipeline = app(EnrollmentPipelineService::class);
-                        $nextStep = $pipeline->getNextStep($record->status);
-                        if ($nextStep === null) {
+                        $actor = Auth::user();
+                        if ($actor instanceof \App\Models\User) {
+                            app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->transition($record, $actor, null);
+                            $this->refreshFormData(['status']);
+
                             return;
                         }
-
-                        if ($nextStep['status'] === $pipeline->getDepartmentVerifiedStatus()) {
-                            $success = app(EnrollmentService::class)->verifyByHeadDept($record);
-                            if (! $success) {
-                                $this->halt();
-                            }
-                        } else {
-                            $record->status = $nextStep['status'];
-                            $record->save();
-
-                            Notification::make()
-                                ->success()
-                                ->title('Pipeline Advanced')
-                                ->body("Enrollment moved to \"{$nextStep['label']}\".")
-                                ->send();
-                        }
-
-                        $this->refreshFormData(['status']);
                     }),
 
                 Action::make('undoCashierVerification')
@@ -707,9 +697,10 @@ final class ViewStudentEnrollment extends ViewRecord
                         StudentEnrollment $record,
                         EnrollmentService $enrollmentService
                     ): void {
-                        $success = $enrollmentService->undoCashierVerification(
-                            $record->id
-                        );
+                        $actor = Auth::user();
+                        $success = $record->workflow_runtime === StudentEnrollment::WorkflowRuntimePolicyV1 && $actor instanceof \App\Models\User
+                            ? app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->reopen($record, $actor, null, 'Cashier verification correction.')->successful
+                            : $enrollmentService->undoCashierVerification($record->id);
                         if (! $success) {
                             $this->halt();
                         }
@@ -748,9 +739,10 @@ final class ViewStudentEnrollment extends ViewRecord
                         StudentEnrollment $record,
                         EnrollmentService $enrollmentService
                     ): void {
-                        $success = $enrollmentService->undoHeadDeptVerification(
-                            $record
-                        );
+                        $actor = Auth::user();
+                        $success = $record->workflow_runtime === StudentEnrollment::WorkflowRuntimePolicyV1 && $actor instanceof \App\Models\User
+                            ? app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->reopen($record, $actor, null, 'Academic verification correction.')->successful
+                            : $enrollmentService->undoHeadDeptVerification($record);
                         if (! $success) {
                             $this->halt();
                         }

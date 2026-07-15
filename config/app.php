@@ -160,6 +160,8 @@ return [
         ),
     ],
 
+    'documentation_url' => env('DOCUMENTATION_URL', 'https://koakademy.github.io/koakademy'),
+
     /*
     |--------------------------------------------------------------------------
     | Maintenance Mode Driver

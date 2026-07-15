@@ -1,0 +1,70 @@
+---
+title: Approval workflow and notifications
+description: Build a safe acyclic approval timeline with roles, actions, conditional branches, fallbacks, and post-commit messages.
+---
+
+# Approval workflow and notifications
+
+The workflow editor displays the enrollment journey as a vertical timeline. Drag cards or focus the handle and use the keyboard to reorder them. Arrow buttons provide an additional accessible control.
+
+![Approval workflow timeline with responsible roles, actions, branches, and advanced reporting details](../../../assets/enrollment-policies/approval-workflow.png)
+
+_Workflow cards use plain staff-facing language while technical identifiers remain under Advanced._
+
+## Every workflow needs
+
+- Exactly one entry step at the top
+- At least one final step
+- One protected **Otherwise** destination for every non-final step
+- Only forward, reachable destinations
+- Supported rule and action handlers
+
+Cycles, self-links, unreachable cards, ambiguous branches, and parallel approvals are rejected.
+
+:::note[What this does]
+Each approval advances a pinned enrollment through a validated decision graph. The enrollment row and relevant capacity rows are locked inside one transaction; failures roll back and can be retried idempotently.
+:::
+
+## Configure a step
+
+1. Give it a plain staff-facing name, such as **Registrar review**.
+2. Choose the staff roles allowed to complete it.
+3. Select the actions performed after approval.
+4. Configure any action-specific fields.
+5. Decide whether the step ends the journey.
+6. Under Advanced, confirm the reporting status and technical identifier only when needed.
+
+### Publication permissions
+
+Roles selected in the editor are converted into a deterministic version-specific permission at publication. That permission is assigned to the selected roles. Changing role assignments for a future version cannot change the authorization recorded by already pinned enrollments.
+
+## Conditional destinations
+
+Use **When … continue to …** for special paths. Conditions are evaluated in the order shown. Everyone who does not match uses the protected **Otherwise** destination.
+
+Example:
+
+- When scholarship verification is required, continue to **Scholarship office review**.
+- Otherwise, continue to **Cashier review**.
+
+:::caution[No backward loops]
+Corrections use an authorized **reopen** operation, not a backward workflow link. Reopen records the actor, target step, reason, and idempotency key.
+:::
+
+## Built-in actions
+
+Core actions include status/outcome projection, academic verification, payment verification, subject or class assignment, tuition calculation, assessment generation, notifications, and student/account synchronization.
+
+Post-commit assessment and notification work is recorded as retryable workflow events and dispatched only after the database transaction commits.
+
+## Notifications
+
+Choose the workflow event and delivery channel. Typical events are every transition or completion of a named step. Keep notifications focused: send a message when it helps a student or staff member take the next action.
+
+## Example: registrar and cashier
+
+1. **Pending review** — entry; registrar role; academic verification action; Otherwise → Cashier review.
+2. **Cashier review** — cashier role; tuition, assessment, and payment verification actions; Otherwise → Enrollment completed.
+3. **Enrollment completed** — terminal completed outcome; notify student.
+
+Simulate both a student who passes and one blocked by a payment gate.

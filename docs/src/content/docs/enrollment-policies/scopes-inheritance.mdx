@@ -1,0 +1,67 @@
+---
+title: Scopes, inheritance, and overrides
+description: Configure school, student-type, program, and academic-period policies without duplicating the global blueprint.
+---
+
+# Scopes, inheritance, and overrides
+
+A scope describes **who should receive a blueprint**. A blank scope is global. A scoped blueprint may target a school, student type, program, school year, semester, or a combination.
+
+:::note[What this does]
+Scopes let one installation support different enrollment needs without copying an entire configuration. Scoped drafts default to “inherit and change only what is different.”
+:::
+
+## Resolution order
+
+Matching policies are compiled from broad to specific:
+
+1. Global
+2. School
+3. Student type
+4. Program
+5. Academic period
+6. Combined scopes
+
+More constrained scopes win. When matching layers are equally constrained, academic period wins first, followed by program, student type, and school.
+
+## Strict ancestor inheritance in the editor
+
+The editor shows only strict ancestors of the selected scope. This makes it clear where an inherited value originated and prevents a misleading preview based on an unspecified student.
+
+The final cross-scope result may include other matching layers. To see it, select a representative student and run simulation. The **Matched blueprints** list and source badges show the actual result.
+
+## Override and reset
+
+For rules and documents, overrides are keyed individually. For workflow, assignment, billing, and notifications, the whole section is replaced atomically so a partial graph or strategy cannot be created accidentally.
+
+- **Override here** copies the effective inherited value into the scoped draft so it can be edited.
+- **Use inherited value** removes the local override and reconnects the field or section to its ancestor.
+- Disabling an inherited keyed rule stores an explicit disabled override; it does not delete the ancestor.
+
+:::caution[Do not copy the global blueprint unnecessarily]
+A sparse scoped draft is easier to maintain. If the school-wide payment strategy changes later, every scope that has not overridden billing receives the change automatically for future enrollments.
+:::
+
+## Example: College-only document
+
+The global blueprint requires a birth certificate. College also requires a Form 138.
+
+1. Publish the global blueprint.
+2. Create a new blueprint scoped to student type **College**.
+3. Keep **Inherit school-wide settings** enabled.
+4. In Required documents, add Form 138.
+5. Save and simulate a College student and a TESDA student.
+
+The College simulation should match both global and College blueprints. TESDA should match only global and should not receive the Form 138 requirement.
+
+## Example: program and semester override
+
+For BS Nursing in the first semester of 2026–2027, add a capacity check and a nursing-office approval step. Scope the policy to the program, school year, and semester. Override only eligibility and workflow.
+
+## Existing complete configurations
+
+Blueprints created before sparse inheritance remain valid. Their complete configuration is preserved and continues to replace the relevant sections. Editing does not silently convert or discard those stored values.
+
+## Duplicate scope protection
+
+Only one logical policy may own a scope combination. If the selected school, student type, program, year, and semester already exist together, create a new version of that policy instead of a duplicate.

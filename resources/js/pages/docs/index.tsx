@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { slug as documentationPage } from "@/routes/docs/v1";
 import { Head, Link, router, usePage } from "@inertiajs/react";
 import { IconChevronRight, IconMenu, IconSchool, IconSearch, IconSparkles } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
@@ -60,7 +61,7 @@ interface SEOData {
 
 interface PageProps {
     slug: string;
-    type: "guide" | "api";
+    type: DocumentationType;
     branding?: Branding;
     page: {
         title: string;
@@ -73,10 +74,27 @@ interface PageProps {
     [key: string]: unknown;
 }
 
+type DocumentationType = "guide" | "developer" | "api";
+
+const documentationAreas: Array<{
+    type: DocumentationType;
+    label: string;
+    mobileLabel: string;
+    target: string;
+}> = [
+    { type: "guide", label: "User Guide", mobileLabel: "User", target: "introduction" },
+    { type: "developer", label: "Developer Docs", mobileLabel: "Developer", target: "developer-introduction" },
+    { type: "api", label: "API Reference", mobileLabel: "API", target: "api-overview" },
+];
+
+const documentationAreaLabels: Record<DocumentationType, string> = {
+    guide: "User Guide",
+    developer: "Developer Docs",
+    api: "API Reference",
+};
+
 export default function DocsIndex() {
     const { props } = usePage<PageProps>();
-    const appName = props.branding?.appName || "School Portal";
-    const organizationName = props.branding?.organizationName || "University";
     const orgShortName = props.branding?.organizationShortName || "UNI";
     const seo = props.seo;
 
@@ -92,12 +110,14 @@ export default function DocsIndex() {
 
     const handleNavClick = (newSlug: string) => {
         setMobileMenuOpen(false);
-        router.visit(`/docs/v1/${newSlug}`);
+        router.visit(documentationPage.url({ slug: newSlug }));
     };
 
-    const handleTypeChange = (newType: "guide" | "api") => {
-        const target = newType === "guide" ? "introduction" : "api-overview";
-        router.visit(`/docs/v1/${target}`);
+    const handleTypeChange = (newType: DocumentationType) => {
+        const area = documentationAreas.find((candidate) => candidate.type === newType);
+        if (area) {
+            router.visit(documentationPage.url({ slug: area.target }));
+        }
     };
 
     const toc = page.tableOfContents || [];
@@ -169,25 +189,21 @@ export default function DocsIndex() {
                                 <span>{orgShortName} Docs</span>
                             </Link>
 
-                            <nav className="flex items-center gap-5 text-sm font-medium">
-                                <button
-                                    onClick={() => handleTypeChange("guide")}
-                                    className={cn(
-                                        "hover:text-foreground transition-colors",
-                                        type === "guide" ? "text-foreground" : "text-muted-foreground",
-                                    )}
-                                >
-                                    Documentation
-                                </button>
-                                <button
-                                    onClick={() => handleTypeChange("api")}
-                                    className={cn(
-                                        "hover:text-foreground transition-colors",
-                                        type === "api" ? "text-foreground" : "text-muted-foreground",
-                                    )}
-                                >
-                                    API Reference
-                                </button>
+                            <nav className="flex items-center gap-5 text-sm font-medium" aria-label="Documentation areas">
+                                {documentationAreas.map((area) => (
+                                    <button
+                                        key={area.type}
+                                        type="button"
+                                        aria-current={type === area.type ? "page" : undefined}
+                                        onClick={() => handleTypeChange(area.type)}
+                                        className={cn(
+                                            "hover:text-foreground min-h-10 transition-colors",
+                                            type === area.type ? "text-foreground" : "text-muted-foreground",
+                                        )}
+                                    >
+                                        {area.label}
+                                    </button>
+                                ))}
                                 <Link href="/help" className="text-muted-foreground hover:text-foreground transition-colors">
                                     Help Center
                                 </Link>
@@ -205,23 +221,20 @@ export default function DocsIndex() {
                                     <IconSchool className="size-6" />
                                     <span className="text-lg font-semibold">{orgShortName} Docs</span>
                                 </div>
-                                <div className="mb-4 flex gap-2 px-2">
-                                    <Button
-                                        variant={type === "guide" ? "secondary" : "ghost"}
-                                        size="sm"
-                                        className="flex-1"
-                                        onClick={() => handleTypeChange("guide")}
-                                    >
-                                        Guide
-                                    </Button>
-                                    <Button
-                                        variant={type === "api" ? "secondary" : "ghost"}
-                                        size="sm"
-                                        className="flex-1"
-                                        onClick={() => handleTypeChange("api")}
-                                    >
-                                        API
-                                    </Button>
+                                <div className="mb-4 grid grid-cols-3 gap-1 px-2" aria-label="Documentation areas">
+                                    {documentationAreas.map((area) => (
+                                        <Button
+                                            key={area.type}
+                                            type="button"
+                                            variant={type === area.type ? "secondary" : "ghost"}
+                                            size="sm"
+                                            className="min-h-10 px-2 text-xs"
+                                            aria-current={type === area.type ? "page" : undefined}
+                                            onClick={() => handleTypeChange(area.type)}
+                                        >
+                                            {area.mobileLabel}
+                                        </Button>
+                                    ))}
                                 </div>
                                 <ScrollArea className="h-[calc(100vh-12rem)]">
                                     <DocsNav sections={navigation} currentSlug={slug} onSelect={handleNavClick} />
@@ -275,7 +288,7 @@ export default function DocsIndex() {
 
                         <main className="min-w-0 flex-1 py-6">
                             <div className="text-muted-foreground mb-6 flex items-center gap-2 text-sm">
-                                <span className="capitalize">{type}</span>
+                                <span>{documentationAreaLabels[type]}</span>
                                 <IconChevronRight className="size-4" />
                                 <span>{page.title}</span>
                             </div>
@@ -535,7 +548,12 @@ function MarkdownContent({ content }: { content: string }) {
                 inTable = true;
                 tableRows = [];
             }
-            if (!line.match(/^\|\s*[-:]?\s*\|/)) {
+            const tableCells = line
+                .split("|")
+                .map((cell) => cell.trim())
+                .filter(Boolean);
+            const isSeparatorRow = tableCells.length > 0 && tableCells.every((cell) => /^:?-{3,}:?$/.test(cell));
+            if (!isSeparatorRow) {
                 tableRows.push(line);
             }
             return;

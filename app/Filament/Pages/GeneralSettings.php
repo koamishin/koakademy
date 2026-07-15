@@ -185,8 +185,27 @@ final class GeneralSettings extends Page
                         'this will make all transactions can be viewed by the public'
                     )->boolean()
                     ->grouped(),
+                Section::make('Enrollment Policies')
+                    ->description('Enrollment workflow configuration is versioned and published from the Inertia System Management workspace. Filament keeps the legacy JSON read-only for one compatibility release.')
+                    ->schema([
+                        TextInput::make('enrollment_policy_workspace')
+                            ->label('Canonical enrollment policy editor')
+                            ->default(url('/administrators/system-management/enrollment-pipeline'))
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->suffixAction(
+                                Action::make('openEnrollmentPolicyWorkspace')
+                                    ->label('Open editor')
+                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                    ->url(url('/administrators/system-management/enrollment-pipeline'))
+                                    ->openUrlInNewTab(),
+                            )
+                            ->columnSpanFull(),
+                    ])
+                    ->columnSpanFull(),
                 Section::make('Enrollment Pipeline Workflow')
                     ->description('Configure enrollment status values, labels, and color coding. Changes here will be used by enrollment logic and dashboards.')
+                    ->hidden()
                     ->schema([
                         TextInput::make('more_configs.enrollment_pipeline.submitted_label')
                             ->label('Submitted Step Label')

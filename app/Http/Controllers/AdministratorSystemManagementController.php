@@ -4,8 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enrollment\EnrollmentPolicyPreset;
+use App\Enrollment\EnrollmentPolicyRegistry;
+use App\Enrollment\EnrollmentPolicyRolloutService;
 use App\Enums\NotificationChannel;
+use App\Enums\PaymentMethod;
 use App\Enums\SchoolLevel;
+use App\Enums\StudentType;
+use App\Features\DynamicEnrollmentPolicies;
 use App\Http\Requests\Administrators\StoreSchoolRequest;
 use App\Http\Requests\Administrators\UpdateApiManagementRequest;
 use App\Http\Requests\Administrators\UpdateEnrollmentPipelineRequest;
@@ -13,6 +19,8 @@ use App\Http\Requests\Administrators\UpdateSchoolLevelRequest;
 use App\Http\Requests\Administrators\UpdateSchoolRequest;
 use App\Http\Requests\Administrators\UpdateSchoolStatusRequest;
 use App\Models\Course;
+use App\Models\EnrollmentPolicy;
+use App\Models\EnrollmentPolicyVersion;
 use App\Models\GeneralSetting;
 use App\Models\School;
 use App\Models\User;
@@ -39,7 +47,9 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Laravel\Pennant\Feature;
 use RuntimeException;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 final class AdministratorSystemManagementController extends Controller
@@ -67,9 +77,106 @@ final class AdministratorSystemManagementController extends Controller
         return $this->renderSystemManagementPage('administrators/system-management/school', 'school', 'viewSchool');
     }
 
-    public function enrollmentPipeline(): Response
-    {
-        return $this->renderSystemManagementPage('administrators/system-management/enrollment-pipeline', 'pipeline', 'viewEnrollmentPipeline');
+    public function enrollmentPipeline(
+        EnrollmentPolicyRegistry $registry,
+        EnrollmentPolicyRolloutService $rollout,
+        GeneralSettingsService $generalSettings,
+    ): Response {
+        $optionList = static fn (array $options): array => collect($options)
+            ->map(fn (string $label, string|int $value): array => ['value' => (string) $value, 'label' => $label])
+            ->values()
+            ->all();
+        $policyModels = EnrollmentPolicy::query()
+            ->with(['school:id,name', 'course:id,code,title', 'activeVersion', 'versions' => fn ($query) => $query->latest('version')])
+            ->orderBy('name')
+            ->get();
+        $permissionNames = $policyModels
+            ->flatMap(fn (EnrollmentPolicy $policy) => $policy->versions)
+            ->flatMap(fn (EnrollmentPolicyVersion $version) => collect(data_get($version->configuration, 'workflow.steps', []))->pluck('permission'))
+            ->filter(fn (mixed $permission): bool => is_string($permission) && $permission !== '')
+            ->unique()
+            ->values();
+        $rolesWithPolicyPermissions = $permissionNames->isEmpty()
+            ? collect()
+            : Role::query()
+                ->whereHas('permissions', fn ($query) => $query->whereIn('name', $permissionNames))
+                ->with(['permissions' => fn ($query) => $query->whereIn('name', $permissionNames)])
+                ->get();
+        $permissionRoles = collect();
+        foreach ($rolesWithPolicyPermissions as $role) {
+            foreach ($role->permissions as $permission) {
+                $permissionRoles->put(
+                    $permission->name,
+                    [...$permissionRoles->get($permission->name, []), (string) $role->id],
+                );
+            }
+        }
+        $serializeVersion = function (?EnrollmentPolicyVersion $version) use ($permissionRoles): ?array {
+            if (! $version) {
+                return null;
+            }
+
+            $serialized = $version->toArray();
+            $configuration = $version->configuration;
+            foreach (data_get($configuration, 'workflow.steps', []) as $index => $step) {
+                $permission = $step['permission'] ?? null;
+                if (! isset($step['authorized_role_ids']) && is_string($permission)) {
+                    $configuration['workflow']['steps'][$index]['authorized_role_ids'] = $permissionRoles->get($permission, []);
+                }
+            }
+            $serialized['configuration'] = $configuration;
+
+            return $serialized;
+        };
+        $policies = $policyModels
+            ->map(fn (EnrollmentPolicy $policy): array => [
+                'id' => $policy->id,
+                'name' => $policy->name,
+                'scope' => $policy->scopeLabels(),
+                'scope_values' => [
+                    'school_id' => $policy->school_id,
+                    'student_type' => $policy->student_type,
+                    'course_id' => $policy->course_id,
+                    'school_year' => $policy->school_year,
+                    'semester' => $policy->semester,
+                ],
+                'is_enabled' => $policy->is_enabled,
+                'active_version_id' => $policy->active_version_id,
+                'active_version' => $serializeVersion($policy->activeVersion),
+                'versions' => $policy->versions->map($serializeVersion)->values(),
+            ]);
+
+        return $this->renderSystemManagementPage(
+            'administrators/system-management/enrollment-pipeline',
+            'pipeline',
+            'viewEnrollmentPipeline',
+            [
+                'enrollment_policies' => $policies,
+                'enrollment_registry' => $registry->manifest(),
+                'enrollment_rollout' => $rollout->report(),
+                'enrollment_presets' => EnrollmentPolicyPreset::catalog(),
+                'has_global_published_policy' => $policyModels->contains(fn (EnrollmentPolicy $policy): bool => $policy->scope_key === EnrollmentPolicy::scopeKey([]) && $policy->active_version_id !== null),
+                'enrollment_documentation_url' => mb_rtrim((string) config('app.documentation_url'), '/'),
+                'enrollment_operator_options' => [
+                    'enrollment_channels' => $optionList(['public' => 'Public registration', 'administrator' => 'Administrator', 'continuing' => 'Continuing student', 'api' => 'API']),
+                    'student_types' => $optionList(StudentType::asSelectOptions()),
+                    'schools' => School::query()->orderBy('name')->pluck('name', 'id')->mapWithKeys(fn (string $label, int $id): array => [(string) $id => $label])->map(fn (string $label, string $value): array => ['value' => $value, 'label' => $label])->values(),
+                    'programs' => Course::query()->orderBy('code')->get(['id', 'code', 'title'])->map(fn (Course $course): array => ['value' => (string) $course->id, 'label' => "{$course->code} · {$course->title}"]),
+                    'periods' => [[
+                        'value' => $generalSettings->getCurrentSchoolYearString().'|'.$generalSettings->getCurrentSemester(),
+                        'label' => $generalSettings->getCurrentSchoolYearString().' · Semester '.$generalSettings->getCurrentSemester(),
+                    ]],
+                    'year_levels' => collect(range(1, 6))->map(fn (int $year): array => ['value' => (string) $year, 'label' => "Year {$year}"]),
+                    'payment_methods' => collect(PaymentMethod::cases())->map(fn (PaymentMethod $method): array => ['value' => $method->value, 'label' => $method->value]),
+                    'roles' => Role::query()->orderBy('name')->get(['id', 'name'])->map(fn (Role $role): array => ['value' => (string) $role->id, 'label' => str($role->name)->headline()->toString()]),
+                    'permissions' => Permission::query()->orderBy('name')->get(['id', 'name'])->map(fn (Permission $permission): array => ['value' => $permission->name, 'label' => str($permission->name)->headline()->toString()]),
+                    'notification_channels' => collect(NotificationChannel::cases())
+                        ->where('value', NotificationChannel::Mail->value)
+                        ->map(fn (NotificationChannel $channel): array => ['value' => $channel->value, 'label' => $channel->getLabel() ?? $channel->value])
+                        ->values(),
+                ],
+            ],
+        );
     }
 
     public function seo(): Response
@@ -668,46 +775,32 @@ final class AdministratorSystemManagementController extends Controller
 
     public function updateEnrollmentPipeline(UpdateEnrollmentPipelineRequest $request): RedirectResponse
     {
+        if (Feature::active(DynamicEnrollmentPolicies::class)) {
+            return Redirect::back()->withErrors([
+                'enrollment_pipeline' => 'The legacy enrollment pipeline is read-only while the policy engine is active.',
+            ]);
+        }
+
         $generalSettingsService = app(GeneralSettingsService::class);
         $settings = $generalSettingsService->getGlobalSettingsModel();
-
         if (! $settings instanceof GeneralSetting) {
-            $settings = GeneralSetting::query()->create([
-                'site_name' => $this->siteSettings->getAppName(),
-            ]);
+            $settings = GeneralSetting::query()->create(['site_name' => $this->siteSettings->getAppName()]);
             $generalSettingsService->replaceGlobalSettings($settings);
         }
 
         $validated = $request->validated();
-
         $moreConfigs = $settings->more_configs ?? [];
         $moreConfigs['enrollment_pipeline'] = $this->enrollmentPipelineService->sanitizeForStorage($validated);
-        $moreConfigs['enrollment_stats'] = $this->enrollmentPipelineService->sanitizeStatsForStorage(
-            $validated['enrollment_stats'] ?? []
-        );
-
-        $normalizedEnrollmentCourseIds = collect($validated['enrollment_courses'] ?? [])
-            ->map(fn (mixed $courseId): int => (int) $courseId)
-            ->filter(fn (int $courseId): bool => $courseId > 0)
-            ->unique()
-            ->values();
-
-        $existingEnrollmentCourseIds = Course::query()
-            ->whereIn('id', $normalizedEnrollmentCourseIds->all())
-            ->pluck('id')
-            ->map(fn (mixed $courseId): int => (int) $courseId)
-            ->flip();
-
-        $settings->update(['more_configs' => $moreConfigs]);
+        $moreConfigs['enrollment_stats'] = $this->enrollmentPipelineService->sanitizeStatsForStorage($validated['enrollment_stats'] ?? []);
+        $courseIds = collect($validated['enrollment_courses'] ?? [])->map(fn (mixed $id): int => (int) $id)->filter()->unique()->values();
+        $existingCourseIds = Course::query()->whereIn('id', $courseIds->all())->pluck('id')->map(fn (mixed $id): int => (int) $id);
 
         $settings->update([
-            'enrollment_courses' => $normalizedEnrollmentCourseIds
-                ->filter(fn (int $courseId): bool => $existingEnrollmentCourseIds->has($courseId))
-                ->values()
-                ->all(),
+            'more_configs' => $moreConfigs,
+            'enrollment_courses' => $courseIds->intersect($existingCourseIds)->values()->all(),
         ]);
 
-        return Redirect::back()->with('success', 'Enrollment pipeline updated successfully.');
+        return Redirect::back()->with('success', 'Legacy enrollment settings updated successfully.');
     }
 
     public function sendTestEmail(Request $request)
@@ -862,11 +955,12 @@ final class AdministratorSystemManagementController extends Controller
         ]);
     }
 
-    private function renderSystemManagementPage(string $component, string $section, string $ability): Response
+    /** @param array<string, mixed> $additional */
+    private function renderSystemManagementPage(string $component, string $section, string $ability, array $additional = []): Response
     {
         $this->authorize($ability, GeneralSetting::class);
 
-        return Inertia::render($component, $this->getSystemManagementPayload($section));
+        return Inertia::render($component, [...$this->getSystemManagementPayload($section), ...$additional]);
     }
 
     /**

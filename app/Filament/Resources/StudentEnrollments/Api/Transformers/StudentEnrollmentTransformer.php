@@ -20,6 +20,16 @@ final class StudentEnrollmentTransformer extends JsonResource
      */
     public function toArray($request): array
     {
+        $this->resource->loadMissing([
+            'policySnapshot',
+            'workflowEvents' => fn ($query) => $query->latest(),
+        ]);
+        $steps = collect(data_get($this->resource->policySnapshot?->configuration, 'workflow.steps', []));
+        $currentStep = $steps->firstWhere('key', $this->resource->current_step_key);
+        $permission = is_array($currentStep) ? ($currentStep['permission'] ?? null) : null;
+        $canTransition = ! is_string($permission) || $permission === '' || $request->user()?->can($permission) === true;
+        $lastFailure = $this->resource->workflowEvents->firstWhere('event_type', 'transition_failed');
+
         return [
             // Basic enrollment information
             'id' => $this->resource->id,
@@ -31,6 +41,27 @@ final class StudentEnrollmentTransformer extends JsonResource
             'school_year' => $this->resource->school_year,
             'downpayment' => $this->resource->downpayment,
             'remarks' => $this->resource->remarks,
+            'workflow' => [
+                'runtime' => $this->resource->workflow_runtime,
+                'snapshot_id' => $this->resource->enrollment_policy_snapshot_id,
+                'source_version_ids' => $this->resource->policySnapshot?->source_version_ids ?? [],
+                'current_step_key' => $this->resource->current_step_key,
+                'current_step' => $currentStep,
+                'terminal_outcome' => $this->resource->terminal_outcome,
+                'allowed_transitions' => $canTransition && is_array($currentStep)
+                    ? collect($currentStep['transitions'] ?? [])->map(fn (array $transition): array => [
+                        'key' => $transition['key'],
+                        'label' => $transition['label'] ?? $transition['key'],
+                        'to' => $transition['to'],
+                    ])->values()->all()
+                    : [],
+                'last_failure' => $lastFailure ? [
+                    'reason' => $lastFailure->reason,
+                    'from_step_key' => $lastFailure->from_step_key,
+                    'to_step_key' => $lastFailure->to_step_key,
+                    'occurred_at' => format_timestamp($lastFailure->created_at),
+                ] : null,
+            ],
 
             // Timestamps
             'created_at' => format_timestamp($this->resource->created_at),

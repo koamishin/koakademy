@@ -164,16 +164,19 @@ final class StudentEnrollmentsTable
                     ->visible(function (StudentEnrollment $record): bool {
                         $pipeline = app(EnrollmentPipelineService::class);
 
-                        return $pipeline->isPending($record->status) && Auth::user()->hasRole('super_admin');
+                        return $record->workflow_runtime === StudentEnrollment::WorkflowRuntimeLegacy
+                            && $pipeline->isPending($record->status)
+                            && Auth::user()->hasRole('super_admin');
                     })
                     ->requiresConfirmation()
                     ->action(function (StudentEnrollment $record, array $data, EnrollmentService $enrollmentService): void {
                         try {
                             $pipeline = app(EnrollmentPipelineService::class);
 
-                            // Mark as verified by head dept
-                            $record->status = $pipeline->getDepartmentVerifiedStatus();
-                            $record->save();
+                            $actor = Auth::user();
+                            if ($actor instanceof \App\Models\User) {
+                                app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->verifyAcademic($record, $actor);
+                            }
 
                             // Then use no-receipt verification
                             $success = $enrollmentService->verifyByCashierWithoutReceipt(
@@ -267,6 +270,13 @@ final class StudentEnrollmentsTable
                             foreach ($records as $record) {
                                 $pipeline = app(EnrollmentPipelineService::class);
 
+                                if ($record->workflow_runtime !== StudentEnrollment::WorkflowRuntimeLegacy) {
+                                    $failedCount++;
+                                    $errors[] = "Student ID {$record->student_id}: Policy workflows cannot use bulk quick enroll";
+
+                                    continue;
+                                }
+
                                 // Only process pending enrollments
                                 if (! $pipeline->isPending($record->status)) {
                                     $failedCount++;
@@ -278,9 +288,10 @@ final class StudentEnrollmentsTable
                                 try {
                                     DB::beginTransaction();
 
-                                    // Mark as verified by head dept
-                                    $record->status = $pipeline->getDepartmentVerifiedStatus();
-                                    $record->save();
+                                    $actor = Auth::user();
+                                    if ($actor instanceof \App\Models\User) {
+                                        app(\App\Enrollment\EnrollmentWorkflowCoordinator::class)->verifyAcademic($record, $actor);
+                                    }
 
                                     // Then use no-receipt verification
                                     $success = $enrollmentService->verifyByCashierWithoutReceipt(

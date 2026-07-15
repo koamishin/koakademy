@@ -1,0 +1,82 @@
+---
+title: Troubleshooting and deployment safety
+description: Diagnose policy validation, inheritance, simulation, migration, rollout, and extension problems without changing existing enrollments.
+---
+
+# Troubleshooting and deployment safety
+
+## Rollout states
+
+| State                | Meaning                                          | Recommended action                                                    |
+| -------------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| Legacy active        | New enrollments use deployed legacy settings.    | Finish the global blueprint and compatibility report.                 |
+| Ready to activate    | Global policy and validations are ready.         | Run representative simulations, then activate deliberately.           |
+| Policy engine active | New enrollments use matching published policies. | Monitor events and keep legacy aliases for the compatibility release. |
+
+## Common operator problems
+
+### “Publish the global blueprint first”
+
+A scoped inheriting draft needs an active published global ancestor. Create or publish the global blueprint, then retry the scoped policy.
+
+### Inherited value is not what I expected
+
+Check the source badge and the strict ancestor list. Then run a simulation with the actual school, student type, program, period, and year level to see every matching layer.
+
+### Simulation says a required fact is unavailable
+
+The rule failed closed. Confirm that the representative student has the data and that its integration handler is registered. Remove or override the rule only if the school intentionally does not enforce it.
+
+### Simulation checksum changed
+
+The saved draft, an inherited active version, or publication permission candidate changed. Save and run simulation again. Never reuse an older checksum.
+
+### Workflow validation reports a cycle or unreachable step
+
+Keep all destinations forward, confirm the entry is the first card, make at least one final card, and ensure each non-final card has the protected Otherwise destination.
+
+### Extension is read-only
+
+The handler is compatible but does not implement operator metadata. It can run and be restored from backup. Ask the extension maintainer to implement `EnrollmentOperatorSchemaProvider`.
+
+## Deployment-safety checklist
+
+1. Apply additive migrations before enabling UI access.
+2. Keep the Pennant rollout flag off during import and backfill.
+3. Confirm original `student_enrollment.status` strings are unchanged.
+4. Review unknown-status and duplicate-enrollment migration warnings.
+5. Publish and simulate a legacy-compatible global preset.
+6. Test public, continuing, administrator, API, Filament, College, and TESDA paths while legacy remains active.
+7. Activate only after the compatibility report is clear.
+8. Monitor workflow failure and retry events after activation.
+9. Keep legacy route adapters and read-only settings for the compatibility release.
+
+:::caution[Do not rewrite deployed migrations]
+Policy rollout uses additive forward migrations. Existing status data, duplicates, and active enrollment behavior are preserved and reported—not deleted or silently merged.
+:::
+
+## Runtime guarantees
+
+- Existing rows default to `legacy`.
+- Rollout changes only the runtime assigned to future enrollments.
+- Every policy enrollment pins an immutable compiled snapshot.
+- Controllers and Filament actions advance through the coordinator; they do not directly mutate workflow state.
+- The legacy `status` value remains the API/reporting projection.
+- Legacy department and cashier routes adapt to semantic policy actions for one compatibility release.
+- No-receipt emergency and bulk quick-enroll controls remain legacy-only.
+
+## Production operations
+
+After configuration or code deployment under Octane/FrankenPHP, reload long-running workers so new registry metadata and environment-backed documentation URLs are visible. Cache only immutable compiled snapshots; publication invalidates policy-list metadata.
+
+Set the contextual help base URL with:
+
+```dotenv
+DOCUMENTATION_URL=https://your-docs.example.edu
+```
+
+The default points to the hosted KoAkademy documentation. Self-hosted schools can override it without changing application code.
+
+## Escalation evidence
+
+When reporting a failure, include the enrollment ID, workflow runtime, snapshot/version ID, current step, event type, handler key, retry count, actor, and structured failure metadata. Do not include student secrets in public issue reports.

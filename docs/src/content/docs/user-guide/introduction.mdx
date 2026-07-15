@@ -1,0 +1,62 @@
+---
+title: Using KoAkademy
+description: A practical starting point for school administrators and staff using KoAkademy day to day.
+---
+
+# Using KoAkademy
+
+This User Guide is for the people who operate the school: administrators, registrars, department heads, cashiers, and other authorized staff. It explains what to do in KoAkademy and what each setting changes. Installation, server configuration, programming, extensions, and APIs are kept in the separate **Developer Docs** area.
+
+## Start with your assigned workspace
+
+After signing in, use the sidebar to open the area related to your responsibility. The exact pages and actions you see depend on your permissions.
+
+| If you are responsible for | Start here             | What you normally do                                                               |
+| -------------------------- | ---------------------- | ---------------------------------------------------------------------------------- |
+| School setup               | System Management      | Review school years, semesters, programs, roles, and enrollment availability.      |
+| Student records            | Students               | Create or update student information and review academic history.                  |
+| Curriculum and classes     | Curriculum and Classes | Prepare subjects, curriculum assignments, sections, schedules, and class capacity. |
+| Enrollment                 | Enrollments            | Review applications, resolve blockers, complete approvals, and monitor progress.   |
+| Tuition and payments       | Finance                | Review assessments, record payments, and complete payment verification.            |
+| Oversight                  | Dashboards and Reports | Monitor enrollment, finance, activity, and operational exceptions.                 |
+
+:::note[What this does]
+KoAkademy shows only the actions your account is allowed to perform. If a page or button is missing, ask an administrator to review your permission instead of sharing another person's account.
+:::
+
+## A safe daily workflow
+
+1. **Confirm the active school year and semester.** This prevents records from being added to the wrong academic period.
+2. **Check alerts and unfinished work.** Resolve blocked enrollments, incomplete documents, payment issues, or full classes before starting new work.
+3. **Use the purpose-built action for the task.** Avoid changing reporting statuses simply to move a record forward.
+4. **Read the confirmation message.** KoAkademy explains whether an action was saved, queued, rejected, or needs another step.
+5. **Review the result.** Confirm the student, academic period, amount, and next responsible office before leaving the page.
+
+## Configure enrollment without code
+
+Enrollment Blueprints control who may enroll, required documents, subject and class assignment, tuition and payment rules, approvals, and notifications.
+
+Use this safe sequence whenever you configure enrollment:
+
+1. Choose a preset and scope.
+2. Change only what is different for that school, student type, program, or period.
+3. Save the draft.
+4. Simulate a representative student and resolve every blocker.
+5. Publish the validated version.
+6. Activate the policy engine only when the readiness checklist is complete.
+
+Publishing or activating a blueprint affects **future enrollments only**. Existing legacy enrollments remain legacy, and active policy enrollments keep the snapshot they started with.
+
+Continue with **Enrollment Blueprints → Quick start — preset to activation** in the navigation.
+
+## Before making an important change
+
+- Confirm that you are working in the correct school and academic period.
+- Read the “What this does” and impact guidance beside the setting.
+- Test configuration changes with simulation before publication.
+- Add clear change notes so another administrator can understand the decision later.
+- Use rollback or reopen only through the authorized action provided by KoAkademy.
+
+## Looking for technical setup?
+
+Choose **Developer Docs** at the top of this page for installation, Docker deployment, environment configuration, contribution workflow, and extension development. Choose **API Reference** for integration endpoints and request formats.

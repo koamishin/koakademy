@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enrollment\EnrollmentWorkflowCoordinator;
 use App\Enums\StudentStatus;
 use App\Enums\StudentType;
 use App\Http\Requests\StoreEnrollmentRegistrationRequest;
@@ -121,7 +122,7 @@ final class EnrollmentRegistrationController extends Controller
         ]);
     }
 
-    public function store(StoreEnrollmentRegistrationRequest $request, GeneralSettingsService $settings): RedirectResponse
+    public function store(StoreEnrollmentRegistrationRequest $request, GeneralSettingsService $settings, EnrollmentWorkflowCoordinator $workflowCoordinator): RedirectResponse
     {
         $payload = $request->validated();
         $studentTypeValue = $payload['student_type'] ?? '';
@@ -204,7 +205,7 @@ final class EnrollmentRegistrationController extends Controller
         }
 
         /** @var Student $student */
-        $student = DB::transaction(function () use ($request, $payload, $studentType, $birthDate, $courseId, $academicYear, $settings): Student {
+        $student = DB::transaction(function () use ($request, $payload, $studentType, $birthDate, $courseId, $academicYear, $settings, $workflowCoordinator): Student {
             $studentId = Student::generateNextId($studentType);
 
             $studentContactId = null;
@@ -363,6 +364,7 @@ final class EnrollmentRegistrationController extends Controller
                     settings: $settings,
                     preferFirstYearSubjects: $this->shouldDefaultApplicantToFirstYear(),
                     shouldAutoAssignSubjects: $this->shouldAutoAssignSubjects(),
+                    workflowCoordinator: $workflowCoordinator,
                 );
             }
 
@@ -589,6 +591,7 @@ final class EnrollmentRegistrationController extends Controller
         Request $request,
         GeneralSettingsService $settings,
         EnrollmentService $enrollmentService,
+        EnrollmentWorkflowCoordinator $workflowCoordinator,
     ): RedirectResponse {
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
@@ -693,10 +696,10 @@ final class EnrollmentRegistrationController extends Controller
         }
 
         try {
-            [$enrollment, $tuition] = DB::transaction(function () use ($validated, $student, $schoolYear, $semester, $enrollmentService): array {
+            [$enrollment, $tuition] = DB::transaction(function () use ($validated, $student, $schoolYear, $semester, $enrollmentService, $workflowCoordinator): array {
                 $schoolId = $this->resolveSiteSchoolId($student);
 
-                $enrollment = StudentEnrollment::query()->create([
+                $enrollment = $workflowCoordinator->create([
                     'school_id' => $schoolId,
                     'student_id' => $student->id,
                     'course_id' => $student->course_id,
@@ -918,6 +921,7 @@ final class EnrollmentRegistrationController extends Controller
         GeneralSettingsService $settings,
         bool $preferFirstYearSubjects,
         bool $shouldAutoAssignSubjects,
+        EnrollmentWorkflowCoordinator $workflowCoordinator,
     ): void {
         $schoolYearStart = $settings->getSystemDefaultSchoolYearStart();
         $schoolYear = $schoolYearStart.' - '.($schoolYearStart + 1);
@@ -925,18 +929,20 @@ final class EnrollmentRegistrationController extends Controller
         $schoolId = $this->resolveSiteSchoolId($student);
         $targetAcademicYear = $preferFirstYearSubjects ? 1 : ($academicYear ?: 1);
 
-        $enrollment = StudentEnrollment::query()->firstOrCreate(
-            [
-                'student_id' => $student->id,
-                'course_id' => $student->course_id,
-                'school_year' => $schoolYear,
-                'semester' => $semester,
-            ],
-            [
-                'school_id' => $schoolId,
-                'academic_year' => $targetAcademicYear,
-            ],
-        );
+        $enrollment = StudentEnrollment::query()->where([
+            'student_id' => $student->id,
+            'course_id' => $student->course_id,
+            'school_year' => $schoolYear,
+            'semester' => $semester,
+        ])->first();
+        $enrollment ??= $workflowCoordinator->create([
+            'student_id' => $student->id,
+            'course_id' => $student->course_id,
+            'school_year' => $schoolYear,
+            'semester' => $semester,
+            'school_id' => $schoolId,
+            'academic_year' => $targetAcademicYear,
+        ]);
 
         if (! $shouldAutoAssignSubjects || ! $student->course_id) {
             return;

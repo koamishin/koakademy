@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\StudentEnrollments\Api;
 
+use App\Enrollment\EnrollmentWorkflowCoordinator;
 use App\Filament\Resources\StudentEnrollments\Api\Transformers\StudentEnrollmentTransformer;
 use App\Http\Controllers\Controller;
 use App\Models\StudentEnrollment;
+use App\Models\User;
 use App\Services\GeneralSettingsService;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -19,8 +21,49 @@ use Illuminate\Validation\ValidationException;
 final class StudentEnrollmentController extends Controller
 {
     public function __construct(
-        private readonly GeneralSettingsService $settingsService
+        private readonly GeneralSettingsService $settingsService,
+        private readonly EnrollmentWorkflowCoordinator $workflowCoordinator,
     ) {}
+
+    public function transition(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'transition_key' => ['nullable', 'string', 'max:80'],
+            'idempotency_key' => ['required', 'string', 'max:96'],
+            'payload' => ['nullable', 'array'],
+        ]);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 403);
+        $enrollment = StudentEnrollment::query()->findOrFail($id);
+        $this->authorize('update', $enrollment);
+
+        return response()->json($this->workflowCoordinator->transition(
+            $enrollment,
+            $actor,
+            $validated['transition_key'] ?? null,
+            $validated['payload'] ?? [],
+            $validated['idempotency_key'],
+        ));
+    }
+
+    public function reopen(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'target_step_key' => ['nullable', 'string', 'max:80'],
+            'reason' => ['required', 'string', 'max:2000'],
+            'idempotency_key' => ['required', 'string', 'max:96'],
+        ]);
+        $actor = $request->user();
+        abort_unless($actor instanceof User, 403);
+
+        return response()->json($this->workflowCoordinator->reopen(
+            StudentEnrollment::query()->findOrFail($id),
+            $actor,
+            $validated['target_step_key'] ?? null,
+            $validated['reason'],
+            $validated['idempotency_key'],
+        ));
+    }
 
     /**
      * Display a listing of student enrollments
@@ -37,6 +80,8 @@ final class StudentEnrollmentController extends Controller
                 'studentTuition',
                 'additionalFees',
                 'resources',
+                'policySnapshot',
+                'workflowEvents' => fn ($query) => $query->latest(),
             ]);
 
         // Filter by current academic period if requested
@@ -130,21 +175,19 @@ final class StudentEnrollmentController extends Controller
         DB::beginTransaction();
 
         try {
-            $enrollment = StudentEnrollment::create([
-                'student_id' => $request->input('student_id'),
-                'course_id' => $request->input('course_id'),
-                'semester' => $request->input('semester'),
-                'academic_year' => $request->input('academic_year'),
+            $validated = $validator->validated();
+            $enrollment = $this->workflowCoordinator->create([
+                'student_id' => $validated['student_id'],
+                'course_id' => $validated['course_id'],
+                'semester' => $validated['semester'],
+                'academic_year' => $validated['academic_year'],
                 'school_year' => $this->settingsService->getCurrentSchoolYearString(),
-                'remarks' => $request->input('remarks'),
-            ]);
-
-            // Create subject enrollments if provided
-            if ($request->filled('subjects')) {
-                foreach ($request->input('subjects', []) as $subject) {
+                'remarks' => $validated['remarks'] ?? null,
+            ], function (StudentEnrollment $enrollment) use ($validated): void {
+                foreach ($validated['subjects'] ?? [] as $subject) {
                     $enrollment->subjectsEnrolled()->create($subject);
                 }
-            }
+            });
 
             DB::commit();
 
@@ -186,6 +229,8 @@ final class StudentEnrollmentController extends Controller
                 'studentTuition',
                 'additionalFees',
                 'resources',
+                'policySnapshot',
+                'workflowEvents' => fn ($query) => $query->latest(),
             ]);
 
         // Include trashed if requested
@@ -229,17 +274,22 @@ final class StudentEnrollmentController extends Controller
             ], 422);
         }
 
+        if ($enrollment->workflow_runtime === StudentEnrollment::WorkflowRuntimePolicyV1 && $request->has('status')) {
+            return response()->json([
+                'message' => 'Policy enrollment statuses can only change through a workflow transition.',
+            ], 422);
+        }
+
         DB::beginTransaction();
 
         try {
-            $enrollment->update($request->only([
-                'student_id',
-                'course_id',
-                'semester',
-                'academic_year',
-                'status',
-                'remarks',
-            ]));
+            $validated = $validator->validated();
+            $status = $validated['status'] ?? null;
+            unset($validated['status']);
+            $enrollment->update($validated);
+            if (is_string($status)) {
+                $this->workflowCoordinator->updateLegacyReportingStatus($enrollment, $status);
+            }
 
             DB::commit();
 

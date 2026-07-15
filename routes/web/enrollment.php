@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Symfony\Component\Finder\SplFileInfo;
 
 Route::get('/enrollment', [EnrollmentRegistrationController::class, 'create'])
     ->name('enrollment.create');
@@ -35,27 +36,77 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
         return redirect('/docs/v1/introduction');
     }
 
+    $legacyGuideDirectory = base_path('docs/guide');
+    $legacyApiDirectory = base_path('docs/api');
+    $currentDocumentationDirectory = base_path('docs/src/content/docs');
+    $usesLegacyDocumentation = File::isDirectory($legacyGuideDirectory) && File::isDirectory($legacyApiDirectory);
+    $guideDirectory = $usesLegacyDocumentation ? $legacyGuideDirectory : $currentDocumentationDirectory;
+    $apiDirectory = $usesLegacyDocumentation ? $legacyApiDirectory : "{$currentDocumentationDirectory}/api";
+
+    abort_unless(File::isDirectory($guideDirectory) && File::isDirectory($apiDirectory), 404);
+
+    $operatorDocumentationPaths = [
+        'introduction' => 'user-guide/introduction',
+    ];
+    $developerDocumentationPaths = [
+        'developer-introduction' => 'getting-started/introduction',
+        'installation' => 'getting-started/installation',
+        'docker' => 'getting-started/docker',
+        'configuration' => 'getting-started/configuration',
+        'troubleshooting' => 'getting-started/troubleshooting',
+        'contributing' => 'getting-started/contributing',
+        'development' => 'development',
+        'enrollment-policy-extensions' => 'development/enrollment-policy-extensions',
+    ];
+
     $type = 'guide';
-    if (Str::startsWith($slug, 'api-') || File::exists(base_path("docs/api/{$slug}.mdx"))) {
+    if (Str::startsWith($slug, 'api-') || File::exists("{$apiDirectory}/{$slug}.mdx")) {
         $type = 'api';
+    } elseif (! $usesLegacyDocumentation && array_key_exists($slug, $developerDocumentationPaths)) {
+        $type = 'developer';
     }
 
     $path = null;
 
-    if ($type === 'guide') {
-        $files = File::allFiles(base_path('docs/guide'));
+    if ($type !== 'api') {
+        $currentDocumentationPaths = [...$operatorDocumentationPaths, ...$developerDocumentationPaths];
+        $currentDocumentationPath = $currentDocumentationPaths[$slug] ?? null;
+
+        if (! $usesLegacyDocumentation && $currentDocumentationPath && File::exists("{$guideDirectory}/{$currentDocumentationPath}.mdx")) {
+            $path = "{$guideDirectory}/{$currentDocumentationPath}.mdx";
+        }
+
+        $files = File::allFiles($guideDirectory);
         foreach ($files as $file) {
+            if ($path) {
+                break;
+            }
+
+            if (! $usesLegacyDocumentation) {
+                $allowedDirectories = $type === 'developer'
+                    ? ['getting-started', 'development']
+                    : ['user-guide', 'enrollment-policies'];
+                $allowedPrefixes = array_map(
+                    fn (string $directory): string => "{$guideDirectory}/{$directory}".DIRECTORY_SEPARATOR,
+                    $allowedDirectories,
+                );
+
+                if (! Str::startsWith($file->getPathname(), $allowedPrefixes)) {
+                    continue;
+                }
+            }
+
             if ($file->getFilenameWithoutExtension() === $slug) {
                 $path = $file->getPathname();
                 break;
             }
         }
     } else {
-        $apiFile = base_path("docs/api/{$slug}.mdx");
+        $apiFile = "{$apiDirectory}/{$slug}.mdx";
         if (File::exists($apiFile)) {
             $path = $apiFile;
-        } elseif (File::exists(base_path("docs/api/{$slug}.md"))) {
-            $path = base_path("docs/api/{$slug}.md");
+        } elseif (File::exists("{$apiDirectory}/{$slug}.md")) {
+            $path = "{$apiDirectory}/{$slug}.md";
         }
     }
 
@@ -83,25 +134,77 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
         }
     }
 
-    preg_match_all('/<!--\s*title-nav:\s*(.+?)\s*-->/', $body, $tocMatches);
-    foreach ($tocMatches[1] ?? [] as $title) {
-        $id = Str::slug(mb_trim($title));
-        $tableOfContents[] = [
-            'id' => $id,
-            'title' => mb_trim($title),
-            'level' => 2,
-        ];
+    if (! $usesLegacyDocumentation) {
+        $body = preg_replace('/^import\s+.+@astrojs\/starlight\/components[\'\"];\s*$/m', '', $body) ?? $body;
+        $body = preg_replace('/^[\t ]*<Card\s+[^>]*title=[\'\"]([^\'\"]+)[\'\"][^>]*>/im', '### $1', $body) ?? $body;
+        $body = preg_replace('/^[\t ]*<TabItem\s+[^>]*label=[\'\"]([^\'\"]+)[\'\"][^>]*>/im', '### $1', $body) ?? $body;
+        $body = preg_replace('/<\/?(?:Card|CardGrid|Steps|Tabs|TabItem)(?:\s[^>]*)?>/i', '', $body) ?? $body;
+        $body = preg_replace_callback(
+            '/^:::(note|tip|caution|danger)(?:\[([^\]]+)\])?\s*\R(.*?)^:::\s*$/ms',
+            static function (array $matches): string {
+                $title = $matches[2] ?? Str::title($matches[1]);
+
+                return "### {$title}\n\n".mb_trim($matches[3]);
+            },
+            $body,
+        ) ?? $body;
+        $body = preg_replace('/!\[([^\]]+)]\(([^)]+)\)/', '[$1]($2)', $body) ?? $body;
+    }
+
+    if ($usesLegacyDocumentation) {
+        preg_match_all('/<!--\s*title-nav:\s*(.+?)\s*-->/', $body, $tocMatches);
+        foreach ($tocMatches[1] ?? [] as $title) {
+            $tableOfContents[] = [
+                'id' => Str::slug(mb_trim($title)),
+                'title' => mb_trim($title),
+                'level' => 2,
+            ];
+        }
+    } else {
+        preg_match_all('/^(#{2,3})\s+(.+)$/m', $body, $headingMatches, PREG_SET_ORDER);
+        foreach ($headingMatches as $heading) {
+            $title = mb_trim($heading[2]);
+            $tableOfContents[] = [
+                'id' => Str::slug($title),
+                'title' => $title,
+                'level' => mb_strlen($heading[1]),
+            ];
+        }
     }
 
     $navigation = [];
 
-    if ($type === 'guide') {
-        $directories = File::directories(base_path('docs/guide'));
-        foreach ($directories as $dir) {
-            $dirName = basename($dir);
-            $title = Str::title(str_replace('-', ' ', $dirName));
+    if ($type !== 'api') {
+        $documentationSections = $usesLegacyDocumentation
+            ? collect(File::directories($guideDirectory))
+                ->mapWithKeys(fn (string $directory): array => [basename($directory) => Str::title(str_replace('-', ' ', basename($directory)))])
+                ->all()
+            : match ($type) {
+                'developer' => [
+                    'getting-started' => 'Setup and deployment',
+                    'development' => 'Development and extensions',
+                ],
+                default => [
+                    'user-guide' => 'Using KoAkademy',
+                    'enrollment-policies' => 'Enrollment Blueprints',
+                ],
+            };
 
-            $files = File::files($dir);
+        foreach ($documentationSections as $directoryName => $title) {
+            $dir = "{$guideDirectory}/{$directoryName}";
+            if (! File::isDirectory($dir)) {
+                continue;
+            }
+
+            $files = $usesLegacyDocumentation ? File::files($dir) : File::allFiles($dir);
+            if (! $usesLegacyDocumentation && $directoryName === 'development') {
+                $rootDevelopmentFiles = array_filter(
+                    File::files($guideDirectory),
+                    fn (SplFileInfo $file): bool => $file->getFilenameWithoutExtension() === 'development',
+                );
+                $files = [...$rootDevelopmentFiles, ...$files];
+            }
+
             $children = [];
 
             foreach ($files as $file) {
@@ -111,8 +214,19 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
                     $fileTitle = mb_trim($m[1]);
                 }
 
+                $relativePath = Str::of($file->getPathname())
+                    ->after($guideDirectory.DIRECTORY_SEPARATOR)
+                    ->beforeLast('.')
+                    ->replace(DIRECTORY_SEPARATOR, '/')
+                    ->toString();
+                $navigationSlug = match ($relativePath) {
+                    'user-guide/introduction' => 'introduction',
+                    'getting-started/introduction' => 'developer-introduction',
+                    default => $file->getFilenameWithoutExtension(),
+                };
+
                 $children[] = [
-                    'id' => $file->getFilenameWithoutExtension(),
+                    'id' => $navigationSlug,
                     'title' => $fileTitle ?? Str::title(str_replace('-', ' ', $file->getFilenameWithoutExtension())),
                     'type' => 'page',
                 ];
@@ -120,7 +234,7 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
 
             if (! empty($children)) {
                 $navigation[] = [
-                    'id' => $dirName,
+                    'id' => $directoryName,
                     'title' => $title,
                     'type' => 'category',
                     'children' => $children,
@@ -128,7 +242,7 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
             }
         }
     } else {
-        $files = File::files(base_path('docs/api'));
+        $files = File::files($apiDirectory);
         $children = [];
         foreach ($files as $file) {
             $fileContent = File::get($file->getPathname());

@@ -149,6 +149,13 @@ final class StoreEnrollmentRegistrationRequest extends FormRequest
         ];
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->filled('income_bracket_mode')) {
+            $this->merge(['income_bracket_mode' => (string) config('income_brackets.default_mode', 'annual')]);
+        }
+    }
+
     /**
      * @return list<string>
      */

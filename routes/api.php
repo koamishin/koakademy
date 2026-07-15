@@ -66,6 +66,8 @@ Route::middleware(['auth:sanctum'])->prefix('enrollments')->name('api.enrollment
     // Standard CRUD operations
     Route::get('/', [StudentEnrollmentController::class, 'index'])->name('index');
     Route::post('/', [StudentEnrollmentController::class, 'store'])->name('store');
+    Route::post('/{id}/transitions', [StudentEnrollmentController::class, 'transition'])->whereNumber('id')->name('transitions.store');
+    Route::post('/{id}/reopen', [StudentEnrollmentController::class, 'reopen'])->whereNumber('id')->name('reopen');
     Route::get('/{id}', [StudentEnrollmentController::class, 'show'])->name('show');
     Route::put('/{id}', [StudentEnrollmentController::class, 'update'])->name('update');
     Route::patch('/{id}', [StudentEnrollmentController::class, 'update'])->name('patch');

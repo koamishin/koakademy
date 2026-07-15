@@ -1,0 +1,73 @@
+---
+title: Subjects, classes, tuition, and payment
+description: Configure assignment, capacity, fees, discounts, payment methods, and minimum-payment gates.
+---
+
+# Subjects, classes, tuition, and payment
+
+These settings control what the student is enrolled in and what must be paid before the journey can complete.
+
+## Subject assignment
+
+Choose one assignment strategy for a matched blueprint:
+
+- **Manual** — staff select subjects. Safest for a first rollout or irregular curricula.
+- **Recommendation only** — the system suggests curriculum subjects but staff confirm them.
+- **Automatic curriculum** — valid curriculum subjects are assigned automatically.
+
+:::note[What this does]
+Assignment strategies are selected by stable keys and validated settings. They do not allow arbitrary formulas or scripts.
+:::
+
+## Class assignment
+
+Manual assignment leaves sections to staff. First-available assignment reserves a class only inside a database transaction and locks capacity records, protecting the final seat from concurrent enrollments.
+
+Before enabling automatic class assignment, confirm:
+
+- Class capacities are accurate.
+- Schedules are complete.
+- Conflict checks are enabled when required.
+- Staff know how to retry a failed transition.
+
+## Tuition calculation
+
+The core course-rate strategy uses the school’s existing rate configuration, supported discounts, and additional fees. Simulation reports the selected strategy and fee result without writing an assessment.
+
+## Payment methods
+
+Choose the methods accepted by this policy, such as cash, bank transfer, or supported online channels. A method must also be operational in the school’s finance configuration.
+
+## Minimum-payment gates
+
+- **No minimum** — payment does not block the configured completion action.
+- **Fixed amount** — require a specific currency amount.
+- **Percentage** — require a portion of calculated tuition.
+
+:::caution[Billing sections replace atomically]
+When a scoped blueprint overrides billing, it owns the complete billing strategy and payment-method section. This avoids mixing incompatible pieces from multiple strategies.
+:::
+
+## Common scenarios
+
+### Manual enrollment with payment later
+
+Use manual assignment, course-rate tuition, accepted payment methods, and **No minimum**. Keep assessment generation in the workflow if students still need an official statement.
+
+### Reserve a class after cashier verification
+
+Place class assignment on the cashier approval transition or the next authorized step. Keep the capacity action transactional and test a full class and a final-seat contention case.
+
+### Scholarship discount
+
+Configure the supported discount in the billing strategy and use an eligibility rule for approved scholarship status. Do not encode an arbitrary formula in a backup file.
+
+## Verify with simulation
+
+Test at least:
+
+1. A regular student with full tuition
+2. A discounted student
+3. A student below the payment gate
+4. A student at the unit limit
+5. A student competing for the last available class seat
