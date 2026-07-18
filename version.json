@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.7.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.7.1",
-  "commit": "29677c32ea59f5ce85d559e7db76e27f400cb16c",
+  "version": "1.10.0-dev.7.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.7.2",
+  "commit": "f20d2e405d5b551555e1e077ec26c036a236f876",
   "branch": "master",
-  "timestamp": "2026-07-18T03:29:25Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29628757613",
+  "timestamp": "2026-07-18T04:56:14Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29631259539",
   "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.7.1 - fix: keep class filters clearable",
-    "previous": "1.10.0-dev.7.0"
+    "current": "Version 1.10.0-dev.7.2 - fix: preserve Scout search after Meilisearch redeploys",
+    "previous": "1.10.0-dev.7.1"
   },
   "metadata": {
     "author": "yukazakiri",
