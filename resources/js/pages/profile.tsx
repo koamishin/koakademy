@@ -151,8 +151,6 @@ export default function ProfilePage() {
             postal_code?: string;
             bio?: string;
             website?: string;
-            department?: string;
-            position?: string;
             security_two_factor_enabled: boolean;
             two_factor_enabled: boolean;
             email_two_factor_enabled: boolean;
@@ -299,8 +297,6 @@ export default function ProfilePage() {
         postal_code: user.postal_code || "",
         bio: user.bio || "",
         website: user.website || "",
-        department: user.department || "",
-        position: user.position || "",
         avatar: null as File | null,
     });
 
@@ -373,12 +369,15 @@ export default function ProfilePage() {
     const campusLocation = [userForm.data.city, userForm.data.state, userForm.data.country].filter(Boolean).join(", ");
     const officeHoursDisplay = facultyForm.data.office_hours || "Set your weekly hours";
     const biographyPreview = facultyForm.data.biography || userForm.data.bio || "Share your story and expertise.";
+    const publicProfileSubtitle = isStudent
+        ? student?.course?.title || "Student"
+        : isFaculty
+          ? facultyForm.data.department || "Faculty Member"
+          : user.role;
 
     const completionFields = [
         userForm.data.name,
         userForm.data.email,
-        userForm.data.department,
-        userForm.data.position,
         userForm.data.bio,
         facultyForm.data.office_hours,
         facultyForm.data.education,
@@ -410,8 +409,6 @@ export default function ProfilePage() {
             userForm.data.postal_code !== (user.postal_code || "") ||
             userForm.data.bio !== (user.bio || "") ||
             userForm.data.website !== (user.website || "") ||
-            userForm.data.department !== (user.department || "") ||
-            userForm.data.position !== (user.position || "") ||
             userForm.data.avatar !== null;
 
         const hasFacultyChanges =
@@ -612,8 +609,7 @@ export default function ProfilePage() {
                         avatarPreview={avatarPreview}
                         avatarInputRef={avatarInputRef}
                         hasChanges={hasChanges}
-                        department={userForm.data.department}
-                        position={userForm.data.position}
+                        department={isFaculty ? facultyForm.data.department : undefined}
                         campusLocation={campusLocation}
                         facultyName={facultyName}
                         onAvatarSelect={handleAvatarSelect}
@@ -866,7 +862,7 @@ export default function ProfilePage() {
                                         <ProfileSidebar
                                             user={user}
                                             avatarPreview={avatarPreview}
-                                            position={userForm.data.position}
+                                            subtitle={publicProfileSubtitle}
                                             biographyPreview={biographyPreview}
                                             isFaculty={isFaculty}
                                         />

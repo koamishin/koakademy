@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
-use App\Features\Onboarding\FacultyToolkit;
+use App\Features\Toggles\FacultyToolkit;
 use App\Models\Faculty;
 use App\Models\User;
 
@@ -46,7 +46,12 @@ it('returns correct endpoints for faculty portal', function (): void {
     );
 });
 
-it('can update user profile information', function (): void {
+it('can update user profile information without changing legacy department and position', function (): void {
+    $this->user->update([
+        'department' => 'Existing Department',
+        'position' => 'Existing Position',
+    ]);
+
     $response = $this
         ->actingAs($this->user)
         ->put(portalUrlForAdministrators('/faculty/profile'), [
@@ -64,8 +69,8 @@ it('can update user profile information', function (): void {
     expect($this->user->name)->toBe('Updated Name');
     expect($this->user->email)->toBe('updated@example.com');
     expect($this->user->phone)->toBe('+63 912 345 6789');
-    expect($this->user->department)->toBe('Computer Science');
-    expect($this->user->position)->toBe('Senior Instructor');
+    expect($this->user->department)->toBe('Existing Department');
+    expect($this->user->position)->toBe('Existing Position');
 });
 
 it('can update faculty specific fields including birth date and gender', function (): void {
@@ -231,6 +236,8 @@ it('returns faculty data when faculty record exists', function (): void {
     $response->assertSuccessful();
     $response->assertInertia(fn ($page) => $page
         ->has('faculty')
+        ->missing('user.department')
+        ->missing('user.position')
         ->where('faculty.first_name', 'Test')
         ->where('faculty.last_name', 'Faculty')
         ->where('faculty.department', 'CCS')

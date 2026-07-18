@@ -152,8 +152,6 @@ final class ProfileController extends Controller
                 'postal_code' => $user->postal_code,
                 'bio' => $user->bio,
                 'website' => $user->website,
-                'department' => $user->department,
-                'position' => $user->position,
                 'security_two_factor_enabled' => $user->security_two_factor_enabled ?? true,
                 'two_factor_enabled' => ! is_null($user->app_authentication_secret),
                 'email_two_factor_enabled' => $user->hasEmailAuthentication(),
@@ -433,8 +431,6 @@ final class ProfileController extends Controller
             'postal_code' => 'nullable|string|max:20',
             'bio' => 'nullable|string',
             'website' => [Rule::excludeIf(! $developerModeEnabled), 'nullable', 'url', 'max:255'],
-            'department' => 'nullable|string|max:255',
-            'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
@@ -443,7 +439,7 @@ final class ProfileController extends Controller
                 ->withErrors($validator->errors())
                 ->withInput($request->only([
                     'name', 'email', 'phone', 'address', 'city', 'state',
-                    'country', 'postal_code', 'bio', 'website', 'department', 'position',
+                    'country', 'postal_code', 'bio', 'website',
                 ]));
         }
 
@@ -479,8 +475,6 @@ final class ProfileController extends Controller
             'country' => $validated['country'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
             'bio' => $validated['bio'] ?? null,
-            'department' => $validated['department'] ?? null,
-            'position' => $validated['position'] ?? null,
             'avatar_url' => $avatarUrl,
         ];
 

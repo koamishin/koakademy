@@ -40,7 +40,7 @@ export function NavUser({
         role?: string;
     };
 }) {
-    const { isMobile } = useSidebar();
+    const { isMobile, setOpenMobile } = useSidebar();
     const { props, url } = usePage<{
         settings?: {
             activeSchoolId?: string | number;
@@ -58,6 +58,7 @@ export function NavUser({
     }>();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
     const [showLogoutDialog, setShowLogoutDialog] = React.useState(false);
+    const triggerRef = React.useRef<HTMLButtonElement>(null);
 
     const settings = props.settings;
     const pathname = url.split("?")[0];
@@ -102,6 +103,17 @@ export function NavUser({
         });
     };
 
+    const closeAccountMenu = () => {
+        setIsMenuOpen(false);
+
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    };
+
+    const menuPortalContainer =
+        isMobile && isMenuOpen ? (triggerRef.current?.closest<HTMLElement>('[data-slot="sheet-content"]') ?? undefined) : undefined;
+
     return (
         <SidebarMenu>
             <SidebarMenuItem>
@@ -112,7 +124,7 @@ export function NavUser({
                             size="lg"
                             className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground md:h-8 md:p-0"
                         >
-                            <button type="button">
+                            <button ref={triggerRef} type="button">
                                 <Avatar className="h-8 w-8 rounded-lg">
                                     <AvatarImage src={user.avatar} alt={user.name} />
                                     <AvatarFallback className="rounded-lg">{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
@@ -126,10 +138,11 @@ export function NavUser({
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                        side={isMobile ? "bottom" : "right"}
+                        className="w-(--anchor-width) min-w-56 rounded-lg"
+                        side={isMobile ? "top" : "right"}
                         align="end"
                         sideOffset={4}
+                        container={menuPortalContainer}
                     >
                         <DropdownMenuLabel className="p-0 font-normal">
                             <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
@@ -153,7 +166,7 @@ export function NavUser({
                                             <School className="mr-2 size-4" />
                                             <span>Switch Active School</span>
                                         </DropdownMenuSubTrigger>
-                                        <DropdownMenuSubContent>
+                                        <DropdownMenuSubContent container={menuPortalContainer}>
                                             <DropdownMenuRadioGroup value={activeSchoolId} onValueChange={handleSchoolChange}>
                                                 {availableSchools.map((school) => (
                                                     <DropdownMenuRadioItem key={school.id} value={school.id.toString()}>
@@ -170,14 +183,18 @@ export function NavUser({
                         <DropdownMenuSeparator />
                         <DropdownMenuGroup>
                             <DropdownMenuItem asChild>
-                                <Link href={accountHref} className="flex w-full cursor-pointer items-center">
+                                <Link href={accountHref} onClick={closeAccountMenu} className="flex w-full cursor-pointer items-center">
                                     <BadgeCheck className="mr-2 size-4" />
                                     Account
                                 </Link>
                             </DropdownMenuItem>
                             {isAdministratorContext && (
                                 <DropdownMenuItem asChild>
-                                    <Link href="/administrators/system-management" className="flex w-full cursor-pointer items-center">
+                                    <Link
+                                        href="/administrators/system-management"
+                                        onClick={closeAccountMenu}
+                                        className="flex w-full cursor-pointer items-center"
+                                    >
                                         <Settings className="mr-2 size-4" />
                                         System Settings
                                     </Link>

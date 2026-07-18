@@ -41,15 +41,18 @@ function DropdownMenuContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  container,
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    container?: MenuPrimitive.Portal.Props["container"]
+  }) {
   return (
-    <MenuPrimitive.Portal>
+    <MenuPrimitive.Portal container={container}>
       <MenuPrimitive.Positioner
         className="isolate z-50 outline-none"
         align={align}
@@ -95,13 +98,19 @@ function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  asChild = false,
+  children,
   ...props
 }: MenuPrimitive.Item.Props & {
   inset?: boolean
   variant?: "default" | "destructive"
+  asChild?: boolean
 }) {
+  const renderedChild = asChild && React.isValidElement(children) ? children : undefined
+
   return (
     <MenuPrimitive.Item
+      render={renderedChild}
       data-slot="dropdown-menu-item"
       data-inset={inset}
       data-variant={variant}
@@ -110,7 +119,9 @@ function DropdownMenuItem({
         className
       )}
       {...props}
-    />
+    >
+      {renderedChild ? undefined : children}
+    </MenuPrimitive.Item>
   )
 }
 

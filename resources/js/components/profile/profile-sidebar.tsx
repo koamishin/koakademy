@@ -8,12 +8,12 @@ interface ProfileSidebarProps {
         name: string;
     };
     avatarPreview?: string;
-    position?: string;
+    subtitle?: string;
     biographyPreview?: string;
     isFaculty: boolean;
 }
 
-export function ProfileSidebar({ user, avatarPreview, position, biographyPreview, isFaculty }: ProfileSidebarProps) {
+export function ProfileSidebar({ user, avatarPreview, subtitle, biographyPreview, isFaculty }: ProfileSidebarProps) {
     return (
         <div className="space-y-4 xl:sticky xl:top-24">
             <Card className="border-border/60 bg-card/75 rounded-lg shadow-sm">
@@ -68,7 +68,7 @@ export function ProfileSidebar({ user, avatarPreview, position, biographyPreview
                         </Avatar>
                         <div className="flex-1 space-y-1">
                             <p className="font-semibold">{user.name}</p>
-                            <p className="text-muted-foreground text-sm">{position}</p>
+                            {subtitle && <p className="text-muted-foreground text-sm">{subtitle}</p>}
                         </div>
                     </div>
                     {biographyPreview && (

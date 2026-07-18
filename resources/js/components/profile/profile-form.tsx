@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { PHILIPPINE_CITIES_MUNICIPALITIES, PHILIPPINE_PROVINCES, PHILIPPINE_REGIONS } from "@/data/philippine-geography";
-import { Building2, Edit3, Link2, Mail, MapPin, Save, UserRound } from "lucide-react";
+import { Edit3, Link2, Mail, MapPin, Save, UserRound } from "lucide-react";
 
 type UserProfileData = {
     name: string;
@@ -23,8 +23,6 @@ type UserProfileData = {
     postal_code: string;
     website: string;
     bio: string;
-    department: string;
-    position: string;
 };
 
 type FacultyProfileData = {
@@ -239,35 +237,6 @@ export function ProfileForm({
                                 aria-invalid={Boolean(userForm.errors.postal_code)}
                             />
                             <FieldError message={userForm.errors.postal_code} />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="department">Department</Label>
-                            <InputGroup className="h-9">
-                                <InputGroupAddon>
-                                    <Building2 />
-                                </InputGroupAddon>
-                                <InputGroupInput
-                                    id="department"
-                                    value={user.department}
-                                    onChange={(event) => userForm.setData("department", event.target.value)}
-                                    aria-invalid={Boolean(userForm.errors.department)}
-                                    placeholder="Computer Science"
-                                />
-                            </InputGroup>
-                            <FieldError message={userForm.errors.department} />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="position">Position</Label>
-                            <Input
-                                id="position"
-                                autoComplete="organization-title"
-                                value={user.position}
-                                onChange={(event) => userForm.setData("position", event.target.value)}
-                                aria-invalid={Boolean(userForm.errors.position)}
-                            />
-                            <FieldError message={userForm.errors.position} />
                         </div>
 
                         {developerModeEnabled && (

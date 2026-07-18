@@ -26,7 +26,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { User } from "@/types/user";
 import { Link, router, usePage } from "@inertiajs/react";
 import { IconSearch } from "@tabler/icons-react";
-import { ChevronDown, LogOut, Settings } from "lucide-react";
+import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface SiteHeaderProps {
@@ -148,9 +148,9 @@ export function SiteHeader({ user }: SiteHeaderProps) {
                                 <DropdownMenuItem asChild className="cursor-pointer rounded-lg">
                                     <Link href={profileLink} className="flex items-center gap-3 px-2 py-2.5">
                                         <span className="bg-muted flex size-8 items-center justify-center rounded-lg">
-                                            <Settings className="size-4" />
+                                            <UserRound className="size-4" />
                                         </span>
-                                        <span className="font-medium">Settings</span>
+                                        <span className="font-medium">Profile</span>
                                     </Link>
                                 </DropdownMenuItem>
 

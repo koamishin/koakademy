@@ -25,7 +25,6 @@ interface ProfileHeaderProps {
     avatarInputRef: React.RefObject<HTMLInputElement | null>;
     hasChanges: boolean;
     department?: string;
-    position?: string;
     campusLocation: string;
     facultyName: string;
     onAvatarSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -43,7 +42,6 @@ export function ProfileHeader({
     avatarInputRef,
     hasChanges,
     department,
-    position,
     campusLocation,
     facultyName,
     onAvatarSelect,
@@ -92,7 +90,7 @@ export function ProfileHeader({
                                     ? student?.course?.title
                                         ? `${student.course.title}${student.formatted_academic_year ? ` - ${student.formatted_academic_year}` : ""}`
                                         : "Student"
-                                    : facultyName || position || (isFaculty ? "Faculty Member" : "")}
+                                    : facultyName || (isFaculty ? "Faculty Member" : user.role)}
                             </p>
                             <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-2 text-xs sm:justify-start sm:gap-3">
                                 {isStudent && student?.course?.code && (
