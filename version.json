@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.7.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.7.2",
-  "commit": "f20d2e405d5b551555e1e077ec26c036a236f876",
+  "version": "1.10.0-dev.8.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.8.0",
+  "commit": "6b46d2c8cd15b25b5c7f3cc8e39d8892c48e4a45",
   "branch": "master",
-  "timestamp": "2026-07-18T04:56:14Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29631259539",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-18T07:44:07Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29636097399",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.7.2 - fix: preserve Scout search after Meilisearch redeploys",
-    "previous": "1.10.0-dev.7.1"
+    "current": "Version 1.10.0-dev.8.0 - feat: redesign profile forms with autocomplete",
+    "previous": "1.10.0-dev.7.2"
   },
   "metadata": {
     "author": "yukazakiri",
