@@ -157,6 +157,9 @@ return [
                 'filterableAttributes' => ['school_year', 'semester', '__soft_deleted'],
                 'searchableAttributes' => ['id', 'record_title', 'subject_code', 'subject_title', 'section', 'school_year', 'faculty'],
             ],
+            App\Models\ClassEnrollment::class => [
+                'filterableAttributes' => ['__soft_deleted'],
+            ],
             App\Models\StudentEnrollment::class => [
                 'filterableAttributes' => ['school_year', 'semester', 'status', '__soft_deleted'],
                 'searchableAttributes' => ['id', 'student_id', 'student_number', 'student_name', 'course_code', 'school_year', 'status'],
