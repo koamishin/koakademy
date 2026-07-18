@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.7.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.7.0",
-  "commit": "7ac1df44adc1785def4412adc181a327f234ffbc",
+  "version": "1.10.0-dev.7.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.7.1",
+  "commit": "29677c32ea59f5ce85d559e7db76e27f400cb16c",
   "branch": "master",
-  "timestamp": "2026-07-15T03:22:05Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29386142292",
-  "release_type": "feature",
+  "timestamp": "2026-07-18T03:29:25Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29628757613",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.7.0 - feat: Introduce enrollment policy engine and infrastructure",
-    "previous": "1.10.0-dev.6.2"
+    "current": "Version 1.10.0-dev.7.1 - fix: keep class filters clearable",
+    "previous": "1.10.0-dev.7.0"
   },
   "metadata": {
     "author": "yukazakiri",
