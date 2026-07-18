@@ -2,31 +2,68 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SchoolAutocompleteInput } from "@/components/ui/school-autocomplete-input";
 import { BookOpen, Save } from "lucide-react";
+
+type EducationData = {
+    elementary_school: string;
+    elementary_year_graduated: string;
+    high_school: string;
+    high_school_year_graduated: string;
+    senior_high_school: string;
+    senior_high_year_graduated: string;
+};
 
 interface StudentEducationFormProps {
     studentForm: {
-        data: {
-            education: {
-                elementary_school: string;
-                elementary_year_graduated: string;
-                high_school: string;
-                high_school_year_graduated: string;
-                senior_high_school: string;
-                senior_high_year_graduated: string;
-            };
-        };
-        setData: (key: string, value: any) => void;
+        data: StudentEducationFormData;
+        setData: <Key extends keyof StudentEducationFormData>(key: Key, value: StudentEducationFormData[Key]) => void;
         errors: Record<string, string>;
         processing: boolean;
     };
-    onSubmit: (e: React.FormEvent) => void;
+    onSubmit: (event: React.FormEvent) => void;
+    schoolOptionsEndpoint: string;
 }
 
-export function StudentEducationForm({ studentForm, onSubmit }: StudentEducationFormProps) {
+type StudentEducationFormData = {
+    education: EducationData;
+};
+
+const schoolSections = [
+    {
+        title: "Elementary",
+        schoolKey: "elementary_school",
+        yearKey: "elementary_year_graduated",
+        placeholder: "Search or enter elementary school",
+    },
+    {
+        title: "Junior high school",
+        schoolKey: "high_school",
+        yearKey: "high_school_year_graduated",
+        placeholder: "Search or enter junior high school",
+    },
+    {
+        title: "Senior high school",
+        schoolKey: "senior_high_school",
+        yearKey: "senior_high_year_graduated",
+        placeholder: "Search or enter senior high school",
+    },
+] as const satisfies ReadonlyArray<{
+    title: string;
+    schoolKey: keyof EducationData;
+    yearKey: keyof EducationData;
+    placeholder: string;
+}>;
+
+function FieldError({ message }: { message?: string }) {
+    return message ? <p className="text-destructive text-sm">{message}</p> : null;
+}
+
+export function StudentEducationForm({ studentForm, onSubmit, schoolOptionsEndpoint }: StudentEducationFormProps) {
+    const currentYear = new Date().getFullYear();
     const errorFor = (key: string) => studentForm.errors[key];
 
-    const updateEducation = (key: string, value: string) => {
+    const updateEducation = (key: keyof EducationData, value: string) => {
         studentForm.setData("education", {
             ...studentForm.data.education,
             [key]: value,
@@ -40,98 +77,55 @@ export function StudentEducationForm({ studentForm, onSubmit }: StudentEducation
                     <BookOpen className="h-5 w-5" />
                     Education History
                 </CardTitle>
-                <CardDescription>Your educational background</CardDescription>
+                <CardDescription>Search existing school records or enter a school that is not listed.</CardDescription>
             </CardHeader>
             <CardContent>
-                <form onSubmit={onSubmit} className="space-y-5">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="md:col-span-2">
-                            <h3 className="mb-2 font-semibold">Elementary</h3>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="elementary_school">School Name</Label>
-                            <Input
-                                id="elementary_school"
-                                value={studentForm.data.education.elementary_school}
-                                onChange={(e) => updateEducation("elementary_school", e.target.value)}
-                                placeholder="Davao Central Elementary School"
-                            />
-                            {errorFor("education.elementary_school") && (
-                                <p className="text-destructive text-sm">{errorFor("education.elementary_school")}</p>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="elementary_year_graduated">Year Graduated</Label>
-                            <Input
-                                id="elementary_year_graduated"
-                                value={studentForm.data.education.elementary_year_graduated}
-                                onChange={(e) => updateEducation("elementary_year_graduated", e.target.value)}
-                                placeholder="2016"
-                            />
-                            {errorFor("education.elementary_year_graduated") && (
-                                <p className="text-destructive text-sm">{errorFor("education.elementary_year_graduated")}</p>
-                            )}
-                        </div>
+                <form onSubmit={onSubmit} className="space-y-6">
+                    {schoolSections.map(({ title, schoolKey, yearKey, placeholder }) => {
+                        const schoolError = errorFor(`education.${schoolKey}`);
+                        const yearError = errorFor(`education.${yearKey}`);
 
-                        <div className="mt-4 md:col-span-2">
-                            <h3 className="mb-2 font-semibold">High School</h3>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="high_school">School Name</Label>
-                            <Input
-                                id="high_school"
-                                value={studentForm.data.education.high_school}
-                                onChange={(e) => updateEducation("high_school", e.target.value)}
-                                placeholder="Davao National High School"
-                            />
-                            {errorFor("education.high_school") && <p className="text-destructive text-sm">{errorFor("education.high_school")}</p>}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="high_school_year_graduated">Year Graduated</Label>
-                            <Input
-                                id="high_school_year_graduated"
-                                value={studentForm.data.education.high_school_year_graduated}
-                                onChange={(e) => updateEducation("high_school_year_graduated", e.target.value)}
-                                placeholder="2020"
-                            />
-                            {errorFor("education.high_school_year_graduated") && (
-                                <p className="text-destructive text-sm">{errorFor("education.high_school_year_graduated")}</p>
-                            )}
-                        </div>
-
-                        <div className="mt-4 md:col-span-2">
-                            <h3 className="mb-2 font-semibold">Senior High School</h3>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="senior_high_school">School Name</Label>
-                            <Input
-                                id="senior_high_school"
-                                value={studentForm.data.education.senior_high_school}
-                                onChange={(e) => updateEducation("senior_high_school", e.target.value)}
-                                placeholder="Davao Senior High School"
-                            />
-                            {errorFor("education.senior_high_school") && (
-                                <p className="text-destructive text-sm">{errorFor("education.senior_high_school")}</p>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="senior_high_year_graduated">Year Graduated</Label>
-                            <Input
-                                id="senior_high_year_graduated"
-                                value={studentForm.data.education.senior_high_year_graduated}
-                                onChange={(e) => updateEducation("senior_high_year_graduated", e.target.value)}
-                                placeholder="2022"
-                            />
-                            {errorFor("education.senior_high_year_graduated") && (
-                                <p className="text-destructive text-sm">{errorFor("education.senior_high_year_graduated")}</p>
-                            )}
-                        </div>
-                    </div>
+                        return (
+                            <section key={schoolKey} className="border-border/70 border-b pb-6 last:border-b-0 last:pb-0">
+                                <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+                                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_10rem]">
+                                    <div className="min-w-0 space-y-2">
+                                        <Label htmlFor={schoolKey}>School name</Label>
+                                        <SchoolAutocompleteInput
+                                            id={schoolKey}
+                                            value={studentForm.data.education[schoolKey]}
+                                            onChange={(value) => updateEducation(schoolKey, value)}
+                                            fieldName={schoolKey}
+                                            endpoint={schoolOptionsEndpoint}
+                                            placeholder={placeholder}
+                                            aria-invalid={Boolean(schoolError)}
+                                        />
+                                        <FieldError message={schoolError} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor={yearKey}>Year graduated</Label>
+                                        <Input
+                                            id={yearKey}
+                                            type="number"
+                                            inputMode="numeric"
+                                            min={1900}
+                                            max={currentYear}
+                                            value={studentForm.data.education[yearKey]}
+                                            onChange={(event) => updateEducation(yearKey, event.target.value)}
+                                            aria-invalid={Boolean(yearError)}
+                                            placeholder={String(currentYear)}
+                                        />
+                                        <FieldError message={yearError} />
+                                    </div>
+                                </div>
+                            </section>
+                        );
+                    })}
 
                     <div className="flex justify-end">
                         <Button type="submit" disabled={studentForm.processing} className="rounded-lg">
                             <Save className="mr-2 h-4 w-4" />
-                            {studentForm.processing ? "Saving..." : "Save Education Info"}
+                            {studentForm.processing ? "Saving..." : "Save education history"}
                         </Button>
                     </div>
                 </form>

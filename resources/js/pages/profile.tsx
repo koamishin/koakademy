@@ -128,6 +128,7 @@ export default function ProfilePage() {
         feature_flags,
         featureFlags,
         student_profile_completion,
+        branding,
     } = usePage<{
         id_card: {
             card_data: IdCardData;
@@ -230,11 +231,15 @@ export default function ProfilePage() {
             studentInformationUpdates?: boolean;
         };
         student_profile_completion?: StudentProfileCompletion;
+        branding?: {
+            defaultCountryCode?: string;
+        };
         endpoints?: {
             profile_update: string;
             password_update: string;
             faculty_update: string;
             student_update: string;
+            school_options: string;
             passkeys: string;
             passkeys_options: string;
             two_factor_enable: string;
@@ -269,6 +274,7 @@ export default function ProfilePage() {
         password_update: endpoints?.password_update || "/profile/password",
         faculty_update: endpoints?.faculty_update || "/profile/faculty",
         student_update: endpoints?.student_update || "/profile/student",
+        school_options: endpoints?.school_options || "/student/profile/school-options",
         passkeys: endpoints?.passkeys || "/profile/passkeys",
         passkeys_options: endpoints?.passkeys_options || "/profile/passkeys/options",
         two_factor_enable: endpoints?.two_factor_enable || "/profile/two-factor-authentication/enable",
@@ -503,6 +509,25 @@ export default function ProfilePage() {
             },
             onError: () => {
                 toast.error("Failed to update profile. Please check your input.");
+            },
+        });
+    };
+
+    const handleFacultySubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        facultyForm.put(paths.faculty_update, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success("Faculty information updated successfully!");
+                setHasChanges(false);
+                router.visit(window.location.pathname, {
+                    replace: true,
+                    preserveScroll: true,
+                    only: ["faculty", "user"],
+                });
+            },
+            onError: () => {
+                toast.error("Please check the highlighted faculty fields.");
             },
         });
     };
@@ -775,10 +800,14 @@ export default function ProfilePage() {
                                                                   data: facultyForm.data,
                                                                   setData: facultyForm.setData,
                                                                   errors: facultyForm.errors,
+                                                                  processing: facultyForm.processing,
                                                               }
                                                             : undefined
                                                     }
                                                     onSubmit={handleUserSubmit}
+                                                    onFacultySubmit={handleFacultySubmit}
+                                                    developerModeEnabled={developerModeEnabled}
+                                                    defaultCountryCode={branding?.defaultCountryCode}
                                                 />
                                             </TabsContent>
 
@@ -801,6 +830,7 @@ export default function ProfilePage() {
                                                                 processing: studentForm.processing,
                                                             }}
                                                             onSubmit={handleStudentSubmit}
+                                                            defaultCountryCode={branding?.defaultCountryCode}
                                                         />
                                                     </TabsContent>
                                                     <TabsContent value="contacts" className="mt-0 min-w-0 outline-none">
@@ -812,6 +842,7 @@ export default function ProfilePage() {
                                                                 processing: studentForm.processing,
                                                             }}
                                                             onSubmit={handleStudentSubmit}
+                                                            defaultCountryCode={branding?.defaultCountryCode}
                                                         />
                                                     </TabsContent>
                                                     <TabsContent value="education" className="mt-0 min-w-0 outline-none">
@@ -823,6 +854,7 @@ export default function ProfilePage() {
                                                                 processing: studentForm.processing,
                                                             }}
                                                             onSubmit={handleStudentSubmit}
+                                                            schoolOptionsEndpoint={paths.school_options}
                                                         />
                                                     </TabsContent>
                                                 </>

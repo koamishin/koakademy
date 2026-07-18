@@ -9,7 +9,7 @@ import {
   AutocompleteList,
 } from "@/components/reui/autocomplete"
 import axios from "axios"
-import { Check, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useDebounce } from "use-debounce"
 
@@ -27,6 +27,9 @@ interface AutocompleteFieldInputProps {
   id?: string
   debounceMs?: number
   showOther?: boolean
+  options?: readonly string[]
+  endpoint?: string
+  "aria-invalid"?: boolean
 }
 
 export function AutocompleteFieldInput({
@@ -39,6 +42,9 @@ export function AutocompleteFieldInput({
   id,
   debounceMs = 300,
   showOther = true,
+  options,
+  endpoint,
+  "aria-invalid": ariaInvalid,
 }: AutocompleteFieldInputProps) {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -46,17 +52,37 @@ export function AutocompleteFieldInput({
   const [debouncedSearch] = useDebounce(search, debounceMs)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  const isOtherMode = value === OTHER_VALUE
+  useEffect(() => {
+    setSearch(value)
+  }, [value])
 
   useEffect(() => {
-    if (!isOtherMode) {
-      setSearch(value)
+    if (disabled) {
+      setSuggestions([])
+      return
     }
-  }, [value, isOtherMode])
 
-  useEffect(() => {
-    if (isOtherMode) return
-    if (disabled || debouncedSearch.trim().length < 1) {
+    if (options) {
+      const query = debouncedSearch.trim().toLocaleLowerCase()
+      const filtered = options
+        .filter((option) =>
+          query === "" ? true : option.toLocaleLowerCase().includes(query),
+        )
+        .filter(
+          (option, index, items) =>
+            items.findIndex(
+              (item) =>
+                item.toLocaleLowerCase() === option.toLocaleLowerCase(),
+            ) === index,
+        )
+        .slice(0, 25)
+
+      setSuggestions(filtered)
+      setLoading(false)
+      return
+    }
+
+    if (debouncedSearch.trim().length < 1) {
       setSuggestions([])
       return
     }
@@ -71,11 +97,17 @@ export function AutocompleteFieldInput({
       setLoading(true)
       try {
         const response = await axios.get(
-          route("administrators.students.field-values", {
-            field: fieldName,
-            search: debouncedSearch,
-          }),
-          { signal: controller.signal },
+          endpoint ??
+            route("administrators.students.field-values", {
+              field: fieldName,
+              search: debouncedSearch,
+            }),
+          {
+            params: endpoint
+              ? { field: fieldName, search: debouncedSearch }
+              : undefined,
+            signal: controller.signal,
+          },
         )
 
         const data = response.data
@@ -102,36 +134,7 @@ export function AutocompleteFieldInput({
     return () => {
       controller.abort()
     }
-  }, [debouncedSearch, fieldName, disabled, isOtherMode])
-
-  if (isOtherMode) {
-    return (
-      <div className={className}>
-        <div className="flex gap-2">
-          <input
-            id={id}
-            type="text"
-            value=""
-            onChange={(event) => onChange(event.target.value)}
-            placeholder={placeholder ?? "Type your custom value"}
-            disabled={disabled}
-            className="border-input bg-transparent ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-8 w-full rounded-lg border px-2.5 py-2 text-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              onChange("")
-              setSearch("")
-            }}
-            className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1 rounded-md border px-2 text-xs"
-          >
-            <Check className="size-3.5" />
-            Pick from list
-          </button>
-        </div>
-      </div>
-    )
-  }
+  }, [debouncedSearch, disabled, endpoint, fieldName, options])
 
   return (
     <div className={className}>
@@ -141,7 +144,9 @@ export function AutocompleteFieldInput({
         value={search}
         onValueChange={(next: string, _details) => {
           if (next === OTHER_VALUE) {
-            onChange(OTHER_VALUE)
+            const customValue = search.trim()
+            setSearch(customValue)
+            onChange(customValue)
             return
           }
           setSearch(next)
@@ -152,7 +157,9 @@ export function AutocompleteFieldInput({
           id={id}
           placeholder={placeholder ?? "Type to search or pick a suggestion"}
           showClear
+          showTrigger
           disabled={disabled}
+          aria-invalid={ariaInvalid}
         />
         <AutocompleteContent>
           <AutocompleteList>

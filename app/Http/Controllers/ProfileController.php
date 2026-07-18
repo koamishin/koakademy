@@ -17,11 +17,13 @@ use App\Models\User;
 use App\Services\DigitalIdCardService;
 use App\Services\FeatureToggleRegistry;
 use App\Services\StudentProfileCompletionService;
+use App\Services\StudentSchoolOptionService;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\RoundBlockSizeMode;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -110,12 +112,7 @@ final class ProfileController extends Controller
             ->values()
             ->all();
 
-        $developerModeFeature = match (true) {
-            $isFaculty => FacultyDeveloperMode::class,
-            $isStudent => StudentDeveloperMode::class,
-            $isAdmin => AdminDeveloperMode::class,
-            default => null,
-        };
+        $developerModeFeature = $this->developerModeFeatureFor($user);
 
         $developerModeEnabled = $developerModeFeature !== null && Feature::for($user)->active($developerModeFeature);
         $studentInformationUpdatesEnabled = $isStudent && Feature::for($user)->active(StudentInformationUpdates::class);
@@ -417,6 +414,7 @@ final class ProfileController extends Controller
     public function updateUser(Request $request)
     {
         $user = Auth::user();
+        $developerModeEnabled = $this->developerModeEnabledFor($user);
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -434,7 +432,7 @@ final class ProfileController extends Controller
             'country' => 'nullable|string|max:100',
             'postal_code' => 'nullable|string|max:20',
             'bio' => 'nullable|string',
-            'website' => 'nullable|url|max:255',
+            'website' => [Rule::excludeIf(! $developerModeEnabled), 'nullable', 'url', 'max:255'],
             'department' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp|max:5120',
@@ -471,7 +469,7 @@ final class ProfileController extends Controller
             $avatarUrl = env('R2_URL').'/'.$path;
         }
 
-        $user->update([
+        $attributes = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'] ?? null,
@@ -481,11 +479,16 @@ final class ProfileController extends Controller
             'country' => $validated['country'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
             'bio' => $validated['bio'] ?? null,
-            'website' => $validated['website'] ?? null,
             'department' => $validated['department'] ?? null,
             'position' => $validated['position'] ?? null,
             'avatar_url' => $avatarUrl,
-        ]);
+        ];
+
+        if ($developerModeEnabled) {
+            $attributes['website'] = $validated['website'] ?? null;
+        }
+
+        $user->update($attributes);
 
         // If email changed, also update faculty record if exists
         if ($user->wasChanged('email')) {
@@ -551,6 +554,20 @@ final class ProfileController extends Controller
         return back()->with('flash', [
             'success' => 'Student information updated successfully!',
         ]);
+    }
+
+    public function studentSchoolOptions(Request $request, StudentSchoolOptionService $schoolOptions): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (! Feature::for($user)->active(StudentInformationUpdates::class)) {
+            abort(403, 'Student information updates are currently disabled.');
+        }
+
+        return response()->json($schoolOptions->search(
+            (string) $request->query('field', ''),
+            (string) $request->query('search', ''),
+        ));
     }
 
     /**
@@ -1039,6 +1056,30 @@ final class ProfileController extends Controller
             $endpoints['student_update'] = $basePath.'/student';
         }
 
+        if ($request->is('student/*')) {
+            $endpoints['school_options'] = $basePath.'/school-options';
+        }
+
         return $endpoints;
+    }
+
+    /**
+     * @return class-string|null
+     */
+    private function developerModeFeatureFor(User $user): ?string
+    {
+        return match (true) {
+            $user->isFaculty() => FacultyDeveloperMode::class,
+            $user->isStudentRole() => StudentDeveloperMode::class,
+            $user->role?->canAccessAdminPortal() === true => AdminDeveloperMode::class,
+            default => null,
+        };
+    }
+
+    private function developerModeEnabledFor(User $user): bool
+    {
+        $feature = $this->developerModeFeatureFor($user);
+
+        return $feature !== null && Feature::for($user)->active($feature);
     }
 }

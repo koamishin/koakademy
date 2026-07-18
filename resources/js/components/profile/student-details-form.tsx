@@ -1,34 +1,90 @@
+import { formatPersonName } from "@/components/profile/profile-form-utils";
+import { AutocompleteFieldInput } from "@/components/ui/autocomplete-field-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GraduationCap, Save } from "lucide-react";
+import { GraduationCap, Mail, MapPin, Save } from "lucide-react";
+
+type StudentDetailsData = {
+    first_name: string;
+    middle_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    birth_date: string;
+    gender: string;
+    civil_status: string;
+    nationality: string;
+    religion: string;
+    address: string;
+    emergency_contact: string;
+};
 
 interface StudentDetailsFormProps {
     studentForm: {
-        data: {
-            first_name: string;
-            middle_name: string;
-            last_name: string;
-            email: string;
-            phone: string;
-            birth_date: string;
-            gender: string;
-            civil_status: string;
-            nationality: string;
-            religion: string;
-            address: string;
-            emergency_contact: string;
-        };
-        setData: (key: string, value: string) => void;
+        data: StudentDetailsData;
+        setData: <Key extends keyof StudentDetailsData>(key: Key, value: StudentDetailsData[Key]) => void;
         errors: Record<string, string>;
         processing: boolean;
     };
-    onSubmit: (e: React.FormEvent) => void;
+    onSubmit: (event: React.FormEvent) => void;
+    defaultCountryCode?: string;
 }
 
-export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsFormProps) {
+const civilStatuses = [
+    ["single", "Single"],
+    ["married", "Married"],
+    ["widowed", "Widowed"],
+    ["separated", "Separated"],
+    ["annulled", "Annulled"],
+] as const;
+
+const nationalities = [
+    "Filipino",
+    "American",
+    "Australian",
+    "British",
+    "Canadian",
+    "Chinese",
+    "Indian",
+    "Indonesian",
+    "Japanese",
+    "Korean",
+    "Malaysian",
+    "Singaporean",
+    "Thai",
+    "Vietnamese",
+];
+
+const religions = [
+    "Roman Catholic",
+    "Islam",
+    "Iglesia ni Cristo",
+    "Born Again Christian",
+    "Seventh-day Adventist",
+    "Protestant",
+    "Evangelical Christian",
+    "Buddhist",
+    "Hindu",
+    "None",
+    "Prefer not to say",
+];
+
+function FieldError({ message }: { message?: string }) {
+    return message ? <p className="text-destructive text-sm">{message}</p> : null;
+}
+
+export function StudentDetailsForm({ studentForm, onSubmit, defaultCountryCode }: StudentDetailsFormProps) {
+    const student = studentForm.data;
+    const knownCivilStatus = civilStatuses.find(([value]) => value === student.civil_status.toLowerCase());
+    const selectedCivilStatus = knownCivilStatus?.[0] ?? student.civil_status;
+    const civilStatusOptions: ReadonlyArray<readonly [string, string]> =
+        knownCivilStatus || !student.civil_status ? civilStatuses : [[student.civil_status, student.civil_status], ...civilStatuses];
+
     return (
         <Card id="student-information" className="border-border/60 bg-card/75 scroll-mt-24 rounded-lg shadow-sm">
             <CardHeader className="pb-4">
@@ -36,87 +92,83 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                     <GraduationCap className="h-5 w-5" />
                     Student Details
                 </CardTitle>
-                <CardDescription>Additional information for student records</CardDescription>
+                <CardDescription>Personal information used for your student record.</CardDescription>
             </CardHeader>
             <CardContent>
                 <form id="student-form" onSubmit={onSubmit} className="space-y-5">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <Label htmlFor="student_first_name">First Name *</Label>
-                            <Input
-                                id="student_first_name"
-                                value={studentForm.data.first_name}
-                                onChange={(e) => studentForm.setData("first_name", e.target.value)}
-                                placeholder="Juan"
-                                required
-                            />
-                            {studentForm.errors.first_name && <p className="text-destructive text-sm">{studentForm.errors.first_name}</p>}
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {(
+                            [
+                                ["first_name", "First name *", "given-name", true],
+                                ["middle_name", "Middle name", "additional-name", false],
+                                ["last_name", "Last name *", "family-name", true],
+                            ] as const
+                        ).map(([key, label, autoComplete, required]) => (
+                            <div key={key} className="space-y-2">
+                                <Label htmlFor={`student_${key}`}>{label}</Label>
+                                <Input
+                                    id={`student_${key}`}
+                                    autoComplete={autoComplete}
+                                    value={student[key]}
+                                    onChange={(event) => studentForm.setData(key, event.target.value)}
+                                    onBlur={(event) => studentForm.setData(key, formatPersonName(event.target.value))}
+                                    aria-invalid={Boolean(studentForm.errors[key])}
+                                    required={required}
+                                />
+                                <FieldError message={studentForm.errors[key]} />
+                            </div>
+                        ))}
+
+                        <div className="space-y-2 lg:col-span-2">
+                            <Label htmlFor="student_email">Student email *</Label>
+                            <InputGroup className="h-9">
+                                <InputGroupAddon>
+                                    <Mail />
+                                </InputGroupAddon>
+                                <InputGroupInput
+                                    id="student_email"
+                                    type="email"
+                                    inputMode="email"
+                                    autoComplete="email"
+                                    value={student.email}
+                                    onChange={(event) => studentForm.setData("email", event.target.value)}
+                                    aria-invalid={Boolean(studentForm.errors.email)}
+                                    required
+                                />
+                            </InputGroup>
+                            <FieldError message={studentForm.errors.email} />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="student_middle_name">Middle Name</Label>
-                            <Input
-                                id="student_middle_name"
-                                value={studentForm.data.middle_name}
-                                onChange={(e) => studentForm.setData("middle_name", e.target.value)}
-                                placeholder="Santos"
-                            />
-                            {studentForm.errors.middle_name && <p className="text-destructive text-sm">{studentForm.errors.middle_name}</p>}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="student_last_name">Last Name *</Label>
-                            <Input
-                                id="student_last_name"
-                                value={studentForm.data.last_name}
-                                onChange={(e) => studentForm.setData("last_name", e.target.value)}
-                                placeholder="Dela Cruz"
-                                required
-                            />
-                            {studentForm.errors.last_name && <p className="text-destructive text-sm">{studentForm.errors.last_name}</p>}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="student_email">Student Email *</Label>
-                            <Input
-                                id="student_email"
-                                type="email"
-                                value={studentForm.data.email}
-                                onChange={(e) => studentForm.setData("email", e.target.value)}
-                                placeholder="juan.delacruz@example.com"
-                                required
-                            />
-                            {studentForm.errors.email && <p className="text-destructive text-sm">{studentForm.errors.email}</p>}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="student_phone">Phone Number</Label>
-                            <Input
+                            <Label htmlFor="student_phone">Phone number</Label>
+                            <PhoneInput
                                 id="student_phone"
-                                type="tel"
-                                value={studentForm.data.phone}
-                                onChange={(e) => studentForm.setData("phone", e.target.value)}
-                                placeholder="+63 912 345 6789"
+                                value={student.phone}
+                                onChange={(value) => studentForm.setData("phone", value)}
+                                defaultCountryCode={defaultCountryCode}
                             />
-                            {studentForm.errors.phone && <p className="text-destructive text-sm">{studentForm.errors.phone}</p>}
+                            <FieldError message={studentForm.errors.phone} />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="student_birth_date">Birth Date</Label>
+                            <Label htmlFor="student_birth_date">Birth date</Label>
                             <Input
                                 id="student_birth_date"
                                 type="date"
-                                value={studentForm.data.birth_date}
-                                onChange={(e) => studentForm.setData("birth_date", e.target.value)}
+                                autoComplete="bday"
+                                max={new Date().toISOString().slice(0, 10)}
+                                value={student.birth_date}
+                                onChange={(event) => studentForm.setData("birth_date", event.target.value)}
+                                aria-invalid={Boolean(studentForm.errors.birth_date)}
                             />
-                            {studentForm.errors.birth_date && <p className="text-destructive text-sm">{studentForm.errors.birth_date}</p>}
+                            <FieldError message={studentForm.errors.birth_date} />
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="student_gender">Gender</Label>
-                            <Select value={studentForm.data.gender} onValueChange={(value) => studentForm.setData("gender", value)}>
-                                <SelectTrigger id="student_gender">
-                                    <SelectValue placeholder="Select Gender" />
+                            <Select value={student.gender} onValueChange={(value) => studentForm.setData("gender", value)}>
+                                <SelectTrigger id="student_gender" aria-invalid={Boolean(studentForm.errors.gender)}>
+                                    <SelectValue placeholder="Select gender" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="male">Male</SelectItem>
@@ -125,74 +177,89 @@ export function StudentDetailsForm({ studentForm, onSubmit }: StudentDetailsForm
                                     <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
                                 </SelectContent>
                             </Select>
-                            {studentForm.errors.gender && <p className="text-destructive text-sm">{studentForm.errors.gender}</p>}
+                            <FieldError message={studentForm.errors.gender} />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="civil_status">Civil Status</Label>
-                            <Select value={studentForm.data.civil_status} onValueChange={(value) => studentForm.setData("civil_status", value)}>
-                                <SelectTrigger id="civil_status">
-                                    <SelectValue placeholder="Select Status" />
+                            <Label htmlFor="civil_status">Civil status</Label>
+                            <Select value={selectedCivilStatus} onValueChange={(value) => studentForm.setData("civil_status", value)}>
+                                <SelectTrigger id="civil_status" aria-invalid={Boolean(studentForm.errors.civil_status)}>
+                                    <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="single">Single</SelectItem>
-                                    <SelectItem value="married">Married</SelectItem>
-                                    <SelectItem value="widowed">Widowed</SelectItem>
-                                    <SelectItem value="separated">Separated</SelectItem>
+                                    {civilStatusOptions.map(([value, label]) => (
+                                        <SelectItem key={value} value={value}>
+                                            {label}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
-                            {studentForm.errors.civil_status && <p className="text-destructive text-sm">{studentForm.errors.civil_status}</p>}
+                            <FieldError message={studentForm.errors.civil_status} />
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="nationality">Nationality</Label>
-                            <Input
+                            <AutocompleteFieldInput
                                 id="nationality"
-                                value={studentForm.data.nationality}
-                                onChange={(e) => studentForm.setData("nationality", e.target.value)}
-                                placeholder="Filipino"
+                                value={student.nationality}
+                                onChange={(value) => studentForm.setData("nationality", value)}
+                                fieldName="nationality"
+                                options={nationalities}
+                                placeholder="Search or enter nationality"
+                                aria-invalid={Boolean(studentForm.errors.nationality)}
                             />
-                            {studentForm.errors.nationality && <p className="text-destructive text-sm">{studentForm.errors.nationality}</p>}
+                            <FieldError message={studentForm.errors.nationality} />
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="religion">Religion</Label>
-                            <Input
+                            <AutocompleteFieldInput
                                 id="religion"
-                                value={studentForm.data.religion}
-                                onChange={(e) => studentForm.setData("religion", e.target.value)}
-                                placeholder="Optional"
+                                value={student.religion}
+                                onChange={(value) => studentForm.setData("religion", value)}
+                                fieldName="religion"
+                                options={religions}
+                                placeholder="Search or enter religion"
+                                aria-invalid={Boolean(studentForm.errors.religion)}
                             />
-                            {studentForm.errors.religion && <p className="text-destructive text-sm">{studentForm.errors.religion}</p>}
+                            <FieldError message={studentForm.errors.religion} />
                         </div>
-                    </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="student_address">Address</Label>
-                        <Input
-                            id="student_address"
-                            value={studentForm.data.address}
-                            onChange={(e) => studentForm.setData("address", e.target.value)}
-                            placeholder="Davao City, Davao del Sur"
-                        />
-                        {studentForm.errors.address && <p className="text-destructive text-sm">{studentForm.errors.address}</p>}
-                    </div>
+                        <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                            <Label htmlFor="student_address">Home address</Label>
+                            <InputGroup className="h-9">
+                                <InputGroupAddon>
+                                    <MapPin />
+                                </InputGroupAddon>
+                                <InputGroupInput
+                                    id="student_address"
+                                    autoComplete="street-address"
+                                    value={student.address}
+                                    onChange={(event) => studentForm.setData("address", event.target.value)}
+                                    aria-invalid={Boolean(studentForm.errors.address)}
+                                    placeholder="House number, street, barangay, city, and province"
+                                />
+                            </InputGroup>
+                            <FieldError message={studentForm.errors.address} />
+                        </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="emergency_contact">Emergency Contact</Label>
-                        <Input
-                            id="emergency_contact"
-                            value={studentForm.data.emergency_contact}
-                            onChange={(e) => studentForm.setData("emergency_contact", e.target.value)}
-                            placeholder="Maria Dela Cruz - 09123456789"
-                        />
-                        {studentForm.errors.emergency_contact && <p className="text-destructive text-sm">{studentForm.errors.emergency_contact}</p>}
+                        <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                            <Label htmlFor="emergency_contact">Additional emergency contact details</Label>
+                            <Input
+                                id="emergency_contact"
+                                value={student.emergency_contact}
+                                onChange={(event) => studentForm.setData("emergency_contact", event.target.value)}
+                                aria-invalid={Boolean(studentForm.errors.emergency_contact)}
+                                placeholder="Name, relationship, or alternate contact details"
+                            />
+                            <FieldError message={studentForm.errors.emergency_contact} />
+                        </div>
                     </div>
 
                     <div className="flex justify-end">
                         <Button type="submit" disabled={studentForm.processing} className="rounded-lg">
                             <Save className="mr-2 h-4 w-4" />
-                            {studentForm.processing ? "Saving..." : "Save Student Details"}
+                            {studentForm.processing ? "Saving..." : "Save student details"}
                         </Button>
                     </div>
                 </form>

@@ -36,6 +36,7 @@ Route::middleware(['auth', 'student.only', 'ensure.feature'])->prefix('student')
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
     Route::put('/profile', [ProfileController::class, 'updateUser'])->name('profile.update');
     Route::put('/profile/student', [ProfileController::class, 'updateStudent'])->name('profile.student.update');
+    Route::get('/profile/school-options', [ProfileController::class, 'studentSchoolOptions'])->name('profile.school-options');
     Route::get('/profile/password', [ProfileController::class, 'showChangePassword'])->name('profile.password');
     Route::put('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.password.update');
 

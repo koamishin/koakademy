@@ -36,6 +36,8 @@ interface SchoolAutocompleteInputProps {
     className?: string;
     id?: string;
     debounceMs?: number;
+    endpoint?: string;
+    "aria-invalid"?: boolean;
 }
 
 export function SchoolAutocompleteInput({
@@ -48,6 +50,8 @@ export function SchoolAutocompleteInput({
     className,
     id,
     debounceMs = 300,
+    endpoint,
+    "aria-invalid": ariaInvalid,
 }: SchoolAutocompleteInputProps) {
     const [open, setOpen] = useState(false);
     const [inputValue, setInputValue] = useState(value);
@@ -82,11 +86,17 @@ export function SchoolAutocompleteInput({
 
             try {
                 const response = await axios.get(
-                    route("administrators.students.education-school-options", {
-                        field: fieldName,
-                        search: debouncedValue,
-                    }),
-                    { signal: controller.signal },
+                    endpoint ??
+                        route("administrators.students.education-school-options", {
+                            field: fieldName,
+                            search: debouncedValue,
+                        }),
+                    {
+                        params: endpoint
+                            ? { field: fieldName, search: debouncedValue }
+                            : undefined,
+                        signal: controller.signal,
+                    },
                 );
 
                 const items: SchoolOption[] = Array.isArray(response.data)
@@ -117,7 +127,7 @@ export function SchoolAutocompleteInput({
         return () => {
             controller.abort();
         };
-    }, [debouncedValue, disabled, fieldName]);
+    }, [debouncedValue, disabled, endpoint, fieldName]);
 
     useEffect(() => {
         return () => {
@@ -180,6 +190,7 @@ export function SchoolAutocompleteInput({
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     autoComplete="off"
+                    aria-invalid={ariaInvalid}
                 />
             </PopoverTrigger>
             <PopoverContent

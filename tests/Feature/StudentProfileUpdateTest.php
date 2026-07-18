@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
+use App\Features\Toggles\StudentDeveloperMode;
 use App\Features\Toggles\StudentInformationUpdates;
 use App\Features\Toggles\StudentSchedule;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Pennant\Feature;
 
@@ -52,6 +54,7 @@ it('returns correct endpoints for student portal', function (): void {
         ->where('endpoints.profile_update', '/student/profile')
         ->where('endpoints.password_update', '/student/profile/password')
         ->where('endpoints.student_update', '/student/profile/student')
+        ->where('endpoints.school_options', '/student/profile/school-options')
         ->where('endpoints.passkeys', '/student/profile/passkeys')
         ->where('endpoints.two_factor_enable', '/student/profile/two-factor-authentication/enable')
         ->where('endpoints.two_factor_confirm', '/student/profile/two-factor-authentication/confirm')
@@ -61,6 +64,79 @@ it('returns correct endpoints for student portal', function (): void {
         ->where('endpoints.experimental_features', '/student/profile/experimental-features')
         ->where('endpoints.browser_sessions_logout', '/student/profile/other-browser-sessions')
     );
+});
+
+it('returns privacy-safe school options for the student profile', function (): void {
+    $education = [
+        'elementary_school' => 'Privacy Test Academy',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ];
+
+    if (Schema::hasColumn('student_education_info', 'elementary_school_address')) {
+        $education['elementary_school_address'] = 'Davao City';
+    }
+
+    DB::table('student_education_info')->insert($education);
+
+    $response = $this
+        ->actingAs($this->user)
+        ->getJson(route('student.profile.school-options', [
+            'field' => 'elementary_school',
+            'search' => 'privacy test',
+        ]));
+
+    $response->assertOk()->assertJsonFragment([
+        'name' => 'Privacy Test Academy',
+        'address' => Schema::hasColumn('student_education_info', 'elementary_school_address') ? 'Davao City' : null,
+    ]);
+
+    expect($response->json('0'))->toHaveKeys(['name', 'address'])
+        ->not->toHaveKeys(['student_id', 'first_name', 'last_name', 'email']);
+});
+
+it('blocks student school options when information updates are inactive', function (): void {
+    Feature::deactivateForEveryone(StudentInformationUpdates::class);
+
+    $this
+        ->actingAs($this->user)
+        ->getJson(route('student.profile.school-options', [
+            'field' => 'elementary_school',
+            'search' => 'school',
+        ]))
+        ->assertForbidden();
+});
+
+it('preserves the portfolio link while student developer mode is inactive', function (): void {
+    $this->user->update(['website' => 'https://existing.example.com']);
+    Feature::for($this->user)->deactivate(StudentDeveloperMode::class);
+
+    $this
+        ->actingAs($this->user)
+        ->put(route('student.profile.update'), [
+            'name' => $this->user->name,
+            'email' => $this->user->email,
+            'website' => 'https://blocked.example.com',
+        ])
+        ->assertRedirect();
+
+    expect($this->user->refresh()->website)->toBe('https://existing.example.com');
+});
+
+it('updates the portfolio link while student developer mode is active', function (): void {
+    $this->user->update(['website' => 'https://existing.example.com']);
+    Feature::for($this->user)->activate(StudentDeveloperMode::class);
+
+    $this
+        ->actingAs($this->user)
+        ->put(route('student.profile.update'), [
+            'name' => $this->user->name,
+            'email' => $this->user->email,
+            'website' => 'https://portfolio.example.com',
+        ])
+        ->assertRedirect();
+
+    expect($this->user->refresh()->website)->toBe('https://portfolio.example.com');
 });
 
 it('can update student profile information', function (): void {
