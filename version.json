@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.8.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.8.0",
-  "commit": "6b46d2c8cd15b25b5c7f3cc8e39d8892c48e4a45",
+  "version": "1.10.0-dev.8.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.8.1",
+  "commit": "0ecd71f4ee8159c591ce58ce21d561b31a37debb",
   "branch": "master",
-  "timestamp": "2026-07-18T07:44:07Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29636097399",
-  "release_type": "feature",
+  "timestamp": "2026-07-18T08:41:02Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29637722491",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.8.0 - feat: redesign profile forms with autocomplete",
-    "previous": "1.10.0-dev.7.2"
+    "current": "Version 1.10.0-dev.8.1 - fix: simplify profiles and repair mobile account menus",
+    "previous": "1.10.0-dev.8.0"
   },
   "metadata": {
     "author": "yukazakiri",
