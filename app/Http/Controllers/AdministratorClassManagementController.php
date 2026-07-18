@@ -49,7 +49,7 @@ final class AdministratorClassManagementController extends Controller
             'grade_level' => $this->nullableString($request->input('grade_level')),
             'semester' => $this->nullableString($request->input('semester')),
             'available_slots' => $request->boolean('available_slots') ? true : null,
-            'fully_enrolled' => $request->has('fully_enrolled') ? $request->boolean('fully_enrolled') : null,
+            'fully_enrolled' => $request->filled('fully_enrolled') ? $request->boolean('fully_enrolled') : null,
         ];
 
         $sort = $this->nullableString($request->input('sort')) ?? 'created_at';
@@ -241,6 +241,8 @@ final class AdministratorClassManagementController extends Controller
                 'school_year' => $class->school_year ?? 'N/A',
                 'semester' => $class->semester ?? 'N/A',
                 'classification' => $class->classification ?? 'college',
+                'academic_year' => $class->academic_year,
+                'grade_level' => $class->grade_level,
                 'course_abbreviations' => $courseAbbreviations === [] ? null : $courseAbbreviations,
                 'shs_track' => $shsTrack,
                 'shs_strand' => $shsStrand,

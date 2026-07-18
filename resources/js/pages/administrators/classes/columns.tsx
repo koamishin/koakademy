@@ -25,6 +25,8 @@ export type ClassRow = {
     school_year: string;
     semester: string | number;
     classification: "college" | "shs" | string;
+    academic_year: number | null;
+    grade_level: string | null;
     course_abbreviations: string[] | null;
     shs_track: string | null;
     shs_strand: string | null;

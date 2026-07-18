@@ -186,6 +186,34 @@ interface ClassesIndexProps {
     };
 }
 
+function createActiveFilters(filters: ClassesIndexProps["filters"]): FilterType[] {
+    const activeFilters: FilterType[] = [];
+
+    if (filters.classification) {
+        activeFilters.push({ id: "classification", field: "classification", operator: "is", values: [filters.classification] });
+    }
+    if (filters.course_id) activeFilters.push({ id: "course_id", field: "course_id", operator: "is", values: [filters.course_id] });
+    if (filters.shs_track_id) activeFilters.push({ id: "shs_track_id", field: "shs_track_id", operator: "is", values: [filters.shs_track_id] });
+    if (filters.room_id) activeFilters.push({ id: "room_id", field: "room_id", operator: "is", values: [filters.room_id] });
+    if (filters.faculty_id) activeFilters.push({ id: "faculty_id", field: "faculty_id", operator: "is", values: [filters.faculty_id] });
+    if (filters.academic_year) {
+        activeFilters.push({ id: "academic_year", field: "academic_year", operator: "is", values: [filters.academic_year] });
+    }
+    if (filters.grade_level) activeFilters.push({ id: "grade_level", field: "grade_level", operator: "is", values: [filters.grade_level] });
+    if (filters.semester) activeFilters.push({ id: "semester", field: "semester", operator: "is", values: [filters.semester] });
+    if (filters.available_slots) activeFilters.push({ id: "available_slots", field: "available_slots", operator: "is", values: ["true"] });
+    if (filters.fully_enrolled !== null && filters.fully_enrolled !== undefined) {
+        activeFilters.push({
+            id: "fully_enrolled",
+            field: "fully_enrolled",
+            operator: "is",
+            values: [filters.fully_enrolled ? "true" : "false"],
+        });
+    }
+
+    return activeFilters;
+}
+
 type InertiaGetPayload = NonNullable<Parameters<typeof router.get>[1]>;
 
 function normalizeSemester(semester: string | number): string {
@@ -416,7 +444,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
     const [isSelectedClassLoading, setIsSelectedClassLoading] = React.useState(false);
     const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
     const [sortOption, setSortOption] = React.useState(`${filters.sort ?? "created_at"}:${filters.direction ?? "desc"}`);
-    const [activeFilters, setActiveFilters] = React.useState<FilterType[]>([]);
+    const [activeFilters, setActiveFilters] = React.useState<FilterType[]>(() => createActiveFilters(filters));
     const [isEditOpen, setIsEditOpen] = React.useState(false);
     const [isCopyOpen, setIsCopyOpen] = React.useState(false);
     const [isManageOpen, setIsManageOpen] = React.useState(false);
@@ -473,15 +501,17 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                     case "semester":
                         return values.some((v) => String(classRow.semester) === String(v));
                     case "academic_year":
-                        return values.some((v) => String(classRow.school_year) === String(v));
+                        return values.some((v) => String(classRow.academic_year) === String(v));
+                    case "grade_level":
+                        return values.some((v) => classRow.grade_level === String(v));
                     case "available_slots":
                         return values.includes("true")
                             ? classRow.maximum_slots > classRow.students_count
                             : classRow.maximum_slots <= classRow.students_count;
-                    case "fully_enrolled":
-                        return values.includes("true")
-                            ? classRow.students_count >= classRow.maximum_slots
-                            : classRow.students_count < classRow.maximum_slots;
+                    case "fully_enrolled": {
+                        const isFullyEnrolled = classRow.maximum_slots > 0 && classRow.students_count >= classRow.maximum_slots;
+                        return values.includes("true") ? isFullyEnrolled : !isFullyEnrolled;
+                    }
                     default:
                         return true;
                 }
@@ -512,23 +542,16 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
         searchTerm: string,
         filterValues: FilterType[] = activeFilters,
         selectedSortOption: string = sortOption,
-    ): Record<string, string | number | null> => {
+    ): Record<string, string | number> => {
         const sort = parseSortOption(selectedSortOption);
-        const appliedFilters: Record<string, string | number | null> = {
-            search: searchTerm.trim() || null,
-            classification: null,
-            course_id: null,
-            shs_track_id: null,
-            room_id: null,
-            faculty_id: null,
-            academic_year: null,
-            grade_level: null,
-            semester: null,
-            available_slots: null,
-            fully_enrolled: null,
+        const appliedFilters: Record<string, string | number> = {
             sort: sort.sort,
             direction: sort.direction,
         };
+
+        if (searchTerm.trim()) {
+            appliedFilters.search = searchTerm.trim();
+        }
 
         filterValues.forEach((filter) => {
             const value = filter.values[0];
@@ -549,33 +572,6 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
             replace: true,
         });
     }, 350);
-
-    React.useEffect(() => {
-        const initialFilters: FilterType[] = [];
-
-        if (filters.classification)
-            initialFilters.push({ id: "classification", field: "classification", operator: "is", values: [filters.classification] });
-        if (filters.course_id) initialFilters.push({ id: "course_id", field: "course_id", operator: "is", values: [filters.course_id] });
-        if (filters.shs_track_id) initialFilters.push({ id: "shs_track_id", field: "shs_track_id", operator: "is", values: [filters.shs_track_id] });
-        if (filters.room_id) initialFilters.push({ id: "room_id", field: "room_id", operator: "is", values: [filters.room_id] });
-        if (filters.faculty_id) initialFilters.push({ id: "faculty_id", field: "faculty_id", operator: "is", values: [filters.faculty_id] });
-        if (filters.academic_year)
-            initialFilters.push({ id: "academic_year", field: "academic_year", operator: "is", values: [filters.academic_year] });
-        if (filters.grade_level) initialFilters.push({ id: "grade_level", field: "grade_level", operator: "is", values: [filters.grade_level] });
-        if (filters.semester) initialFilters.push({ id: "semester", field: "semester", operator: "is", values: [filters.semester] });
-        if (filters.available_slots) initialFilters.push({ id: "available_slots", field: "available_slots", operator: "is", values: ["true"] });
-        if (filters.fully_enrolled !== null && filters.fully_enrolled !== undefined) {
-            initialFilters.push({
-                id: "fully_enrolled",
-                field: "fully_enrolled",
-                operator: "is",
-                values: [filters.fully_enrolled ? "true" : "false"],
-            });
-        }
-
-        setActiveFilters(initialFilters);
-        setSortOption(`${filters.sort ?? "created_at"}:${filters.direction ?? "desc"}`);
-    }, [filters]);
 
     const handleFiltersChange = (newFilters: FilterType[]) => {
         setActiveFilters(newFilters);
@@ -1193,7 +1189,7 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                                 }
                             />
 
-                            {activeFilters.length > 0 && (
+                            {(search.trim() !== "" || activeFilters.length > 0) && (
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -1255,55 +1251,53 @@ export default function AdministratorClassesIndex({ user, classes, selected_clas
                         </div>
                         <ClassStats totalClasses={filteredStatsTotalClasses} totalStudents={filteredStatsTotalStudents} />
 
-                        {visibleClasses.length === 0 ? (
-                            <div className="flex min-h-[320px] flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center">
-                                <div className="bg-muted/50 border-border flex h-14 w-14 items-center justify-center rounded-full border">
-                                    <Layers className="text-muted-foreground h-7 w-7" />
+                        {viewMode === "grid" ? (
+                            <div className="animate-in fade-in slide-in-from-bottom-4 overflow-hidden rounded-lg border duration-500">
+                                <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                    {toolbarContent}
                                 </div>
-                                <h3 className="mt-4 text-lg font-semibold">No classes found</h3>
-                                <p className="text-muted-foreground mt-1.5 max-w-sm text-sm">
-                                    Try adjusting your search or filters, or create a new class to get started.
-                                </p>
-                                <Button variant="outline" size="sm" className="mt-5" onClick={clearFilters}>
-                                    Clear filters
-                                </Button>
-                            </div>
-                        ) : (
-                            <>
-                                {viewMode === "grid" ? (
-                                    <div className="animate-in fade-in slide-in-from-bottom-4 overflow-hidden rounded-lg border duration-500">
-                                        <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                                            {toolbarContent}
-                                        </div>
-                                        <div className="grid gap-4 p-4 md:grid-cols-2 2xl:grid-cols-3">
-                                            {visibleClasses.map((row) => (
-                                                <ClassCard
-                                                    key={row.id}
-                                                    classRow={row}
-                                                    onManage={openManage}
-                                                    onEdit={openEdit}
-                                                    onDelete={confirmDelete}
-                                                    onCopy={(id) => {
-                                                        setCopySourceId(id);
-                                                        setCopySection("A");
-                                                        setIsCopyOpen(true);
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
+                                {visibleClasses.length > 0 ? (
+                                    <div className="grid gap-4 p-4 md:grid-cols-2 2xl:grid-cols-3">
+                                        {visibleClasses.map((row) => (
+                                            <ClassCard
+                                                key={row.id}
+                                                classRow={row}
+                                                onManage={openManage}
+                                                onEdit={openEdit}
+                                                onDelete={confirmDelete}
+                                                onCopy={(id) => {
+                                                    setCopySourceId(id);
+                                                    setCopySection("A");
+                                                    setIsCopyOpen(true);
+                                                }}
+                                            />
+                                        ))}
                                     </div>
                                 ) : (
-                                    <DataTable columns={columns} data={visibleClasses} toolbar={toolbarContent} />
-                                )}
-
-                                {viewMode === "grid" && (
-                                    <div className="flex items-center justify-between gap-3 border-t pt-4">
-                                        <div className="text-muted-foreground text-sm">
-                                            Showing {visibleClasses.length} {visibleClasses.length === 1 ? "class" : "classes"}
+                                    <div className="flex min-h-[280px] flex-col items-center justify-center p-8 text-center">
+                                        <div className="bg-muted/50 border-border flex h-14 w-14 items-center justify-center rounded-full border">
+                                            <Layers className="text-muted-foreground h-7 w-7" />
                                         </div>
+                                        <h3 className="mt-4 text-lg font-semibold">No classes found</h3>
+                                        <p className="text-muted-foreground mt-1.5 max-w-sm text-sm">Try adjusting your search or filters.</p>
+                                        {(search.trim() !== "" || activeFilters.length > 0) && (
+                                            <Button variant="outline" size="sm" className="mt-5" onClick={clearFilters}>
+                                                Clear search and filters
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
-                            </>
+                            </div>
+                        ) : (
+                            <DataTable columns={columns} data={visibleClasses} toolbar={toolbarContent} />
+                        )}
+
+                        {viewMode === "grid" && visibleClasses.length > 0 && (
+                            <div className="flex items-center justify-between gap-3 border-t pt-4">
+                                <div className="text-muted-foreground text-sm">
+                                    Showing {visibleClasses.length} {visibleClasses.length === 1 ? "class" : "classes"}
+                                </div>
+                            </div>
                         )}
                     </div>
                 );

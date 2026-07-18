@@ -140,8 +140,8 @@ it('can filter classes by available slots', function () {
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/classes/index', false)
-            ->has('classes.data', 1)
-            ->where('classes.data.0.id', $classAvailable->id)
+            ->has('classes', 1)
+            ->where('classes.0.id', $classAvailable->id)
         );
 });
 
@@ -181,13 +181,31 @@ it('can filter classes by fully enrolled', function () {
         ])->id,
     ]);
 
+    // No enrollment-status filter should show both full and available classes.
+    $this->get(route('administrators.classes.index'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/classes/index', false)
+            ->has('classes', 2)
+            ->where('filters.fully_enrolled', null)
+        );
+
+    // Empty query values should also be treated as a cleared filter.
+    $this->get(route('administrators.classes.index', ['fully_enrolled' => '']))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('administrators/classes/index', false)
+            ->has('classes', 2)
+            ->where('filters.fully_enrolled', null)
+        );
+
     // Request with fully_enrolled=true
     $this->get(route('administrators.classes.index', ['fully_enrolled' => true]))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/classes/index', false)
-            ->has('classes.data', 1)
-            ->where('classes.data.0.id', $classFull->id)
+            ->has('classes', 1)
+            ->where('classes.0.id', $classFull->id)
         );
 
     // Request with fully_enrolled=false (should show available)
@@ -195,8 +213,8 @@ it('can filter classes by fully enrolled', function () {
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/classes/index', false)
-            ->has('classes.data', 1)
-            ->where('classes.data.0.id', $classAvailable->id)
+            ->has('classes', 1)
+            ->where('classes.0.id', $classAvailable->id)
         );
 });
 
@@ -226,7 +244,7 @@ it('lists classes by most recent first by default', function () {
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/classes/index', false)
-            ->where('classes.data.0.id', $newerClass->id)
-            ->where('classes.data.1.id', $olderClass->id)
+            ->where('classes.0.id', $newerClass->id)
+            ->where('classes.1.id', $olderClass->id)
         );
 });
