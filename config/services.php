@@ -43,7 +43,7 @@ return [
     ],
 
     'github' => [
-        'repo' => env('GITHUB_REPO', 'yukazakiri/koakademy'),
+        'repo' => env('GITHUB_REPOSITORY', env('GITHUB_REPO', 'yukazakiri/koakademy')),
         'token' => env('GITHUB_TOKEN'),
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),

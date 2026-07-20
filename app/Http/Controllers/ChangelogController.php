@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 final class ChangelogController extends Controller
 {
@@ -23,13 +24,20 @@ final class ChangelogController extends Controller
         $user = Auth::user();
         $canAccessAdminPortal = $user?->canAccessAdminPortal() ?? false;
 
-        // Authenticated users can see development and beta releases. Public
-        // visitors only see stable releases.
-        $changelog = $changelogService->getChangelog(20, includePrereleases: $user !== null);
+        // The deployment workflow publishes every application update as a
+        // pre-release, so these entries are part of the public product history.
+        $changelog = $changelogService->getChangelog(30, includePrereleases: true);
 
         // Get version info for the current release
         $versionInfo = $versionService->getVersionInfo();
         $version = config('app.version', '1.0.0');
+
+        if (! $canAccessAdminPortal) {
+            $versionInfo['commit'] = null;
+            $versionInfo['build_url'] = null;
+        }
+
+        $changelogSource = $changelog->isEmpty() ? 'build_metadata' : 'github_releases';
 
         if ($changelog->isEmpty()) {
             $changelog = collect([$this->fallbackEntry($versionInfo, $version)]);
@@ -51,7 +59,11 @@ final class ChangelogController extends Controller
             'version' => $version,
             'versionInfo' => $versionInfo,
             'changelog' => $changelog->toArray(),
-            'github_repo' => config('services.github.repo', 'dccp-developers/DccpAdminV3'),
+            'changelog_source' => $changelogSource,
+            'show_technical_links' => $canAccessAdminPortal,
+            'github_repo' => $canAccessAdminPortal
+                ? config('services.github.repo', 'dccp-developers/DccpAdminV3')
+                : null,
         ]);
     }
 
@@ -59,14 +71,18 @@ final class ChangelogController extends Controller
      * Build a useful release entry when GitHub releases are unavailable.
      *
      * @param  array{version: string, release_type: string, commit: string|null, build_url: string|null, timestamp: string|null, is_latest: bool}  $versionInfo
-     * @return array{version: string, date: string, type: string, changes: array<int, array{type: string, description: string}>, github_url: null}
+     * @return array{title: string, version: string, date: string, published_at: string|null, type: string, prerelease: bool, source: string, changes: array<int, array{type: string, description: string}>, github_url: null}
      */
     private function fallbackEntry(array $versionInfo, string $version): array
     {
         return [
+            'title' => 'Current deployed build',
             'version' => $versionInfo['version'] ?? $version,
             'date' => $this->fallbackDate($versionInfo['timestamp']),
+            'published_at' => $versionInfo['timestamp'],
             'type' => $versionInfo['release_type'] ?? 'patch',
+            'prerelease' => str_contains($versionInfo['version'] ?? $version, '-'),
+            'source' => 'build_metadata',
             'changes' => [
                 [
                     'type' => 'improvement',
@@ -85,7 +101,7 @@ final class ChangelogController extends Controller
 
         try {
             return \Carbon\Carbon::parse($timestamp)->format('F j, Y');
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return now()->format('F j, Y');
         }
     }

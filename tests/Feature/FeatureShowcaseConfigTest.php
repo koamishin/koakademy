@@ -160,6 +160,35 @@ it('returns latest stable version from GitHub', function (): void {
     expect($version)->toBe('0.1.0');
 });
 
+it('parses generated prerelease notes into transparent change categories', function (): void {
+    Http::fake([
+        'api.github.com/repos/yukazakiri/koakademy/releases*' => Http::response([
+            [
+                'name' => 'Development release 1.10.0-dev.10.1',
+                'tag_name' => 'v1.10.0-dev.10.1',
+                'prerelease' => true,
+                'published_at' => '2026-07-20T08:15:00Z',
+                'created_at' => '2026-07-20T08:15:00Z',
+                'html_url' => 'https://github.com/yukazakiri/koakademy/releases/tag/v1.10.0-dev.10.1',
+                'body' => "## 📋 What's Changed\n- feat(changelog): add release filters (abcdef1)\n- fix: restore private repository sync (abcdef2)\n- chore: rebuild application image (abcdef3)",
+            ],
+        ], 200),
+    ]);
+
+    $release = app(ChangelogService::class)
+        ->getChangelog(limit: 30, includePrereleases: true)
+        ->first();
+
+    expect($release['title'])->toBe('Development release 1.10.0-dev.10.1')
+        ->and($release['prerelease'])->toBeTrue()
+        ->and($release['source'])->toBe('github_release')
+        ->and($release['changes'])->toBe([
+            ['type' => 'feature', 'description' => 'Add release filters'],
+            ['type' => 'fix', 'description' => 'Restore private repository sync'],
+            ['type' => 'improvement', 'description' => 'Rebuild application image'],
+        ]);
+});
+
 it('clears all showcase caches', function (): void {
     Http::fake([
         'api.github.com/repos/yukazakiri/koakademy/releases*' => Http::response([
@@ -178,10 +207,14 @@ it('clears all showcase caches', function (): void {
 
     $service->getShowcaseChangelog();
     $service->getLatestStableVersion();
+    $service->getChangelog(limit: 20, includePrereleases: true);
+
+    expect(Cache::has('changelog_entries.v2.limit:20.prereleases:1'))->toBeTrue();
 
     $service->clearCache();
 
     expect(Cache::has('changelog_entries'))->toBeFalse()
+        ->and(Cache::has('changelog_entries.v2.limit:20.prereleases:1'))->toBeFalse()
         ->and(Cache::has('showcase_changelog'))->toBeFalse()
         ->and(Cache::has('latest_stable_version'))->toBeFalse();
 });

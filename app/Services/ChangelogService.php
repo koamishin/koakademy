@@ -12,7 +12,11 @@ use Illuminate\Support\Facades\Log;
 
 final readonly class ChangelogService
 {
-    private const string CACHE_KEY = 'changelog_entries';
+    private const string CACHE_KEY = 'changelog_entries.v2';
+
+    private const string LEGACY_CACHE_KEY = 'changelog_entries';
+
+    private const string CACHE_KEYS_KEY = 'changelog_entry_cache_keys';
 
     private const string RATE_LIMIT_CACHE_KEY = 'changelog_github_rate_limited';
 
@@ -29,9 +33,13 @@ final readonly class ChangelogService
      * Get changelog entries from GitHub releases.
      *
      * @return Collection<int, array{
+     *     title: string,
      *     version: string,
      *     date: string,
+     *     published_at: string,
      *     type: string,
+     *     prerelease: bool,
+     *     source: string,
      *     changes: array<int, array{type: string, description: string}>,
      *     github_url: string|null
      * }>
@@ -39,6 +47,7 @@ final readonly class ChangelogService
     public function getChangelog(int $limit = 20, bool $includePrereleases = false): Collection
     {
         $cacheKey = self::CACHE_KEY.".limit:{$limit}.prereleases:".($includePrereleases ? '1' : '0');
+        $this->rememberCacheKey($cacheKey);
 
         return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($limit, $includePrereleases) {
             Log::info('ChangelogService: getChangelog called', [
@@ -72,11 +81,16 @@ final readonly class ChangelogService
 
             return $filtered->map(function (array $release): array {
                 $version = mb_ltrim($release['tag_name'], 'v');
+                $publishedAt = $release['published_at'] ?? $release['created_at'];
 
                 return [
+                    'title' => ($release['name'] ?? null) ?: "Version {$version}",
                     'version' => $version,
-                    'date' => $this->formatDate($release['published_at'] ?? $release['created_at']),
+                    'date' => $this->formatDate($publishedAt),
+                    'published_at' => $publishedAt,
                     'type' => $this->determineVersionType($version),
+                    'prerelease' => (bool) ($release['prerelease'] ?? false),
+                    'source' => 'github_release',
                     'changes' => $this->parseGitHubReleaseBody($release['body'] ?? ''),
                     'github_url' => $release['html_url'],
                 ];
@@ -148,7 +162,13 @@ final readonly class ChangelogService
      */
     public function clearCache(): void
     {
+        foreach (Cache::get(self::CACHE_KEYS_KEY, []) as $cacheKey) {
+            Cache::forget($cacheKey);
+        }
+
         Cache::forget(self::CACHE_KEY);
+        Cache::forget(self::LEGACY_CACHE_KEY);
+        Cache::forget(self::CACHE_KEYS_KEY);
         Cache::forget(self::RATE_LIMIT_CACHE_KEY);
         Cache::forget('showcase_changelog');
         Cache::forget('latest_stable_version');
@@ -357,28 +377,28 @@ final readonly class ChangelogService
                 continue;
             }
 
-            // Check for section headers
-            if (preg_match('/^##?\s*(Features?|New|Added)/i', $line)) {
+            // GitHub-generated release notes may include emoji before headings.
+            if (str_starts_with($line, '#') && preg_match('/(Features?|New|Added)/i', $line)) {
                 $currentType = 'feature';
 
                 continue;
             }
-            if (preg_match('/^##?\s*(Bug\s*Fixes?|Fixed|Fixes)/i', $line)) {
+            if (str_starts_with($line, '#') && preg_match('/(Bug\s*Fixes?|Fixed|Fixes)/i', $line)) {
                 $currentType = 'fix';
 
                 continue;
             }
-            if (preg_match('/^##?\s*(Breaking|Breaking\s*Changes?)/i', $line)) {
+            if (str_starts_with($line, '#') && preg_match('/(Breaking|Breaking\s*Changes?)/i', $line)) {
                 $currentType = 'breaking';
 
                 continue;
             }
-            if (preg_match('/^##?\s*(Security)/i', $line)) {
+            if (str_starts_with($line, '#') && preg_match('/Security/i', $line)) {
                 $currentType = 'security';
 
                 continue;
             }
-            if (preg_match('/^##?\s*(Improvements?|Enhanced?|Changed?)/i', $line)) {
+            if (str_starts_with($line, '#') && preg_match('/(Improvements?|Enhanced?|Changed?)/i', $line)) {
                 $currentType = 'improvement';
 
                 continue;
@@ -386,14 +406,20 @@ final readonly class ChangelogService
 
             // Parse list items
             if (preg_match('/^[-*]\s+(.+)$/', $line, $matches)) {
+                $description = mb_trim($matches[1]);
+
                 $changes[] = [
-                    'type' => $currentType,
-                    'description' => ucfirst(mb_trim($matches[1])),
+                    'type' => $this->inferChangeType($description, $currentType),
+                    'description' => $this->cleanChangeDescription($description),
                 ];
             }
         }
 
-        return $changes;
+        return collect($changes)
+            ->filter(fn (array $change): bool => $change['description'] !== '')
+            ->unique(fn (array $change): string => $change['type'].'|'.$change['description'])
+            ->values()
+            ->all();
     }
 
     /**
@@ -401,7 +427,8 @@ final readonly class ChangelogService
      */
     private function determineVersionType(string $version): string
     {
-        $parts = explode('.', $version);
+        $baseVersion = explode('-', $version, 2)[0];
+        $parts = explode('.', $baseVersion);
 
         if (count($parts) < 3) {
             return 'major';
@@ -418,6 +445,39 @@ final readonly class ChangelogService
         }
 
         return 'patch';
+    }
+
+    private function inferChangeType(string $description, string $fallback): string
+    {
+        return match (true) {
+            preg_match('/^(breaking|major)(?:\([^)]+\))?!?:/i', $description) === 1 => 'breaking',
+            preg_match('/^(security|sec)(?:\([^)]+\))?!?:/i', $description) === 1 => 'security',
+            preg_match('/^(feat|feature)(?:\([^)]+\))?!?:/i', $description) === 1 => 'feature',
+            preg_match('/^(fix|bugfix)(?:\([^)]+\))?!?:/i', $description) === 1 => 'fix',
+            preg_match('/^(perf|refactor|chore|style|docs|test)(?:\([^)]+\))?!?:/i', $description) === 1 => 'improvement',
+            default => $fallback,
+        };
+    }
+
+    private function cleanChangeDescription(string $description): string
+    {
+        $description = preg_replace(
+            '/^(?:breaking|major|security|sec|feat|feature|fix|bugfix|perf|refactor|chore|style|docs|test)(?:\([^)]+\))?!?:\s*/i',
+            '',
+            $description,
+        );
+        $description = preg_replace('/\s+\([0-9a-f]{7,40}\)$/i', '', (string) $description);
+        $description = preg_replace('/[*_]+/', '', (string) $description);
+
+        return ucfirst(mb_trim((string) $description));
+    }
+
+    private function rememberCacheKey(string $cacheKey): void
+    {
+        $cacheKeys = Cache::get(self::CACHE_KEYS_KEY, []);
+        $cacheKeys[] = $cacheKey;
+
+        Cache::put(self::CACHE_KEYS_KEY, array_values(array_unique($cacheKeys)), self::CACHE_TTL);
     }
 
     /**

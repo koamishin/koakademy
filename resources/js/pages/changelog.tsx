@@ -1,36 +1,27 @@
 import AdminLayout from "@/components/administrators/admin-layout";
 import PortalLayout from "@/components/portal-layout";
-import {
-    Timeline,
-    TimelineContent,
-    TimelineDate,
-    TimelineHeader,
-    TimelineIndicator,
-    TimelineItem,
-    TimelineSeparator,
-    TimelineTitle,
-} from "@/components/reui/timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { User } from "@/types/user";
 import { ChangelogEntry, VersionInfo } from "@/types/version";
 import { Head } from "@inertiajs/react";
 import {
-    IconAlertCircle,
+    IconAlertTriangle,
     IconBug,
     IconCalendar,
     IconCheck,
-    IconChevronRight,
-    IconClock,
+    IconCode,
     IconExternalLink,
     IconGitBranch,
+    IconHistory,
     IconRocket,
     IconSearch,
+    IconShieldCheck,
     IconSparkles,
-    IconTools,
+    IconTool,
+    IconX,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 
@@ -40,259 +31,379 @@ interface ChangelogProps {
     version: string;
     versionInfo?: VersionInfo;
     changelog: ChangelogEntry[];
+    changelog_source?: "github_releases" | "build_metadata";
+    show_technical_links?: boolean;
     github_repo?: string;
 }
 
-type FilterType = "all" | "feature" | "fix" | "improvement" | "breaking" | "security";
+type ChangeType = ChangelogEntry["changes"][number]["type"];
+type FilterType = "all" | ChangeType;
+
+const filters: { value: FilterType; label: string }[] = [
+    { value: "all", label: "All updates" },
+    { value: "feature", label: "Features" },
+    { value: "fix", label: "Fixes" },
+    { value: "improvement", label: "Improvements" },
+    { value: "security", label: "Security" },
+    { value: "breaking", label: "Breaking" },
+];
 
 const typeConfig = {
-    feature: { label: "Feature", icon: IconRocket, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-    fix: { label: "Fix", icon: IconBug, color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
-    improvement: { label: "Improvement", icon: IconSparkles, color: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" },
-    breaking: { label: "Breaking", icon: IconAlertCircle, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-    security: { label: "Security", icon: IconTools, color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" },
+    feature: {
+        label: "Feature",
+        icon: IconRocket,
+        iconClass: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+    },
+    fix: {
+        label: "Fix",
+        icon: IconBug,
+        iconClass: "bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+    },
+    improvement: {
+        label: "Improvement",
+        icon: IconSparkles,
+        iconClass: "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+    },
+    breaking: {
+        label: "Breaking",
+        icon: IconAlertTriangle,
+        iconClass: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+    },
+    security: {
+        label: "Security",
+        icon: IconShieldCheck,
+        iconClass: "bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+    },
+} satisfies Record<ChangeType, { label: string; icon: typeof IconRocket; iconClass: string }>;
+
+const releaseTypeConfig: Record<string, { label: string; className: string }> = {
+    major: { label: "Major release", className: "border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
+    minor: { label: "Minor release", className: "border-sky-300 bg-sky-50 text-sky-800 dark:bg-sky-950 dark:text-sky-300" },
+    patch: { label: "Patch", className: "border-border bg-muted text-muted-foreground" },
+    feature: { label: "Feature release", className: "border-emerald-300 bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
+    bugfix: { label: "Bug fix", className: "border-rose-300 bg-rose-50 text-rose-800 dark:bg-rose-950 dark:text-rose-300" },
+    chore: { label: "Maintenance", className: "border-border bg-muted text-muted-foreground" },
 };
 
-const versionTypeConfig = {
-    major: { label: "Major", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
-    minor: { label: "Minor", color: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" },
-    patch: { label: "Patch", color: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400" },
-} as const;
+function formatDate(dateString: string): string {
+    const date = new Date(dateString);
 
-export default function Changelog({ user, layout = "portal", version, versionInfo, changelog, github_repo }: ChangelogProps) {
+    if (Number.isNaN(date.getTime())) {
+        return dateString;
+    }
+
+    return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+}
+
+function formatTimestamp(timestamp?: string | null): string | null {
+    if (!timestamp) return null;
+
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return null;
+
+    return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
+export default function Changelog({
+    user,
+    layout = "portal",
+    version,
+    versionInfo,
+    changelog,
+    changelog_source = "build_metadata",
+    show_technical_links = false,
+    github_repo,
+}: ChangelogProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilter, setActiveFilter] = useState<FilterType>("all");
 
     const currentVersion = versionInfo?.version || version;
     const currentEntry = changelog.find((entry) => entry.version === currentVersion) ?? changelog[0];
     const releaseType = versionInfo?.release_type ?? currentEntry?.type ?? "patch";
-    const releaseDate = versionInfo?.timestamp ?? currentEntry?.date ?? null;
-    const githubReleasesUrl = `https://github.com/${github_repo || "dccp-developers/DccpAdminV3"}/releases`;
+    const releaseTypeDetails = releaseTypeConfig[releaseType] ?? releaseTypeConfig.patch;
+    const deployedAt = formatTimestamp(versionInfo?.timestamp) ?? (currentEntry ? formatDate(currentEntry.date) : null);
+    const developmentBuild = currentVersion.includes("-") || currentEntry?.prerelease;
+    const githubReleasesUrl = github_repo ? `https://github.com/${github_repo}/releases` : null;
 
     const filteredChangelog = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+
         return changelog.filter((entry) => {
             const matchesSearch =
-                searchQuery === "" ||
-                entry.version.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                entry.changes.some((change) => change.description.toLowerCase().includes(searchQuery.toLowerCase()));
+                query === "" ||
+                entry.version.toLowerCase().includes(query) ||
+                entry.title.toLowerCase().includes(query) ||
+                entry.changes.some((change) => change.description.toLowerCase().includes(query));
+            const matchesFilter = activeFilter === "all" || entry.changes.some((change) => change.type === activeFilter);
 
-            if (activeFilter === "all") return matchesSearch;
-
-            return matchesSearch && entry.changes.some((change) => change.type === activeFilter);
+            return matchesSearch && matchesFilter;
         });
-    }, [changelog, searchQuery, activeFilter]);
+    }, [activeFilter, changelog, searchQuery]);
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        if (Number.isNaN(date.getTime())) {
-            return dateString;
-        }
-
-        return date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        });
-    };
-
-    const formatTimestamp = (timestamp: string | null) => {
-        if (!timestamp) return null;
-        const date = new Date(timestamp);
-        if (Number.isNaN(date.getTime())) return null;
-
-        return date.toLocaleString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        });
+    const resetFilters = () => {
+        setSearchQuery("");
+        setActiveFilter("all");
     };
 
     const content = (
         <>
-            <Head title="Changelog" />
-            <main className={cn("flex flex-1 flex-col gap-6", layout === "portal" && "p-4 sm:px-6 sm:py-0")}>
-                <div className="flex flex-col gap-4 border-b pb-5">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                        <div className="space-y-1">
-                            <h1 className="text-foreground text-2xl font-semibold tracking-tight">Changelog</h1>
-                            <p className="text-muted-foreground text-sm">Release notes, fixes, and deployed build details.</p>
-                        </div>
+            <Head title="What's new" />
+            <main className={cn("flex flex-1 flex-col", layout === "portal" && "px-4 pb-10 sm:px-6 lg:px-8")}>
+                <header className="border-border border-b py-6 sm:py-8">
+                    <div className="mx-auto w-full max-w-6xl">
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                            <div className="max-w-2xl space-y-2">
+                                <div className="text-primary flex items-center gap-2 text-sm font-medium">
+                                    <IconHistory className="size-4" />
+                                    Product updates
+                                </div>
+                                <h1 className="text-foreground text-3xl font-semibold sm:text-4xl">What&apos;s new</h1>
+                                <p className="text-muted-foreground max-w-xl text-sm leading-6 sm:text-base">
+                                    A transparent record of the features, fixes, and maintenance updates deployed to this portal.
+                                </p>
+                            </div>
 
-                        <div className="flex flex-wrap items-center gap-2 text-sm">
-                            {versionInfo?.is_latest && (
-                                <Badge
-                                    variant="outline"
-                                    className="border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400"
-                                >
-                                    <IconCheck className="mr-1 size-3" />
-                                    Latest
-                                </Badge>
-                            )}
-                            <Badge variant="secondary" className="font-mono text-sm">
-                                v{currentVersion}
-                            </Badge>
-                            <Badge className={cn("text-xs", versionTypeConfig[releaseType]?.color)}>
-                                {versionTypeConfig[releaseType]?.label ?? releaseType}
-                            </Badge>
-                            {releaseDate && (
-                                <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                                    <IconClock className="size-4" />
-                                    {formatTimestamp(versionInfo?.timestamp ?? null) ?? formatDate(releaseDate)}
-                                </span>
-                            )}
-                            {versionInfo?.build_url && (
-                                <Button variant="outline" size="sm" asChild>
-                                    <a href={versionInfo.build_url} target="_blank" rel="noopener noreferrer">
-                                        <IconGitBranch className="size-4" />
-                                        Build
+                            {show_technical_links && githubReleasesUrl && (
+                                <Button variant="outline" size="sm" asChild className="w-fit">
+                                    <a href={githubReleasesUrl} target="_blank" rel="noopener noreferrer">
+                                        <IconCode className="size-4" />
+                                        View releases
+                                        <IconExternalLink className="size-3.5" />
                                     </a>
                                 </Button>
                             )}
-                            <Button variant="outline" size="sm" asChild>
-                                <a href={githubReleasesUrl} target="_blank" rel="noopener noreferrer">
-                                    <IconExternalLink className="size-4" />
-                                    GitHub
-                                </a>
-                            </Button>
                         </div>
                     </div>
+                </header>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <Tabs value={activeFilter} onValueChange={(value) => setActiveFilter(value as FilterType)}>
-                            <TabsList className="h-9">
-                                <TabsTrigger value="all">All</TabsTrigger>
-                                <TabsTrigger value="feature">Features</TabsTrigger>
-                                <TabsTrigger value="fix">Fixes</TabsTrigger>
-                                <TabsTrigger value="improvement">Improvements</TabsTrigger>
-                            </TabsList>
-                        </Tabs>
+                <section className="border-border bg-muted/30 border-b py-5" aria-labelledby="current-deployment-heading">
+                    <div className="mx-auto grid w-full max-w-6xl gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                        <div className="flex min-w-0 items-start gap-3">
+                            <span className="bg-background border-border mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md border">
+                                <IconCheck className="size-5 text-emerald-600" />
+                            </span>
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h2 id="current-deployment-heading" className="text-foreground text-sm font-semibold">
+                                        Current deployment
+                                    </h2>
+                                    <Badge variant="outline" className={cn("rounded-sm", releaseTypeDetails.className)}>
+                                        {releaseTypeDetails.label}
+                                    </Badge>
+                                    <Badge variant="outline" className="rounded-sm">
+                                        {developmentBuild ? "Development channel" : "Stable channel"}
+                                    </Badge>
+                                </div>
+                                <p className="text-muted-foreground mt-1 text-sm">
+                                    <span className="text-foreground font-mono font-medium">v{currentVersion}</span>
+                                    {deployedAt && <span> · Deployed {deployedAt}</span>}
+                                </p>
+                            </div>
+                        </div>
 
-                        <div className="relative w-full sm:w-72">
-                            <IconSearch className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                        <div className="text-muted-foreground flex items-start gap-2 text-xs leading-5 md:max-w-sm">
+                            <IconGitBranch className="mt-0.5 size-4 shrink-0" />
+                            <span>
+                                {changelog_source === "github_releases"
+                                    ? "Release notes are synced from the deployment's GitHub release record."
+                                    : "GitHub release notes are temporarily unavailable. Build metadata is shown instead."}
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="mx-auto w-full max-w-6xl py-6 sm:py-8" aria-label="Release history">
+                    <div className="flex flex-col gap-4 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="overflow-x-auto pb-1">
+                            <div className="flex min-w-max gap-1" role="group" aria-label="Filter updates">
+                                {filters.map((filter) => (
+                                    <Button
+                                        key={filter.value}
+                                        type="button"
+                                        size="sm"
+                                        variant={activeFilter === filter.value ? "secondary" : "ghost"}
+                                        aria-pressed={activeFilter === filter.value}
+                                        onClick={() => setActiveFilter(filter.value)}
+                                        className="rounded-md"
+                                    >
+                                        {filter.label}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="relative w-full lg:w-72">
+                            <IconSearch className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                             <Input
-                                placeholder="Search releases"
+                                type="search"
+                                aria-label="Search release notes"
+                                placeholder="Search release notes"
                                 value={searchQuery}
                                 onChange={(event) => setSearchQuery(event.target.value)}
-                                className="h-9 pl-9"
+                                className="h-9 pr-9 pl-9"
                             />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    title="Clear search"
+                                    aria-label="Clear search"
+                                    onClick={() => setSearchQuery("")}
+                                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-sm"
+                                >
+                                    <IconX className="size-4" />
+                                </button>
+                            )}
                         </div>
                     </div>
-                </div>
 
-                {filteredChangelog.length === 0 ? (
-                    <div className="border-border bg-muted/20 flex min-h-48 flex-col items-center justify-center rounded-lg border border-dashed px-6 py-10 text-center">
-                        <IconCalendar className="text-muted-foreground/60 mb-3 size-9" />
-                        <p className="text-foreground font-medium">No matching releases</p>
-                        <p className="text-muted-foreground mt-1 max-w-md text-sm">
-                            Current version v{currentVersion} is available. Clear the search or change the filter to view its release details.
+                    <div className="text-muted-foreground flex items-center justify-between py-5 text-sm">
+                        <p>
+                            {filteredChangelog.length} {filteredChangelog.length === 1 ? "release" : "releases"}
                         </p>
+                        {(activeFilter !== "all" || searchQuery) && (
+                            <Button type="button" variant="ghost" size="sm" onClick={resetFilters}>
+                                Clear filters
+                            </Button>
+                        )}
                     </div>
-                ) : (
-                    <Timeline defaultValue={filteredChangelog.length} className="max-w-5xl">
-                        {filteredChangelog.map((entry, index) => {
-                            const isCurrentVersion = entry.version === currentVersion;
-                            const visibleChanges = entry.changes.filter((change) => activeFilter === "all" || change.type === activeFilter);
 
-                            return (
-                                <TimelineItem key={entry.version} step={index + 1} className="pb-8">
-                                    <TimelineHeader>
-                                        <TimelineSeparator className="bg-border" />
-                                        <TimelineIndicator
-                                            className={cn(
-                                                "border-border bg-background",
-                                                isCurrentVersion && "border-primary bg-primary shadow-primary/30 shadow-sm",
-                                            )}
-                                        />
-                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                            <div className="min-w-0 space-y-1">
-                                                <TimelineTitle className="flex flex-wrap items-center gap-2 text-base">
-                                                    <span className="font-mono">v{entry.version}</span>
-                                                    {isCurrentVersion && (
-                                                        <Badge variant="default" className="text-xs">
-                                                            Current
+                    {filteredChangelog.length === 0 ? (
+                        <div className="border-border flex min-h-56 flex-col items-center justify-center rounded-md border border-dashed px-6 py-12 text-center">
+                            <IconCalendar className="text-muted-foreground mb-3 size-8" />
+                            <h2 className="text-foreground text-base font-semibold">No matching updates</h2>
+                            <p className="text-muted-foreground mt-1 max-w-sm text-sm leading-6">
+                                Try a different search term or clear the selected category.
+                            </p>
+                            <Button type="button" variant="outline" size="sm" onClick={resetFilters} className="mt-4">
+                                Clear filters
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            {filteredChangelog.map((entry) => {
+                                const isCurrentVersion = entry.version === currentVersion;
+                                const visibleChanges = entry.changes.filter((change) => activeFilter === "all" || change.type === activeFilter);
+                                const entryReleaseType = releaseTypeConfig[entry.type] ?? releaseTypeConfig.patch;
+
+                                return (
+                                    <article
+                                        key={entry.version}
+                                        className={cn(
+                                            "border-border bg-background overflow-hidden rounded-md border",
+                                            isCurrentVersion && "border-primary/50",
+                                        )}
+                                    >
+                                        <div className="grid md:grid-cols-[11rem_minmax(0,1fr)]">
+                                            <div className="border-border bg-muted/20 border-b p-4 md:border-r md:border-b-0 md:p-5">
+                                                <time
+                                                    className="text-muted-foreground text-xs font-medium"
+                                                    dateTime={entry.published_at ?? entry.date}
+                                                >
+                                                    {formatDate(entry.published_at ?? entry.date)}
+                                                </time>
+                                                <p className="text-foreground mt-1 font-mono text-lg font-semibold">v{entry.version}</p>
+                                                <div className="mt-3 flex flex-wrap gap-1.5">
+                                                    {isCurrentVersion && <Badge className="rounded-sm">Current</Badge>}
+                                                    {entry.prerelease && (
+                                                        <Badge variant="outline" className="rounded-sm">
+                                                            Pre-release
                                                         </Badge>
                                                     )}
-                                                    <Badge className={cn("text-xs", versionTypeConfig[entry.type]?.color)}>
-                                                        {versionTypeConfig[entry.type]?.label ?? entry.type}
+                                                    <Badge variant="outline" className={cn("rounded-sm", entryReleaseType.className)}>
+                                                        {entryReleaseType.label}
                                                     </Badge>
-                                                </TimelineTitle>
-                                                <TimelineDate dateTime={entry.date}>{formatDate(entry.date)}</TimelineDate>
+                                                </div>
                                             </div>
 
-                                            {entry.github_url && (
-                                                <Button variant="ghost" size="sm" asChild className="h-8 justify-start px-2 sm:justify-center">
-                                                    <a href={entry.github_url} target="_blank" rel="noopener noreferrer">
-                                                        Release
-                                                        <IconExternalLink className="size-4" />
-                                                    </a>
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </TimelineHeader>
-
-                                    <TimelineContent className="pt-2 text-sm">
-                                        {visibleChanges.length > 0 ? (
-                                            <ul className="divide-border rounded-md border">
-                                                {visibleChanges.map((change, changeIndex) => {
-                                                    const config = typeConfig[change.type] ?? typeConfig.improvement;
-                                                    const Icon = config.icon;
-
-                                                    return (
-                                                        <li key={changeIndex} className="flex gap-3 border-b px-3 py-3 last:border-b-0">
-                                                            <span
-                                                                className={cn(
-                                                                    "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md",
-                                                                    config.color,
-                                                                )}
+                                            <div className="min-w-0 p-4 sm:p-5">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <h2 className="text-foreground text-base font-semibold sm:text-lg">{entry.title}</h2>
+                                                        <p className="text-muted-foreground mt-1 text-xs">
+                                                            {entry.source === "github_release" ? "GitHub release notes" : "Deployment metadata"}
+                                                        </p>
+                                                    </div>
+                                                    {show_technical_links && entry.github_url && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            asChild
+                                                            title="Open release on GitHub"
+                                                            className="shrink-0"
+                                                        >
+                                                            <a
+                                                                href={entry.github_url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                aria-label="Open release on GitHub"
                                                             >
-                                                                <Icon className="size-3.5" />
-                                                            </span>
-                                                            <div className="min-w-0 flex-1">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="text-foreground text-xs font-medium">{config.label}</span>
-                                                                    <IconChevronRight className="text-muted-foreground size-3" />
-                                                                </div>
-                                                                <p className="text-foreground/90 mt-1 leading-relaxed">{change.description}</p>
-                                                            </div>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        ) : (
-                                            <div className="border-border bg-muted/20 rounded-md border px-3 py-3 text-sm">
-                                                Release notes are not available for this version yet.
+                                                                <IconExternalLink className="size-4" />
+                                                            </a>
+                                                        </Button>
+                                                    )}
+                                                </div>
+
+                                                {visibleChanges.length > 0 ? (
+                                                    <ul className="divide-border mt-4 divide-y">
+                                                        {visibleChanges.map((change, index) => {
+                                                            const config = typeConfig[change.type] ?? typeConfig.improvement;
+                                                            const ChangeIcon = config.icon;
+
+                                                            return (
+                                                                <li key={`${change.type}-${index}`} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                                                                    <span
+                                                                        className={cn(
+                                                                            "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md",
+                                                                            config.iconClass,
+                                                                        )}
+                                                                    >
+                                                                        <ChangeIcon className="size-4" />
+                                                                    </span>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="text-muted-foreground text-xs font-medium">{config.label}</p>
+                                                                        <p className="text-foreground mt-0.5 text-sm leading-6">
+                                                                            {change.description}
+                                                                        </p>
+                                                                    </div>
+                                                                </li>
+                                                            );
+                                                        })}
+                                                    </ul>
+                                                ) : (
+                                                    <div className="text-muted-foreground mt-4 flex items-center gap-2 text-sm">
+                                                        <IconTool className="size-4" />
+                                                        Detailed release notes are not available for this build.
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                    </TimelineContent>
-                                </TimelineItem>
-                            );
-                        })}
-                    </Timeline>
-                )}
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
             </main>
         </>
     );
 
     if (layout === "admin") {
         return (
-            <AdminLayout user={user} title="Changelog">
+            <AdminLayout user={user} title="What's new">
                 {content}
             </AdminLayout>
         );
     }
 
-    return (
-        <PortalLayout
-            user={{
-                name: user.name,
-                email: user.email,
-                avatar: user.avatar,
-                role: user.role,
-            }}
-        >
-            {content}
-        </PortalLayout>
-    );
+    return <PortalLayout user={{ name: user.name, email: user.email, avatar: user.avatar, role: user.role }}>{content}</PortalLayout>;
 }
