@@ -120,6 +120,7 @@ final class StoreEnrollmentRegistrationRequest extends FormRequest
             'documents.*.file' => ['required_with:documents', 'file', 'mimes:jpeg,jpg,png,webp,pdf', 'max:10240'],
 
             'consent' => ['accepted'],
+            'marketing_consent' => ['sometimes', 'boolean'],
         ];
     }
 

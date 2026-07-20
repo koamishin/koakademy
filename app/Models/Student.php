@@ -54,6 +54,9 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property string|null $address
  * @property string|null $emergency_contact
  * @property string $status
+ * @property Carbon|null $privacy_consent_at
+ * @property bool $marketing_consent
+ * @property Carbon|null $marketing_consent_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, ClassEnrollment> $Classes
@@ -152,6 +155,9 @@ final class Student extends Model
         'age',
         'address',
         'contacts',
+        'privacy_consent_at',
+        'marketing_consent',
+        'marketing_consent_at',
         'course_id',
         'academic_year',
         'email',
@@ -224,6 +230,9 @@ final class Student extends Model
         'age',
         'address',
         'contacts',
+        'privacy_consent_at',
+        'marketing_consent',
+        'marketing_consent_at',
         'course_id',
         'academic_year',
         'email',
@@ -1529,6 +1538,9 @@ final class Student extends Model
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
             'contacts' => 'array',
+            'privacy_consent_at' => 'datetime',
+            'marketing_consent' => 'boolean',
+            'marketing_consent_at' => 'datetime',
             'subject_enrolled' => 'array',
             'user_id' => 'integer',
             'student_type' => StudentType::class,

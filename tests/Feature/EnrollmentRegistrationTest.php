@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Enums\StudentStatus;
 use App\Enums\StudentType;
+use App\Features\Toggles\OnlineCollegeEnrollment;
 use App\Models\Classes;
 use App\Models\Course;
+use App\Models\Department;
 use App\Models\GeneralSetting;
 use App\Models\School;
 use App\Models\Student;
@@ -13,6 +15,8 @@ use App\Models\StudentEnrollment;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Pennant\Feature;
 
 beforeEach(function () {
     //
@@ -20,7 +24,17 @@ beforeEach(function () {
 
 it('can view enrollment page', function () {
     $response = $this->get(route('enrollment.create'));
-    $response->assertStatus(200);
+    $response->assertStatus(200)
+        ->assertInertia(fn (Assert $page) => $page->where('school_name', 'KoAkademy'));
+});
+
+it('uses the configured school name on the enrollment privacy notice', function () {
+    School::factory()->inactive()->create(['name' => 'Archived School']);
+    School::factory()->create(['name' => 'DCCP Main Campus', 'is_active' => true]);
+
+    $this->get(route('enrollment.create'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('school_name', 'DCCP Main Campus'));
 });
 
 it('allows tesda student registration', function () {
@@ -62,6 +76,7 @@ it('allows tesda student registration', function () {
             'elementary_school' => 'Elem School',
         ],
         'consent' => true,
+        'marketing_consent' => true,
     ];
 
     $response = $this->post(route('enrollment.store'), $data);
@@ -75,13 +90,59 @@ it('allows tesda student registration', function () {
         'student_type' => StudentType::TESDA,
         'status' => StudentStatus::Applicant,
         'course_id' => $course->id,
+        'marketing_consent' => true,
+    ]);
+
+    $student = Student::query()->where('email', 'john@example.com')->firstOrFail();
+    expect($student->privacy_consent_at)->not->toBeNull()
+        ->and($student->marketing_consent_at)->not->toBeNull();
+});
+
+it('requires data privacy consent before accepting enrollment', function () {
+    $course = Course::factory()->create([
+        'department' => 'TESDA',
+        'is_active' => true,
+    ]);
+
+    $response = $this->post(route('enrollment.store'), [
+        'first_name' => 'Privacy',
+        'last_name' => 'Required',
+        'student_type' => 'tesda',
+        'course_id' => $course->id,
+        'birth_date' => '2000-01-01',
+        'gender' => 'male',
+        'nationality' => 'Filipino',
+        'address' => '123 Test St',
+        'income_bracket_mode' => 'annual',
+        'use_same_parent_income' => true,
+        'family_income_bracket' => 'below_250k',
+        'contacts' => [
+            'emergency_contact_name' => 'Test Guardian',
+            'emergency_contact_phone' => '09987654321',
+        ],
+        'parents' => [
+            'guardian_name' => 'Test Guardian',
+            'guardian_relationship' => 'Parent',
+            'guardian_contact' => '09987654321',
+        ],
+        'consent' => false,
+    ]);
+
+    $response->assertSessionHasErrors('consent');
+    $this->assertDatabaseMissing('students', [
+        'first_name' => 'Privacy',
+        'last_name' => 'Required',
     ]);
 });
 
 it('prevents college student registration', function () {
+    Feature::deactivateForEveryone(OnlineCollegeEnrollment::class);
+
     // Create a non-TESDA course
+    $department = Department::factory()->create(['code' => 'IT']);
     $course = Course::factory()->create([
         'department' => 'IT',
+        'department_id' => $department->id,
         'is_active' => true,
     ]);
 
@@ -383,10 +444,16 @@ it('saves continuing enrollment using first school when no active school exists'
             ],
         ],
         'consent' => true,
+        'marketing_consent' => true,
     ]);
 
     $response->assertRedirect(route('enrollment.create'));
     $response->assertSessionHas('flash.success');
+
+    $student->refresh();
+    expect($student->privacy_consent_at)->not->toBeNull()
+        ->and($student->marketing_consent)->toBeTrue()
+        ->and($student->marketing_consent_at)->not->toBeNull();
 
     $enrollment = StudentEnrollment::query()
         ->withoutSchoolScope()

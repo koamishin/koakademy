@@ -83,6 +83,9 @@ final class EnrollmentRegistrationController extends Controller
             ->all();
 
         $currencySymbol = app(SiteSettings::class)->getCurrency() === 'PHP' ? '₱' : (app(SiteSettings::class)->getCurrency() === 'USD' ? '$' : app(SiteSettings::class)->getCurrency());
+        $schoolName = School::query()->active()->orderBy('id')->value('name')
+            ?? School::query()->orderBy('id')->value('name')
+            ?? 'KoAkademy';
 
         $incomeModes = collect(config('income_brackets.modes', []))
             ->map(function (array $modeConfig, string $modeKey) use ($currencySymbol): array {
@@ -119,6 +122,7 @@ final class EnrollmentRegistrationController extends Controller
             'income_modes' => $incomeModes,
             'default_income_mode' => (string) config('income_brackets.default_mode', 'annual'),
             'currency_symbol' => $currencySymbol,
+            'school_name' => $schoolName,
         ]);
     }
 
@@ -335,6 +339,9 @@ final class EnrollmentRegistrationController extends Controller
                 'student_personal_id' => $studentPersonalInfoId,
                 'status' => StudentStatus::Applicant,
                 'contacts' => $contacts,
+                'privacy_consent_at' => now(),
+                'marketing_consent' => (bool) ($payload['marketing_consent'] ?? false),
+                'marketing_consent_at' => ($payload['marketing_consent'] ?? false) ? now() : null,
                 'ethnicity' => $payload['ethnicity'] ?? null,
                 'city_of_origin' => $payload['city_of_origin'] ?? null,
                 'province_of_origin' => $payload['province_of_origin'] ?? null,
@@ -606,6 +613,7 @@ final class EnrollmentRegistrationController extends Controller
             'subjects.*.enrolled_lecture_units' => ['required', 'integer', 'min:0'],
             'subjects.*.enrolled_laboratory_units' => ['required', 'integer', 'min:0'],
             'consent' => ['accepted'],
+            'marketing_consent' => ['sometimes', 'boolean'],
         ], [
             'consent.accepted' => 'You must confirm that the information is accurate and you agree to the data privacy notice.',
             'subjects.required' => 'Please select at least one subject to enroll in.',
@@ -698,6 +706,13 @@ final class EnrollmentRegistrationController extends Controller
         try {
             [$enrollment, $tuition] = DB::transaction(function () use ($validated, $student, $schoolYear, $semester, $enrollmentService, $workflowCoordinator): array {
                 $schoolId = $this->resolveSiteSchoolId($student);
+
+                $marketingConsent = (bool) ($validated['marketing_consent'] ?? false);
+                $student->update([
+                    'privacy_consent_at' => now(),
+                    'marketing_consent' => $marketingConsent,
+                    'marketing_consent_at' => $marketingConsent ? now() : null,
+                ]);
 
                 $enrollment = $workflowCoordinator->create([
                     'school_id' => $schoolId,

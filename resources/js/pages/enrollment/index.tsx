@@ -20,6 +20,7 @@ import {
     ChevronRight,
     Copy,
     Eraser,
+    ExternalLink,
     FileText,
     GraduationCap,
     Loader2,
@@ -27,6 +28,7 @@ import {
     PencilLine,
     School,
     Search,
+    ShieldCheck,
     Sparkles,
     Trash2,
     Upload,
@@ -183,6 +185,7 @@ type EnrollmentFormData = {
 
     remarks: string;
     consent: boolean;
+    marketing_consent: boolean;
 };
 
 type IncomeBracketOption = {
@@ -205,6 +208,7 @@ interface EnrollmentCreateProps {
     income_modes?: IncomeModeOption[];
     default_income_mode?: string;
     currency_symbol?: string;
+    school_name?: string;
 }
 
 const steps = [
@@ -354,7 +358,7 @@ interface Branding {
 const sanitizeNumberInput = (value: string) => value.replace(/\D/g, "");
 const sanitizeNameInput = (value: string) => value.replace(/[^a-zA-Z\s.-]/g, "");
 
-export default function EnrollmentCreate({ departments, courses, flash, college_enrollment_enabled = false, tesda_enrollment_enabled = true, income_modes = [], default_income_mode = 'annual', currency_symbol = '₱' }: EnrollmentCreateProps) {
+export default function EnrollmentCreate({ departments, courses, flash, college_enrollment_enabled = false, tesda_enrollment_enabled = true, income_modes = [], default_income_mode = 'annual', currency_symbol = '₱', school_name = "KoAkademy" }: EnrollmentCreateProps) {
     const { props } = usePage<{ branding?: Branding }>();
     const appName = props.branding?.appName || "School Portal";
     const orgShortName = props.branding?.organizationShortName || "UNI";
@@ -363,6 +367,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
     const [direction, setDirection] = useState(0);
     const [showSuccess, setShowSuccess] = useState(false);
     const [successData, setSuccessData] = useState<SuccessData | null>(null);
+    const [privacyGateCompleted, setPrivacyGateCompleted] = useState(false);
     const [uploadedDocuments, setUploadedDocuments] = useState<DocumentFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -430,7 +435,6 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
     const [continuingStep, setContinuingStep] = useState<0 | 1 | 2>(0); // 0=confirm, 1=subjects, 2=review
     const [continuingYear, setContinuingYear] = useState("");
     const [continuingSemester, setContinuingSemester] = useState("");
-    const [continuingConsent, setContinuingConsent] = useState(false);
     const [continuingSubmitting, setContinuingSubmitting] = useState(false);
     const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null);
     const [availableSubjects, setAvailableSubjects] = useState<SubjectOption[]>([]);
@@ -544,6 +548,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
 
         remarks: "",
         consent: false,
+        marketing_consent: false,
     });
 
     const errorsBag = errors as Record<string, string>;
@@ -768,6 +773,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         formData.append("mother_income_bracket", data.mother_income_bracket);
         formData.append("remarks", data.remarks);
         formData.append("consent", data.consent ? "1" : "0");
+        formData.append("marketing_consent", data.marketing_consent ? "1" : "0");
 
         // Add nested objects
         Object.entries(data.contacts).forEach(([key, value]) => {
@@ -807,6 +813,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         reset();
         setShowSuccess(false);
         setSuccessData(null);
+        setPrivacyGateCompleted(false);
         setCurrentStep(0);
         setUploadedDocuments([]);
         setAvailableDocuments(Object.fromEntries(DOCUMENT_TYPES.map((doc) => [doc.id, false])));
@@ -817,7 +824,6 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
         setLookupStudentId("");
         setContinuingYear("");
         setContinuingSemester("");
-        setContinuingConsent(false);
         setContinuingStep(0);
         setCourseInfo(null);
         setAvailableSubjects([]);
@@ -1175,7 +1181,7 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
             toast.error("Please select at least one subject to enroll in.");
             return;
         }
-        if (!continuingConsent) {
+        if (!data.consent) {
             toast.error("Please agree to the data privacy notice.");
             return;
         }
@@ -1196,7 +1202,8 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                     enrolled_lecture_units: s.lecture_units,
                     enrolled_laboratory_units: s.laboratory_units,
                 })),
-                consent: true,
+                consent: data.consent,
+                marketing_consent: data.marketing_consent,
             },
             {
                 preserveScroll: true,
@@ -1220,6 +1227,161 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(amount);
+
+    const handlePrivacyContinue = () => {
+        if (!data.consent) {
+            toast.error("Please agree to the required Data Privacy Notice before continuing.");
+            return;
+        }
+
+        setPrivacyGateCompleted(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const privacyView = (
+        <>
+            <header className="bg-background/90 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-40 w-full border-b backdrop-blur-md">
+                <div className="container mx-auto flex h-16 max-w-3xl items-center justify-between px-4">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-primary text-primary-foreground flex h-9 w-9 items-center justify-center rounded-lg shadow-sm">
+                            <GraduationCap className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <h1 className="text-sm leading-none font-bold sm:text-base">{orgShortName} Enrollment</h1>
+                            <p className="text-muted-foreground mt-0.5 text-[10px] sm:text-xs">Privacy and consent</p>
+                        </div>
+                    </div>
+                    <Button variant="ghost" size="sm" asChild>
+                        <a href="/login" className="gap-1.5">
+                            <LogIn className="h-4 w-4" />
+                            <span className="hidden sm:inline">Sign in</span>
+                        </a>
+                    </Button>
+                </div>
+            </header>
+
+            <main className="container mx-auto flex w-full max-w-3xl flex-1 items-start px-4 py-6 sm:px-6 sm:py-10">
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full space-y-5"
+                >
+                    <div className="flex items-start gap-3">
+                        <div className="bg-primary/10 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-lg">
+                            <ShieldCheck className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <Badge variant="secondary" className="mb-2">
+                                Required before enrollment
+                            </Badge>
+                            <h2 className="text-foreground text-2xl font-bold sm:text-3xl">Data Privacy Notice</h2>
+                            <p className="text-muted-foreground mt-2 text-sm leading-relaxed sm:text-base">
+                                When you submit this form, it will not automatically collect your details like name and
+                                email address unless you provide them yourself.
+                            </p>
+                        </div>
+                    </div>
+
+                    <Card className="overflow-hidden border-2 shadow-sm">
+                        <CardContent className="space-y-6 p-5 sm:p-7">
+                            <div className="space-y-3">
+                                <p className="text-foreground text-sm leading-7 sm:text-base">
+                                    {school_name} believes in the sanctity of personal information and the rights of
+                                    individuals to Data Privacy per Republic Act 10173 - Data Privacy Act of 2012. Thus,
+                                    {school_name} is committed to the protection and responsible usage of such information.
+                                    {school_name} will only collect, use, and disclose your personal information with your
+                                    knowledge and consent.
+                                </p>
+                                <a
+                                    href="https://privacy.gov.ph/data-privacy-act/"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-primary inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-4"
+                                >
+                                    View the complete Data Privacy Act of 2012
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                            </div>
+
+                            <Separator />
+
+                            <label
+                                htmlFor="privacy-consent"
+                                className={cn(
+                                    "flex cursor-pointer items-start gap-3 rounded-lg border-2 p-4 transition-colors",
+                                    data.consent ? "border-primary bg-primary/5" : "hover:border-primary/50",
+                                )}
+                            >
+                                <Checkbox
+                                    id="privacy-consent"
+                                    checked={data.consent}
+                                    onCheckedChange={(checked) => setData("consent", checked === true)}
+                                    className="mt-0.5"
+                                />
+                                <span className="min-w-0">
+                                    <span className="text-foreground block text-sm font-semibold sm:text-base">
+                                        I agree
+                                        <span className="text-destructive ml-1" aria-hidden>
+                                            *
+                                        </span>
+                                    </span>
+                                    <span className="text-muted-foreground mt-1 block text-xs leading-relaxed sm:text-sm">
+                                        I have read the Data Privacy Notice and consent to the collection and processing
+                                        of the information I provide for enrollment.
+                                    </span>
+                                </span>
+                            </label>
+
+                            <label
+                                htmlFor="marketing-consent"
+                                className={cn(
+                                    "flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors",
+                                    data.marketing_consent
+                                        ? "border-primary bg-primary/5"
+                                        : "hover:border-primary/50",
+                                )}
+                            >
+                                <Checkbox
+                                    id="marketing-consent"
+                                    checked={data.marketing_consent}
+                                    onCheckedChange={(checked) => setData("marketing_consent", checked === true)}
+                                    className="mt-0.5"
+                                />
+                                <span className="min-w-0">
+                                    <span className="text-foreground flex flex-wrap items-center gap-2 text-sm font-semibold sm:text-base">
+                                        I agree
+                                        <Badge variant="outline">Optional</Badge>
+                                    </span>
+                                    <span className="text-muted-foreground mt-1 block text-xs leading-relaxed sm:text-sm">
+                                        I consent to receive marketing communications, updates, and newsletters from
+                                        {" "}{school_name}. I understand my data will be handled in accordance with the{" "}
+                                        <a
+                                            href="/privacy-policy"
+                                            onClick={(event) => event.stopPropagation()}
+                                            className="text-primary underline underline-offset-4"
+                                        >
+                                            Privacy Policy
+                                        </a>
+                                        .
+                                    </span>
+                                </span>
+                            </label>
+
+                            <Button
+                                type="button"
+                                size="lg"
+                                onClick={handlePrivacyContinue}
+                                disabled={!data.consent}
+                                className="h-12 w-full gap-2 text-base"
+                            >
+                                Continue to enrollment <ArrowRight className="h-5 w-5" />
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            </main>
+        </>
+    );
 
     const identifyView = (
         <>
@@ -1841,18 +2003,20 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                         </p>
                                     </div>
 
-                                    {/* Consent */}
-                                    <label className="bg-muted/20 flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm">
-                                        <Checkbox
-                                            checked={continuingConsent}
-                                            onCheckedChange={(checked) => setContinuingConsent(checked === true)}
-                                            className="mt-0.5"
-                                        />
-                                        <span className="text-muted-foreground">
-                                            I confirm that the information above is accurate and I agree to the
-                                            school&apos;s data privacy notice.
-                                        </span>
-                                    </label>
+                                    <div className="bg-muted/20 flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
+                                        <div className="flex items-start gap-2.5">
+                                            <ShieldCheck className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+                                            <div>
+                                                <p className="text-foreground font-medium">Privacy consent recorded</p>
+                                                <p className="text-muted-foreground mt-0.5 text-xs">
+                                                    Marketing communications: {data.marketing_consent ? "Accepted" : "Not accepted"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Button variant="ghost" size="sm" onClick={() => setPrivacyGateCompleted(false)}>
+                                            Review
+                                        </Button>
+                                    </div>
 
                                     <div className="flex flex-col gap-3 sm:flex-row">
                                         <Button
@@ -2174,7 +2338,9 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                 )}
             </AnimatePresence>
 
-            {mode !== "new" ? (
+            {!privacyGateCompleted ? (
+                privacyView
+            ) : mode !== "new" ? (
                 identifyView
             ) : (
                 <>
@@ -3409,22 +3575,19 @@ export default function EnrollmentCreate({ departments, courses, flash, college_
                                     </CardContent>
                                 </Card>
 
-                                <div className="bg-card flex items-start gap-3 rounded-xl border p-4 shadow-sm">
-                                    <Checkbox
-                                        id="consent"
-                                        checked={data.consent}
-                                        onCheckedChange={(val) => setData("consent", val === true)}
-                                        className="mt-1"
-                                    />
-                                    <div className="space-y-1">
-                                        <Label htmlFor="consent" className="cursor-pointer text-sm font-semibold sm:text-base">
-                                            I confirm the information is correct.
-                                        </Label>
-                                        <p className="text-muted-foreground text-xs leading-relaxed">
-                                            By checking this box, you agree to the Data Privacy Act of 2012 and allow the institution to process your
-                                            personal data.
-                                        </p>
+                                <div className="bg-card flex items-start justify-between gap-3 rounded-lg border p-4 shadow-sm">
+                                    <div className="flex items-start gap-3">
+                                        <ShieldCheck className="text-primary mt-0.5 h-5 w-5 shrink-0" />
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold sm:text-base">Privacy consent recorded</p>
+                                            <p className="text-muted-foreground text-xs leading-relaxed">
+                                                Marketing communications: {data.marketing_consent ? "Accepted" : "Not accepted"}
+                                            </p>
+                                        </div>
                                     </div>
+                                    <Button variant="ghost" size="sm" onClick={() => setPrivacyGateCompleted(false)}>
+                                        Review
+                                    </Button>
                                 </div>
                             </div>
                         )}
