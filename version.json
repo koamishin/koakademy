@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.9.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.9.0",
-  "commit": "ebc049f2aff09791e3fd52ea4448d4507531f348",
+  "version": "1.10.0-dev.10.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.10.0",
+  "commit": "a9dd7fb6a2820c8fdef0a97fda781d3f4ea65c08",
   "branch": "master",
-  "timestamp": "2026-07-20T03:04:22Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29709679337",
+  "timestamp": "2026-07-20T03:13:17Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29713977544",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.9.0 - feat: redesign classroom experience",
-    "previous": "1.10.0-dev.8.1"
+    "current": "Version 1.10.0-dev.10.0 - feat: add enrollment privacy consent gate",
+    "previous": "1.10.0-dev.9.0"
   },
   "metadata": {
     "author": "yukazakiri",
