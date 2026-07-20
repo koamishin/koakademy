@@ -1,12 +1,14 @@
+import { AssignmentComposerDialog } from "@/components/class/assignment-composer-dialog";
+import { StudentSubmissionDialog } from "@/components/class/student-submission-dialog";
+import { SubmissionViewerSheet } from "@/components/class/submission-viewer-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { classPostStatusLabels, classPostTypeMeta, formatClassDate, isClassPostOverdue, parseClassDate } from "@/lib/classroom";
 import { cn } from "@/lib/utils";
 import { ClassPostEntry, StudentEntry } from "@/types/class-detail-types";
-import { IconEdit, IconEye, IconLink, IconPaperclip } from "@tabler/icons-react";
+import { BookOpenCheck, CalendarClock, ChevronRight, ClipboardCheck, FileQuestion, Paperclip, Pencil, Send, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
-import { AssignmentComposerDialog } from "@/components/class/assignment-composer-dialog";
-import { SubmissionViewerSheet } from "@/components/class/submission-viewer-sheet";
 
 interface ClassworkTabProps {
     classId?: number;
@@ -18,210 +20,198 @@ interface ClassworkTabProps {
     isStudentView?: boolean;
 }
 
-const classPostTypeLabels: Record<string, { label: string; badge: string; intent: "stream" | "classwork" | "both" }> = {
-    announcement: { label: "Announcement", badge: "bg-indigo-500/15 text-indigo-600", intent: "stream" },
-    quiz: { label: "Quiz", badge: "bg-rose-500/15 text-rose-600", intent: "both" },
-    assignment: { label: "Assignment", badge: "bg-amber-500/15 text-amber-600", intent: "both" },
-    activity: { label: "Activity", badge: "bg-emerald-500/15 text-emerald-600", intent: "both" },
-};
-
-const statusLabels: Record<string, string> = {
-    backlog: "Planned",
-    in_progress: "In progress",
-    review: "Needs review",
-    blocked: "Needs help",
-    done: "Completed",
-};
+const typeIcons = { assignment: ClipboardCheck, activity: BookOpenCheck, quiz: FileQuestion };
 
 export function ClassworkTab({
-    classId,
-    classCode,
-    classSection,
-    currentFacultyId,
+    classId = 0,
+    classCode = "",
+    classSection = "",
+    currentFacultyId = null,
     classPosts,
     students = [],
     isStudentView = false,
 }: ClassworkTabProps) {
-    const [viewingPost, setViewingPost] = useState<ClassPostEntry | null>(null);
-    const [viewingSubmissions, setViewingSubmissions] = useState(false);
-    const [editingPost, setEditingPost] = useState<ClassPostEntry | null>(null);
-    const [editOpen, setEditOpen] = useState(false);
+    const [filter, setFilter] = useState("all");
+    const [submissionPost, setSubmissionPost] = useState<ClassPostEntry | null>(null);
+    const [viewingSubmissions, setViewingSubmissions] = useState<ClassPostEntry | null>(null);
+    const [editingAssignment, setEditingAssignment] = useState<ClassPostEntry | null>(null);
 
-    const dateFormatter = useMemo(
-        () =>
-            new Intl.DateTimeFormat(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-            }),
-        [],
-    );
+    const classwork = useMemo(() => {
+        return classPosts
+            .filter((post) => ["assignment", "activity", "quiz"].includes(post.type))
+            .filter((post) => filter === "all" || post.type === filter)
+            .sort((left, right) => {
+                const leftDue = parseClassDate(left.due_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+                const rightDue = parseClassDate(right.due_date)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+                return leftDue - rightDue;
+            });
+    }, [classPosts, filter]);
 
-    const handleViewSubmissions = (post: ClassPostEntry) => {
-        setViewingPost(post);
-        setViewingSubmissions(true);
-    };
-
-    const handleEditPost = (post: ClassPostEntry) => {
-        setEditingPost(post);
-        setEditOpen(true);
-    };
-
-    const classworkGroups = useMemo(() => {
-        const groups: Record<string, ClassPostEntry[]> = {
-            quiz: [],
-            assignment: [],
-            activity: [],
-        };
-
-        classPosts.forEach((post) => {
-            if (post.type in groups) {
-                groups[post.type].push(post);
-            }
-        });
-
-        return groups;
-    }, [classPosts]);
+    const assignmentPost = editingAssignment
+        ? {
+              ...editingAssignment,
+              instruction: editingAssignment.assignment?.instruction,
+              audience_mode: editingAssignment.assignment?.audience_mode,
+              assigned_student_ids: editingAssignment.assignment?.assigned_student_ids?.map(Number),
+              rubric: editingAssignment.assignment?.rubric,
+          }
+        : null;
 
     return (
         <div className="space-y-4">
-            {["quiz", "assignment", "activity"].map((type) => {
-                const labelMeta = classPostTypeLabels[type];
-                const posts = classworkGroups[type] ?? [];
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+                {["all", "assignment", "activity", "quiz"].map((type) => (
+                    <Button
+                        key={type}
+                        type="button"
+                        size="sm"
+                        variant={filter === type ? "secondary" : "outline"}
+                        className="shrink-0"
+                        onClick={() => setFilter(type)}
+                    >
+                        {type === "all" ? "All work" : (classPostTypeMeta[type]?.label ?? type)}
+                    </Button>
+                ))}
+            </div>
 
-                if (!posts.length) {
-                    return null;
-                }
+            {classwork.length > 0 ? (
+                <div className="space-y-3">
+                    {classwork.map((post) => {
+                        const Icon = typeIcons[post.type as keyof typeof typeIcons] ?? BookOpenCheck;
+                        const overdue = isClassPostOverdue(post);
+                        const submitted = Boolean(post.my_submission);
 
-                return (
-                    <Card key={type} className="border-border/70 bg-card/90 shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Badge className={cn("rounded-full px-2 py-0.5 text-[11px]", labelMeta.badge)}>{labelMeta.label}</Badge>
-                                {labelMeta.label}
-                            </CardTitle>
-                            <CardDescription>Latest {labelMeta.label.toLowerCase()} posts</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {posts.map((post) => (
-                                <div
-                                    key={post.id}
-                                    className="border-border/60 bg-background/60 hover:border-primary/30 rounded-xl border p-4 transition"
-                                >
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <p className="text-foreground text-sm font-semibold">{post.title}</p>
-                                            {post.content && <p className="text-muted-foreground line-clamp-2 text-xs">{post.content}</p>}
-                                            {post.assignment?.instruction && (
-                                                <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{post.assignment.instruction}</p>
+                        return (
+                            <Card key={post.id} className="border-border/70 overflow-hidden rounded-lg shadow-sm">
+                                <article className="p-4 sm:p-5">
+                                    <div className="flex items-start gap-3">
+                                        <div
+                                            className={cn(
+                                                "flex size-10 shrink-0 items-center justify-center rounded-md",
+                                                classPostTypeMeta[post.type]?.tone,
                                             )}
-                                            <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                                {post.status && (
-                                                    <Badge variant="outline" className="h-5 px-2 text-[10px] font-normal">
-                                                        {statusLabels[post.status] ?? post.status}
-                                                    </Badge>
-                                                )}
-                                                {post.total_points ? <span>{post.total_points} pts</span> : null}
-                                                {post.due_date ? <span>Due {new Date(post.due_date).toLocaleDateString()}</span> : null}
-                                                {post.assignment && (
-                                                    <>
-                                                        <span>
-                                                            {post.assignment.audience_mode === "all_students"
-                                                                ? "All students"
-                                                                : `${post.assignment.assigned_student_ids.length} students`}
-                                                        </span>
-                                                        <span>{post.assignment.rubric.length} criteria</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                            {post.type === "assignment" && !isStudentView && (
-                                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="h-7 text-xs"
-                                                        onClick={() => handleViewSubmissions(post)}
-                                                    >
-                                                        <IconEye className="mr-1 size-3.5" />
-                                                        Submissions
-                                                        {post.submission_count !== undefined && post.submission_count > 0 && (
-                                                            <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
-                                                                {post.submission_count}
+                                        >
+                                            <Icon className="size-5" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        <Badge variant="secondary" className="text-[10px]">
+                                                            {classPostTypeMeta[post.type]?.label ?? post.type}
+                                                        </Badge>
+                                                        {post.status && (
+                                                            <Badge variant="outline" className="text-[10px] font-normal">
+                                                                {classPostStatusLabels[post.status] ?? post.status}
                                                             </Badge>
                                                         )}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-muted-foreground hover:text-foreground h-7 text-xs"
-                                                        onClick={() => handleEditPost(post)}
-                                                    >
-                                                        <IconEdit className="mr-1 size-3.5" />
-                                                        Edit
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                        {post.created_at && (
-                                            <span className="text-muted-foreground text-xs">{dateFormatter.format(new Date(post.created_at))}</span>
-                                        )}
-                                    </div>
-                                    {(post.attachments?.length ?? 0) > 0 && (
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            {post.attachments.map((attachment, attachmentIndex) => (
-                                                <a
-                                                    key={`${post.id}-${attachmentIndex}`}
-                                                    href={attachment.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="border-border/60 bg-background/70 text-primary hover:border-primary/30 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs transition"
-                                                >
-                                                    {attachment.kind === "file" ? (
-                                                        <IconPaperclip className="size-3.5" />
-                                                    ) : (
-                                                        <IconLink className="size-3.5" />
+                                                        {submitted && (
+                                                            <Badge className="bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300">
+                                                                Submitted
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <h2 className="mt-2 text-base leading-snug font-semibold">{post.title}</h2>
+                                                    {(post.assignment?.instruction || post.content) && (
+                                                        <p className="text-muted-foreground mt-1 line-clamp-2 text-sm leading-5">
+                                                            {post.assignment?.instruction || post.content}
+                                                        </p>
                                                     )}
-                                                    {attachment.name}
-                                                </a>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
-                );
-            })}
+                                                </div>
+                                                <ChevronRight className="text-muted-foreground mt-1 size-4 shrink-0 sm:hidden" />
+                                            </div>
 
-            {!["quiz", "assignment", "activity"].some((type) => (classworkGroups[type] ?? []).length) && (
-                <Card className="border-border/70 bg-card/90 shadow-sm">
-                    <CardContent className="text-muted-foreground p-8 text-center">No classwork posted yet.</CardContent>
-                </Card>
+                                            <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                                                {post.due_date && (
+                                                    <span className={cn("flex items-center gap-1", overdue && "text-destructive")}>
+                                                        <CalendarClock className="size-3.5" />
+                                                        {overdue ? "Overdue" : "Due"} {formatClassDate(post.due_date)}
+                                                    </span>
+                                                )}
+                                                {post.total_points !== null && post.total_points !== undefined && (
+                                                    <span>{post.total_points} points</span>
+                                                )}
+                                                {post.attachments.length > 0 && (
+                                                    <span className="flex items-center gap-1">
+                                                        <Paperclip className="size-3.5" />
+                                                        {post.attachments.length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="border-border/70 mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-end">
+                                        {isStudentView ? (
+                                            post.type === "assignment" &&
+                                            (post.my_submission ? (
+                                                <p className="text-muted-foreground mr-auto text-sm">
+                                                    {post.my_submission.status === "graded"
+                                                        ? `Graded: ${post.my_submission.points ?? 0}/${post.total_points ?? 0}`
+                                                        : `Submitted ${formatClassDate(post.my_submission.submitted_at)}`}
+                                                </p>
+                                            ) : (
+                                                <Button type="button" className="min-h-10 sm:w-auto" onClick={() => setSubmissionPost(post)}>
+                                                    <Send className="size-4" />
+                                                    Submit assignment
+                                                </Button>
+                                            ))
+                                        ) : post.type === "assignment" ? (
+                                            <>
+                                                <Button type="button" variant="outline" onClick={() => setViewingSubmissions(post)}>
+                                                    <UsersRound className="size-4" />
+                                                    Submissions
+                                                    {post.submission_count !== undefined && (
+                                                        <Badge variant="secondary" className="ml-1 text-[10px]">
+                                                            {post.submission_count}
+                                                        </Badge>
+                                                    )}
+                                                </Button>
+                                                <Button type="button" variant="ghost" onClick={() => setEditingAssignment(post)}>
+                                                    <Pencil className="size-4" />
+                                                    Edit
+                                                </Button>
+                                            </>
+                                        ) : null}
+                                    </div>
+                                </article>
+                            </Card>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="border-border/70 bg-card flex min-h-48 flex-col items-center justify-center rounded-lg border border-dashed px-6 text-center">
+                    <BookOpenCheck className="text-muted-foreground size-8" />
+                    <h2 className="mt-3 text-sm font-semibold">No classwork here</h2>
+                    <p className="text-muted-foreground mt-1 text-sm">Try another filter or check back when new work is posted.</p>
+                </div>
             )}
 
+            <StudentSubmissionDialog
+                open={submissionPost !== null}
+                onOpenChange={(open) => !open && setSubmissionPost(null)}
+                classId={classId}
+                post={submissionPost}
+            />
             {!isStudentView && (
                 <>
                     <SubmissionViewerSheet
-                        open={viewingSubmissions}
-                        onOpenChange={setViewingSubmissions}
-                        classId={classId ?? 0}
-                        post={viewingPost}
+                        open={viewingSubmissions !== null}
+                        onOpenChange={(open) => !open && setViewingSubmissions(null)}
+                        classId={classId}
+                        post={viewingSubmissions}
                     />
-
-                    {editingPost && (
-                        <AssignmentComposerDialog
-                            classId={classId ?? 0}
-                            classCode={classCode ?? ""}
-                            classSection={classSection ?? ""}
-                            currentFacultyId={currentFacultyId ?? null}
-                            students={students}
-                            mode="edit"
-                            post={editingPost}
-                            open={editOpen}
-                            onOpenChange={setEditOpen}
-                        />
-                    )}
+                    <AssignmentComposerDialog
+                        classId={classId}
+                        classCode={classCode}
+                        classSection={classSection}
+                        currentFacultyId={currentFacultyId}
+                        students={students}
+                        mode="edit"
+                        post={assignmentPost}
+                        open={editingAssignment !== null}
+                        onOpenChange={(open) => !open && setEditingAssignment(null)}
+                    />
                 </>
             )}
         </div>

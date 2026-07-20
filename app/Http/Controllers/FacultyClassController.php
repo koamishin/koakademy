@@ -22,6 +22,7 @@ use App\Models\ClassPostSubmission;
 use App\Models\Faculty;
 use App\Models\Room;
 use App\Models\User;
+use App\Services\ClassPostPayloadService;
 use Carbon\Carbon;
 use Exception;
 use Filament\Actions\Action;
@@ -209,35 +210,16 @@ final class FacultyClassController extends Controller
             'photo_url' => $faculty->getFilamentAvatarUrl(),
         ];
 
+        $payloads = app(ClassPostPayloadService::class);
+
         $classPosts = ClassPost::where('class_id', $class->id)
             ->latest()
             ->get()
-            ->map(function (ClassPost $post): array {
-                $attachments = collect($post->attachments ?? [])
-                    ->map(fn ($attachment): array => [
-                        'name' => $attachment['name'] ?? basename((string) ($attachment['url'] ?? 'Attachment')),
-                        'url' => $attachment['url'] ?? '',
-                        'kind' => $attachment['kind'] ?? 'link',
-                    ])
-                    ->values();
-
+            ->map(function (ClassPost $post) use ($payloads): array {
                 return [
-                    'id' => $post->id,
-                    'title' => $post->title,
-                    'content' => $post->content,
-                    'type' => $post->type instanceof ClassPostType ? $post->type->value : (string) $post->type,
-                    'status' => $post->status ?? 'backlog',
-                    'priority' => $post->priority ?? 'medium',
-                    'start_date' => $post->start_date?->toDateString(),
-                    'due_date' => $post->due_date?->toDateString(),
-                    'progress_percent' => $post->progress_percent ?? 0,
-                    'total_points' => $post->total_points,
-                    'assigned_faculty_id' => $post->assigned_faculty_id,
-                    'attachments' => $attachments,
-                    'assignment' => $this->formatAssignmentPayload($post),
+                    ...$payloads->serialize($post),
                     'submission_count' => $post->submissions()->count(),
                     'graded_count' => $post->submissions()->whereNotNull('points')->count(),
-                    'created_at' => format_timestamp($post->created_at),
                 ];
             });
 
@@ -1858,25 +1840,6 @@ final class FacultyClassController extends Controller
             ->map(fn ($id): int => (int) $id)
             ->values()
             ->all();
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function formatAssignmentPayload(ClassPost $post): ?array
-    {
-        $postType = $post->type instanceof ClassPostType ? $post->type->value : (string) $post->type;
-
-        if ($postType !== ClassPostType::Assignment->value) {
-            return null;
-        }
-
-        return [
-            'instruction' => $post->instruction,
-            'audience_mode' => $post->audience_mode ?? 'all_students',
-            'assigned_student_ids' => $post->assigned_student_ids ?? [],
-            'rubric' => $this->normalizeRubric($post->rubric ?? []),
-        ];
     }
 
     /**

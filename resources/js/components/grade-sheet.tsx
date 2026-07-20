@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { router } from "@inertiajs/react";
@@ -191,7 +192,7 @@ export function GradeSheet({ classId, students, autoAverageDefault }: GradeSheet
     };
 
     return (
-        <Card className="border-border/70 bg-card/90 shadow-sm">
+        <Card className="border-border/70 bg-card/90 rounded-lg shadow-sm">
             <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <CardTitle>Grades</CardTitle>
@@ -228,13 +229,13 @@ export function GradeSheet({ classId, students, autoAverageDefault }: GradeSheet
                             Finals complete: {allCompleteByTerm.finals ? "Yes" : "No"}
                         </Badge>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" size="sm" className="rounded-full" onClick={handleSaveGrades} disabled={isSavingGrades}>
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                        <Button variant="outline" size="sm" className="col-span-2 sm:col-span-1" onClick={handleSaveGrades} disabled={isSavingGrades}>
                             {isSavingGrades ? "Saving..." : "Save grades"}
                         </Button>
                         <Button
                             size="sm"
-                            className="rounded-full"
+                            className=""
                             variant="secondary"
                             disabled={!allCompleteByTerm.prelim}
                             onClick={() => handleSubmitTerm("prelim")}
@@ -243,20 +244,66 @@ export function GradeSheet({ classId, students, autoAverageDefault }: GradeSheet
                         </Button>
                         <Button
                             size="sm"
-                            className="rounded-full"
+                            className=""
                             variant="secondary"
                             disabled={!allCompleteByTerm.midterm}
                             onClick={() => handleSubmitTerm("midterm")}
                         >
                             Submit Midterm
                         </Button>
-                        <Button size="sm" className="rounded-full" disabled={!allCompleteByTerm.finals} onClick={() => handleSubmitTerm("finals")}>
+                        <Button size="sm" disabled={!allCompleteByTerm.finals} onClick={() => handleSubmitTerm("finals")}>
                             Submit Finals
                         </Button>
                     </div>
                 </div>
 
-                <div className="border-border/60 overflow-x-auto rounded-lg border">
+                <div className="space-y-3 md:hidden">
+                    {gradeRows.map((row, index) => (
+                        <div key={row.enrollmentId} className="border-border/70 rounded-lg border p-4">
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold">{row.name}</p>
+                                <p className="text-muted-foreground truncate font-mono text-xs">{row.studentId}</p>
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                {gradeColumns.map((field) => (
+                                    <div key={field} className="space-y-1.5">
+                                        <Label htmlFor={`mobile-grade-${row.enrollmentId}-${field}`} className="text-xs capitalize">
+                                            {field === "final" ? "Finals" : field}
+                                        </Label>
+                                        <Input
+                                            id={`mobile-grade-${row.enrollmentId}-${field}`}
+                                            type="number"
+                                            inputMode="decimal"
+                                            min={0}
+                                            max={100}
+                                            value={row[field]}
+                                            onChange={(event) => handleGradeChange(index, field, event.target.value)}
+                                            className={`${gradeTone(row[field] === "" ? "" : Number(row[field])).text} text-center font-semibold`}
+                                        />
+                                    </div>
+                                ))}
+                                <div className="space-y-1.5">
+                                    <Label htmlFor={`mobile-grade-${row.enrollmentId}-average`} className="text-xs">
+                                        Average
+                                    </Label>
+                                    <Input
+                                        id={`mobile-grade-${row.enrollmentId}-average`}
+                                        type="number"
+                                        inputMode="decimal"
+                                        min={0}
+                                        max={100}
+                                        value={row.average}
+                                        readOnly={autoAverageEnabled}
+                                        onChange={(event) => handleGradeChange(index, "average", event.target.value)}
+                                        className={`${gradeTone(row.average === "" ? "" : Number(row.average)).text} text-center font-semibold`}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="border-border/60 hidden overflow-x-auto rounded-lg border md:block">
                     <table className="w-full min-w-[900px] border-separate border-spacing-0 text-sm">
                         <thead>
                             <tr className="bg-muted/40 text-muted-foreground text-xs tracking-[0.25em] uppercase">

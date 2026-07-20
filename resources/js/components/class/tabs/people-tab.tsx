@@ -60,16 +60,16 @@ export function PeopleTab({ classData, teacher, students, onViewProfile, onTrack
 
     return (
         <div className="space-y-6">
-            <Card className="border-border/70 bg-card/90 shadow-sm">
-                <CardHeader>
+            <Card className="border-border/70 bg-card/90 rounded-lg shadow-sm">
+                <CardHeader className="px-4 sm:px-6">
                     <CardTitle>People</CardTitle>
                     <CardDescription>Teacher and enrolled students</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 px-4 sm:px-6">
                     {/* Teacher Section */}
                     <div className="space-y-3">
                         <p className="text-muted-foreground text-xs font-semibold tracking-[0.3em] uppercase">Teacher</p>
-                        <div className="border-border/60 bg-background/60 flex items-center gap-4 rounded-xl border p-4">
+                        <div className="border-border/60 bg-background/60 flex min-w-0 items-center gap-3 rounded-lg border p-3 sm:gap-4 sm:p-4">
                             <div className="bg-primary/10 text-primary flex size-14 items-center justify-center overflow-hidden rounded-full">
                                 {teacher.photo_url ? (
                                     <img src={teacher.photo_url} alt={teacher.name} className="h-full w-full object-cover" />
@@ -77,9 +77,9 @@ export function PeopleTab({ classData, teacher, students, onViewProfile, onTrack
                                     <span className="text-lg font-semibold">{teacher.name.charAt(0).toUpperCase()}</span>
                                 )}
                             </div>
-                            <div className="flex-1">
-                                <p className="text-foreground text-base font-semibold">{teacher.name}</p>
-                                {teacher.email && <p className="text-muted-foreground text-sm">{teacher.email}</p>}
+                            <div className="min-w-0 flex-1">
+                                <p className="text-foreground truncate text-base font-semibold">{teacher.name}</p>
+                                {teacher.email && <p className="text-muted-foreground truncate text-sm">{teacher.email}</p>}
                                 {teacher.department && <p className="text-muted-foreground text-xs">{teacher.department}</p>}
                             </div>
                         </div>
@@ -87,9 +87,9 @@ export function PeopleTab({ classData, teacher, students, onViewProfile, onTrack
 
                     {/* Students Section */}
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-muted-foreground text-xs font-semibold tracking-[0.3em] uppercase">Students</p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <AddStudentDialog classId={classData.id} classification={classData.classification} />
                                 <Badge variant="outline" className="rounded-full px-3 py-0.5 text-xs">
                                     {students.length} enrolled
@@ -126,7 +126,9 @@ export function PeopleTab({ classData, teacher, students, onViewProfile, onTrack
                                                     const payload = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
 
                                                     if (!response.ok) {
-                                                        throw new Error(payload.error || payload.message || "Failed to queue student list PDF export.");
+                                                        throw new Error(
+                                                            payload.error || payload.message || "Failed to queue student list PDF export.",
+                                                        );
                                                     }
 
                                                     toast.success("PDF export queued", {
@@ -158,25 +160,24 @@ export function PeopleTab({ classData, teacher, students, onViewProfile, onTrack
                                 {students.map((student) => (
                                     <div
                                         key={student.id}
-                                        className="border-border/60 bg-background/60 flex items-center justify-between rounded-xl border p-3"
+                                        className="border-border/60 bg-background/60 flex min-w-0 items-start gap-3 rounded-lg border p-3 sm:items-center"
                                     >
-                                        <div className="flex flex-1 items-center gap-3">
+                                        <div className="flex min-w-0 flex-1 items-center gap-3">
                                             <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-full">
                                                 <span className="text-sm font-semibold">{student.name.charAt(0).toUpperCase()}</span>
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-foreground text-sm font-semibold">{student.name}</p>
-                                                    <span className="text-muted-foreground text-xs">•</span>
-                                                    <p className="text-muted-foreground font-mono text-xs">ID: {student.student_id}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex min-w-0 flex-col sm:flex-row sm:items-center sm:gap-2">
+                                                    <p className="text-foreground truncate text-sm font-semibold">{student.name}</p>
+                                                    <p className="text-muted-foreground truncate font-mono text-xs">ID: {student.student_id}</p>
                                                 </div>
-                                                <p className="text-muted-foreground text-xs">{student.email ?? "No email available"}</p>
+                                                <p className="text-muted-foreground truncate text-xs">{student.email ?? "No email available"}</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex shrink-0 items-center gap-1">
                                             <Badge
                                                 className={cn(
-                                                    "rounded-full px-3 py-0.5 text-[10px] uppercase",
+                                                    "hidden rounded-full px-2 py-0.5 text-[10px] uppercase sm:inline-flex",
                                                     student.status === "Active"
                                                         ? "bg-emerald-500/15 text-emerald-600"
                                                         : "bg-amber-500/15 text-amber-600",

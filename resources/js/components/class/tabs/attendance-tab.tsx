@@ -726,7 +726,7 @@ export function AttendanceTab({
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             {scheduleOptions.length ? (
                                 scheduleOptions.map((option) => (
-                                    <div key={option.id} className="border-border/60 bg-muted/10 rounded-xl border px-3 py-2 text-sm">
+                                    <div key={option.id} className="border-border/60 bg-muted/10 rounded-lg border px-3 py-2 text-sm">
                                         <div className="flex items-center justify-between gap-3">
                                             <span className="text-foreground font-medium">{option.day}</span>
                                             <span className="text-muted-foreground text-xs">{option.room ?? "TBA"}</span>
@@ -870,10 +870,10 @@ export function AttendanceTab({
                 </DialogContent>
             </Dialog>
 
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <h3 className="text-lg font-semibold">attendance sessions</h3>
-                    <div className="bg-muted/20 flex items-center rounded-lg border p-1">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-base font-semibold sm:text-lg">Attendance sessions</h3>
+                    <div className="bg-muted/20 hidden items-center rounded-lg border p-1 sm:flex">
                         <button
                             onClick={() => setViewMode("list")}
                             className={cn(
@@ -896,7 +896,7 @@ export function AttendanceTab({
                         </button>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm">
@@ -995,11 +995,11 @@ export function AttendanceTab({
                                 {attendance.sessions.map((session) => (
                                     <Card
                                         key={session.id}
-                                        className="hover:border-primary/50 bg-card text-card-foreground border-border/60 overflow-hidden transition-all"
+                                        className="hover:border-primary/50 bg-card text-card-foreground border-border/60 overflow-hidden rounded-lg transition-all"
                                     >
-                                        <div className="flex items-center justify-between p-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="bg-muted/30 flex max-w-40 min-w-[60px] flex-col items-center justify-center rounded-lg border px-3 py-2 text-center">
+                                        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                                                <div className="bg-muted/30 flex min-w-14 shrink-0 flex-col items-center justify-center rounded-md border px-2 py-2 text-center">
                                                     <span className="text-muted-foreground text-xs font-medium uppercase">
                                                         {session.session_date
                                                             ? fromYmd(session.session_date).toLocaleDateString("en-US", { month: "short" })
@@ -1009,16 +1009,21 @@ export function AttendanceTab({
                                                         {session.session_date ? fromYmd(session.session_date).getDate() : "-"}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <h4 className="font-semibold">{session.topic || "Regular Session"}</h4>
-                                                    <p className="text-muted-foreground text-sm">
+                                                <div className="min-w-0">
+                                                    <h4 className="truncate font-semibold">{session.topic || "Regular Session"}</h4>
+                                                    <p className="text-muted-foreground text-xs sm:text-sm">
                                                         {session.records.filter((r) => r.status === "present").length} Present •{" "}
                                                         {session.records.filter((r) => r.status === "absent").length} Absent
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => openRosterWorkspace(session.id)}>
+                                            <div className="flex items-center gap-2 sm:shrink-0">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1 sm:flex-none"
+                                                    onClick={() => openRosterWorkspace(session.id)}
+                                                >
                                                     View Roster
                                                 </Button>
                                                 <DropdownMenu>
@@ -1047,7 +1052,7 @@ export function AttendanceTab({
                             </div>
                         )
                     ) : (
-                        <div className="border-border/60 bg-card rounded-xl border p-4">
+                        <div className="border-border/60 bg-card rounded-lg border p-4">
                             <Calendar
                                 mode="single"
                                 selected={selectedAttendanceSession?.session_date ? fromYmd(selectedAttendanceSession.session_date) : undefined}
@@ -1261,28 +1266,28 @@ export function AttendanceTab({
                     }
                 }}
             >
-                <SheetContent side="right" className="bg-background text-foreground flex w-[95%] flex-col gap-0 p-0 sm:max-w-3xl">
-                    <SheetHeader className="border-border/60 bg-card/50 sticky top-0 z-10 space-y-2 border-b px-6 py-4 backdrop-blur-sm">
-                        <SheetTitle className="text-2xl">Roster workspace</SheetTitle>
+                <SheetContent side="right" className="bg-background text-foreground flex w-full flex-col gap-0 p-0 sm:max-w-3xl">
+                    <SheetHeader className="border-border/60 bg-card/50 sticky top-0 z-10 space-y-1 border-b px-4 py-4 text-left backdrop-blur-sm sm:px-6">
+                        <SheetTitle className="text-lg sm:text-2xl">Roster workspace</SheetTitle>
                         <SheetDescription>Update individual attendance without leaving the timeline.</SheetDescription>
                     </SheetHeader>
-                    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+                    <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:space-y-6 sm:px-6 sm:py-6">
                         {selectedAttendanceSession ? (
                             <>
-                                <div className="bg-card text-muted-foreground flex flex-wrap items-center gap-3 rounded-2xl border p-4 text-sm shadow-sm">
+                                <div className="bg-card text-muted-foreground flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm shadow-sm sm:gap-3 sm:p-4">
                                     <div className="flex items-center gap-2">
                                         <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-full">
                                             <IconCalendar className="size-4" />
                                         </div>
                                         <span className="text-foreground font-semibold">{selectedAttendanceSession.topic || "General meeting"}</span>
                                     </div>
-                                    <div className="bg-border/60 h-4 w-px" />
+                                    <div className="bg-border/60 hidden h-4 w-px sm:block" />
                                     <span>
                                         {selectedAttendanceSession.session_date
                                             ? fromYmd(selectedAttendanceSession.session_date).toLocaleDateString(undefined, { dateStyle: "medium" })
                                             : "Unscheduled"}
                                     </span>
-                                    <div className="bg-border/60 h-4 w-px" />
+                                    <div className="bg-border/60 hidden h-4 w-px sm:block" />
                                     <span>{selectedAttendanceSession.taken_by || "You"}</span>
                                     {selectedAttendanceSession.is_no_meeting ? (
                                         <Badge
@@ -1293,7 +1298,7 @@ export function AttendanceTab({
                                             {selectedAttendanceSession.no_meeting_reason ? ` • ${selectedAttendanceSession.no_meeting_reason}` : ""}
                                         </Badge>
                                     ) : null}
-                                    <div className="ml-auto flex items-center gap-2">
+                                    <div className="flex w-full items-center justify-end gap-2 sm:ml-auto sm:w-auto">
                                         <Button
                                             variant="outline"
                                             size="sm"
@@ -1313,7 +1318,7 @@ export function AttendanceTab({
                                     </div>
                                 </div>
 
-                                <div className="border-border/60 bg-card space-y-3 rounded-2xl border p-4 shadow-sm">
+                                <div className="border-border/60 bg-card space-y-3 rounded-lg border p-3 shadow-sm sm:p-4">
                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                         <div className="space-y-2">
                                             <Label className="text-muted-foreground text-xs tracking-[0.2em] uppercase">Search</Label>
@@ -1376,7 +1381,7 @@ export function AttendanceTab({
                                     </p>
                                 </div>
 
-                                <div className="border-border/60 bg-card overflow-hidden rounded-2xl border shadow-sm">
+                                <div className="border-border/60 bg-card overflow-hidden rounded-lg border shadow-sm">
                                     {selectedAttendanceSession.is_no_meeting ? (
                                         <div className="flex flex-col items-center justify-center py-12 text-center">
                                             <div className="mb-3 rounded-full bg-amber-100 p-3 text-amber-600">
@@ -1505,7 +1510,7 @@ export function AttendanceTab({
                                 </div>
                             </>
                         ) : (
-                            <div className="border-border/60 bg-muted/10 flex flex-col items-center justify-center rounded-3xl border border-dashed py-20 text-center">
+                            <div className="border-border/60 bg-muted/10 flex flex-col items-center justify-center rounded-lg border border-dashed py-20 text-center">
                                 <div className="bg-muted mb-4 rounded-full p-4">
                                     <IconCalendar className="text-muted-foreground size-8" />
                                 </div>
@@ -1584,7 +1589,7 @@ function ScheduleDayColumn({ day, schedules, roomsById, formatTime, onEdit, onRe
     return (
         <div
             ref={setNodeRef}
-            className={cn("border-border/60 bg-muted/5 min-w-[220px] flex-1 rounded-xl border p-3", isOver && "ring-primary/20 bg-primary/5 ring-2")}
+            className={cn("border-border/60 bg-muted/5 min-w-[220px] flex-1 rounded-lg border p-3", isOver && "ring-primary/20 bg-primary/5 ring-2")}
         >
             <div className="flex items-center justify-between">
                 <p className="text-foreground text-sm font-semibold">{day}</p>

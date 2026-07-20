@@ -13,14 +13,7 @@ import { FilePreview } from "@/components/class/file-preview";
 import { AssignmentRubricCriterion, AssignmentRubricLevel, StudentEntry } from "@/types/class-detail-types";
 import { useForm } from "@inertiajs/react";
 import { route } from "ziggy-js";
-import {
-    IconChevronDown,
-    IconPaperclip,
-    IconPlus,
-    IconSearch,
-    IconTrash,
-    IconUsers,
-} from "@tabler/icons-react";
+import { IconChevronDown, IconPaperclip, IconPlus, IconSearch, IconTrash, IconUsers } from "@tabler/icons-react";
 import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -277,9 +270,7 @@ export function AssignmentComposerDialog({
 
             return {
                 ...criterion,
-                levels: criterion.levels.map((level, currentLevelIndex) =>
-                    currentLevelIndex === levelIndex ? { ...level, ...patch } : level,
-                ),
+                levels: criterion.levels.map((level, currentLevelIndex) => (currentLevelIndex === levelIndex ? { ...level, ...patch } : level)),
             };
         });
 
@@ -429,8 +420,8 @@ export function AssignmentComposerDialog({
                     trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>
                 )}
 
-                <DialogContent className="max-w-[95vw] gap-0 overflow-hidden p-0 sm:max-w-4xl">
-                    <DialogHeader className="space-y-2 px-6 pt-6 pb-5 sm:px-8">
+                <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-auto sm:max-h-[90dvh] sm:w-full sm:max-w-4xl sm:rounded-lg sm:border">
+                    <DialogHeader className="space-y-2 px-4 pt-5 pb-4 text-left sm:px-8 sm:pt-6 sm:pb-5">
                         <Badge variant="secondary" className="w-fit text-xs font-medium">
                             Assignment Composer
                         </Badge>
@@ -444,10 +435,10 @@ export function AssignmentComposerDialog({
 
                     <Separator />
 
-                    <form onSubmit={handleSubmit} className="flex flex-col">
-                        <ScrollArea className="max-h-[68vh]">
-                            <div className="space-y-6 px-6 py-6 sm:px-8">
-                                <section className="space-y-4 rounded-2xl border p-4 sm:p-5">
+                    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                        <ScrollArea className="min-h-0 flex-1">
+                            <div className="space-y-5 px-4 py-5 sm:space-y-6 sm:px-8 sm:py-6">
+                                <section className="space-y-4 rounded-lg border p-4 sm:p-5">
                                     <p className="text-sm font-semibold">1. Assignment details</p>
 
                                     <div className="space-y-2">
@@ -473,7 +464,7 @@ export function AssignmentComposerDialog({
                                             <span className="text-muted-foreground text-xs">Max {MAX_FILE_SIZE_MB}MB per file</span>
                                         </div>
 
-                                        <div className="overflow-hidden rounded-xl border">
+                                        <div className="overflow-hidden rounded-lg border">
                                             <Textarea
                                                 id="assignment-instruction"
                                                 value={form.data.instruction}
@@ -513,7 +504,9 @@ export function AssignmentComposerDialog({
                                             <div className="bg-muted/20 flex min-w-0 items-center justify-between gap-2 rounded-b-xl border-t px-3 py-2">
                                                 <Button type="button" variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
                                                     <IconPaperclip className="mr-2 size-4" />
-                                                    {form.data.attachments.length > 0 || form.data.files.length > 0 ? "Add attachment" : "Attach file"}
+                                                    {form.data.attachments.length > 0 || form.data.files.length > 0
+                                                        ? "Add attachment"
+                                                        : "Attach file"}
                                                 </Button>
                                                 {(form.data.attachments.length > 0 || form.data.files.length > 0) && (
                                                     <Badge variant="secondary" className="shrink-0 text-xs font-normal">
@@ -529,7 +522,7 @@ export function AssignmentComposerDialog({
                                     </div>
                                 </section>
 
-                                <section className="grid gap-4 rounded-2xl border p-4 sm:grid-cols-2 sm:p-5">
+                                <section className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2 sm:p-5">
                                     <p className="col-span-full text-sm font-semibold">2. Points and due date</p>
 
                                     <div className="space-y-2">
@@ -566,7 +559,7 @@ export function AssignmentComposerDialog({
                                     </div>
                                 </section>
 
-                                <section className="space-y-4 rounded-2xl border p-4 sm:p-5">
+                                <section className="space-y-4 rounded-lg border p-4 sm:p-5">
                                     <div className="flex items-center gap-2">
                                         <IconUsers className="text-muted-foreground size-4" />
                                         <p className="text-sm font-semibold">3. Assign to</p>
@@ -586,7 +579,7 @@ export function AssignmentComposerDialog({
                                         }}
                                         className="gap-3"
                                     >
-                                        <label className="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                                        <label className="hover:bg-muted/50 has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors">
                                             <RadioGroupItem value="all_students" id="audience-all" className="mt-0.5" />
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-medium">All students</p>
@@ -594,7 +587,7 @@ export function AssignmentComposerDialog({
                                             </div>
                                         </label>
 
-                                        <label className="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5">
+                                        <label className="hover:bg-muted/50 has-[[data-state=checked]]:border-primary/50 has-[[data-state=checked]]:bg-primary/5 flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors">
                                             <RadioGroupItem value="specific_students" id="audience-specific" className="mt-0.5" />
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-medium">Specific students</p>
@@ -604,7 +597,7 @@ export function AssignmentComposerDialog({
                                     </RadioGroup>
 
                                     {form.data.audience_mode === "specific_students" && (
-                                        <div className="space-y-3 rounded-xl border p-3">
+                                        <div className="space-y-3 rounded-lg border p-3">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <div className="relative min-w-0 flex-1">
                                                     <IconSearch className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -638,7 +631,9 @@ export function AssignmentComposerDialog({
                                                             >
                                                                 <Checkbox
                                                                     checked={checked}
-                                                                    onCheckedChange={(value) => handleToggleSpecificStudent(enrollmentId, Boolean(value))}
+                                                                    onCheckedChange={(value) =>
+                                                                        handleToggleSpecificStudent(enrollmentId, Boolean(value))
+                                                                    }
                                                                 />
                                                                 <div className="min-w-0">
                                                                     <p className="text-sm font-medium">{student.name}</p>
@@ -652,10 +647,12 @@ export function AssignmentComposerDialog({
                                         </div>
                                     )}
 
-                                    {form.errors.assigned_student_ids && <p className="text-destructive text-xs">{form.errors.assigned_student_ids}</p>}
+                                    {form.errors.assigned_student_ids && (
+                                        <p className="text-destructive text-xs">{form.errors.assigned_student_ids}</p>
+                                    )}
                                 </section>
 
-                                <section className="space-y-3 rounded-2xl border p-4 sm:p-5">
+                                <section className="space-y-3 rounded-lg border p-4 sm:p-5">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <p className="text-sm font-semibold">4. Grading rubric</p>
@@ -676,7 +673,7 @@ export function AssignmentComposerDialog({
                                                     <button
                                                         type="button"
                                                         onClick={handleAddCriterion}
-                                                        className="border-border/60 hover:border-primary/40 hover:bg-muted/50 flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-6 transition-colors"
+                                                        className="border-border/60 hover:border-primary/40 hover:bg-muted/50 flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-6 transition-colors"
                                                     >
                                                         <div className="bg-primary/10 flex size-10 items-center justify-center rounded-full">
                                                             <IconPlus className="text-primary size-5" />
@@ -686,7 +683,7 @@ export function AssignmentComposerDialog({
                                                 )}
 
                                                 {form.data.rubric.map((criterion, criterionIndex) => (
-                                                    <div key={`criterion-${criterionIndex}`} className="space-y-4 rounded-xl border p-4">
+                                                    <div key={`criterion-${criterionIndex}`} className="space-y-4 rounded-lg border p-4">
                                                         <div className="flex items-start justify-between gap-3">
                                                             <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_auto]">
                                                                 <Input
@@ -738,17 +735,25 @@ export function AssignmentComposerDialog({
 
                                                         <div className="space-y-2">
                                                             <div className="flex items-center justify-between">
-                                                                <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                                                                <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                                                                     Levels
                                                                 </span>
-                                                                <Button type="button" size="sm" variant="ghost" onClick={() => handleAddLevel(criterionIndex)}>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => handleAddLevel(criterionIndex)}
+                                                                >
                                                                     <IconPlus className="mr-1 size-3.5" />
                                                                     Add level
                                                                 </Button>
                                                             </div>
 
                                                             {criterion.levels.map((level, levelIndex) => (
-                                                                <div key={`criterion-${criterionIndex}-level-${levelIndex}`} className="rounded-lg border p-3">
+                                                                <div
+                                                                    key={`criterion-${criterionIndex}-level-${levelIndex}`}
+                                                                    className="rounded-lg border p-3"
+                                                                >
                                                                     <div className="flex items-start gap-3">
                                                                         <div className="grid min-w-0 flex-1 gap-2">
                                                                             <Input
@@ -801,7 +806,7 @@ export function AssignmentComposerDialog({
                                     </div>
                                 </section>
 
-                                <div className="space-y-2 rounded-2xl border p-4">
+                                <div className="space-y-2 rounded-lg border p-4">
                                     <Label htmlFor="assignment-content" className="text-sm font-medium">
                                         Additional notes (optional)
                                     </Label>
@@ -819,7 +824,7 @@ export function AssignmentComposerDialog({
 
                         <Separator />
 
-                        <DialogFooter className="bg-background/95 sticky bottom-0 px-6 py-4 backdrop-blur sm:px-8">
+                        <DialogFooter className="bg-background/95 border-border border-t px-4 py-3 pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-8 sm:py-4">
                             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                                 Cancel
                             </Button>

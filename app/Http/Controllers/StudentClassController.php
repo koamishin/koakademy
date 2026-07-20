@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\AttendanceStatus;
+use App\Enums\ClassPostType;
 use App\Models\ClassEnrollment;
 use App\Models\Classes;
 use App\Models\ClassPost;
 use App\Models\ClassPostSubmission;
 use App\Models\Student;
+use App\Services\ClassPostPayloadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -89,33 +91,15 @@ final class StudentClassController extends Controller
             'photo_url' => $class->Faculty?->getFilamentAvatarUrl(),
         ];
 
+        $payloads = app(ClassPostPayloadService::class);
+
         $classPosts = ClassPost::where('class_id', $class->id)
             ->where('status', '!=', 'draft') // Assuming students shouldn't see drafts
             ->latest()
             ->get()
-            ->map(function (ClassPost $post): array {
-                $attachments = collect($post->attachments ?? [])
-                    ->map(fn ($attachment): array => [
-                        'name' => $attachment['name'] ?? basename((string) ($attachment['url'] ?? 'Attachment')),
-                        'url' => $attachment['url'] ?? '',
-                        'kind' => $attachment['kind'] ?? 'link',
-                    ])
-                    ->values();
-
-                return [
-                    'id' => $post->id,
-                    'title' => $post->title,
-                    'content' => $post->content,
-                    'type' => $post->type instanceof \App\Enums\ClassPostType ? $post->type->value : (string) $post->type,
-                    'status' => $post->status,
-                    'priority' => $post->priority,
-                    'start_date' => $post->start_date?->toDateString(),
-                    'due_date' => $post->due_date?->toDateString(),
-                    'attachments' => $attachments,
-                    'created_at' => format_timestamp($post->created_at),
-                    'assigned_faculty_id' => $post->assigned_faculty_id,
-                ];
-            });
+            ->filter(fn (ClassPost $post): bool => $this->studentCanAccessPost($post, $enrollment))
+            ->map(fn (ClassPost $post): array => $payloads->serialize($post, includeAudienceIds: false))
+            ->values();
 
         // Student's own grades
         $grades = [
@@ -160,12 +144,16 @@ final class StudentClassController extends Controller
             ->sortBy('name')
             ->values();
 
-        // Add submission status to posts
-        $classPosts = $classPosts->map(function (array $post) use ($student): array {
+        $submissionsByPost = ClassPostSubmission::query()
+            ->where('student_id', $student->id)
+            ->whereIn('class_post_id', $classPosts->pluck('id'))
+            ->get()
+            ->keyBy('class_post_id');
+
+        // Add this student's submission state without querying once per assignment.
+        $classPosts = $classPosts->map(function (array $post) use ($submissionsByPost): array {
             if ($post['type'] === 'assignment') {
-                $submission = ClassPostSubmission::where('class_post_id', $post['id'])
-                    ->where('student_id', $student->id)
-                    ->first();
+                $submission = $submissionsByPost->get($post['id']);
 
                 $post['my_submission'] = $submission ? [
                     'id' => $submission->id,
@@ -209,7 +197,7 @@ final class StudentClassController extends Controller
             ->orWhere('user_id', $user->id)
             ->firstOrFail();
 
-        ClassEnrollment::where('class_id', $class->id)
+        $enrollment = ClassEnrollment::where('class_id', $class->id)
             ->where('student_id', $student->id)
             ->firstOrFail();
 
@@ -217,7 +205,11 @@ final class StudentClassController extends Controller
             abort(404);
         }
 
-        if ($post->type !== \App\Enums\ClassPostType::Assignment) {
+        if (! $this->studentCanAccessPost($post, $enrollment)) {
+            abort(404);
+        }
+
+        if ($post->type !== ClassPostType::Assignment) {
             throw ValidationException::withMessages([
                 'post' => 'This post is not an assignment.',
             ]);
@@ -267,5 +259,24 @@ final class StudentClassController extends Controller
             ->with('flash', [
                 'success' => 'Assignment submitted successfully.',
             ]);
+    }
+
+    private function studentCanAccessPost(ClassPost $post, ClassEnrollment $enrollment): bool
+    {
+        if ($post->status === 'draft') {
+            return false;
+        }
+
+        $postType = $post->type instanceof ClassPostType ? $post->type->value : (string) $post->type;
+
+        if ($postType !== ClassPostType::Assignment->value || $post->audience_mode !== 'specific_students') {
+            return true;
+        }
+
+        $assignedEnrollmentIds = collect($post->assigned_student_ids ?? [])
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        return in_array((int) $enrollment->id, $assignedEnrollmentIds, true);
     }
 }

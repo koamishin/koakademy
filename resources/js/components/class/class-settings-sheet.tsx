@@ -129,8 +129,8 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden p-0 lg:min-w-[700px]">
-                <DialogHeader className="border-border/60 bg-card/80 border-b px-6 py-4">
+            <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-auto sm:max-h-[90dvh] sm:w-full sm:max-w-3xl sm:rounded-lg sm:border">
+                <DialogHeader className="border-border/60 bg-card/80 border-b px-4 py-4 text-left sm:px-6">
                     <DialogTitle>Class Settings</DialogTitle>
                     <DialogDescription>
                         Manage {classData.subject_code} • Section {classData.section}
@@ -138,7 +138,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                 </DialogHeader>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col overflow-hidden">
-                    <div className="border-border/40 bg-muted/20 border-b px-6 py-2">
+                    <div className="border-border/40 bg-muted/20 border-b px-3 py-2 sm:px-6">
                         <TabsList className="grid w-full grid-cols-2">
                             <TabsTrigger value="visuals" className="gap-2">
                                 <IconPalette className="h-4 w-4" /> Visuals & Features
@@ -150,9 +150,9 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                     </div>
 
                     <div className="bg-background/50 flex-1 overflow-y-auto">
-                        <TabsContent value="visuals" className="mt-0 space-y-6 p-6">
+                        <TabsContent value="visuals" className="mt-0 space-y-5 p-4 sm:space-y-6 sm:p-6">
                             {/* Visuals content remains the same */}
-                            <section className="border-border/60 bg-background/70 space-y-4 rounded-xl border p-4">
+                            <section className="border-border/60 bg-background/70 space-y-4 rounded-lg border p-4">
                                 <div className="space-y-3">
                                     <Label className="text-muted-foreground flex items-center gap-2 text-xs tracking-[0.3em] uppercase">
                                         <IconPalette className="size-3.5" />
@@ -233,7 +233,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                                 </div>
                             </section>
 
-                            <section className="border-border/60 bg-background/70 space-y-4 rounded-xl border p-4">
+                            <section className="border-border/60 bg-background/70 space-y-4 rounded-lg border p-4">
                                 <p className="text-muted-foreground text-xs tracking-[0.3em] uppercase">Features</p>
                                 {[
                                     ["enable_announcements", "Announcements"],
@@ -255,9 +255,9 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                             </section>
                         </TabsContent>
 
-                        <TabsContent value="details" className="mt-0 space-y-6 p-6">
+                        <TabsContent value="details" className="mt-0 space-y-5 p-4 sm:space-y-6 sm:p-6">
                             <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label>Room Assignment</Label>
                                         <Input
@@ -277,7 +277,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                                         />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="space-y-2">
                                         <Label>Semester</Label>
                                         <Input value={detailsForm.semester} disabled className="bg-muted" />
@@ -331,8 +331,8 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                                 )}
 
                                 {detailsForm.schedules.map((sched, idx) => (
-                                    <div key={idx} className="grid grid-cols-12 items-end gap-2 border-b pb-4 last:border-0 last:pb-0">
-                                        <div className="col-span-3 space-y-1">
+                                    <div key={idx} className="grid gap-3 border-b pb-4 last:border-0 last:pb-0 sm:grid-cols-12 sm:items-end sm:gap-2">
+                                        <div className="space-y-1 sm:col-span-3">
                                             <Label className="text-xs">Day</Label>
                                             <Select
                                                 value={sched.day_of_week}
@@ -354,7 +354,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="col-span-3 space-y-1">
+                                        <div className="space-y-1 sm:col-span-3">
                                             <Label className="text-xs">Start</Label>
                                             <Input
                                                 type="time"
@@ -367,7 +367,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                                                 }}
                                             />
                                         </div>
-                                        <div className="col-span-3 space-y-1">
+                                        <div className="space-y-1 sm:col-span-3">
                                             <Label className="text-xs">End</Label>
                                             <Input
                                                 type="time"
@@ -380,7 +380,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                                                 }}
                                             />
                                         </div>
-                                        <div className="col-span-2 space-y-1">
+                                        <div className="space-y-1 sm:col-span-2">
                                             <Label className="text-xs">Room</Label>
                                             <Select
                                                 value={String(sched.room_id)}
@@ -402,7 +402,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="col-span-1">
+                                        <div className="flex justify-end sm:col-span-1">
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
@@ -425,7 +425,7 @@ export function ClassSettingsDialog({ open, onOpenChange, classData, rooms }: Cl
                     </div>
                 </Tabs>
 
-                <DialogFooter className="border-border/60 bg-card/90 border-t px-6 py-4">
+                <DialogFooter className="border-border/60 bg-card/90 border-t px-4 py-3 pb-[max(.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4">
                     <Button onClick={() => onOpenChange(false)} variant="outline" className="rounded-full">
                         Cancel
                     </Button>
