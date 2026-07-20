@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.10.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.10.1",
-  "commit": "2dad2492d62b0fde18271b0b4d8b76af3a8c18bf",
+  "version": "1.10.0-dev.11.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.11.0",
+  "commit": "758b5b8229fb9f312fc68f63089a22ba6de48f95",
   "branch": "master",
-  "timestamp": "2026-07-20T04:50:54Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29717635679",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-20T07:30:18Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29724568028",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.10.1 - fix: restore classroom tabs context",
-    "previous": "1.10.0-dev.10.0"
+    "current": "Version 1.10.0-dev.11.0 - feat: redesign changelog experience",
+    "previous": "1.10.0-dev.10.1"
   },
   "metadata": {
     "author": "yukazakiri",
