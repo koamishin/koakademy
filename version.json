@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.8.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.8.1",
-  "commit": "0ecd71f4ee8159c591ce58ce21d561b31a37debb",
+  "version": "1.10.0-dev.9.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.9.0",
+  "commit": "ebc049f2aff09791e3fd52ea4448d4507531f348",
   "branch": "master",
-  "timestamp": "2026-07-18T08:41:02Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29637722491",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-20T03:04:22Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29709679337",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.8.1 - fix: simplify profiles and repair mobile account menus",
-    "previous": "1.10.0-dev.8.0"
+    "current": "Version 1.10.0-dev.9.0 - feat: redesign classroom experience",
+    "previous": "1.10.0-dev.8.1"
   },
   "metadata": {
     "author": "yukazakiri",
