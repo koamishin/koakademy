@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.10.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.10.0",
-  "commit": "a9dd7fb6a2820c8fdef0a97fda781d3f4ea65c08",
+  "version": "1.10.0-dev.10.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.10.1",
+  "commit": "2dad2492d62b0fde18271b0b4d8b76af3a8c18bf",
   "branch": "master",
-  "timestamp": "2026-07-20T03:13:17Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29713977544",
-  "release_type": "feature",
+  "timestamp": "2026-07-20T04:50:54Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29717635679",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.10.0 - feat: add enrollment privacy consent gate",
-    "previous": "1.10.0-dev.9.0"
+    "current": "Version 1.10.0-dev.10.1 - fix: restore classroom tabs context",
+    "previous": "1.10.0-dev.10.0"
   },
   "metadata": {
     "author": "yukazakiri",
