@@ -41,7 +41,7 @@ export function ClassroomNavigation({ activeTab, onTabChange, tabs }: ClassroomN
                 ))}
             </TabsList>
 
-            <div className="grid grid-cols-3 gap-1 md:hidden">
+            <TabsList className="grid h-auto w-full grid-cols-3 gap-1 bg-transparent p-0 md:hidden">
                 {primaryTabs.map((tab) => (
                     <TabsTrigger
                         key={tab.value}
@@ -62,7 +62,7 @@ export function ClassroomNavigation({ activeTab, onTabChange, tabs }: ClassroomN
                     <Ellipsis className="size-4" />
                     More
                 </Button>
-            </div>
+            </TabsList>
 
             <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
                 <SheetContent side="bottom" className="max-h-[75dvh] rounded-t-lg p-0">
