@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.11.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.11.0",
-  "commit": "758b5b8229fb9f312fc68f63089a22ba6de48f95",
+  "version": "1.10.0-dev.12.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.12.0",
+  "commit": "449094efc018058f594dfe8e02d5adc29ecbdb69",
   "branch": "master",
-  "timestamp": "2026-07-20T07:30:18Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29724568028",
+  "timestamp": "2026-07-21T00:59:08Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29791641081",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.11.0 - feat: redesign changelog experience",
-    "previous": "1.10.0-dev.10.1"
+    "current": "Version 1.10.0-dev.12.0 - feat: show student creation date",
+    "previous": "1.10.0-dev.11.0"
   },
   "metadata": {
     "author": "yukazakiri",
