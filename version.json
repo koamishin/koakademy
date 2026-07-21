@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.13.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.13.0",
-  "commit": "dd91bdf4fecbd9c7e6b6834174a223a670bcaf83",
+  "version": "1.10.0-dev.14.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.0",
+  "commit": "c51eabcc4296faffda622d2042f64ef3b7864bd7",
   "branch": "master",
-  "timestamp": "2026-07-21T01:42:20Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29793631691",
+  "timestamp": "2026-07-21T02:11:40Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29794983611",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.13.0 - feat: configure student bulk exports",
-    "previous": "1.10.0-dev.12.0"
+    "current": "Version 1.10.0-dev.14.0 - feat: add fast student filters",
+    "previous": "1.10.0-dev.13.0"
   },
   "metadata": {
     "author": "yukazakiri",
