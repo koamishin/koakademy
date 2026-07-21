@@ -532,10 +532,37 @@ describe('API Data Access - Administrative Users', function (): void {
 
         Sanctum::actingAs($this->adminUser);
 
-        $studentData = Student::factory()->make([
+        $studentData = array_merge(Student::factory()->make([
             'email' => 'admincreated@example.com',
             'first_name' => 'Admin Created',
-        ])->toArray();
+        ])->toArray(), [
+            'remarks' => 'Created by an authorized administrator',
+            'profile_url' => 'https://example.com/student-profile',
+            'student_contact_id' => 1,
+            'student_parent_info' => 1,
+            'student_education_id' => 1,
+            'student_personal_id' => 1,
+            'document_location_id' => 1,
+            'deleted_at' => now()->toDateTimeString(),
+            'year_graduated' => now()->year,
+            'special_order' => 'TEST-SO-001',
+            'issued_date' => now()->toDateString(),
+            'subject_enrolled' => ['TEST101'],
+            'user_id' => $this->adminUser->id,
+            'ethnicity' => 'Not specified',
+            'indigenous_group' => 'Not applicable',
+            'withdrawal_date' => now()->toDateString(),
+            'withdrawal_reason' => 'Not applicable',
+            'attrition_category' => 'other',
+            'dropout_date' => now()->toDateString(),
+            'employment_status' => 'unemployed',
+            'employer_name' => 'Not applicable',
+            'job_position' => 'Not applicable',
+            'employment_date' => now()->toDateString(),
+            'employed_by_institution' => false,
+            'scholarship_type' => 'none',
+            'scholarship_details' => 'Not applicable',
+        ]);
 
         $response = $this->postJson('/api/students', $studentData);
 
@@ -547,11 +574,22 @@ describe('API Data Access - Administrative Users', function (): void {
 
         Sanctum::actingAs($this->adminUser);
 
-        $facultyData = Faculty::factory()->make([
+        $facultyData = array_merge(Faculty::factory()->make([
             'email' => 'admincreated@example.com',
             'first_name' => 'Admin Created',
-        ])->toArray();
-        $facultyData['password'] = 'password123';
+        ])->toArray(), [
+            'middle_name' => 'Test',
+            'office_hours' => 'Monday 09:00-11:00',
+            'biography' => 'Test faculty biography',
+            'education' => 'Test degree',
+            'courses_taught' => 'TEST101',
+            'photo_url' => 'https://example.com/faculty-photo.jpg',
+            'password' => 'password123',
+            'remember_token' => 'test-token',
+            'email_verified_at' => now()->toDateTimeString(),
+            'faculty_code' => 'FAC-ADMIN-001',
+            'full_name' => 'Admin Created Test',
+        ]);
 
         $response = $this->postJson('/api/faculties', $facultyData);
 

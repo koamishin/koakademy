@@ -85,7 +85,7 @@ test('digital id card verification endpoint validates token', function () {
     $this->get(route('id-card.verify', ['token' => 'invalid-token']))
         ->assertOk() // It returns a page with an error, not a 404/500
         ->assertInertia(fn ($page) => $page
-            ->component('id-card/verify')
+            ->component('id-card/verify', false)
             ->where('valid', false)
         );
 });

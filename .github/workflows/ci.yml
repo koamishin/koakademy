@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_DEBUG: "false"
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      BROADCAST_CONNECTION: "null"
+      SCOUT_DRIVER: collection
+      PULSE_ENABLED: "false"
+      TELESCOPE_ENABLED: "false"
+      NIGHTWATCH_ENABLED: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: mbstring, bcmath, pcntl, intl, gd, zip, sqlite3
+          coverage: none
+          tools: composer:v2
+
+      - name: Install SVG conversion dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends librsvg2-bin
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ runner.os }}-php85-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php85-
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docs/package-lock.json
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Audit PHP dependencies
+        run: composer audit --locked
+
+      - name: Install JavaScript dependencies
+        run: |
+          npm ci
+          npm --prefix docs ci
+
+      - name: Check PHP formatting
+        run: vendor/bin/pint --test
+
+      - name: Build application frontend
+        run: npm run build
+
+      - name: Run Pest suite
+        run: php artisan test --parallel --compact
+
+      - name: Check generated docs and local links
+        run: npm run docs:check
+
+      - name: Build Astro documentation
+        run: npm --prefix docs run build
+
+      - name: Validate production Compose file
+        run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+
+      - name: Check POSIX shell syntax
+        run: >-
+          sh -n docker/start-container docker/healthcheck docker/pulse-process
+          docker/run-scripts.sh docker/run.sh docker/docker-scripts/*.sh

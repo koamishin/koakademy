@@ -7,13 +7,9 @@ use Spatie\LaravelPdf\Jobs\GeneratePdfJob;
 return [
     /*
      * The default driver to use for PDF generation.
-     * Supported: "cloudflare", "dompdf", "gotenberg"
+     * KoAkademy's supported self-hosted driver is Gotenberg.
      */
-    'driver' => env('LARAVEL_PDF_DRIVER', match (env('APP_ENV', 'production')) {
-        'local', 'development', 'testing' => env('LARAVEL_PDF_LOCAL_DRIVER', 'dompdf'),
-        'staging' => env('LARAVEL_PDF_STAGING_DRIVER', 'dompdf'),
-        default => env('LARAVEL_PDF_PRODUCTION_DRIVER', 'gotenberg'),
-    }),
+    'driver' => env('LARAVEL_PDF_DRIVER', 'gotenberg'),
 
     /*
      * Driver strategy profiles by environment.
@@ -24,25 +20,25 @@ return [
                 'primary' => env('LARAVEL_PDF_PRODUCTION_DRIVER', 'gotenberg'),
                 'fallback' => array_values(array_filter(array_map(
                     static fn (string $driver): string => mb_trim($driver),
-                    explode(',', env('LARAVEL_PDF_PRODUCTION_FALLBACK', 'dompdf')),
+                    explode(',', env('LARAVEL_PDF_PRODUCTION_FALLBACK', '')),
                 ))),
             ],
             'staging' => [
-                'primary' => env('LARAVEL_PDF_STAGING_DRIVER', 'dompdf'),
+                'primary' => env('LARAVEL_PDF_STAGING_DRIVER', 'gotenberg'),
                 'fallback' => array_values(array_filter(array_map(
                     static fn (string $driver): string => mb_trim($driver),
-                    explode(',', env('LARAVEL_PDF_STAGING_FALLBACK', 'dompdf')),
+                    explode(',', env('LARAVEL_PDF_STAGING_FALLBACK', '')),
                 ))),
             ],
             'local' => [
-                'primary' => env('LARAVEL_PDF_LOCAL_DRIVER', 'dompdf'),
+                'primary' => env('LARAVEL_PDF_LOCAL_DRIVER', 'gotenberg'),
                 'fallback' => array_values(array_filter(array_map(
                     static fn (string $driver): string => mb_trim($driver),
-                    explode(',', env('LARAVEL_PDF_LOCAL_FALLBACK', 'dompdf')),
+                    explode(',', env('LARAVEL_PDF_LOCAL_FALLBACK', '')),
                 ))),
             ],
         ],
-        'rollback_driver' => env('LARAVEL_PDF_ROLLBACK_DRIVER', 'dompdf'),
+        'rollback_driver' => env('LARAVEL_PDF_ROLLBACK_DRIVER', 'gotenberg'),
     ],
 
     /*
@@ -73,27 +69,6 @@ return [
         'url' => env('GOTENBERG_URL', 'http://localhost:3000'),
         'username' => env('GOTENBERG_USERNAME'),
         'password' => env('GOTENBERG_PASSWORD'),
-    ],
-
-    /*
-     * DOMPDF driver configuration.
-     *
-     * Pure PHP PDF generation — no external binaries required.
-     * Requires the dompdf/dompdf package:
-     * composer require dompdf/dompdf
-     */
-    'dompdf' => [
-        /*
-         * Allow DOMPDF to fetch external resources (images, CSS).
-         * Set to true if your HTML references remote URLs.
-         */
-        'is_remote_enabled' => env('LARAVEL_PDF_DOMPDF_REMOTE_ENABLED', false),
-
-        /*
-         * The base path for local file access.
-         * Defaults to DOMPDF's built-in chroot setting when null.
-         */
-        'chroot' => env('LARAVEL_PDF_DOMPDF_CHROOT'),
     ],
 
     /*

@@ -42,6 +42,7 @@ it('updates any school record from system management', function (): void {
             'email' => 'school-updated@example.com',
             'dean_name' => 'Dean Updated',
             'dean_email' => 'dean.updated@example.com',
+            'school_level' => SchoolLevel::HigherEducation->value,
         ])
         ->assertRedirect()
         ->assertSessionHas('success');

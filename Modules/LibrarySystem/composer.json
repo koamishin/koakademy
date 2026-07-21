@@ -1,10 +1,10 @@
 {
-    "name": "nwidart/librarysystem",
-    "description": "",
+    "name": "koakademy/library-system",
+    "description": "Library system module for KoAkademy.",
+    "license": "AGPL-3.0-or-later",
     "authors": [
         {
-            "name": "Nicolas Widart",
-            "email": "n.widart@gmail.com"
+            "name": "KoAkademy contributors"
         }
     ],
     "extra": {

@@ -63,9 +63,13 @@ it('shows previous semester clearance status for listed students', function (): 
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/students/index', false)
             ->has('students.data', 3)
-            ->where('students.data.0.previous_sem_clearance', 'cleared')
-            ->where('students.data.1.previous_sem_clearance', 'not_cleared')
-            ->where('students.data.2.previous_sem_clearance', 'no_record')
+            ->where('students.data', function ($students) use ($studentCleared, $studentPending, $studentNoRecord): bool {
+                return $students->pluck('previous_sem_clearance', 'id')->all() === [
+                    $studentNoRecord->id => 'no_record',
+                    $studentPending->id => 'not_cleared',
+                    $studentCleared->id => 'cleared',
+                ];
+            })
         );
 });
 
@@ -141,8 +145,12 @@ it('uses current semester status records for student list', function (): void {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/students/index', false)
             ->has('students.data', 2)
-            ->where('students.data.0.status', StudentStatus::Enrolled->value)
-            ->where('students.data.1.status', StudentStatus::Graduated->value)
+            ->where('students.data', function ($students) use ($studentEnrolled, $studentGraduated): bool {
+                return $students->pluck('status', 'id')->all() === [
+                    $studentGraduated->id => StudentStatus::Graduated->value,
+                    $studentEnrolled->id => StudentStatus::Enrolled->value,
+                ];
+            })
         );
 });
 
@@ -160,13 +168,13 @@ it('includes avatar urls for listed students', function (): void {
         'picture_1x1' => '/storage/students/avatar-1.png',
     ]);
 
-    Student::factory()->create([
+    $studentWithAvatar = Student::factory()->create([
         'first_name' => 'Ari',
         'last_name' => 'Aardvark',
         'document_location_id' => $documentLocation->id,
     ]);
 
-    Student::factory()->create([
+    $studentWithoutAvatar = Student::factory()->create([
         'first_name' => 'Zoe',
         'last_name' => 'Zephyr',
         'document_location_id' => null,
@@ -178,7 +186,11 @@ it('includes avatar urls for listed students', function (): void {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('administrators/students/index', false)
             ->has('students.data', 2)
-            ->where('students.data.0.avatar_url', '/storage/students/avatar-1.png')
-            ->where('students.data.1.avatar_url', null)
+            ->where('students.data', function ($students) use ($studentWithAvatar, $studentWithoutAvatar): bool {
+                return $students->pluck('avatar_url', 'id')->all() === [
+                    $studentWithoutAvatar->id => null,
+                    $studentWithAvatar->id => '/storage/students/avatar-1.png',
+                ];
+            })
         );
 });

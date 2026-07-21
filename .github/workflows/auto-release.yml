@@ -295,9 +295,11 @@ jobs:
             org.opencontainers.image.version=${{ needs.analyze-commit.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.head_commit.timestamp || github.event.repository.updated_at }}
-            org.opencontainers.image.title=KoAcademy
-            org.opencontainers.image.description=Divine Cross College Portal - Admin Dashboard V3
-            org.opencontainers.image.vendor=KOA
+            org.opencontainers.image.title=KoAkademy
+            org.opencontainers.image.description=Production-capable beta image for the self-hosted KoAkademy platform
+            org.opencontainers.image.vendor=KoAkademy
+            org.opencontainers.image.source=https://github.com/yukazakiri/koakademy
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
 
       - name: Write version metadata for image
         shell: bash
@@ -348,7 +350,7 @@ jobs:
           cache-from: type=gha,scope=koakademy-docker-amd64
           cache-to: type=gha,mode=max,scope=koakademy-docker-amd64
           build-args: |
-            APP_NAME=KoAcademy
+            APP_NAME=KoAkademy
             APP_ENV=production
             APP_DEBUG=false
             APP_URL=https://koacademy.yukazaki.com

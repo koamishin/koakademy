@@ -16,7 +16,7 @@ it('generates PDFs from HTML through laravel-pdf and maps core options', functio
     $savedPath = null;
 
     app(PdfGenerationService::class)->generatePdfFromHtml('<h1>KoAkademy PDF</h1>', $outputPath, [
-        'driver' => 'dompdf',
+        'driver' => 'gotenberg',
         'format' => 'A4',
         'landscape' => true,
         'margin_top' => '10mm',
@@ -50,7 +50,7 @@ it('generates PDFs from HTML through laravel-pdf and maps core options', functio
     $driverProperty = $reflection->getProperty('driverName');
     $driverProperty->setAccessible(true);
 
-    expect($driverProperty->getValue($savedPdf))->toBe('dompdf');
+    expect($driverProperty->getValue($savedPdf))->toBe('gotenberg');
 });
 
 it('generates PDFs from a Blade view through laravel-pdf', function (): void {

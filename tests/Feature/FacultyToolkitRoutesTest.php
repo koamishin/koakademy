@@ -3,14 +3,22 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
+use App\Features\Toggles\FacultyAssessments;
+use App\Features\Toggles\FacultyAtRiskAlerts;
+use App\Features\Toggles\FacultyInbox;
+use App\Features\Toggles\FacultyInsights;
+use App\Features\Toggles\FacultyOfficeHours;
+use App\Features\Toggles\FacultyRequestsApprovals;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Pennant\Feature;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
-it('serves faculty toolkit sidebar pages', function (string $path, string $title): void {
+it('serves faculty toolkit sidebar pages', function (string $path, string $title, string $feature): void {
     config(['inertia.testing.ensure_pages_exist' => false]);
+    Feature::activateForEveryone($feature);
 
     $user = User::factory()->create([
         'role' => UserRole::Instructor,
@@ -28,12 +36,12 @@ it('serves faculty toolkit sidebar pages', function (string $path, string $title
             ->has('user')
         );
 })->with([
-    'at-risk alerts' => ['/faculty/at-risk-alerts', 'At-Risk Alerts'],
-    'assessments' => ['/faculty/assessments', 'Assessments'],
-    'inbox' => ['/faculty/inbox', 'Inbox'],
-    'office hours' => ['/faculty/office-hours', 'Office Hours'],
-    'requests' => ['/faculty/requests', 'Requests & Approvals'],
-    'insights' => ['/faculty/insights', 'Insights'],
+    'at-risk alerts' => ['/faculty/at-risk-alerts', 'At-Risk Alerts', FacultyAtRiskAlerts::class],
+    'assessments' => ['/faculty/assessments', 'Assessments', FacultyAssessments::class],
+    'inbox' => ['/faculty/inbox', 'Inbox', FacultyInbox::class],
+    'office hours' => ['/faculty/office-hours', 'Office Hours', FacultyOfficeHours::class],
+    'requests' => ['/faculty/requests', 'Requests & Approvals', FacultyRequestsApprovals::class],
+    'insights' => ['/faculty/insights', 'Insights', FacultyInsights::class],
 ]);
 
 it('registers named routes for faculty toolkit links', function (): void {

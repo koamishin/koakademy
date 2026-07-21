@@ -47,7 +47,7 @@ jobs:
           cache-from: type=gha,scope=koakademy-docker-amd64
           cache-to: type=gha,mode=max,scope=koakademy-docker-amd64
           build-args: |
-            APP_NAME=KoAcademy
+            APP_NAME=KoAkademy
             APP_ENV=production
             APP_DEBUG=false
             APP_URL=https://koacademy.yukazaki.com

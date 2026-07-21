@@ -1,23 +1,45 @@
 ---
 title: API Overview
-description: Introduction to the KoAkademy Portal API
-title-nav: Overview
+description: The tested public API subset for KoAkademy beta releases.
 ---
 
 # API Overview
 
-The KoAkademy API provides a RESTful interface for developers to build applications on top of the KoAkademy platform.
+KoAkademy's API is beta. Only the routes listed here are a documented integration surface:
+
+| Authentication | Method and path | Purpose |
+| --- | --- | --- |
+| Optional feature, public | `GET /api/v1/public/settings` | Selected public website settings |
+| Laravel Sanctum | `GET /api/settings` and settings routes | Read and manage general settings |
+| Laravel Sanctum | `POST /api/students/verify` | Match a student ID and email |
+
+Routes that exist in the application but are not listed here are internal and may change without a public compatibility guarantee. In particular, KoAkademy does not publish a student CRUD API contract.
 
 ## Base URL
 
-All API requests should be prefixed with:
+Use the configured application origin and `/api`, for example:
 
-`https://api.koakademy.edu/api`
+```text
+https://school.example/api
+```
+
+Do not substitute a fictional shared KoAkademy API hostname; self-hosted installations serve their own API.
 
 ## Authentication
 
-The API uses Bearer Token authentication. You can obtain a token by logging into the KoAkademy portal and generating one from your profile settings.
+Protected routes use Laravel Sanctum. Clients with a token provisioned by their operator send:
 
-## Response Format
+```http
+Authorization: Bearer YOUR_TOKEN
+Accept: application/json
+```
 
-All responses are returned in JSON format. Standard HTTP status codes are used to indicate success or failure.
+Token issuance and revocation are deployment responsibilities. No public token-creation endpoint is documented in this release. Never put tokens in source code, browser logs, URLs, or public issue reports.
+
+## Stability and errors
+
+Requests and responses use JSON and normal HTTP status codes. Callers must handle at least `401` for missing/invalid authentication, `403` for denied actions, `404` for missing or disabled resources, and `422` for validation errors.
+
+Field-level compatibility is limited to examples covered by endpoint tests. Pin the latest stable KoAkademy version and verify integrations in staging before upgrades.
+
+Continue with [Authenticated settings](./developer-api.mdx) or [Student verification](./student-verification-api.mdx).

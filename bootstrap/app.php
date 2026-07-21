@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureAdministrativePortalAccess;
 use App\Http\Middleware\FacultyIdValidationMiddleware;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetTenantContext;
+use App\Support\HostingSecurity;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,14 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance']);
 
-        // Trust Traefik proxy & forwarded headers so Laravel detects HTTPS behind proxy
-        $middleware->trustProxies(at: '*');
-        $middleware->trustHosts([
-            'localhost',
-            '127.0.0.1',
-            'portal\.koakademy\.test',
-            'admin\.koakademy\.test',
-        ]);
+        $middleware->trustProxies(at: HostingSecurity::trustedProxies());
+        $middleware->trustHosts(at: HostingSecurity::trustedHostPatterns());
 
         $middleware->web(append: [
             App\Http\Middleware\EnsureSystemIsSetup::class,

@@ -6,6 +6,16 @@ use App\Enums\UserRole;
 use App\Models\Department;
 use App\Models\School;
 use App\Models\User;
+use Spatie\Permission\Models\Permission;
+
+function grantOrganizationPermissions(User $user, array $permissions): void
+{
+    foreach ($permissions as $permission) {
+        Permission::findOrCreate($permission, 'web');
+    }
+
+    $user->givePermissionTo($permissions);
+}
 
 beforeEach(function () {
     // Create test schools
@@ -248,98 +258,65 @@ describe('User Role - Organizational Management', function () {
 });
 
 describe('School Policies', function () {
-    it('allows system admins to view any school', function () {
+    it('allows users with school view permissions', function () {
+        grantOrganizationPermissions($this->developer, ['ViewAny:School', 'View:School']);
+
         expect($this->developer->can('viewAny', School::class))->toBe(true);
         expect($this->developer->can('view', $this->schoolIT))->toBe(true);
         expect($this->developer->can('view', $this->schoolBusiness))->toBe(true);
     });
 
-    it('allows deans to view schools', function () {
-        expect($this->deanIT->can('viewAny', School::class))->toBe(true);
-        expect($this->deanIT->can('view', $this->schoolIT))->toBe(true);
-        expect($this->deanIT->can('view', $this->schoolBusiness))->toBe(true);
-    });
-
-    it('allows registrar to view schools', function () {
-        expect($this->registrar->can('viewAny', School::class))->toBe(true);
-        expect($this->registrar->can('view', $this->schoolIT))->toBe(true);
-    });
-
-    it('restricts students from viewing schools', function () {
+    it('denies school access without explicit permissions', function () {
         expect($this->student->can('viewAny', School::class))->toBe(false);
+        expect($this->deanIT->can('view', $this->schoolIT))->toBe(false);
     });
 
-    it('allows only high-level roles to create schools', function () {
+    it('uses explicit permissions for school mutations', function () {
+        grantOrganizationPermissions($this->developer, [
+            'Create:School',
+            'Update:School',
+            'Delete:School',
+        ]);
+
         expect($this->developer->can('create', School::class))->toBe(true);
-        expect($this->admin->can('create', School::class))->toBe(true);
-        expect($this->president->can('create', School::class))->toBe(true);
-        expect($this->deanIT->can('create', School::class))->toBe(false);
-        expect($this->deptHeadCS->can('create', School::class))->toBe(false);
-    });
-
-    it('allows appropriate roles to update schools', function () {
         expect($this->developer->can('update', $this->schoolIT))->toBe(true);
-        expect($this->president->can('update', $this->schoolIT))->toBe(true);
-        expect($this->deanIT->can('update', $this->schoolIT))->toBe(true);
+        expect($this->developer->can('delete', $this->schoolIT))->toBe(true);
+        expect($this->deanIT->can('create', School::class))->toBe(false);
         expect($this->deptHeadCS->can('update', $this->schoolIT))->toBe(false);
-    });
-
-    it('prevents deletion of schools with users', function () {
-        expect($this->developer->can('delete', $this->schoolIT))->toBe(false); // has users
-
-        $emptySchool = School::factory()->create();
-        expect($this->developer->can('delete', $emptySchool))->toBe(true);
     });
 });
 
 describe('Department Policies', function () {
-    it('allows system admins to view any department', function () {
+    it('allows users with department view permissions', function () {
+        grantOrganizationPermissions($this->developer, ['ViewAny:Department', 'View:Department']);
+
         expect($this->developer->can('viewAny', Department::class))->toBe(true);
         expect($this->developer->can('view', $this->deptCS))->toBe(true);
         expect($this->developer->can('view', $this->deptMGT))->toBe(true);
     });
 
-    it('allows users to view departments in their school', function () {
-        expect($this->deanIT->can('view', $this->deptCS))->toBe(true);
-        expect($this->deanIT->can('view', $this->deptIS))->toBe(true);
-        expect($this->deptHeadCS->can('view', $this->deptCS))->toBe(true);
-        expect($this->professor->can('view', $this->deptCS))->toBe(true);
+    it('denies department access without explicit permissions', function () {
+        expect($this->deanIT->can('viewAny', Department::class))->toBe(false);
+        expect($this->professor->can('view', $this->deptCS))->toBe(false);
     });
 
-    it('allows appropriate roles to create departments', function () {
+    it('uses explicit permissions for department mutations', function () {
+        grantOrganizationPermissions($this->developer, [
+            'Create:Department',
+            'Update:Department',
+            'Delete:Department',
+        ]);
+
         expect($this->developer->can('create', Department::class))->toBe(true);
-        expect($this->president->can('create', Department::class))->toBe(true);
-        expect($this->deanIT->can('create', Department::class))->toBe(true);
-        expect($this->deptHeadCS->can('create', Department::class))->toBe(false);
-        expect($this->professor->can('create', Department::class))->toBe(false);
-    });
-
-    it('allows appropriate roles to update departments', function () {
         expect($this->developer->can('update', $this->deptCS))->toBe(true);
-        expect($this->president->can('update', $this->deptCS))->toBe(true);
-        expect($this->deanIT->can('update', $this->deptCS))->toBe(true);
-        expect($this->deptHeadCS->can('update', $this->deptCS))->toBe(true);
-
-        // Cannot update department in different school
-        $businessUser = User::factory()->create([
-            'role' => UserRole::Dean,
-            'school_id' => $this->schoolBusiness->id,
-        ]);
-        expect($businessUser->can('update', $this->deptCS))->toBe(false);
-    });
-
-    it('prevents deletion of departments with users', function () {
-        expect($this->developer->can('delete', $this->deptCS))->toBe(false); // has users
-
-        $emptyDept = Department::factory()->create([
-            'school_id' => $this->schoolIT->id,
-        ]);
-        expect($this->developer->can('delete', $emptyDept))->toBe(true);
+        expect($this->developer->can('delete', $this->deptCS))->toBe(true);
+        expect($this->deanIT->can('create', Department::class))->toBe(false);
+        expect($this->deptHeadCS->can('update', $this->deptCS))->toBe(false);
     });
 });
 
 describe('Integration Tests', function () {
-    it('maintains data integrity when deleting schools', function () {
+    it('preserves organization assignments while a school is soft deleted', function () {
         $school = School::factory()->create();
         $dept = Department::factory()->create(['school_id' => $school->id]);
         $user = User::factory()->create([
@@ -351,8 +328,9 @@ describe('Integration Tests', function () {
         $school->delete();
 
         $user->refresh();
-        expect($user->school_id)->toBeNull();
-        expect($user->department_id)->toBeNull();
+        expect($user->school_id)->toBe($school->id);
+        expect($user->department_id)->toBe($dept->id);
+        expect(School::withTrashed()->find($school->id)?->trashed())->toBeTrue();
     });
 
     it('maintains data integrity when deleting departments', function () {

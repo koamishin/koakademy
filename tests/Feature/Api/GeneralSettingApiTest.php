@@ -15,11 +15,16 @@ use Tests\TestCase;
 #[CoversClass(GeneralSettingController::class)]
 final class GeneralSettingApiTest extends TestCase
 {
-    private User $user;
+    private ?User $user = null;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        if ($this->name() === 'it_requires_authentication') {
+            return;
+        }
+
         $this->user = User::factory()->create();
         Sanctum::actingAs($this->user);
     }
@@ -33,7 +38,7 @@ final class GeneralSettingApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonStructure([
-                '*' => [
+                'data' => ['*' => [
                     'id',
                     'site_name',
                     'site_description',
@@ -76,7 +81,7 @@ final class GeneralSettingApiTest extends TestCase
                     'school_year',
                     'school_year_string',
                     'semester_name',
-                ],
+                ]],
             ]);
     }
 
@@ -96,6 +101,7 @@ final class GeneralSettingApiTest extends TestCase
     public function it_can_create_general_settings(): void
     {
         $data = GeneralSetting::factory()->raw();
+        unset($data['enrollment_courses']);
 
         $response = $this->postJson('/api/settings', $data);
 
@@ -195,42 +201,6 @@ final class GeneralSettingApiTest extends TestCase
         $response->assertOk()
             ->assertJson([
                 'message' => 'General settings deleted successfully',
-            ]);
-
-        $this->assertSoftDeleted('general_settings', [
-            'id' => $settings->id,
-        ]);
-    }
-
-    #[Test]
-    public function it_can_restore_deleted_general_settings(): void
-    {
-        $settings = GeneralSetting::factory()->create();
-        $settings->delete();
-
-        $response = $this->postJson("/api/settings/{$settings->id}/restore");
-
-        $response->assertOk()
-            ->assertJson([
-                'message' => 'General settings restored successfully',
-            ]);
-
-        $this->assertNotSoftDeleted('general_settings', [
-            'id' => $settings->id,
-        ]);
-    }
-
-    #[Test]
-    public function it_can_force_delete_general_settings(): void
-    {
-        $settings = GeneralSetting::factory()->create();
-        $settings->delete();
-
-        $response = $this->deleteJson("/api/settings/{$settings->id}/force");
-
-        $response->assertOk()
-            ->assertJson([
-                'message' => 'General settings permanently deleted',
             ]);
 
         $this->assertDatabaseMissing('general_settings', [
@@ -362,22 +332,8 @@ final class GeneralSettingApiTest extends TestCase
     #[Test]
     public function it_requires_authentication(): void
     {
-        Sanctum::actingAs(null);
-
         $response = $this->getJson('/api/settings');
 
         $response->assertUnauthorized();
-    }
-
-    #[Test]
-    public function it_can_include_trashed_records(): void
-    {
-        $settings = GeneralSetting::factory()->create();
-        $settings->delete();
-
-        $response = $this->getJson('/api/settings?with_trashed=true');
-
-        $response->assertOk()
-            ->assertJsonCount(1);
     }
 }

@@ -63,10 +63,10 @@ test('administrator announcements page uses the module controller and page', fun
     config(['inertia.testing.ensure_pages_exist' => false]);
     ensureAnnouncementModuleColumns();
 
-    Permission::findOrCreate('view_announcements', 'web');
+    Permission::findOrCreate('ViewAny:Announcement', 'web');
 
     $user = User::factory()->create(['role' => UserRole::Admin]);
-    $user->givePermissionTo('view_announcements');
+    $user->givePermissionTo('ViewAny:Announcement');
 
     Announcement::query()->create([
         'title' => 'System Update',
@@ -91,11 +91,13 @@ test('administrator announcements page uses the module controller and page', fun
             ->where('announcements.data.0.title', 'System Update'));
 });
 
-test('administrator announcements page allows admin role without seeded announcement permissions', function (): void {
+test('administrator announcements page allows an admin with the policy permission', function (): void {
     config(['inertia.testing.ensure_pages_exist' => false]);
     ensureAnnouncementModuleColumns();
 
     $user = User::factory()->create(['role' => UserRole::Admin]);
+    Permission::findOrCreate('ViewAny:Announcement', 'web');
+    $user->givePermissionTo('ViewAny:Announcement');
 
     Announcement::query()->create([
         'title' => 'Migration Notice',

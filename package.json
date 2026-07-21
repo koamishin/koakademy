@@ -6,6 +6,8 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
+        "docs:sync": "node scripts/sync-docs.mjs",
+        "docs:check": "node scripts/sync-docs.mjs --check && node scripts/check-docs.mjs",
         "lint": "eslint . --fix",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/"

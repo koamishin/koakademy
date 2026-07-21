@@ -1,81 +1,41 @@
 ---
 title: Introduction
-description: What is KoAkademy and how to get started.
+description: Choose the self-hosting or contribution path for KoAkademy.
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid } from "@astrojs/starlight/components";
 
-**KoAkademy** is an open-source learning management system (LMS) built for schools, universities, and training centers. It combines a powerful admin panel, a student portal, and a developer-friendly API — all in one modular Laravel application.
+# KoAkademy developer documentation
+
+KoAkademy is a self-hosted school administration and learning platform. It is a production-capable beta: the repository provides a supported topology and automated validation, while each operator remains responsible for staging, backup, monitoring, privacy, and recovery.
 
 <CardGrid stagger>
-	<Card title="Admin Panel" icon="setting">
-		Filament-based admin with role-based access, activity logs, and real-time monitoring via Laravel Pulse.
-	</Card>
-	<Card title="Student Portal" icon="open-book">
-		Inertia + React frontend with course enrollment, schedules, grades, and payment tracking.
-	</Card>
-	<Card title="REST API" icon="seti:json">
-		Token-authenticated API for integrations — student verification, enrollment data, and settings.
-	</Card>
-	<Card title="Modular" icon="layers">
-		Built with Laravel Modules. Add or remove features without touching core code.
-	</Card>
+    <Card title="Self-host" icon="server">
+        Run Laravel and FrankenPHP with PostgreSQL, Redis, Gotenberg, external S3-compatible storage, and your HTTPS edge.
+    </Card>
+    <Card title="Contribute" icon="github">
+        Develop with PHP 8.5, Laravel 12, Filament 5, React 19, Inertia, Pest, and the canonical documentation workflow.
+    </Card>
+    <Card title="Integrate" icon="seti:json">
+        Use only the tested beta subset: public settings, authenticated settings, and authenticated student verification.
+    </Card>
 </CardGrid>
-
-## Architecture Overview
-
-KoAkademy is a full-stack Laravel application with the following stack:
-
-| Layer | Technology |
-|---|---|
-| **Backend** | Laravel 12, PHP 8.4, FrankenPHP (Octane) |
-| **Frontend** | React 19, Inertia.js, Tailwind CSS v4, shadcn/ui |
-| **Admin** | Filament v4, Livewire v3 |
-| **Database** | PostgreSQL 17 (primary), SQLite (local), MySQL 8.4 |
-| **Cache/Queue** | Redis |
-| **Search** | Meilisearch |
-| **Queue Worker** | Station |
-| **Monitoring** | Laravel Pulse, Laravel Telescope |
-| **PDF** | Cloudflare Browser Rendering / DOMPDF |
-| **Mail** | Mailpit (dev), SMTP (production) |
-
-## Who Is This For?
-
-- **Schools & Universities** — Manage students, courses, enrollments, grades, and finances.
-- **Training Centers** — Track learner progress, issue certificates, and handle payments.
-- **Developers** — Extend via modules, integrate via API, or white-label the platform.
 
 ## Self-Host or Contribute?
 
-KoAkademy is built for two kinds of people. Pick the path that fits you:
+For self-hosting, begin with [Installation](./installation/), then follow [Deployment](./docker/) and [Configuration](./configuration/). The supported default is one HTTPS hostname with administration at `/admin`.
 
-### I want to self-host KoAkademy
+For source development, start with [Development](../development/) and [Contributing](./contributing/). Root technical Markdown files are canonical; marked MDX pages are generated with `npm run docs:sync`.
 
-You are running KoAkademy for your school, university, or training center. You want a stable, production-ready deployment with minimal setup.
+## Production services
 
-**Recommended paths:**
+| Role | Supported component |
+| --- | --- |
+| HTTP application | KoAkademy production image, PHP 8.5, FrankenPHP |
+| Database | PostgreSQL |
+| Cache, sessions, queue | Redis |
+| PDF rendering | `spatie/laravel-pdf` with Gotenberg |
+| Uploads | External S3-compatible storage |
+| HTTPS | Operator-managed Caddy, Nginx, Traefik, or tunnel |
 
-| Path | Best For | Time |
-|---|---|---|
-| [Docker Compose](../installation/#self-hosted-production) | Production self-hosting | 10 minutes |
-| [Docker Deployment](../docker) | Full production stack with Meilisearch & Gotenberg | 15 minutes |
-
-After deploying, read [Configuration](../configuration) to set up domains, mail, and optional services.
-
-### I want to develop or contribute
-
-You are a developer who wants to extend KoAkademy, fix bugs, or build new modules. You need a local development environment with hot-reload, debugging, and test tooling.
-
-**Recommended paths:**
-
-| Path | Best For | Time |
-|---|---|---|
-| [Laravel Herd](../installation/#laravel-herd) | macOS / Windows — fastest non-Docker path | 5 minutes |
-| [Sail (Docker)](../installation/#docker--laravel-sail) | Any OS — fully isolated dev stack | 10 minutes |
-| [Native Setup](../installation/#native-manual) | Linux / full control | 15 minutes |
-
-After setting up, read [Development](../../development) for the daily contributor workflow, testing conventions, and how to submit pull requests.
-
-## License
-
-KoAkademy is open-source software licensed under the [AGPL-3.0-or-later](https://github.com/yukazakiri/koakademy/blob/main/LICENSE.md).
+Only the latest stable release is supported. KoAkademy is licensed under GNU AGPL-3.0-or-later.

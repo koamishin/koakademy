@@ -2,16 +2,17 @@
 
 declare(strict_types=1);
 
-it('sets cloudflare as the primary production PDF driver profile', function (): void {
+it('sets Gotenberg as the primary production PDF driver profile', function (): void {
     $config = config('laravel-pdf');
     $strategy = $config['strategy'] ?? [];
     $profiles = $strategy['profiles'] ?? [];
     $production = $profiles['production'] ?? [];
 
-    expect($production['primary'] ?? null)->toBe('cloudflare');
+    expect($config['driver'] ?? null)->toBe('gotenberg')
+        ->and($production['primary'] ?? null)->toBe('gotenberg');
 });
 
-it('stores a production fallback order and rollback driver in PDF strategy config', function (): void {
+it('does not claim an unavailable production PDF fallback', function (): void {
     $config = config('laravel-pdf');
     $strategy = $config['strategy'] ?? [];
     $profiles = $strategy['profiles'] ?? [];
@@ -21,7 +22,7 @@ it('stores a production fallback order and rollback driver in PDF strategy confi
     expect($config)->toBeArray()
         ->and($strategy)->toBeArray()
         ->and($production['primary'] ?? null)->toBeString()
-        ->and($fallback)->toBeArray()
-        ->and($fallback)->toContain('dompdf')
-        ->and($strategy['rollback_driver'] ?? null)->toBeString();
+        ->and($fallback)->toBe([])
+        ->and($strategy['rollback_driver'] ?? null)->toBe('gotenberg')
+        ->and(json_encode($strategy, JSON_THROW_ON_ERROR))->not->toContain('dompdf');
 });

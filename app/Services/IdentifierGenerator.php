@@ -173,8 +173,14 @@ final class IdentifierGenerator
 
     private function adaptToExistingRecords(IdSequence $sequence): IdSequence
     {
+        $latestStudentId = $sequence->key === self::Student
+            ? $this->latestCreatedGeneratedStudentId()
+            : null;
+
         $minimumNextNumber = match ($sequence->key) {
-            self::Student => (int) $this->latestCreatedGeneratedStudentId() + 1,
+            self::Student => $latestStudentId === null
+                ? (int) $sequence->start_number
+                : $latestStudentId + 1,
             self::Staff => (int) $this->latestNumericFacultyId() + 1,
             default => (int) $sequence->next_number,
         };

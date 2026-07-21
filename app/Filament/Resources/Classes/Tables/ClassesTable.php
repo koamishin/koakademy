@@ -42,6 +42,7 @@ final class ClassesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->splitSearchTerms(false)
             ->columns([
                 BadgeColumn::make('classification')
                     ->label('Type')
@@ -62,6 +63,35 @@ final class ClassesTable
                 TextColumn::make('subject_code')
                     ->label('Subject(s)')
                     ->searchable(query: function (Builder $query, string $search): void {
+                        if ($query->getConnection()->getDriverName() === 'sqlite') {
+                            $query->where(function (Builder $sqliteQuery) use ($search): void {
+                                $like = "%{$search}%";
+
+                                $sqliteQuery
+                                    ->where('subject_code', 'like', $like)
+                                    ->orWhereHas('Subject', function (Builder $subjectQuery) use ($like): void {
+                                        $subjectQuery->where('code', 'like', $like)
+                                            ->orWhere('title', 'like', $like);
+                                    })
+                                    ->orWhereHas('ShsSubject', function (Builder $subjectQuery) use ($like): void {
+                                        $subjectQuery->where('code', 'like', $like)
+                                            ->orWhere('title', 'like', $like);
+                                    })
+                                    ->orWhereRaw('
+                                        subject_ids IS NOT NULL
+                                        AND EXISTS (
+                                            SELECT 1
+                                            FROM subject
+                                            JOIN json_each(classes.subject_ids) AS subject_id
+                                                ON subject.id = CAST(subject_id.value AS INTEGER)
+                                            WHERE subject.code LIKE ? OR subject.title LIKE ?
+                                        )
+                                    ', [$like, $like]);
+                            });
+
+                            return;
+                        }
+
                         $query->where(function ($q) use ($search): void {
                             $searchPattern = preg_quote($search, '/');
 

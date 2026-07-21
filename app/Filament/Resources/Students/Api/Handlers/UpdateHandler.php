@@ -53,7 +53,7 @@ final class UpdateHandler extends Handlers
             return response()->json(['message' => 'Faculty members cannot update student records.'], 403);
         }
 
-        $model->fill($request->all());
+        $model->fill($request->safe()->only($model->getFillable()));
 
         $model->save();
 

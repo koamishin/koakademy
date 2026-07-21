@@ -1,10 +1,10 @@
 {
-    "name": "nwidart/announcement",
-    "description": "",
+    "name": "koakademy/announcement",
+    "description": "Announcement module for KoAkademy.",
+    "license": "AGPL-3.0-or-later",
     "authors": [
         {
-            "name": "Nicolas Widart",
-            "email": "n.widart@gmail.com"
+            "name": "KoAkademy contributors"
         }
     ],
     "extra": {

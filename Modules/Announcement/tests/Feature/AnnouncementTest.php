@@ -35,7 +35,7 @@ it('requires authentication to view announcements page', function () {
 
 it('can list announcements', function () {
     config(['inertia.testing.ensure_pages_exist' => false]);
-    $role = announcementRole('admin', ['view_announcements']);
+    $role = announcementRole('admin', ['ViewAny:Announcement']);
     $admin = User::factory()->create(['role' => 'admin']);
     $admin->assignRole($role);
     Announcement::factory()->count(3)->create(['created_by' => $admin->id]);
@@ -52,7 +52,7 @@ it('can list announcements', function () {
 });
 
 it('can create an announcement', function () {
-    $role = announcementRole('admin', ['manage_announcements']);
+    $role = announcementRole('admin', ['Create:Announcement']);
     $admin = User::factory()->create(['role' => 'admin']);
     $admin->assignRole($role);
 
@@ -79,7 +79,7 @@ it('can create an announcement', function () {
 });
 
 it('can update an announcement', function () {
-    $role = announcementRole('developer', ['manage_announcements']);
+    $role = announcementRole('developer', ['Update:Announcement']);
     $admin = User::factory()->create(['role' => 'developer']);
     $admin->assignRole($role);
 
@@ -108,7 +108,7 @@ it('can update an announcement', function () {
 });
 
 it('can delete an announcement', function () {
-    $role = announcementRole('super_admin', ['manage_announcements']);
+    $role = announcementRole('super_admin', ['Delete:Announcement']);
     $admin = User::factory()->create(['role' => 'super_admin']);
     $admin->assignRole($role);
 

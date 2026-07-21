@@ -63,9 +63,9 @@ FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION}
 
 LABEL maintainer="Yuka <128908897+yukazakiri@users.noreply.github.com>"
 LABEL org.opencontainers.image.title="KoAkademy"
-LABEL org.opencontainers.image.description="Production-ready Docker image for KoAkademy"
-LABEL org.opencontainers.image.source=https://github.com/exaco/laravel-docktane
-LABEL org.opencontainers.image.licenses=MIT
+LABEL org.opencontainers.image.description="Production-capable beta image for the self-hosted KoAkademy platform"
+LABEL org.opencontainers.image.source=https://github.com/yukazakiri/koakademy
+LABEL org.opencontainers.image.licenses=AGPL-3.0-or-later
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
@@ -96,6 +96,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     libicu-dev \
     libpq-dev \
+    librsvg2-bin \
     postgresql-client \
     postgresql-17 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*

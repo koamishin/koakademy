@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Students\Api\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class CreateStudentRequest extends FormRequest
@@ -13,7 +14,9 @@ final class CreateStudentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+
+        return $user instanceof User && ! $user->role->isStudent();
     }
 
     /**

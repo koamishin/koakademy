@@ -45,6 +45,8 @@ it('creates an SHS student with enrolled status', function (): void {
         'last_name' => 'Louis',
         'first_name' => 'Lukkanit',
         'middle_name' => 'A',
+        'birth_date' => '2008-01-15',
+        'gender' => 'male',
         'contact' => '09600179497',
         'strand_id' => $strand->id,
         'grade_level' => '11',
@@ -52,7 +54,7 @@ it('creates an SHS student with enrolled status', function (): void {
     ];
 
     $this->actingAs($user)
-        ->post(route('classes.students.store-shs', ['class' => $class->id]), $payload)
+        ->post(route('faculty.classes.students.store-shs', ['class' => $class->id]), $payload)
         ->assertRedirect();
 
     $this->assertDatabaseHas('students', [

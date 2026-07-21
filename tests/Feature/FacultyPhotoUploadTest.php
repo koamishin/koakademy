@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\Faculty;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 
 function expectedStorageUrl(): string
@@ -36,14 +35,7 @@ it('can upload faculty photo using default storage', function () {
     Storage::delete($path);
 });
 
-it('can save faculty with photo using filament form', function () {
-    // Skip if Redis is not available (for testing environment)
-    try {
-        Redis::ping();
-    } catch (Exception $e) {
-        $this->markTestSkipped('Redis not available for testing');
-    }
-
+it('can save a faculty photo storage path', function () {
     // Create a faculty record
     $faculty = Faculty::factory()->create([
         'first_name' => 'Jane',
@@ -63,7 +55,7 @@ it('can save faculty with photo using filament form', function () {
 
     // Verify the update
     $faculty->refresh();
-    expect($faculty->photo_url)->toBe($photoPath);
+    expect($faculty->getRawOriginal('photo_url'))->toBe($photoPath);
 
     // Test the photoUrl accessor
     expect($faculty->photo_url)->toContain(expectedStorageUrl());
@@ -114,9 +106,10 @@ it('can test faculty photo upload lifecycle', function () {
 
     // Verify new photo exists and has correct URL
     $faculty->refresh();
-    expect(Storage::exists($faculty->photo_url))->toBeTrue();
-    expect($faculty->photo_url)->toContain('faculty-photos');
+    $storedPhotoPath = $faculty->getRawOriginal('photo_url');
+    expect(Storage::exists($storedPhotoPath))->toBeTrue();
+    expect($storedPhotoPath)->toContain('faculty-photos');
 
     // Clean up
-    Storage::delete($faculty->photo_url);
+    Storage::delete($storedPhotoPath);
 });

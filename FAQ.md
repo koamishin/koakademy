@@ -1,0 +1,53 @@
+# Frequently Asked Questions
+
+## Is KoAkademy production ready?
+
+KoAkademy is a production-capable beta. It provides a hardened reference topology, health endpoint, migrations, tests, and operator docs. Each institution remains responsible for staging, capacity planning, backups, monitoring, privacy, security review, and recovery exercises.
+
+## Which release is supported?
+
+Only the latest stable, non-prerelease release is supported. Development and prerelease images are for evaluation. Read the changelog and release notes before upgrading.
+
+## Can I use MySQL or SQLite in production?
+
+The prebuilt production image supports PostgreSQL only. SQLite remains the default lightweight option for native development and automated tests. Other databases are not part of the supported production contract.
+
+## Why is the app exposed only on `127.0.0.1:8000`?
+
+TLS termination and public routing belong to an operator-managed edge. Loopback binding prevents direct network access to the origin and makes broad forwarded-header trust safer. Proxy HTTPS traffic from Caddy, Nginx, Traefik, or a tunnel to that address.
+
+## Can portal and admin use separate subdomains?
+
+Yes, as an advanced option. The supported default uses one hostname with `/admin`. For split hosts, configure `APP_URL`, `PORTAL_HOST`, `ADMIN_HOST`, certificates, proxy routes, cookie scope, and cross-host behavior together.
+
+## How do I create the first administrator?
+
+Run migrations, start the app, then open `/setup`. The one-time wizard creates the institution and first super administrator. It becomes forbidden after setup. Do not use `make:filament-user` for initial installation.
+
+## Does KoAkademy run migrations automatically?
+
+Not in the supported production flow. `RUN_MIGRATIONS=false` is the default. Operators run `php artisan migrate --force` explicitly during installation and upgrades after taking a backup and reviewing release notes.
+
+## Which PDF library and renderer are used?
+
+KoAkademy uses `spatie/laravel-pdf` with Gotenberg. Gotenberg runs as a private production service. DOMPDF is not installed and is not a fallback.
+
+## Is local disk supported for production uploads?
+
+No. Production uploads require external S3-compatible storage. Container-local storage is for framework runtime data and temporary work; treating it as durable upload storage risks data loss during replacement or scaling.
+
+## Are all routes under `/api` public API contracts?
+
+No. The documented beta contract intentionally includes only public settings, authenticated settings, and authenticated student verification. Other internal routes may change without public compatibility guarantees.
+
+## How should vulnerabilities be reported?
+
+Use a private GitHub Security Advisory as described in [SECURITY.md](SECURITY.md). Do not include exploit details or sensitive institutional data in a public issue.
+
+## Is hosted support or an SLA included?
+
+No support SLA, compliance certification, uptime guarantee, or compatibility guarantee is offered. Community issues and pull requests are handled as maintainer capacity allows.
+
+## Why is there no Code of Conduct?
+
+The maintainers have not adopted one yet. Choosing and enforcing a Code of Conduct is explicitly deferred as a maintainer governance decision.

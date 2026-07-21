@@ -48,7 +48,7 @@ final class GenerateStudentTimetablePdfJob implements ShouldQueue
                 'student_name' => $this->student->full_name ?? 'Unknown',
             ]);
 
-            // Generate PDF using PdfGenerationService (Cloudflare / DOMPDF)
+            // Generate the PDF through the configured Laravel PDF driver.
             $filename = $this->generateTimetablePdf($this->student);
 
             Log::info('Student timetable PDF generated successfully', [

@@ -43,6 +43,12 @@
       "skillPath": "skills/oss-ci/SKILL.md",
       "computedHash": "80bcd1603a4fec8f4c4bdbf370bfc3805b6b246fa19967f3dfc56f29ced8cc2f"
     },
+    "oss-doc-audit": {
+      "source": "build000r/skills",
+      "sourceType": "github",
+      "skillPath": "oss-doc-audit/SKILL.md",
+      "computedHash": "cf6a4d09b9d0bf6efa19b1d9c65e5d8d17899507dd4ce3dfe410ee9129ce8282"
+    },
     "oss-docs": {
       "source": "zeyuzhangzyz/open-source-hardening-skills",
       "sourceType": "github",

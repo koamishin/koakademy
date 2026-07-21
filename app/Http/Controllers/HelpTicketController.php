@@ -6,7 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\HelpTicket;
 use App\Models\User;
-use Filament\Notifications\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

@@ -57,7 +57,7 @@ it('schedules a daily destructive demo database refresh only for demo environmen
     $refreshEvent = null;
 
     foreach ($schedule->events() as $event) {
-        if (str_contains($event->command, 'migrate:fresh')) {
+        if (is_string($event->command) && str_contains($event->command, 'migrate:fresh')) {
             $refreshEvent = $event;
             break;
         }
@@ -109,10 +109,10 @@ it('does not register the service worker in demo environment', function (): void
     useDemoEnvironment();
 
     followingRedirects()
-        ->get('https://portal.dccp.test/login')
+        ->get(portalUrlForAdministrators('/login'))
         ->assertOk()
         ->assertSee('serviceWorker.getRegistrations', false)
-        ->assertDontSee('src="https://portal.dccp.test/sw.js"', false);
+        ->assertDontSee('src="http://localhost/sw.js"', false);
 });
 
 it('keeps the demo faculty account aligned with faculty seed data', function (): void {

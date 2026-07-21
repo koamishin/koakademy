@@ -1,272 +1,71 @@
 ---
 title: Student Verification API
-description: Check if a student exists in our system
-titleNav: Verification API
+description: Test whether a student ID and email match an existing record.
 ---
 
 # Student Verification API
 
-**Simple way to check if a student is registered**
-
-This API lets you verify if a student exists in our system using their student ID and email. It's perfect for login systems or checking enrollment status.
-
-{/* title-nav: When to Use This API? */}
-
-## When to Use This API?
-
-- Building a login system
-- Checking if a student is enrolled
-- Validating student credentials
-- Verifying student identity
-
-{/* title-nav: Quick Example */}
-
-## Quick Example
-
-```javascript
-// JavaScript - Verify a student
-const response = await fetch("/api/students/verify", {
-    method: "POST",
-    headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer YOUR_TOKEN_HERE",
-    },
-    body: JSON.stringify({
-        student_id: "STU-2024-001",
-        email: "john@example.com",
-    }),
-});
-
-const data = await response.json();
-console.log(data.data.exists); // true or false
-```
-
-{/* title-nav: API Details */}
-
-## API Details
-
-| Info                | Value                  |
-| ------------------- | ---------------------- |
-| **Endpoint**        | `/api/students/verify` |
-| **Method**          | POST                   |
-| **Auth Required**   | Yes                    |
-| **Response Format** | JSON                   |
-
-{/* title-nav: Request */}
+`POST /api/students/verify` checks whether one student ID and email address match the same record. It requires Laravel Sanctum authentication. It is not authentication for the student and must not be used as proof of identity by itself.
 
 ## Request
 
-### Headers
-
 ```http
-Content-Type: application/json
+POST /api/students/verify
 Accept: application/json
-Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN
+
+{
+  "student_id": "2024001",
+  "email": "student@example.edu"
+}
 ```
 
-### Body Parameters
+| Field | Validation |
+| --- | --- |
+| `student_id` | Required string, maximum 50 characters |
+| `email` | Required valid email, maximum 255 characters |
 
-| Parameter    | Type   | Required | Description                         |
-| ------------ | ------ | -------- | ----------------------------------- |
-| `student_id` | string | Yes      | Student's ID (e.g., "STU-2024-001") |
-| `email`      | string | Yes      | Student's email address             |
+## Match found
 
-{/* title-nav: Response Examples */}
-
-## Response Examples
-
-### ✅ Student Found (200 OK)
+HTTP `200`:
 
 ```json
 {
     "message": "Student verified successfully",
     "data": {
-        "exists": true,
-        "student_id": "STU-2024-001",
-        "email": "john@example.com",
-        "full_name": "John Doe",
-        "status": "enrolled",
-        "student_type": "college"
-    }
+      "exists": true,
+      "student_id": 2024001,
+    "email": "student@example.edu",
+    "full_name": "Example Student",
+    "status": "enrolled",
+    "student_type": "college"
+  }
 }
 ```
 
-### ❌ Student Not Found (404)
+The current model serializes a matched `student_id` as an integer. The request field remains a string; unmatched responses echo the submitted string. Clients should accept this existing distinction until a future version explicitly announces a normalized response contract.
+
+## No matching record
+
+HTTP `404`:
 
 ```json
 {
-    "message": "Student not found",
-    "data": {
-        "exists": false,
-        "student_id": "STU-2024-999",
-        "email": "notfound@example.com"
-    }
+  "message": "Student not found",
+  "data": {
+    "exists": false,
+    "student_id": "2024001",
+    "email": "student@example.edu"
+  }
 }
 ```
 
-### ⚠️ Validation Error (422)
+The same not-found response is used when the ID exists but belongs to a different email. Clients should not infer which submitted value was incorrect.
 
-```json
-{
-    "message": "Validation failed",
-    "errors": {
-        "student_id": ["The student id field is required."],
-        "email": ["The email field is required."]
-    }
-}
-```
+## Other responses
 
-{/* title-nav: Complete Code Examples */}
+- HTTP `401` when Sanctum authentication is missing or invalid
+- HTTP `422` with field errors when either input fails validation
 
-## Complete Code Examples
-
-### JavaScript
-
-```javascript
-async function verifyStudent(token, studentId, email) {
-    const response = await fetch("/api/students/verify", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-            student_id: studentId,
-            email: email,
-        }),
-    });
-
-    const data = await response.json();
-
-    if (data.data && data.data.exists) {
-        console.log("Student is valid!");
-        console.log("Name:", data.data.full_name);
-        console.log("Status:", data.data.status);
-        return true;
-    } else {
-        console.log("Student not found");
-        return false;
-    }
-}
-
-// Usage
-verifyStudent("your-token", "STU-2024-001", "john@example.com");
-```
-
-### PHP
-
-```php
-$response = Http::withToken($token)
-    ->post('/api/students/verify', [
-        'student_id' => 'STU-2024-001',
-        'email' => 'john@example.com'
-    ]);
-
-$data = $response->json();
-
-if ($data['data']['exists'] ?? false) {
-    echo "Student: " . $data['data']['full_name'];
-    echo "Status: " . $data['data']['status'];
-}
-```
-
-### Python
-
-```python
-import requests
-
-def verify_student(token, student_id, email):
-    response = requests.post(
-        'https://api.koakademy.edu/api/students/verify',
-        headers={
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'application/json'
-        },
-        json={
-            'student_id': student_id,
-            'email': email
-        }
-    )
-
-    data = response.json()
-
-    if data.get('data', {}).get('exists'):
-        print(f"Student: {data['data']['full_name']}")
-        print(f"Status: {data['data']['status']}")
-        return True
-
-    return False
-
-# Usage
-verify_student('your-token', 'STU-2024-001', 'john@example.com')
-```
-
-{/* title-nav: Common Use Cases */}
-
-## Common Use Cases
-
-### 1. Student Login
-
-```javascript
-async function studentLogin(studentId, email, password) {
-    // First verify the student
-    const verified = await verifyStudent(token, studentId, email);
-
-    if (!verified) {
-        return { success: false, message: "Invalid student credentials" };
-    }
-
-    // Then check password (your own logic)
-    // ... check password logic here ...
-
-    return { success: true, message: "Login successful" };
-}
-```
-
-### 2. Check Enrollment Status
-
-```javascript
-async function checkEnrollment(studentId, email) {
-    const response = await fetch("/api/students/verify", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ student_id: studentId, email }),
-    });
-
-    const data = await response.json();
-
-    if (data.data?.exists) {
-        return data.data.status === "enrolled";
-    }
-
-    return false;
-}
-```
-
-:::note
-Both `student_id` and `email` must match exactly. If either one is wrong, the verification will fail.
-:::
-
-:::caution
-You need a valid authentication token to use this API. Contact your administrator to get one.
-:::
-
-{/* title-nav: Error Codes */}
-
-## Error Codes
-
-| Code | Meaning          | What to Do                   |
-| ---- | ---------------- | ---------------------------- |
-| 200  | Success          | Student found                |
-| 401  | Unauthorized     | Check your token             |
-| 404  | Not Found        | Student ID or email is wrong |
-| 422  | Validation Error | Missing required fields      |
-
-{/* title-nav: Related APIs */}
-
-## Related APIs
-
-- [Student Management API](./student-api.mdx) - Full student CRUD operations
+Because this endpoint handles personal data, integrations should minimize retention, avoid logging submitted identifiers, use HTTPS, protect tokens, and rate-limit callers at the operator-managed edge where appropriate.

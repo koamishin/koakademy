@@ -1,15 +1,17 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "yukazakiri/koacademy",
+    "name": "yukazakiri/koakademy",
     "type": "project",
-    "description": "KoAcademy is a comprehensive Laravel-based learning management system built with Filament, featuring modular architecture, advanced admin panels, and integrated tools for course management, user engagement, and analytics.",
+    "description": "Self-hosted school administration and learning platform built with Laravel, Filament, Inertia, and React.",
     "keywords": [
         "laravel",
-        "framework",
+        "self-hosted",
+        "education",
+        "school-management",
+        "learning-management-system",
         "filament",
-        "flirt-kit",
-        "starter-kit",
-        "rilt"
+        "inertia",
+        "react"
     ],
     "license": "AGPL-3.0-or-later",
     "require": {
@@ -61,7 +63,7 @@
         "laravel/wayfinder": "^0.1.12",
         "maatwebsite/excel": "4.x-dev",
         "mansoor/filament-versionable": "5.x-dev",
-        "marcelweidum/filament-passkeys": "4.0",
+        "marcelweidum/filament-passkeys": "^4.0.5",
         "meilisearch/meilisearch-php": "^1.16",
         "moataz-01/filament-notification-sound": "^1.0",
         "mozex/laravel-scout-bulk-actions": "^1.7",

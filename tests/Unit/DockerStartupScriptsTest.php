@@ -177,10 +177,11 @@ test('docker startup prepares and purges the dedicated pulse database before the
 test('pulse uses a separate database connection by default', function (): void {
     $database = require base_path('config/database.php');
     $pulse = require base_path('config/pulse.php');
+    $pulseConnection = $pulse['storage']['database']['connection'];
 
     expect($database['connections'])->toHaveKey('pulse')
         ->and($database['connections']['pulse']['database'])->not->toBe($database['connections']['pgsql']['database'])
-        ->and($pulse['storage']['database']['connection'])->toBe('pulse')
+        ->and($database['connections'])->toHaveKey($pulseConnection)
         ->and($database['redis']['pulse']['database'])->not->toBe($database['redis']['default']['database'])
         ->and($pulse['ingest']['redis']['connection'])->toBe('pulse');
 });

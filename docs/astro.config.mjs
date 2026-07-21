@@ -21,7 +21,7 @@ export default defineConfig({
             ],
             lastUpdated: true,
             customCss: ["./src/styles/custom.css"],
-            social: [{ icon: "github", label: "GitHub", href: "https://github.com/koakademy/koakademy" }],
+            social: [{ icon: "github", label: "GitHub", href: "https://github.com/yukazakiri/koakademy" }],
             sidebar: [
                 { label: "Home", link: "/" },
                 {
@@ -51,6 +51,8 @@ export default defineConfig({
                         { slug: "getting-started/configuration" },
                         { slug: "getting-started/troubleshooting" },
                         { slug: "getting-started/contributing" },
+                        { slug: "getting-started/architecture" },
+                        { slug: "getting-started/faq" },
                         { slug: "development" },
                         { slug: "development/enrollment-policy-extensions" },
                     ],
@@ -61,7 +63,6 @@ export default defineConfig({
                     items: [
                         { slug: "api/api-overview" },
                         { slug: "api/developer-api" },
-                        { slug: "api/student-api" },
                         { slug: "api/student-verification-api" },
                     ],
                 },

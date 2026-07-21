@@ -18,7 +18,7 @@ it('verifies an existing student by student_id and email', function () {
 
     $response = $this->actingAs($user, 'sanctum')
         ->postJson('/api/students/verify', [
-            'student_id' => 2024001,
+            'student_id' => '2024001',
             'email' => 'student@example.com',
         ]);
 
@@ -41,7 +41,7 @@ it('returns 404 when student does not exist', function () {
 
     $response = $this->actingAs($user, 'sanctum')
         ->postJson('/api/students/verify', [
-            'student_id' => 9999999,
+            'student_id' => '9999999',
             'email' => 'nonexistent@example.com',
         ]);
 
@@ -50,7 +50,7 @@ it('returns 404 when student does not exist', function () {
             'message' => 'Student not found',
             'data' => [
                 'exists' => false,
-                'student_id' => 9999999,
+                'student_id' => '9999999',
                 'email' => 'nonexistent@example.com',
             ],
         ]);
@@ -73,7 +73,7 @@ it('returns validation error when email is missing', function () {
 
     $response = $this->actingAs($user, 'sanctum')
         ->postJson('/api/students/verify', [
-            'student_id' => 2024001,
+            'student_id' => '2024001',
         ]);
 
     $response->assertUnprocessable()
@@ -95,7 +95,7 @@ it('returns validation error when email is invalid', function () {
 
 it('requires authentication', function () {
     $response = $this->postJson('/api/students/verify', [
-        'student_id' => 2024001,
+        'student_id' => '2024001',
         'email' => 'student@example.com',
     ]);
 
@@ -116,7 +116,7 @@ it('returns 404 when student_id does not match email', function () {
     // Try to verify with correct student_id but wrong email
     $response = $this->actingAs($user, 'sanctum')
         ->postJson('/api/students/verify', [
-            'student_id' => 2024001,
+            'student_id' => '2024001',
             'email' => 'student2@example.com',
         ]);
 

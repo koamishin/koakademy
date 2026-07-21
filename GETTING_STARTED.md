@@ -1,162 +1,92 @@
-# Getting Started with KoAkademy
+# Getting Started
 
-This guide is for contributors setting up the repository locally.
+This guide installs KoAkademy with the supported production container topology. KoAkademy is a production-capable beta; start in a staging environment and keep a tested recovery path.
 
 ## Prerequisites
 
-- Docker Desktop or Docker Engine with Compose
-- PHP and Composer for the initial bootstrap step
-- Node.js 22+
-- Git
+- Linux host with Docker Engine and Docker Compose v2
+- 4 GB RAM minimum for a small evaluation; size from observed workload
+- HTTPS hostname and an external reverse proxy or tunnel
+- S3-compatible bucket, access key, and secret key
+- Outbound access to GitHub Container Registry and your object-storage endpoint
 
-## 1. Clone the Repository
+Only PostgreSQL is supported by the prebuilt production image. SQLite is available for native development and tests.
 
-```bash
+## 1. Obtain a supported release
+
+Clone the repository at the latest stable release tag so the deployment files and image version stay together:
+
+```sh
 git clone https://github.com/yukazakiri/koakademy.git
 cd koakademy
+git fetch --tags
+git checkout <latest-stable-tag>
 ```
 
-## 2. Use the Setup Scripts
+Replace `<latest-stable-tag>` with the latest non-prerelease tag shown on the GitHub Releases page. KoAkademy supports only the latest stable release; do not deploy `-dev`, prerelease, or arbitrary branch images as production releases.
 
-The preferred contributor setup path is through the helper scripts in [`scripts/`](scripts/).
+## 2. Configure the environment
 
-### Linux and macOS
-
-Run the main Docker-based bootstrap script:
-
-```bash
-./scripts/dev-setup.sh
+```sh
+cp .env.production.example .env
+chmod 600 .env
 ```
 
-Common options:
+At minimum, replace:
 
-```bash
-./scripts/dev-setup.sh --skip-ssl
-./scripts/dev-setup.sh --skip-hosts
-./scripts/dev-setup.sh --skip-docker
+- `APP_URL`, `PORTAL_HOST`, and `ADMIN_HOST` with the same production hostname
+- `DB_PASSWORD` and `REDIS_PASSWORD` with unique random values
+- every `AWS_*` value with credentials for a dedicated S3-compatible bucket
+- `MAIL_*` when real email delivery is required
+- `KOAKADEMY_VERSION` with the matching stable image tag
+
+Generate the application key:
+
+```sh
+docker compose --env-file .env -f compose.production.yaml run --rm app php artisan key:generate --show
 ```
 
-Optional helpers:
+Copy the complete output into `APP_KEY`. Never reuse a key from another installation or commit `.env`.
 
-```bash
-./scripts/setup-sail-alias.sh
-./scripts/setup-ssl.sh
-./scripts/fix-ssl.sh
+Validate configuration before starting anything:
+
+```sh
+docker compose --env-file .env -f compose.production.yaml config --quiet
 ```
 
-### Windows
+## 3. Start dependencies and migrate
 
-Run the PowerShell setup script:
-
-```powershell
-.\scripts\dev-setup.ps1
+```sh
+docker compose --env-file .env -f compose.production.yaml pull
+docker compose --env-file .env -f compose.production.yaml up -d postgres redis gotenberg
+docker compose --env-file .env -f compose.production.yaml run --rm app php artisan migrate --force
 ```
 
-Common options:
+Migrations are intentionally separate from container startup. Review release notes and take a database backup before the same command during upgrades.
 
-```powershell
-.\scripts\dev-setup.ps1 -SkipMigrations
-.\scripts\dev-setup.ps1 -SkipNpm
-.\scripts\setup-ssl.ps1
+## 4. Start and verify KoAkademy
+
+```sh
+docker compose --env-file .env -f compose.production.yaml up -d app
+docker compose --env-file .env -f compose.production.yaml ps
+curl --fail --silent --show-error http://127.0.0.1:8000/up
 ```
 
-## 3. Manual Sail Bootstrap
+If `/up` fails, inspect `docker compose --env-file .env -f compose.production.yaml logs app` and use [Troubleshooting](TROUBLESHOOTING.md).
 
-If you prefer to do the setup manually, use the same Sail-based flow that the scripts automate:
+## 5. Add HTTPS and complete setup
 
-```bash
-# Required once so vendor/bin/sail exists
-composer install
-
-cp .env.example .env
-vendor/bin/sail up -d
-vendor/bin/sail npm install
-vendor/bin/sail artisan key:generate
-vendor/bin/sail artisan migrate
-```
-
-If you want sample data:
-
-```bash
-vendor/bin/sail artisan db:seed
-```
-
-## 4. Configure Local Domains
-
-The setup scripts can manage hosts and certificates for you.
-
-If you want to manage hosts manually, add these entries:
+Forward your HTTPS edge to `http://127.0.0.1:8000` and preserve `Host`, `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers. Then visit:
 
 ```text
-127.0.0.1 portal.koakademy.test
-127.0.0.1 admin.koakademy.test
-127.0.0.1 mailpit.local.test
+https://school.example/setup
 ```
 
-If local HTTPS certificates need to be created or repaired, use:
+The one-time wizard creates the institution, initial academic period, and first super administrator. After completion, verify `https://school.example/admin`. The setup route returns `403` after the application is initialized.
 
-```bash
-./scripts/setup-ssl.sh
-./scripts/fix-ssl.sh
-```
+## Next steps
 
-## 5. Start the App
-
-For day-to-day development:
-
-```bash
-vendor/bin/sail npm run dev
-```
-
-If the Docker stack is not already running:
-
-```bash
-vendor/bin/sail up -d
-```
-
-Primary local entrypoints:
-
-- `https://portal.koakademy.test`
-- `https://admin.koakademy.test`
-- `http://mailpit.local.test:8025`
-
-## 6. Verify the Setup
-
-Run a small test slice and a production asset build:
-
-```bash
-vendor/bin/sail artisan test --compact
-vendor/bin/sail npm run build
-```
-
-## Project Layout
-
-```text
-app/                  Application services, models, controllers, settings
-app/Filament/         Filament resources, pages, widgets, clusters
-config/               Framework and application configuration
-database/             Migrations, factories, seeders, settings migrations
-docs/                 Product and API documentation
-resources/js/         Inertia pages, shared React UI, client logic
-routes/               Web, admin, portal, and API routes
-scripts/              Local setup, SSL, and developer utility scripts
-tests/                Pest feature and unit tests
-```
-
-## Common Commands
-
-```bash
-vendor/bin/sail artisan migrate
-vendor/bin/sail artisan db:seed
-vendor/bin/sail artisan test --compact tests/Feature/SomeFeatureTest.php
-vendor/bin/sail bin pint --dirty --format agent
-vendor/bin/sail npm run dev
-vendor/bin/sail npm run build
-```
-
-## Notes for Contributors
-
-- Prefer the scripts in `scripts/` for first-time setup, SSL repair, and local convenience tasks.
-- Prefer config values, settings records, and shared services over hardcoded product names or domains.
-- Use existing factories and seeders when writing tests.
-- Keep changes small and verify the affected feature before moving on.
+- Finish the production checklist in [Deployment](DEPLOYMENT.md).
+- Review every variable in [Configuration](CONFIGURATION.md).
+- Configure scheduled backups for PostgreSQL and external object storage.
+- Subscribe to security and release notifications for the repository.

@@ -1,0 +1,55 @@
+# Contributing
+
+Thank you for improving KoAkademy. Contributions should be focused, testable, and safe for institutions that self-host the application.
+
+## Before opening work
+
+- Search existing issues and pull requests.
+- Use a GitHub issue for substantial behavior or architecture changes so maintainers can confirm direction.
+- Do not use a public issue for vulnerabilities; follow [SECURITY.md](SECURITY.md).
+- Keep product changes separate from formatting, generated files, or unrelated refactors.
+
+No response-time or merge-time SLA is promised.
+
+## Development setup
+
+Follow [Development](DEVELOPMENT.md). Use PHP 8.5, Node.js 22, Composer 2, and the locked dependencies. The default automated test environment uses SQLite; production-specific database behavior should also be tested with PostgreSQL.
+
+## Pull request checklist
+
+Before submitting:
+
+```sh
+vendor/bin/pint --test
+php artisan test --parallel --compact
+npm run build
+npm run docs:check
+npm --prefix docs run build
+docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+```
+
+- Add or update Pest tests for behavior changes.
+- Add migrations for schema changes; do not rewrite released migration history.
+- Update canonical root docs when installation, configuration, architecture, or operations change.
+- Run `npm run docs:sync` and commit generated MDX mirrors.
+- Keep API examples limited to tested routes and real response shapes.
+- Avoid new services, dependencies, network calls, or telemetry without explaining the tradeoff.
+- Confirm no credentials, personal data, production logs, or generated `.env` files are included.
+
+## Code style
+
+PHP follows Laravel conventions and Laravel Pint. New PHP files use `declare(strict_types=1);`. Tests use Pest. React code should be typed, accessible, and use established components and generated route helpers where practical.
+
+Prefer small commits with imperative messages. Pull request descriptions should explain the problem, solution, validation performed, user-visible impact, migration or rollback concerns, and screenshots for interface changes.
+
+## Documentation ownership
+
+Root `README.md`, `GETTING_STARTED.md`, `DEPLOYMENT.md`, `CONFIGURATION.md`, `TROUBLESHOOTING.md`, `DEVELOPMENT.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, and `FAQ.md` are canonical. Their generated MDX mirrors contain a warning header and must not be edited by hand.
+
+Operator guides, enrollment blueprints, and API pages remain native under `docs/src/content/docs/`.
+
+## License
+
+By contributing, you agree that your contribution is licensed under the repository's [GNU AGPL-3.0-or-later license](LICENSE.md). Ensure you have the right to submit the work and preserve required notices for third-party material.
+
+The project has not adopted a Code of Conduct yet. That is an explicit maintainer decision still to be made; contributors should nevertheless communicate respectfully and keep discussion focused on the work.

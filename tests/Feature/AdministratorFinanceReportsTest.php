@@ -13,6 +13,9 @@ use App\Services\TransactionReceiptDataService;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia;
+use Spatie\LaravelPdf\Enums\Format;
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -358,7 +361,22 @@ it('shares document and email delivery data on the receipt page', function (): v
 
 it('emails the document receipt with a PDF attachment', function (): void {
     Mail::fake();
-    config()->set('laravel-pdf.driver', 'gotenberg');
+
+    $pdfBuilder = Mockery::mock(PdfBuilder::class);
+    $pdfBuilder->shouldReceive('format')
+        ->once()
+        ->with(Format::A4)
+        ->andReturnSelf();
+    $pdfBuilder->shouldReceive('base64')
+        ->once()
+        ->andReturn(base64_encode('%PDF-1.4 test receipt'));
+
+    Pdf::shouldReceive('view')
+        ->once()
+        ->with('pdf.transaction-receipt', Mockery::on(
+            fn (array $data): bool => isset($data['receipt']) && is_array($data['receipt'])
+        ))
+        ->andReturn($pdfBuilder);
 
     $cashier = User::factory()->create(['role' => UserRole::Cashier]);
     $student = Student::factory()->create(['email' => 'attached@example.com']);
@@ -389,7 +407,6 @@ it('emails the document receipt with a PDF attachment', function (): void {
             && $mail->receipt['amount'] === 1250.0
             && count($mail->attachments()) === 1;
     });
-
     expect($transaction->fresh()->receipt_email_status)->toBe('sent')
         ->and($transaction->fresh()->receipt_emailed_at)->not->toBeNull();
 });

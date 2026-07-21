@@ -1,584 +1,112 @@
 ---
-title: Docker
-description: Deploy KoAkademy with Docker and Docker Compose.
+title: Deployment
+description: Deploy, upgrade, back up, and recover KoAkademy.
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+{/* GENERATED FILE. Source: /DEPLOYMENT.md. Run: npm run docs:sync */}
 
-KoAkademy provides pre-built Docker images for both **quick evaluation** and **production deployment**. You can run it in seconds with a single `docker run` command, or deploy a full production stack with Docker Compose.
+This is the canonical production and upgrade runbook for KoAkademy.
 
-## Quick Run
+## Supported architecture
 
-Evaluate KoAkademy instantly with our Docker Hub image.
+`compose.production.yaml` runs four private services: the application, PostgreSQL, Redis, and Gotenberg. Only the application is published, and only to `127.0.0.1:8000`. Uploads use external S3-compatible storage. An operator-managed Caddy, Nginx, Traefik, or tunnel terminates HTTPS and proxies to the loopback origin.
 
-:::caution
-The pre-built image is optimized for production-style deployments. For a quick evaluation, you must provide a valid Laravel `APP_KEY` and tell the container to use SQLite so it can start without an external database.
-:::
+The default is one hostname:
 
-### 1. Generate an app key
-
-```bash "Terminal"
-APP_KEY="base64:$(openssl rand -base64 32)"
-echo "$APP_KEY"
+```text
+https://school.example/        portal
+https://school.example/admin   administration
 ```
 
-On Windows (PowerShell):
+Split portal and admin subdomains are an advanced configuration. Add both hostnames to `PORTAL_HOST`, `ADMIN_HOST`, and the proxy certificate/routing configuration.
 
-```powershell
-$bytes = New-Object byte[] 32
-(New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($bytes)
-$APP_KEY = "base64:" + [Convert]::ToBase64String($bytes)
-Write-Output $APP_KEY
+## First deployment
+
+Follow [Getting Started](./installation/). The required order is:
+
+1. Copy and secure `.env`.
+2. Validate Compose configuration.
+3. Start PostgreSQL, Redis, and Gotenberg.
+4. Generate `APP_KEY`.
+5. Run `php artisan migrate --force` explicitly.
+6. Start the application.
+7. Verify the loopback `/up` endpoint.
+8. Configure HTTPS forwarding.
+9. Complete `/setup` and reach `/admin`.
+
+Container startup never needs migration privileges beyond the application's normal database user, and `RUN_MIGRATIONS=false` is the supported production setting.
+
+## Reverse proxy requirements
+
+Terminate TLS at the edge and forward to `http://127.0.0.1:8000`. Preserve these headers:
+
+```text
+Host
+X-Forwarded-For
+X-Forwarded-Host
+X-Forwarded-Proto
 ```
 
-### 2. Run the container
+`TRUSTED_HOSTS` accepts additional comma-separated exact hostnames. `TRUSTED_PROXIES` accepts `*`, IP addresses, or CIDRs. Trusting all proxies is appropriate only while the application port remains loopback-only; use explicit edge proxy addresses if the origin becomes reachable from another network.
 
-```bash "Terminal"
-docker run -d \
-  --name koakademy \
-  -p 8000:8000 \
-  -e APP_KEY="$APP_KEY" \
-  -e APP_ENV=local \
-  -e DB_CONNECTION=sqlite \
-  -e DB_DATABASE=/app/database/database.sqlite \
-  -e CACHE_STORE=database \
-  -e SESSION_DRIVER=database \
-  -e QUEUE_CONNECTION=sync \
-  -e MAIL_MAILER=log \
-  yukazaki/koakademy:latest
+Example Caddy site:
+
+```text
+school.example {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8000
+}
 ```
 
-Visit `http://localhost:8000`. The container runs FrankenPHP with Laravel Octane on port `8000`.
+## Backups
 
-:::note
-Data is stored inside the container. If you remove the container, the SQLite database and uploaded files are lost. Mount a volume for persistence:
+Back up both data planes:
 
-```bash
-  -v koakademy-sqlite:/app/database \
-  -v koakademy-storage:/app/storage \
-```
-:::
+- PostgreSQL database, including a periodic restore test
+- S3-compatible bucket, according to the provider's versioning and retention controls
 
-:::tip
-Use `yukazaki/koakademy:dev-latest` for the latest development build.
-:::
+The Redis volume is operational state, not the source of record. Preserve `.env` and `APP_KEY` in an encrypted secret store; losing `APP_KEY` can make encrypted application data and sessions unreadable.
 
-## Docker Compose
+Example database backup:
 
-For production or persistent deployments, use Docker Compose with PostgreSQL and Redis.
-
-The project includes an `.env.production.example` file with sensible defaults. Start from there instead of writing an `.env` from scratch.
-
-### 1. Create a Compose File
-
-Create `docker-compose.yml`:
-
-```yaml
-services:
-  app:
-    image: yukazaki/koakademy:latest
-    container_name: koakademy-app
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    depends_on:
-      pgsql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - koakademy-storage:/app/storage
-    networks:
-      - koakademy
-    healthcheck:
-      test: ["CMD", "healthcheck"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
-
-  pgsql:
-    image: postgres:18-alpine
-    container_name: koakademy-pgsql
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: koakademy
-      POSTGRES_USER: koakademy
-      POSTGRES_PASSWORD: replace-with-strong-password
-    volumes:
-      - koakademy-pgsql:/var/lib/postgresql
-    networks:
-      - koakademy
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U koakademy -d koakademy"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  redis:
-    image: redis:7-alpine
-    container_name: koakademy-redis
-    restart: unless-stopped
-    volumes:
-      - koakademy-redis:/data
-    networks:
-      - koakademy
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-volumes:
-  koakademy-storage:
-  koakademy-pgsql:
-  koakademy-redis:
-
-networks:
-  koakademy:
-    driver: bridge
+```sh
+docker compose --env-file .env -f compose.production.yaml exec -T postgres \
+  pg_dump --clean --if-exists --no-owner --username="$DB_USERNAME" "$DB_DATABASE" > koakademy.sql
 ```
 
-:::caution
-If you are using PostgreSQL 18+, mount the volume to `/var/lib/postgresql` instead of `/var/lib/postgresql/data`. The PostgreSQL 18+ Docker image stores data in a version-specific subdirectory inside `/var/lib/postgresql` to support `pg_upgrade`.
-:::
+Run this from a shell where the variables were loaded safely, or substitute the configured non-secret database name and user. Protect the resulting dump as sensitive institutional data.
 
-### 2. Create Your Environment File
+## Upgrade
 
-Copy the production example and customize it:
+KoAkademy supports upgrades to the latest stable release. Read [CHANGELOG.md](https://github.com/yukazakiri/koakademy/blob/master/CHANGELOG.md) and the GitHub release notes first.
 
-```bash
-cp .env.production.example .env
+```sh
+# 1. Back up PostgreSQL and verify object-storage protection.
+# 2. Update the checked-out stable tag and KOAKADEMY_VERSION in .env.
+docker compose --env-file .env -f compose.production.yaml pull app
+
+# 3. Run migrations as a deliberate one-off operation.
+docker compose --env-file .env -f compose.production.yaml run --rm app php artisan migrate --force
+
+# 4. Replace the running application and verify it.
+docker compose --env-file .env -f compose.production.yaml up -d app
+curl --fail --silent --show-error http://127.0.0.1:8000/up
 ```
 
-Edit the values that matter for your setup:
-
-```ini
-APP_NAME="KoAkademy"
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=http://localhost:8000
-APP_KEY=   # leave empty for now; we will generate it below
-
-DB_CONNECTION=pgsql
-DB_HOST=pgsql
-DB_PORT=5432
-DB_DATABASE=koakademy
-DB_USERNAME=koakademy
-DB_PASSWORD=replace-with-strong-password
-
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=redis
-
-REDIS_HOST=redis
-REDIS_PORT=6379
-
-MAIL_MAILER=log
-MAIL_FROM_ADDRESS=noreply@koakademy.edu
-MAIL_FROM_NAME="${APP_NAME}"
-
-OCTANE_SERVER=frankenphp
-OCTANE_HOST=0.0.0.0
-OCTANE_PORT=8000
-```
-
-:::note
-`ADMIN_HOST` and `PORTAL_HOST` are domain-based routing values. Both default to `localhost` when not set, so the app works immediately at `http://localhost:8000`. Set them explicitly when deploying to a real domain.
-:::
-
-:::note
-`ADMIN_HOST` and `PORTAL_HOST` are used when you deploy to a real domain (e.g. `portal.yourschool.edu`). Both default to `localhost` when not set, so the app works immediately at `http://localhost:8000`.
-:::
-
-Generate an app key and add it to `.env`:
-
-```bash
-docker run --rm \
-  -e APP_KEY=base64:000000000000000000000000000000000000000000= \
-  yukazaki/koakademy:latest \
-  php artisan key:generate --show
-```
-
-Copy the output into `APP_KEY=` in your `.env`.
-
-:::note
-Migrations run automatically when the `app` container starts (`RUN_MIGRATIONS=true` by default). You only need to run them manually if you disable auto-migrations or want to verify the state.
-:::
-
-### 3. Start the Stack
-
-```bash
-docker compose up -d
-```
-
-### 4. Create an Admin User
-
-```bash
-docker exec -it koakademy-app php artisan make:filament-user
-```
-
-Follow the prompts to create your first administrator.
-
-### 5. Verify Deployment
-
-```bash
-docker ps
-docker logs koakademy-app --tail=200
-docker exec koakademy-app php artisan about
-```
-
-## Production Compose with All Services
-
-For a full production deployment with Meilisearch and Gotenberg:
-
-```yaml
-services:
-  app:
-    image: yukazaki/koakademy:latest
-    container_name: koakademy-app
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
-    depends_on:
-      pgsql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      meilisearch:
-        condition: service_healthy
-      gotenberg:
-        condition: service_started
-    volumes:
-      - koakademy-storage:/app/storage
-    networks:
-      - koakademy
-    healthcheck:
-      test: ["CMD", "healthcheck"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
-
-  pgsql:
-    image: postgres:18-alpine
-    container_name: koakademy-pgsql
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: koakademy
-      POSTGRES_USER: koakademy
-      POSTGRES_PASSWORD: replace-with-strong-password
-    volumes:
-      - koakademy-pgsql:/var/lib/postgresql
-    networks:
-      - koakademy
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U koakademy -d koakademy"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  redis:
-    image: redis:7-alpine
-    container_name: koakademy-redis
-    restart: unless-stopped
-    volumes:
-      - koakademy-redis:/data
-    networks:
-      - koakademy
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-  meilisearch:
-    image: getmeili/meilisearch:v1.42
-    container_name: koakademy-meilisearch
-    restart: unless-stopped
-    environment:
-      MEILI_MASTER_KEY: replace-with-strong-key
-      MEILI_NO_ANALYTICS: "false"
-    volumes:
-      - koakademy-meilisearch:/meili_data
-    networks:
-      - koakademy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-  gotenberg:
-    image: gotenberg/gotenberg:8
-    container_name: koakademy-gotenberg
-    restart: unless-stopped
-    networks:
-      - koakademy
-
-volumes:
-  koakademy-storage:
-  koakademy-pgsql:
-  koakademy-redis:
-  koakademy-meilisearch:
-
-networks:
-  koakademy:
-    driver: bridge
-```
-
-Append these to your `.env`:
-
-```ini
-# Search (Meilisearch)
-SCOUT_DRIVER=meilisearch
-MEILISEARCH_HOST=http://meilisearch:7700
-MEILISEARCH_KEY=replace-with-strong-key
-
-# PDF rendering (Gotenberg)
-LARAVEL_PDF_DRIVER=gotenberg
-LARAVEL_PDF_PRODUCTION_DRIVER=gotenberg
-GOTENBERG_URL=http://gotenberg:3000
-```
-
-:::caution
-`MEILI_MASTER_KEY` in the compose service and `MEILISEARCH_KEY` in `.env` must be the same value. Without a master key, Meilisearch runs in development mode and exposes all API endpoints without authentication — never do this in production.
-:::
-
-:::note
-The `app` container runs FrankenPHP, Station, Pulse, and Nightwatch together via Supervisor when `QUEUE_CONNECTION=redis`. You do **not** need separate `station` or `pulse` containers unless you are horizontally scaling workers across multiple hosts.
-:::
-
-### Pulse Startup and Storage
-
-The production image prepares Pulse before FrankenPHP starts. By default, each HTTP container startup:
-
-1. Creates a dedicated PostgreSQL database named `<DB_DATABASE>_pulse` when it does not exist.
-2. Runs the Pulse migration on the `pulse` connection.
-3. Drains pending Redis ingest entries and purges existing Pulse metrics.
-4. Starts both `pulse:check` and `pulse:work` under Supervisor.
-
-Pulse uses Redis database `4` for ingest by default, keeping it separate from the application queues. The PostgreSQL database uses the primary database host and credentials unless you provide `PULSE_DB_HOST`, `PULSE_DB_DATABASE`, `PULSE_DB_USERNAME`, and `PULSE_DB_PASSWORD`.
-
-```ini
-PULSE_ENABLED=true
-PULSE_INGEST_DRIVER=redis
-PULSE_REDIS_CONNECTION=pulse
-PULSE_STORAGE_DRIVER=database
-PULSE_DB_CONNECTION=pulse
-PULSE_AUTO_CREATE_DATABASE=true
-PULSE_RUN_MIGRATIONS=true
-PULSE_PURGE_ON_START=true
-```
-
-`PULSE_PURGE_ON_START=true` clears metrics on every container restart, including automatic restarts. Set it to `false` if metrics should survive redeployments. When the database user cannot create databases, create the Pulse database once through your database provider and set `PULSE_AUTO_CREATE_DATABASE=false`.
-
-## Search Indexing
-
-KoAkademy does not run full Scout imports during container startup. This keeps Docker Compose and Docker Swarm deployments fast and prevents every replica from trying to rebuild Meilisearch indexes during a rollout.
-
-After enabling Meilisearch, sync index settings first:
-
-```bash
-docker exec koakademy-app php artisan scout:sync-index-settings
-```
-
-Then rebuild records only when you intentionally need to, such as after the first Meilisearch deploy, after adding a new searchable model, or after changing `toSearchableArray()`:
-
-```bash
-docker exec koakademy-app php artisan scout:queue-import-all --chunk=500 --queue=default --force
-```
-
-The `scout:queue-import-all` command discovers every model configured in `config/scout-bulk-actions.php` and dispatches chunked import jobs. Keep Station running while the jobs process.
-
-### Docker Swarm One-Off Task
-
-For Swarm, run indexing as a temporary one-off service from a manager node. Use the same image tag, overlay network, environment, secrets, and configs as the application service.
-
-```bash
-docker service create \
-  --name koakademy-scout-index \
-  --restart-condition none \
-  --replicas 1 \
-  --network <stack>_<overlay-network> \
-  --env-file .env.production \
-  --with-registry-auth \
-  <your-app-image:tag> \
-  php artisan scout:queue-import-all --chunk=500 --queue=default --force
-```
-
-Watch the task:
-
-```bash
-docker service logs -f koakademy-scout-index
-docker service ps koakademy-scout-index
-```
-
-Remove the temporary service after it finishes dispatching jobs:
-
-```bash
-docker service rm koakademy-scout-index
-```
-
-:::tip
-The default Station supervisor listens to the `default` and `assessments` queues. Use `--queue=default` unless you add a dedicated indexing queue to `config/station.php`.
-:::
-
-## Scaling Workers Separately
-
-If you need to scale Station or Pulse workers independently (for example, on a different host or with different resource limits), run dedicated worker containers:
-
-```yaml
-  station:
-    image: yukazaki/koakademy:latest
-    container_name: koakademy-station
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      CONTAINER_MODE: station
-    depends_on:
-      - pgsql
-      - redis
-    volumes:
-      - koakademy-storage:/app/storage
-    networks:
-      - koakademy
-```
-
-Use `CONTAINER_MODE=station` to run only the Station queue workers, bypassing the web server entirely. The same pattern works for `scheduler` and `nightwatch`.
-
-## Available Container Modes
-
-The KoAkademy image supports different container modes via the `CONTAINER_MODE` environment variable:
-
-| Mode | Use Case | Command |
-|---|---|---|
-| `http` (default) | Web server with Octane, Station, Pulse, and Nightwatch | `docker run ... yukazaki/koakademy:latest` |
-| `station` | Queue workers with Station only | `docker run -e CONTAINER_MODE=station ...` |
-| `scheduler` | Cron scheduler only | `docker run -e CONTAINER_MODE=scheduler ...` |
-| `worker` | General queue worker only | `docker run -e CONTAINER_MODE=worker ...` |
-| `nightwatch` | Nightwatch monitoring only | `docker run -e CONTAINER_MODE=nightwatch ...` |
-
-## Image Registries
-
-| Registry | Image |
-|---|---|
-| Docker Hub | `yukazaki/koakademy:latest` |
-| GitHub Container Registry | `ghcr.io/yukazakiri/koakademy` |
-| Dev (latest unstable) | `yukazaki/koakademy:dev-latest` |
-
-## Health Checks
-
-The KoAkademy image includes a built-in `HEALTHCHECK` instruction that runs every second after a 5-second start period. The health check adapts to the active `CONTAINER_MODE`:
-
-| Mode | Health Check |
-|---|---|
-| `http` | Runs `php artisan octane:status` — verifies the Octane server is accepting requests |
-| `station` | Runs `php artisan station:status` — verifies the Station process is active |
-| `scheduler` | Checks that the Supercronic process is running via Supervisor |
-| `nightwatch` | Checks that the Nightwatch agent is running via Supervisor |
-| `worker` | Checks that the queue worker is running via Supervisor |
-
-### HTTP Health Endpoint
-
-The image also exposes a lightweight `/health` endpoint at the application level:
-
-```bash
-curl -s http://localhost:8000/health
-# {"status":"ok","timestamp":"2026-06-10T12:00:00+00:00"}
-```
-
-This endpoint is used internally by the container's startup logic (`is_http_url_reachable`) to detect when Octane is ready to serve traffic.
-
-### Checking Health Status
-
-View the health status of all containers:
-
-```bash
-docker ps --format "table {{.Names}}\t{{.Status}}"
-```
-
-Inspect a specific container's health log:
-
-```bash
-docker inspect --format='{{json .State.Health}}' koakademy-app | python3 -m json.tool
-```
-
-### Customizing Health Check Parameters
-
-Override the defaults if your workload needs a longer startup period:
-
-```yaml
-services:
-  app:
-    image: yukazaki/koakademy:latest
-    healthcheck:
-      test: ["CMD", "healthcheck"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 15s
-```
-
-### Health Check Environment Variables
-
-The health check honors these environment variables from your `.env`:
-
-| Variable | Default | Description |
-|---|---|---|
-| `CONTAINER_MODE` | `http` | Determines which health check strategy to use |
-| `CONNECTION_MAX_TRIES` | `30` | Retries for database/Redis connectivity checks during startup |
-| `CONNECTION_RETRY_SLEEP` | `1` | Seconds between connection retries |
-| `SERVICE_CONNECT_TIMEOUT` | `2` | Timeout in seconds for service connectivity checks |
-
-## Rolling Updates
-
-To update to the latest image:
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-The container automatically runs migrations on startup. After the update, warm the caches:
-
-```bash
-docker exec koakademy-app php artisan optimize
-```
-
-## Backup & Rollback
-
-Back up before every deploy:
-
-```bash
-# Database (pass the password via the environment)
-docker exec -e PGPASSWORD=replace-with-strong-password koakademy-app \
-  pg_dump -U koakademy koakademy > backup.sql
-
-# Storage
-docker run --rm -v koakademy-storage:/data -v $(pwd):/backup alpine \
-  tar czf /backup/storage.tar.gz -C /data .
-```
-
-To roll back to a previous image tag:
-
-```bash
-# Update your docker-compose.yml to use the previous tag, then:
-docker compose down
-docker compose up -d
-```
-
-## Next Steps
-
-- [Configuration](/getting-started/configuration) — Full environment variable reference.
-- [Development](/development) — Set up a local contributor environment.
+Test the portal, `/admin`, authentication, uploads, a queued job, and a PDF export after every upgrade.
+
+## Rollback
+
+Application-image rollback is safe only when the previous code supports the migrated database schema. If release notes do not explicitly allow a code-only rollback, restore the pre-upgrade database backup and matching image together in a maintenance window. Never run `migrate:rollback` blindly on production data.
+
+## Production checklist
+
+- `APP_ENV=production` and `APP_DEBUG=false`
+- Unique `APP_KEY`, database password, Redis password, and S3 credentials
+- `SESSION_SECURE_COOKIE=true`, HTTPS active, and correct trusted hosts/proxies
+- Application published only on `127.0.0.1:8000`
+- PostgreSQL, Redis, and Gotenberg have no host port mappings
+- `RUN_MIGRATIONS=false`
+- `/up`, `/setup` or `/admin`, upload, queue, mail, and PDF smoke tests pass
+- Database and object-storage recovery tested
+- Logs, disk use, queue depth, certificate expiry, and backup failures monitored

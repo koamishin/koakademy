@@ -5,12 +5,15 @@ declare(strict_types=1);
 use App\Enums\UserRole;
 use App\Models\User;
 use Modules\Announcement\Models\Announcement;
+use Spatie\Permission\Models\Permission;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 
 test('administrators can create announcements', function (): void {
     $user = User::factory()->create(['role' => UserRole::Admin]);
+    Permission::findOrCreate('Create:Announcement', 'web');
+    $user->givePermissionTo('Create:Announcement');
 
     actingAs($user)
         ->post(route('administrators.announcements.store'), [
@@ -42,6 +45,8 @@ test('administrators can create announcements', function (): void {
 
 test('announcement creation validates required fields', function (): void {
     $user = User::factory()->create(['role' => UserRole::Admin]);
+    Permission::findOrCreate('Create:Announcement', 'web');
+    $user->givePermissionTo('Create:Announcement');
 
     actingAs($user)
         ->post(route('administrators.announcements.store'), [])
@@ -50,6 +55,8 @@ test('announcement creation validates required fields', function (): void {
 
 test('announcement creation stores starts_at and ends_at', function (): void {
     $user = User::factory()->create(['role' => UserRole::Admin]);
+    Permission::findOrCreate('Create:Announcement', 'web');
+    $user->givePermissionTo('Create:Announcement');
 
     actingAs($user)
         ->post(route('administrators.announcements.store'), [

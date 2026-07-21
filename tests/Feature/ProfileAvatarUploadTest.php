@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -64,7 +65,7 @@ it('can update user avatar replacing old one', function () {
 });
 
 it('can handle profile avatar form component', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => UserRole::Admin]);
 
     $this->actingAs($user);
 
@@ -77,7 +78,7 @@ it('can handle profile avatar form component', function () {
 
 it('verifies filament-edit-profile configuration', function () {
     expect(config('filament-edit-profile.avatar_column'))->toBe('avatar_url');
-    expect(config('filament-edit-profile.visibility'))->toBe('private');
+    expect(config('filament-edit-profile.visibility'))->toBe('public');
 });
 
 it('verifies default filesystem is configured', function () {

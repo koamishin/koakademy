@@ -1,178 +1,107 @@
-# Deployment Guide
+# Deployment
 
-This guide covers a production deployment shape for KoAkademy using a container image, Redis, and an external database. Replace image names, secrets, and hostnames with values for your environment.
+This is the canonical production and upgrade runbook for KoAkademy.
 
-## Deployment Checklist
+## Supported architecture
 
-- Build and publish an application image for this repository.
-- Provision PostgreSQL or MySQL.
-- Provision Redis.
-- Set `APP_URL`, `ADMIN_HOST`, and `PORTAL_HOST` to the real production domains.
-- Run database migrations during deploy.
-- Keep `storage/` persistent across releases.
+`compose.production.yaml` runs four private services: the application, PostgreSQL, Redis, and Gotenberg. Only the application is published, and only to `127.0.0.1:8000`. Uploads use external S3-compatible storage. An operator-managed Caddy, Nginx, Traefik, or tunnel terminates HTTPS and proxies to the loopback origin.
 
-## Required Environment
+The default is one hostname:
 
-```env
-APP_NAME="KoAkademy"
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://koakademy.edu
-ADMIN_HOST=admin.koakademy.edu
-PORTAL_HOST=portal.koakademy.edu
-
-DB_CONNECTION=pgsql
-DB_HOST=postgres
-DB_PORT=5432
-DB_DATABASE=koakademy
-DB_USERNAME=koakademy
-DB_PASSWORD=change-me
-
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=database
-REDIS_HOST=redis
-REDIS_PORT=6379
-STATION_ENABLED=true
-STATION_DRIVER=redis
-STATION_DASHBOARD_PATH=station
-
-MAIL_MAILER=smtp
-MAIL_FROM_ADDRESS=noreply@koakademy.edu
-MAIL_FROM_NAME="${APP_NAME}"
-
-LARAVEL_PDF_DRIVER=cloudflare
-LARAVEL_PDF_PRODUCTION_DRIVER=cloudflare
-LARAVEL_PDF_PRODUCTION_FALLBACK=dompdf
-LARAVEL_PDF_ROLLBACK_DRIVER=dompdf
-CLOUDFLARE_API_TOKEN=
-CLOUDFLARE_ACCOUNT_ID=
-
-FILESYSTEM_DISK=public
-OCTANE_SERVER=frankenphp
-OCTANE_HOST=0.0.0.0
-OCTANE_PORT=8000
+```text
+https://school.example/        portal
+https://school.example/admin   administration
 ```
 
-## Example Docker Compose
+Split portal and admin subdomains are an advanced configuration. Add both hostnames to `PORTAL_HOST`, `ADMIN_HOST`, and the proxy certificate/routing configuration.
 
-```yaml
-services:
-  app:
-    image: ghcr.io/your-org/koakademy:latest
-    container_name: koakademy-app
-    restart: unless-stopped
-    env_file:
-      - .env.production
-    ports:
-      - "8000:8000"
-    depends_on:
-      - redis
-    volumes:
-      - koakademy-storage:/var/www/html/storage
+## First deployment
 
-  redis:
-    image: redis:7-alpine
-    container_name: koakademy-redis
-    restart: unless-stopped
-    volumes:
-      - koakademy-redis:/data
+Follow [Getting Started](GETTING_STARTED.md). The required order is:
 
-volumes:
-  koakademy-storage:
-  koakademy-redis:
+1. Copy and secure `.env`.
+2. Validate Compose configuration.
+3. Start PostgreSQL, Redis, and Gotenberg.
+4. Generate `APP_KEY`.
+5. Run `php artisan migrate --force` explicitly.
+6. Start the application.
+7. Verify the loopback `/up` endpoint.
+8. Configure HTTPS forwarding.
+9. Complete `/setup` and reach `/admin`.
+
+Container startup never needs migration privileges beyond the application's normal database user, and `RUN_MIGRATIONS=false` is the supported production setting.
+
+## Reverse proxy requirements
+
+Terminate TLS at the edge and forward to `http://127.0.0.1:8000`. Preserve these headers:
+
+```text
+Host
+X-Forwarded-For
+X-Forwarded-Host
+X-Forwarded-Proto
 ```
 
-## Deploy Steps
+`TRUSTED_HOSTS` accepts additional comma-separated exact hostnames. `TRUSTED_PROXIES` accepts `*`, IP addresses, or CIDRs. Trusting all proxies is appropriate only while the application port remains loopback-only; use explicit edge proxy addresses if the origin becomes reachable from another network.
 
-```bash
-docker compose pull
-docker compose up -d
-docker exec koakademy-app php artisan migrate --force
-docker exec koakademy-app php artisan optimize
-```
+Example Caddy site:
 
-If you need an initial administrator:
-
-```bash
-docker exec -it koakademy-app php artisan make:filament-user
-```
-
-## Branding and Domains
-
-- Runtime branding should come from configuration and persisted settings, not from compiled text in the image.
-- Set canonical production hosts with `APP_URL`, `ADMIN_HOST`, and `PORTAL_HOST`.
-- If you are migrating an older deployment, back up the settings table before applying any branding backfill migration.
-
-## Health Checks
-
-Useful commands after deployment:
-
-```bash
-# Check container status including health
-docker ps --format "table {{.Names}}\t{{.Status}}"
-
-# Inspect health check details
-docker inspect --format='{{json .State.Health}}' koakademy-app | python3 -m json.tool
-
-# View recent container logs
-docker logs koakademy-app --tail=200
-
-# Lightweight application health endpoint
-docker exec koakademy-app curl -s http://localhost:8000/health
-
-# Octane process status
-docker exec koakademy-app php artisan octane:status
-
-# Full system overview
-docker exec koakademy-app php artisan about
+```text
+school.example {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8000
+}
 ```
 
 ## Backups
 
-Back up at least:
+Back up both data planes:
 
-- the application database
-- the persistent `storage/` volume
-- production environment files and secret values from your secret manager
+- PostgreSQL database, including a periodic restore test
+- S3-compatible bucket, according to the provider's versioning and retention controls
+
+The Redis volume is operational state, not the source of record. Preserve `.env` and `APP_KEY` in an encrypted secret store; losing `APP_KEY` can make encrypted application data and sessions unreadable.
+
+Example database backup:
+
+```sh
+docker compose --env-file .env -f compose.production.yaml exec -T postgres \
+  pg_dump --clean --if-exists --no-owner --username="$DB_USERNAME" "$DB_DATABASE" > koakademy.sql
+```
+
+Run this from a shell where the variables were loaded safely, or substitute the configured non-secret database name and user. Protect the resulting dump as sensitive institutional data.
+
+## Upgrade
+
+KoAkademy supports upgrades to the latest stable release. Read [CHANGELOG.md](CHANGELOG.md) and the GitHub release notes first.
+
+```sh
+# 1. Back up PostgreSQL and verify object-storage protection.
+# 2. Update the checked-out stable tag and KOAKADEMY_VERSION in .env.
+docker compose --env-file .env -f compose.production.yaml pull app
+
+# 3. Run migrations as a deliberate one-off operation.
+docker compose --env-file .env -f compose.production.yaml run --rm app php artisan migrate --force
+
+# 4. Replace the running application and verify it.
+docker compose --env-file .env -f compose.production.yaml up -d app
+curl --fail --silent --show-error http://127.0.0.1:8000/up
+```
+
+Test the portal, `/admin`, authentication, uploads, a queued job, and a PDF export after every upgrade.
 
 ## Rollback
 
-Keep the previous container image tag available. To roll back:
+Application-image rollback is safe only when the previous code supports the migrated database schema. If release notes do not explicitly allow a code-only rollback, restore the pre-upgrade database backup and matching image together in a maintenance window. Never run `migrate:rollback` blindly on production data.
 
-1. Point the compose file to the previous image tag.
-2. Redeploy the containers.
-3. Restore the database only if the failed release included destructive schema changes.
+## Production checklist
 
-PDF driver rollback path:
-
-1. Set `LARAVEL_PDF_DRIVER=${LARAVEL_PDF_ROLLBACK_DRIVER}`.
-2. Redeploy and clear config cache (`php artisan config:clear`).
-
-## PDF Driver ADR (2026-04-23)
-
-Decision record for PDF rendering in production:
-
-- Primary production driver: `cloudflare` (Cloudflare Browser Rendering).
-- Production fallback: `dompdf` (pure PHP, no external binaries).
-- Staging fallback: `dompdf`.
-- Local development default: `dompdf`.
-- Rollback knob: `LARAVEL_PDF_ROLLBACK_DRIVER`.
-
-Rationale:
-
-- Eliminates local Chromium/Node runtime from the container image.
-- Uses Cloudflare's managed headless browser for complex layouts.
-- Keeps DOMPDF as a lightweight, zero-dependency fallback.
-
-## Post-Deploy Verification
-
-Check these URLs and flows:
-
-- `https://koakademy.edu`
-- `https://portal.koakademy.edu`
-- `https://admin.koakademy.edu`
-- authentication
-- dashboard rendering
-- enrollment and payment views
-- queue-backed notifications or jobs
+- `APP_ENV=production` and `APP_DEBUG=false`
+- Unique `APP_KEY`, database password, Redis password, and S3 credentials
+- `SESSION_SECURE_COOKIE=true`, HTTPS active, and correct trusted hosts/proxies
+- Application published only on `127.0.0.1:8000`
+- PostgreSQL, Redis, and Gotenberg have no host port mappings
+- `RUN_MIGRATIONS=false`
+- `/up`, `/setup` or `/admin`, upload, queue, mail, and PDF smoke tests pass
+- Database and object-storage recovery tested
+- Logs, disk use, queue depth, certificate expiry, and backup failures monitored

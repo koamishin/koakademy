@@ -1,93 +1,101 @@
-# Development Guide
+# Development
 
-This document covers the normal contributor workflow for KoAkademy.
+This guide covers native development and testing. Production operators should use [Getting Started](GETTING_STARTED.md) instead.
 
-## Daily Workflow
+## Toolchain
 
-Start the stack:
+- PHP 8.5 and Composer 2
+- Node.js 22 and npm
+- `rsvg-convert` from `librsvg2-bin` for SVG brand uploads
+- SQLite for the default test/development path, or PostgreSQL for integration work
+- Redis and Gotenberg when working on queues, sessions, cache, or PDF features
 
-```bash
-vendor/bin/sail up -d
-vendor/bin/sail npm run dev
+The repository also includes a development-oriented `compose.yaml`. It is not the production topology and publishes additional tools and ports.
+
+## Native setup
+
+```sh
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+composer install
+npm ci
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate
+npm run build
+php artisan serve
 ```
 
-Run targeted tests while you work:
+Open `http://127.0.0.1:8000/setup` to create development data and the first administrator. Run a Vite development server with `npm run dev` when editing frontend assets.
 
-```bash
-vendor/bin/sail artisan test --compact tests/Feature/SomeFeatureTest.php
+## Common commands
+
+```sh
+composer test
+vendor/bin/pint --test
+npm run build
+npm run format:check
+npm run docs:check
+npm --prefix docs ci
+npm --prefix docs run build
 ```
 
-Format changed PHP files before you finish:
+Run a focused Pest file while iterating:
 
-```bash
-vendor/bin/sail bin pint --dirty --format agent
+```sh
+php artisan test --compact tests/Feature/SetupAvailabilityTest.php
+php artisan test --compact --filter="shows the setup screen"
 ```
 
-## Project Conventions
+## Documentation workflow
 
-- Use `vendor/bin/sail` for PHP, Artisan, Composer, and Node commands.
-- Keep branding dynamic. Use configuration or database-backed settings instead of hardcoded `KoAkademy`, domains, or legacy names in runtime code.
-- Follow existing patterns in neighboring files before adding new abstractions.
-- Add or update tests for each code change.
+Root project/technical Markdown files are canonical. Edit those files, then run:
 
-## Where Things Live
-
-- `app/Settings/` holds database-backed settings objects.
-- `app/Services/` holds shared application services.
-- `app/Providers/Filament/` configures the admin and portal panels.
-- `resources/js/pages/` contains Inertia page entries.
-- `resources/js/components/` contains shared React UI.
-- `database/settings/` contains settings migrations and backfills.
-- `tests/Feature/` covers user-facing behavior.
-- `tests/Unit/` covers focused service and helper logic.
-
-## Backend Work
-
-Useful commands:
-
-```bash
-vendor/bin/sail artisan make:test --pest Feature/ExampleFeatureTest
-vendor/bin/sail artisan route:list --except-vendor
-vendor/bin/sail artisan config:show app.name
-vendor/bin/sail artisan migrate
+```sh
+npm run docs:sync
+npm run docs:check
 ```
 
-Guidelines:
+The sync command generates marked MDX mirrors consumed by both Astro and the in-app documentation. Never edit generated mirrors directly. Operator guides and enrollment blueprints under `docs/src/content/docs/` remain native MDX and are edited in place.
 
-- Prefer named routes and generated route helpers over hardcoded URLs.
-- Validate input with form requests or existing request validation patterns.
-- Reuse settings and configuration services for branding, domains, and shared metadata.
+## Application structure
 
-## Frontend Work
+- `app/` — application services, models, middleware, jobs, policies, and support code
+- `routes/` — web, API, console, and channel routes
+- `resources/js/` — Inertia React pages and frontend components
+- `Modules/` — optional domain modules loaded by Laravel Modules
+- `database/` — migrations, factories, and seeders
+- `tests/` — Pest feature and unit tests
+- `docs/` — Astro documentation site and in-app Markdown sources
+- `docker/` — production image and runtime scripts
 
-Useful commands:
+See [Architecture](ARCHITECTURE.md) for boundaries and production dependencies.
 
-```bash
-vendor/bin/sail npm run dev
-vendor/bin/sail npm run build
-vendor/bin/sail npm run lint
-```
+## Database changes
 
-Guidelines:
+Create migrations rather than modifying historical migrations. Include factories or test fixtures when a behavior needs representative data. Test migrations against SQLite when supported and PostgreSQL when using database-specific features. Production migrations must be compatible with the documented explicit `migrate --force` upgrade step.
 
-- Check for existing components before creating new ones.
-- Keep route usage aligned with the project’s existing Wayfinder and route helper patterns.
-- Preserve the current UI language unless the task explicitly asks for a broader redesign.
+## Backend conventions
 
-## Testing and Verification
+- Use strict types in new PHP files.
+- Validate request input and authorize protected actions.
+- Keep controllers focused on HTTP translation; place reusable workflows in services or actions.
+- Use Eloquent relationships, eager loading, and database constraints deliberately.
+- Dispatch expensive exports, mail, indexing, and PDF work to queues.
+- Keep secrets and host-specific values in configuration, never source code.
 
-Default workflow:
+## Frontend conventions
 
-```bash
-vendor/bin/sail artisan test --compact tests/Feature/SomeFeatureTest.php
-vendor/bin/sail bin pint --dirty --format agent
-vendor/bin/sail npm run build
-```
+Use TypeScript for React code and existing design-system primitives before adding dependencies. Preserve keyboard access, visible focus, meaningful labels, reduced-motion behavior, loading states, and actionable error messages. Frontend calls to Laravel routes should use generated Wayfinder helpers where available.
 
-Run the smallest relevant test set first. Expand only when the change touches cross-cutting behavior.
+## Adding or changing APIs
 
-## Local Troubleshooting
+API routes are not documented merely because they exist. New public documentation requires:
 
-- If `vendor/bin/sail` is missing, run `composer install`.
-- If Vite assets are stale, run `vendor/bin/sail npm run build` or `vendor/bin/sail npm run dev`.
-- If domains do not resolve, check your hosts file entries for `portal.koakademy.test` and `admin.koakademy.test`.
+1. Authentication and authorization behavior
+2. Request validation and response tests
+3. Stable examples based on actual controller responses
+4. An update to the API documentation contract test
+
+The currently published subset is listed in `docs/src/content/docs/api/api-overview.mdx`.

@@ -36,7 +36,7 @@ final class CreateHandler extends Handlers
     {
         $model = new (self::getModel());
 
-        $model->fill($request->all());
+        $model->fill($request->safe()->only($model->getFillable()));
 
         $model->save();
 
