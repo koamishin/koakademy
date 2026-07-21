@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.12.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.12.0",
-  "commit": "449094efc018058f594dfe8e02d5adc29ecbdb69",
+  "version": "1.10.0-dev.13.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.13.0",
+  "commit": "dd91bdf4fecbd9c7e6b6834174a223a670bcaf83",
   "branch": "master",
-  "timestamp": "2026-07-21T00:59:08Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29791641081",
+  "timestamp": "2026-07-21T01:42:20Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29793631691",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.12.0 - feat: show student creation date",
-    "previous": "1.10.0-dev.11.0"
+    "current": "Version 1.10.0-dev.13.0 - feat: configure student bulk exports",
+    "previous": "1.10.0-dev.12.0"
   },
   "metadata": {
     "author": "yukazakiri",
