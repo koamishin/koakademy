@@ -81,6 +81,17 @@ const getStatusColor = (status: string | null) => {
     }
 };
 
+const addedDateFormatter = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+});
+
+const addedTimeFormatter = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+});
+
 export const columns: ColumnDef<Student>[] = [
     {
         id: "select",
@@ -231,6 +242,34 @@ export const columns: ColumnDef<Student>[] = [
                 <Badge variant="outline" className="max-w-[120px] truncate text-[10px] font-normal" title={scholarship}>
                     {scholarship}
                 </Badge>
+            );
+        },
+    },
+    {
+        accessorKey: "created_at",
+        header: ({ column }) => (
+            <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="-ml-4">
+                Added
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+        ),
+        cell: ({ row }) => {
+            const createdAt = row.original.created_at;
+
+            if (!createdAt) {
+                return <span className="text-muted-foreground text-xs">Unknown</span>;
+            }
+
+            const date = new Date(createdAt);
+            if (Number.isNaN(date.getTime())) {
+                return <span className="text-muted-foreground text-xs">Unknown</span>;
+            }
+
+            return (
+                <div className="min-w-[7rem] text-xs" title={date.toLocaleString()}>
+                    <div className="text-foreground font-medium">{addedDateFormatter.format(date)}</div>
+                    <div className="text-muted-foreground mt-0.5">{addedTimeFormatter.format(date)}</div>
+                </div>
             );
         },
     },
