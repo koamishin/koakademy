@@ -37,6 +37,30 @@
       "skillPath": "skills/make-interfaces-feel-better/SKILL.md",
       "computedHash": "2c3576e63d8c39d75ed327f1dcf6aab7aec0edf293a55f6cb3f7b8571974a01c"
     },
+    "oss-ci": {
+      "source": "zeyuzhangzyz/open-source-hardening-skills",
+      "sourceType": "github",
+      "skillPath": "skills/oss-ci/SKILL.md",
+      "computedHash": "80bcd1603a4fec8f4c4bdbf370bfc3805b6b246fa19967f3dfc56f29ced8cc2f"
+    },
+    "oss-docs": {
+      "source": "zeyuzhangzyz/open-source-hardening-skills",
+      "sourceType": "github",
+      "skillPath": "skills/oss-docs/SKILL.md",
+      "computedHash": "5cff864218ffb8d04f62f2cc5026bb77455ee5e9652e7d8d096cda99651e2698"
+    },
+    "oss-hardening": {
+      "source": "zeyuzhangzyz/open-source-hardening-skills",
+      "sourceType": "github",
+      "skillPath": "skills/oss-hardening/SKILL.md",
+      "computedHash": "389e681c2625e7889bac4084c31112cc224e81fc319049dc1ee73aa1b7e38a96"
+    },
+    "oss-search": {
+      "source": "zeyuzhangzyz/open-source-hardening-skills",
+      "sourceType": "github",
+      "skillPath": "skills/oss-search/SKILL.md",
+      "computedHash": "5b21c5e88fbc5336f4c24fcbe44fd69115d81bba9e6f2f54aac5de258c4670d7"
+    },
     "review-animations": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
