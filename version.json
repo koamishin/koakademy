@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.14.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.0",
-  "commit": "c51eabcc4296faffda622d2042f64ef3b7864bd7",
+  "version": "1.10.0-dev.14.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.1",
+  "commit": "b1524b949a61bf65feec17ae610954b0be121399",
   "branch": "master",
-  "timestamp": "2026-07-21T02:11:40Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29794983611",
-  "release_type": "feature",
+  "timestamp": "2026-07-21T02:40:18Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29796263623",
+  "release_type": "chore",
   "changelog": {
-    "current": "Version 1.10.0-dev.14.0 - feat: add fast student filters",
-    "previous": "1.10.0-dev.13.0"
+    "current": "Version 1.10.0-dev.14.1 - chore: added some agent Skills",
+    "previous": "1.10.0-dev.14.0"
   },
   "metadata": {
     "author": "yukazakiri",
