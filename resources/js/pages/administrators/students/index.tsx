@@ -24,12 +24,16 @@ import type { User } from "@/types/user";
 import { Head, Link, router } from "@inertiajs/react";
 import {
     Award,
+    BookOpen,
     Briefcase,
+    Building2,
+    CalendarCheck,
     CheckCircle,
     Filter,
     GraduationCap,
     HelpCircle,
     LayoutGrid,
+    Layers,
     List,
     Loader2,
     MapPin,
@@ -82,6 +86,10 @@ interface StudentsIndexProps {
         search?: string | null;
         type?: string | null;
         status?: string | null;
+        course_id?: number | null;
+        department_id?: number | null;
+        year_level?: number | null;
+        current_enrollment?: "enrolled" | "not_enrolled" | null;
         scholarship_type?: string | null;
         employment_status?: string | null;
         is_indigenous_person?: string | null;
@@ -94,6 +102,9 @@ interface StudentsIndexProps {
     options: {
         types: { value: string; label: string }[];
         statuses: { value: string; label: string }[];
+        courses: { value: string; label: string }[];
+        departments: { value: string; label: string }[];
+        year_levels: { value: string; label: string }[];
         scholarship_types: { value: string; label: string }[];
         employment_statuses: { value: string; label: string }[];
     };
@@ -106,37 +117,99 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
 
     const [activeFilters, setActiveFilters] = useState<FilterType[]>([]);
 
+    const activeFilterValues = useMemo(
+        () =>
+            Object.fromEntries(
+                activeFilters
+                    .map((filter) => [filter.field, filter.values[0]] as const)
+                    .filter((entry): entry is readonly [string, string | number] => typeof entry[1] === "string" || typeof entry[1] === "number")
+                    .map(([field, value]) => [field, String(value)]),
+            ),
+        [activeFilters],
+    );
+
+    const serverFilterValues = useMemo(() => {
+        const values: Record<string, string> = {};
+
+        if (filters.trashed && filters.trashed !== "active") values.trashed = filters.trashed;
+        if (filters.type) values.type = filters.type;
+        if (filters.status) values.status = filters.status;
+        if (filters.course_id) values.course_id = String(filters.course_id);
+        if (filters.department_id) values.department_id = String(filters.department_id);
+        if (filters.year_level) values.year_level = String(filters.year_level);
+        if (filters.current_enrollment) values.current_enrollment = filters.current_enrollment;
+        if (filters.scholarship_type) values.scholarship_type = filters.scholarship_type;
+        if (filters.employment_status) values.employment_status = filters.employment_status;
+        if (filters.is_indigenous_person) values.is_indigenous_person = filters.is_indigenous_person;
+        if (filters.previous_semester_cleared) values.previous_semester_cleared = filters.previous_semester_cleared;
+
+        return values;
+    }, [filters]);
+
     const filteredStudents = useMemo(() => {
         const searchTerm = search.trim().toLowerCase();
 
-        if (searchTerm === "") {
-            return students.data;
-        }
+        return students.data.filter((student) => {
+            const matchesSearch =
+                searchTerm === "" ||
+                [
+                    student.student_id,
+                    student.name,
+                    student.course,
+                    student.course_title,
+                    student.academic_year,
+                    student.type,
+                    student.status,
+                    student.scholarship_type,
+                    student.employment_status,
+                    student.region_of_origin,
+                ]
+                    .filter((value): value is string | number => value !== null && value !== undefined)
+                    .some((value) => String(value).toLowerCase().includes(searchTerm));
 
-        return students.data.filter((student) =>
-            [
-                student.student_id,
-                student.name,
-                student.course,
-                student.course_title,
-                student.academic_year,
-                student.type,
-                student.status,
-                student.scholarship_type,
-                student.employment_status,
-                student.region_of_origin,
-            ]
-                .filter((value): value is string | number => value !== null && value !== undefined)
-                .some((value) => String(value).toLowerCase().includes(searchTerm)),
-        );
-    }, [search, students.data]);
+            if (!matchesSearch) return false;
+
+            return Object.entries(activeFilterValues).every(([field, value]) => {
+                switch (field) {
+                    case "trashed":
+                        if (value === "all") return true;
+                        return value === "trashed" ? student.deleted_at !== null : student.deleted_at === null;
+                    case "type":
+                        return student.type === value;
+                    case "status":
+                        return student.status === value;
+                    case "course_id":
+                        return String(student.course_id ?? "") === value;
+                    case "department_id":
+                        return String(student.department_id ?? "") === value;
+                    case "year_level":
+                        return String(student.year_level ?? "") === value;
+                    case "current_enrollment":
+                        return value === "enrolled" ? student.status === "enrolled" : student.status !== "enrolled";
+                    case "scholarship_type":
+                        return student.scholarship_type_value === value;
+                    case "employment_status":
+                        return student.employment_status_value === value;
+                    case "is_indigenous_person":
+                        return value === "yes" ? student.is_indigenous_person : !student.is_indigenous_person;
+                    case "previous_semester_cleared":
+                        return value === "true" ? student.previous_sem_clearance === "cleared" : student.previous_sem_clearance === "not_cleared";
+                    default:
+                        return true;
+                }
+            });
+        });
+    }, [activeFilterValues, search, students.data]);
 
     const hasLocalSearch = search.trim() !== "";
     const serverSearch = filters.search ?? "";
     const isServerSearchCurrent = search.trim() === serverSearch.trim();
-    const shouldUseLocalSearchResults = hasLocalSearch && !isServerSearchCurrent;
-    const visibleStudents = shouldUseLocalSearchResults ? filteredStudents : students.data;
-    const visiblePagination = shouldUseLocalSearchResults
+    const isServerFilterStateCurrent =
+        Object.keys(activeFilterValues).length === Object.keys(serverFilterValues).length &&
+        Object.entries(activeFilterValues).every(([field, value]) => serverFilterValues[field] === value);
+    const shouldUseLocalResults = (hasLocalSearch && !isServerSearchCurrent) || (activeFilters.length > 0 && !isServerFilterStateCurrent);
+    const visibleStudents = shouldUseLocalResults ? filteredStudents : students.data;
+    const visiblePagination = shouldUseLocalResults
         ? {
               current_page: 1,
               last_page: 1,
@@ -177,6 +250,10 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
             search: searchTerm.trim() || null,
             type: null,
             status: null,
+            course_id: null,
+            department_id: null,
+            year_level: null,
+            current_enrollment: null,
             scholarship_type: null,
             employment_status: null,
             is_indigenous_person: null,
@@ -215,6 +292,17 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
         }
         if (filters.type) initialFilters.push({ id: "type", field: "type", operator: "is", values: [filters.type] });
         if (filters.status) initialFilters.push({ id: "status", field: "status", operator: "is", values: [filters.status] });
+        if (filters.course_id) initialFilters.push({ id: "course_id", field: "course_id", operator: "is", values: [String(filters.course_id)] });
+        if (filters.department_id)
+            initialFilters.push({ id: "department_id", field: "department_id", operator: "is", values: [String(filters.department_id)] });
+        if (filters.year_level) initialFilters.push({ id: "year_level", field: "year_level", operator: "is", values: [String(filters.year_level)] });
+        if (filters.current_enrollment)
+            initialFilters.push({
+                id: "current_enrollment",
+                field: "current_enrollment",
+                operator: "is",
+                values: [filters.current_enrollment],
+            });
         if (filters.scholarship_type)
             initialFilters.push({ id: "scholarship_type", field: "scholarship_type", operator: "is", values: [filters.scholarship_type] });
         if (filters.employment_status)
@@ -239,23 +327,12 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
 
     const handleFiltersChange = (newFilters: FilterType[]) => {
         setActiveFilters(newFilters);
-
-        router.get(route("administrators.students.index"), buildFilterParams(search, newFilters), {
-            only: ["students", "filters"],
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        refreshStudents(search, newFilters);
     };
 
     const clearFilters = () => {
         setActiveFilters([]);
-        router.get(route("administrators.students.index"), buildFilterParams(search, []), {
-            only: ["students", "filters"],
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        refreshStudents(search, []);
     };
 
     const handleSortChange = (value: string | null) => {
@@ -310,8 +387,39 @@ export default function AdministratorStudentsIndex({ user, students, stats, filt
                 options: options.types.map((opt) => ({ ...opt, icon: <UserIcon className="text-muted-foreground h-4 w-4" /> })),
             },
             {
+                key: "course_id",
+                label: "Course",
+                type: "select",
+                icon: <BookOpen className="h-4 w-4" />,
+                options: options.courses.map((opt) => ({ ...opt, icon: <BookOpen className="text-muted-foreground h-4 w-4" /> })),
+            },
+            {
+                key: "department_id",
+                label: "Department",
+                type: "select",
+                icon: <Building2 className="h-4 w-4" />,
+                options: options.departments.map((opt) => ({ ...opt, icon: <Building2 className="text-muted-foreground h-4 w-4" /> })),
+            },
+            {
+                key: "year_level",
+                label: "Year Level",
+                type: "select",
+                icon: <Layers className="h-4 w-4" />,
+                options: options.year_levels.map((opt) => ({ ...opt, icon: <Layers className="text-muted-foreground h-4 w-4" /> })),
+            },
+            {
+                key: "current_enrollment",
+                label: "Current Enrollment",
+                type: "select",
+                icon: <CalendarCheck className="h-4 w-4" />,
+                options: [
+                    { value: "enrolled", label: "Currently enrolled", icon: <UserCheck className="h-4 w-4 text-green-500" /> },
+                    { value: "not_enrolled", label: "Not currently enrolled", icon: <XCircle className="h-4 w-4 text-red-500" /> },
+                ],
+            },
+            {
                 key: "status",
-                label: "Enrollment Status",
+                label: "Current Semester Status",
                 type: "select",
                 icon: <GraduationCap className="h-4 w-4" />,
                 options: options.statuses.map((opt) => ({ ...opt, icon: <GraduationCap className="text-muted-foreground h-4 w-4" /> })),

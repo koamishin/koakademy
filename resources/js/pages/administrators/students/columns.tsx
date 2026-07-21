@@ -38,12 +38,17 @@ export type Student = {
     student_id: number | string | null;
     name: string;
     avatar_url: string | null;
+    course_id: number | null;
+    department_id: number | null;
     course: string | null;
     course_title: string | null;
+    year_level: number | null;
     academic_year: string;
     type: string | null;
     status: string | null;
+    scholarship_type_value: string | null;
     scholarship_type: string;
+    employment_status_value: string | null;
     employment_status: string;
     is_indigenous_person: boolean;
     region_of_origin: string | null;

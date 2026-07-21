@@ -20,6 +20,7 @@ use App\Mail\StudentBulkMessage;
 use App\Models\Account;
 use App\Models\ClassAttendanceRecord;
 use App\Models\Course;
+use App\Models\Department;
 use App\Models\GeneralSetting;
 use App\Models\ShsStrand;
 use App\Models\ShsStudent;
@@ -67,6 +68,14 @@ final class AdministratorStudentManagementController extends Controller
         $search = $request->input('search');
         $type = $request->input('type');
         $status = $request->input('status');
+        $courseId = $request->integer('course_id');
+        $courseId = $courseId > 0 ? $courseId : null;
+        $departmentId = $request->integer('department_id');
+        $departmentId = $departmentId > 0 ? $departmentId : null;
+        $yearLevel = $request->integer('year_level');
+        $yearLevel = in_array($yearLevel, [1, 2, 3, 4], true) ? $yearLevel : null;
+        $currentEnrollment = $request->string('current_enrollment')->toString();
+        $currentEnrollment = in_array($currentEnrollment, ['enrolled', 'not_enrolled'], true) ? $currentEnrollment : null;
         $scholarshipType = $request->input('scholarship_type');
         $employmentStatus = $request->input('employment_status');
         $isIndigenousPerson = $request->input('is_indigenous_person');
@@ -126,6 +135,26 @@ final class AdministratorStudentManagementController extends Controller
                     $query->where('academic_year', $currentPeriod['academic_year'])
                         ->where('semester', $currentPeriod['semester'])
                         ->where('status', $status);
+                });
+            })
+            ->when($courseId !== null, function ($builder) use ($courseId): void {
+                $builder->where('course_id', $courseId);
+            })
+            ->when($departmentId !== null, function ($builder) use ($departmentId): void {
+                $builder->whereHas('Course', function ($query) use ($departmentId): void {
+                    $query->where('department_id', $departmentId);
+                });
+            })
+            ->when($yearLevel !== null, function ($builder) use ($yearLevel): void {
+                $builder->where('academic_year', $yearLevel);
+            })
+            ->when($currentEnrollment !== null, function ($builder) use ($currentEnrollment, $currentPeriod): void {
+                $method = $currentEnrollment === 'enrolled' ? 'whereHas' : 'whereDoesntHave';
+
+                $builder->{$method}('statusRecords', function ($query) use ($currentPeriod): void {
+                    $query->where('academic_year', $currentPeriod['academic_year'])
+                        ->where('semester', $currentPeriod['semester'])
+                        ->where('status', StudentStatus::Enrolled->value);
                 });
             })
             ->when($scholarshipType && $scholarshipType !== 'all', function ($builder) use ($scholarshipType): void {
@@ -212,6 +241,10 @@ final class AdministratorStudentManagementController extends Controller
         $hasActiveFilters = (is_string($search) && mb_trim($search) !== '')
             || (is_string($type) && $type !== '' && $type !== 'all')
             || (is_string($status) && $status !== '' && $status !== 'all')
+            || $courseId !== null
+            || $departmentId !== null
+            || $yearLevel !== null
+            || $currentEnrollment !== null
             || ($scholarshipType && $scholarshipType !== 'all')
             || ($employmentStatus && $employmentStatus !== 'all')
             || ($isIndigenousPerson !== null && $isIndigenousPerson !== 'all')
@@ -238,12 +271,17 @@ final class AdministratorStudentManagementController extends Controller
                 'id' => $student->id,
                 'student_id' => $student->student_id,
                 'name' => $student->full_name,
+                'course_id' => $student->course_id,
+                'department_id' => $student->Course?->department_id,
                 'course' => $student->Course?->code,
                 'course_title' => $student->Course?->title,
+                'year_level' => $student->academic_year,
                 'academic_year' => $student->formatted_academic_year,
                 'type' => $studentType instanceof StudentType ? $studentType->value : (is_string($studentType) ? $studentType : null),
                 'status' => $currentStatus instanceof StudentStatus ? $currentStatus->value : (is_string($currentStatus) ? $currentStatus : null),
+                'scholarship_type_value' => $scholarshipType instanceof ScholarshipType ? $scholarshipType->value : $scholarshipType,
                 'scholarship_type' => $scholarshipType instanceof ScholarshipType ? $scholarshipType->getLabel() : ($scholarshipType ?? 'None'),
+                'employment_status_value' => $employmentStatus instanceof EmploymentStatus ? $employmentStatus->value : $employmentStatus,
                 'employment_status' => $employmentStatus instanceof EmploymentStatus ? $employmentStatus->getLabel() : ($employmentStatus ?? 'N/A'),
                 'is_indigenous_person' => $student->is_indigenous_person,
                 'region_of_origin' => $student->region_of_origin,
@@ -294,6 +332,33 @@ final class AdministratorStudentManagementController extends Controller
             ->values()
             ->all();
 
+        $courses = Course::query()
+            ->orderBy('code')
+            ->get(['id', 'code', 'title'])
+            ->map(fn (Course $course): array => [
+                'value' => (string) $course->id,
+                'label' => "{$course->code} - {$course->title}",
+            ])
+            ->values()
+            ->all();
+
+        $departments = Department::query()
+            ->orderBy('code')
+            ->get(['id', 'code', 'name'])
+            ->map(fn (Department $department): array => [
+                'value' => (string) $department->id,
+                'label' => "{$department->code} - {$department->name}",
+            ])
+            ->values()
+            ->all();
+
+        $yearLevels = collect([1, 2, 3, 4])
+            ->map(fn (int $year): array => [
+                'value' => (string) $year,
+                'label' => "Year {$year}",
+            ])
+            ->all();
+
         $stats = [
             'total_students' => $globalStudentTotal,
             'total_enrolled' => StudentStatusRecord::query()
@@ -327,6 +392,10 @@ final class AdministratorStudentManagementController extends Controller
                 'search' => is_string($search) ? $search : null,
                 'type' => is_string($type) ? $type : null,
                 'status' => is_string($status) ? $status : null,
+                'course_id' => $courseId,
+                'department_id' => $departmentId,
+                'year_level' => $yearLevel,
+                'current_enrollment' => $currentEnrollment,
                 'scholarship_type' => $scholarshipType,
                 'employment_status' => $employmentStatus,
                 'is_indigenous_person' => $isIndigenousPerson,
@@ -340,6 +409,9 @@ final class AdministratorStudentManagementController extends Controller
             'options' => [
                 'types' => $types,
                 'statuses' => $statuses,
+                'courses' => $courses,
+                'departments' => $departments,
+                'year_levels' => $yearLevels,
                 'scholarship_types' => $scholarshipTypes,
                 'employment_statuses' => $employmentStatuses,
             ],
