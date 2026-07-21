@@ -25,7 +25,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { BulkExportButton } from "@/components/ui/bulk-export-button";
+import { BulkExportButton, type ExportColumn } from "@/components/ui/bulk-export-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -48,10 +48,11 @@ import {
     Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import type { Student } from "./columns";
 
 declare let route: any;
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData extends Student, TValue> {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
     // Server-side pagination props
@@ -72,7 +73,70 @@ interface DataTableProps<TData, TValue> {
     };
 }
 
-export function DataTable<TData, TValue>({
+function readableLabel(value: string | null, fallback = "Not specified"): string {
+    if (!value) return fallback;
+
+    return value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatAddedAt(value: string | null): string | null {
+    if (!value) return null;
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+
+    return new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(date);
+}
+
+const studentExportColumns: ExportColumn<Student>[] = [
+    { key: "student_id", label: "Student ID", getValue: (student) => student.student_id },
+    { key: "name", label: "Student Name", getValue: (student) => student.name },
+    { key: "course", label: "Course Code", getValue: (student) => student.course },
+    { key: "course_title", label: "Course Title", defaultSelected: false, getValue: (student) => student.course_title },
+    { key: "academic_year", label: "Academic Year", getValue: (student) => student.academic_year },
+    { key: "status", label: "Status", getValue: (student) => readableLabel(student.status) },
+    { key: "type", label: "Student Type", getValue: (student) => readableLabel(student.type) },
+    {
+        key: "previous_sem_clearance",
+        label: "Clearance",
+        defaultSelected: false,
+        getValue: (student) =>
+            student.previous_sem_clearance === "cleared" ? "Cleared" : student.previous_sem_clearance === "not_cleared" ? "Pending" : "No record",
+    },
+    { key: "scholarship_type", label: "Scholarship", getValue: (student) => student.scholarship_type || "None" },
+    {
+        key: "employment_status",
+        label: "Employment Status",
+        defaultSelected: false,
+        getValue: (student) => student.employment_status || "Not specified",
+    },
+    {
+        key: "is_indigenous_person",
+        label: "Indigenous Person",
+        defaultSelected: false,
+        getValue: (student) => student.is_indigenous_person,
+    },
+    {
+        key: "region_of_origin",
+        label: "Region of Origin",
+        defaultSelected: false,
+        getValue: (student) => student.region_of_origin,
+    },
+    {
+        key: "created_at",
+        label: "Date Added",
+        defaultSelected: false,
+        getValue: (student) => formatAddedAt(student.created_at),
+    },
+];
+
+export function DataTable<TData extends Student, TValue>({
     columns,
     data,
     pagination,
@@ -102,6 +166,10 @@ export function DataTable<TData, TValue>({
         }
     }, [forceDeleteDialogOpen]);
 
+    React.useEffect(() => {
+        setRowSelection({});
+    }, [data]);
+
     // Initialize sorting from URL if present
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -115,6 +183,7 @@ export function DataTable<TData, TValue>({
     const table = useReactTable({
         data,
         columns,
+        getRowId: (row) => String(row.id),
         getCoreRowModel: getCoreRowModel(),
         manualPagination: !!pagination,
         manualSorting: !!pagination,
@@ -184,16 +253,6 @@ export function DataTable<TData, TValue>({
             { only: ["students", "filters"], preserveScroll: true, preserveState: true, replace: true },
         );
     };
-
-    const exportColumns = [
-        { key: "student_id", label: "Student ID" },
-        { key: "name", label: "Name" },
-        { key: "course", label: "Course" },
-        { key: "status", label: "Status" },
-        { key: "type", label: "Type" },
-        { key: "academic_year", label: "Academic Year" },
-        { key: "scholarship_type", label: "Scholarship" },
-    ];
 
     const selectedRows = table.getFilteredSelectedRowModel().rows;
     const selectedData = selectedRows.map((row) => row.original);
@@ -357,7 +416,14 @@ export function DataTable<TData, TValue>({
         <div>
             <div className="flex flex-col gap-3 py-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex flex-wrap items-center gap-2">
-                    <BulkExportButton data={selectedData} columns={exportColumns} filename="students-export" />
+                    <BulkExportButton
+                        data={selectedData}
+                        columns={studentExportColumns}
+                        filename="selected-students"
+                        title="Selected Students"
+                        getSortValue={(student) => student.name}
+                        getSortTieBreaker={(student) => String(student.student_id ?? student.id)}
+                    />
                     <Badge variant="secondary" className="h-7 px-2 text-xs">
                         Selected {selectedCount}
                     </Badge>
