@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.14.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.1",
-  "commit": "b1524b949a61bf65feec17ae610954b0be121399",
+  "version": "1.10.0-dev.14.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.2",
+  "commit": "e4bd535eb9cbb0b352802fa110b3e4520104b4b9",
   "branch": "master",
-  "timestamp": "2026-07-21T02:40:18Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29796263623",
+  "timestamp": "2026-07-21T05:28:22Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29803569743",
   "release_type": "chore",
   "changelog": {
-    "current": "Version 1.10.0-dev.14.1 - chore: added some agent Skills",
-    "previous": "1.10.0-dev.14.0"
+    "current": "Version 1.10.0-dev.14.2 - chore: harden open-source readiness",
+    "previous": "1.10.0-dev.14.1"
   },
   "metadata": {
     "author": "yukazakiri",
