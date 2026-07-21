@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.14.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.2",
-  "commit": "e4bd535eb9cbb0b352802fa110b3e4520104b4b9",
+  "version": "1.10.0-dev.14.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.3",
+  "commit": "e117002ca7d966fc8a863656afcec1c210ad7a0e",
   "branch": "master",
-  "timestamp": "2026-07-21T05:28:22Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29803569743",
+  "timestamp": "2026-07-21T06:24:30Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29806603219",
   "release_type": "chore",
   "changelog": {
-    "current": "Version 1.10.0-dev.14.2 - chore: harden open-source readiness",
-    "previous": "1.10.0-dev.14.1"
+    "current": "Version 1.10.0-dev.14.3 - chore: add simplestats dep",
+    "previous": "1.10.0-dev.14.2"
   },
   "metadata": {
     "author": "yukazakiri",
