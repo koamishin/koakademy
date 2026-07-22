@@ -32,6 +32,7 @@ use Laravel\Passkeys\PasskeyAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Scout\Searchable;
 use Override;
+use SimpleStatsIo\LaravelClient\Contracts\TrackablePerson;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -85,7 +86,7 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * @mixin \Eloquent
  */
-final class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasAvatar, HasEmailAuthentication, PasskeyUser
+final class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasAvatar, HasEmailAuthentication, PasskeyUser, TrackablePerson
 {
     use BroadcastsEvents;
     use HasApiTokens;
@@ -856,5 +857,13 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
 
             return 'Limited Access';
         });
+    }
+
+    /**
+     * The time used by SimpleStats to attribute the user's first tracked event.
+     */
+    public function getTrackingTime(): Carbon
+    {
+        return $this->created_at ?? $this->freshTimestamp();
     }
 }

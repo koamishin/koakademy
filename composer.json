@@ -174,7 +174,11 @@
                 "Modules/*/composer.json"
             ]
         },
-        "patches": {}
+        "patches": {
+            "backstage/mails": {
+                "Fix unmountAction signature for Filament 5.7 (upstream: backstagephp/mails)": "patches/backstage-mails-filament-57-unmount-action.patch"
+            }
+        }
     },
     "config": {
         "optimize-autoloader": true,
