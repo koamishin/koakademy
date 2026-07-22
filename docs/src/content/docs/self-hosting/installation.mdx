@@ -1,0 +1,97 @@
+---
+title: Installation
+description: Install KoAkademy with the supported production topology.
+---
+
+{/* GENERATED FILE. Source: /GETTING_STARTED.md. Run: npm run docs:sync */}
+
+This guide installs KoAkademy with the supported production container topology. KoAkademy is a production-capable beta; start in a staging environment and keep a tested recovery path.
+
+## Prerequisites
+
+- Linux host with Docker Engine and Docker Compose v2
+- 4 GB RAM minimum for a small evaluation; size from observed workload
+- HTTPS hostname and an external reverse proxy or tunnel
+- S3-compatible bucket, access key, and secret key
+- Outbound access to GitHub Container Registry and your object-storage endpoint
+
+Only PostgreSQL is supported by the prebuilt production image. SQLite is available for native development and tests.
+
+## 1. Obtain a supported release
+
+Clone the repository at the latest stable release tag so the deployment files and image version stay together:
+
+```sh
+git clone https://github.com/yukazakiri/koakademy.git
+cd koakademy
+git fetch --tags
+git checkout <latest-stable-tag>
+```
+
+Replace `<latest-stable-tag>` with the latest non-prerelease tag shown on the GitHub Releases page. KoAkademy supports only the latest stable release; do not deploy `-dev`, prerelease, or arbitrary branch images as production releases.
+
+## 2. Configure the environment
+
+```sh
+cp .env.production.example .env
+chmod 600 .env
+```
+
+At minimum, replace:
+
+- `APP_URL`, `PORTAL_HOST`, and `ADMIN_HOST` with the same production hostname
+- `DB_PASSWORD` and `REDIS_PASSWORD` with unique random values
+- every `AWS_*` value with credentials for a dedicated S3-compatible bucket
+- `MAIL_*` when real email delivery is required
+- `KOAKADEMY_VERSION` with the matching stable image tag
+
+Generate the application key:
+
+```sh
+docker compose --env-file .env -f compose.production.yaml run --rm app php artisan key:generate --show
+```
+
+Copy the complete output into `APP_KEY`. Never reuse a key from another installation or commit `.env`.
+
+Validate configuration before starting anything:
+
+```sh
+docker compose --env-file .env -f compose.production.yaml config --quiet
+```
+
+## 3. Start dependencies and migrate
+
+```sh
+docker compose --env-file .env -f compose.production.yaml pull
+docker compose --env-file .env -f compose.production.yaml up -d postgres redis gotenberg
+docker compose --env-file .env -f compose.production.yaml run --rm app php artisan migrate --force
+```
+
+Migrations are intentionally separate from container startup. Review release notes and take a database backup before the same command during upgrades.
+
+## 4. Start and verify KoAkademy
+
+```sh
+docker compose --env-file .env -f compose.production.yaml up -d app
+docker compose --env-file .env -f compose.production.yaml ps
+curl --fail --silent --show-error http://127.0.0.1:8000/up
+```
+
+If `/up` fails, inspect `docker compose --env-file .env -f compose.production.yaml logs app` and use [Troubleshooting](./troubleshooting/).
+
+## 5. Add HTTPS and complete setup
+
+Forward your HTTPS edge to `http://127.0.0.1:8000` and preserve `Host`, `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers. Then visit:
+
+```text
+https://school.example/setup
+```
+
+The one-time wizard creates the institution, initial academic period, and first super administrator. After completion, verify `https://school.example/admin`. The setup route returns `403` after the application is initialized.
+
+## Next steps
+
+- Finish the production checklist in [Deployment](./deployment/).
+- Review every variable in [Configuration](./configuration/).
+- Configure scheduled backups for PostgreSQL and external object storage.
+- Subscribe to security and release notifications for the repository.

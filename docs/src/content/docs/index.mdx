@@ -1,42 +1,68 @@
 ---
-title: KoAkademy Guides
-description: Choose the guide for operating KoAkademy or the separate technical reference for installing and extending it.
+title: KoAkademy
+description: Developer, maintainer, and operator documentation for the KoAkademy school administration platform.
+template: splash
+hero:
+    title: KoAkademy
+    tagline: Self-hosted school administration and learning platform — Laravel 12, Filament 5, Inertia, and React 19 in one FrankenPHP container. Understand the system, run it, extend it.
+    image:
+        file: ../../assets/logo.png
+        alt: KoAkademy
+    actions:
+        - text: Understand the system
+          link: /koakademy/start-here/introduction/
+          icon: right-arrow
+          variant: primary
+        - text: Self-host
+          link: /koakademy/self-hosting/installation/
+          icon: right-arrow
+        - text: GitHub
+          link: https://github.com/yukazakiri/koakademy
+          icon: external
+          variant: minimal
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
 
-# KoAkademy Guides
+## For contributors
 
-Choose the documentation area that matches what you are trying to accomplish. Staff guidance and technical implementation details are deliberately separated so school operators do not need to work through developer terminology.
+Set up a development environment and learn how the moving parts fit together.
 
-<CardGrid stagger>
-    <Card title="User Guide" icon="open-book">
-        Learn how administrators, registrars, department heads, and cashiers use KoAkademy for daily school operations.
+<CardGrid>
+    <LinkCard title="Development setup" href="/koakademy/start-here/development/" description="PHP 8.5, Laravel 12, Pest, Vite — from clone to running tests." />
+    <LinkCard title="Architecture overview" href="/koakademy/start-here/architecture/" description="Runtime services, application layers, and data boundaries." />
+    <LinkCard title="System Internals" href="/koakademy/system/architecture-domain/" description="Domain model, auth, modules, enrollment engine, queues, frontend." />
+    <LinkCard title="Contributing" href="/koakademy/start-here/contributing/" description="PR checklist, code style, and documentation ownership." />
+</CardGrid>
 
-        **Start here:** [Using KoAkademy](./user-guide/introduction/)
-    </Card>
-    <Card title="Enrollment Blueprints" icon="list-checks">
-        Configure availability, eligibility, documents, subjects, classes, tuition, approvals, and notifications without code.
+## For maintainers
 
-        **Start here:** [Enrollment Policies overview](./enrollment-policies/overview/)
-    </Card>
-    <Card title="Developer Docs" icon="seti:php">
-        Install, deploy, configure, test, contribute to, or extend the KoAkademy application.
+How the repository itself operates — CI, releases, and automation.
 
-        **Start here:** [Developer introduction](./getting-started/introduction/)
-    </Card>
-    <Card title="API Reference" icon="seti:json">
-        Integrate external systems using the tested public settings, authenticated settings, and student-verification subset.
+<CardGrid>
+    <LinkCard title="CI pipeline" href="/koakademy/maintainers/ci/" description="What every push and pull request is validated against." />
+    <LinkCard title="Releases & versioning" href="/koakademy/maintainers/releases/" description="Dev pre-releases, official releases, and the version.json contract." />
+    <LinkCard title="Repository automation" href="/koakademy/maintainers/automation/" description="Labels, issue quality checks, roadmap board, and PR access." />
+    <LinkCard title="Documentation system" href="/koakademy/maintainers/documentation/" description="Canonical Markdown, generated mirrors, and the docs site itself." />
+</CardGrid>
 
-        **Start here:** [API overview](./api/api-overview/)
-    </Card>
+## For operators
 
+Run KoAkademy in production on your own infrastructure.
+
+<CardGrid>
+    <LinkCard title="Installation" href="/koakademy/self-hosting/installation/" description="The supported production topology, step by step." />
+    <LinkCard title="Deployment" href="/koakademy/self-hosting/deployment/" description="Upgrades, backups, rollback, and the production checklist." />
+    <LinkCard title="Configuration" href="/koakademy/self-hosting/configuration/" description="Environment variables and service contracts." />
+    <LinkCard title="Troubleshooting" href="/koakademy/self-hosting/troubleshooting/" description="Diagnose containers, proxies, uploads, PDFs, and queues." />
 </CardGrid>
 
 ## For school staff
 
-Start with the **User Guide**, then follow the Enrollment Blueprint guides when you need to configure enrollment. These pages explain the effect of each choice, recommended defaults, safe publication, and what changes only future enrollments.
+Day-to-day usage guides for administrators, faculty, and students.
 
-## For technical teams
-
-Use **Developer Docs** for server requirements, Docker, environment configuration, source-code contribution, architecture, and testing. Use **API Reference** only for the deliberately small tested integration contract.
+<CardGrid>
+    <LinkCard title="User Guide" href="/koakademy/user-guide/introduction/" description="Daily workflows for registrars, cashiers, and administrators." />
+    <LinkCard title="Enrollment Blueprints" href="/koakademy/enrollment-policies/overview/" description="Configure who can enroll, what they pay, and who approves — without code." />
+    <LinkCard title="API Reference" href="/koakademy/api/api-overview/" description="The tested integration subset: settings and student verification." />
+</CardGrid>

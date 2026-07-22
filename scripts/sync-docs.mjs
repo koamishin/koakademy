@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
@@ -8,14 +8,14 @@ const root = process.cwd();
 const checkOnly = process.argv.includes("--check");
 
 const documents = [
-    { source: "GETTING_STARTED.md", target: "docs/src/content/docs/getting-started/installation.mdx", title: "Installation", description: "Install KoAkademy with the supported production topology." },
-    { source: "DEPLOYMENT.md", target: "docs/src/content/docs/getting-started/docker.mdx", title: "Deployment", description: "Deploy, upgrade, back up, and recover KoAkademy." },
-    { source: "CONFIGURATION.md", target: "docs/src/content/docs/getting-started/configuration.mdx", title: "Configuration", description: "Production environment and service configuration." },
-    { source: "TROUBLESHOOTING.md", target: "docs/src/content/docs/getting-started/troubleshooting.mdx", title: "Troubleshooting", description: "Diagnose self-hosted KoAkademy deployments." },
-    { source: "CONTRIBUTING.md", target: "docs/src/content/docs/getting-started/contributing.mdx", title: "Contributing", description: "Contribution workflow, validation, and documentation ownership." },
-    { source: "DEVELOPMENT.md", target: "docs/src/content/docs/development.mdx", title: "Development", description: "Set up and validate a KoAkademy development environment." },
-    { source: "ARCHITECTURE.md", target: "docs/src/content/docs/getting-started/architecture.mdx", title: "Architecture", description: "Runtime services, application boundaries, and data flows." },
-    { source: "FAQ.md", target: "docs/src/content/docs/getting-started/faq.mdx", title: "FAQ", description: "Answers about support, deployment, storage, PDFs, and APIs." },
+    { source: "GETTING_STARTED.md", target: "docs/src/content/docs/self-hosting/installation.mdx", title: "Installation", description: "Install KoAkademy with the supported production topology." },
+    { source: "DEPLOYMENT.md", target: "docs/src/content/docs/self-hosting/deployment.mdx", title: "Deployment", description: "Deploy, upgrade, back up, and recover KoAkademy." },
+    { source: "CONFIGURATION.md", target: "docs/src/content/docs/self-hosting/configuration.mdx", title: "Configuration", description: "Production environment and service configuration." },
+    { source: "TROUBLESHOOTING.md", target: "docs/src/content/docs/self-hosting/troubleshooting.mdx", title: "Troubleshooting", description: "Diagnose self-hosted KoAkademy deployments." },
+    { source: "CONTRIBUTING.md", target: "docs/src/content/docs/start-here/contributing.mdx", title: "Contributing", description: "Contribution workflow, validation, and documentation ownership." },
+    { source: "DEVELOPMENT.md", target: "docs/src/content/docs/start-here/development.mdx", title: "Development", description: "Set up and validate a KoAkademy development environment." },
+    { source: "ARCHITECTURE.md", target: "docs/src/content/docs/start-here/architecture.mdx", title: "Architecture", description: "Runtime services, application boundaries, and data flows." },
+    { source: "FAQ.md", target: "docs/src/content/docs/self-hosting/faq.mdx", title: "FAQ", description: "Answers about support, deployment, storage, PDFs, and APIs." },
 ];
 
 const targetBySource = new Map(documents.map((document) => [document.source, document.target]));
@@ -24,10 +24,6 @@ const repositoryDocuments = new Set([
     "SECURITY.md",
     "CHANGELOG.md",
     "LICENSE.md",
-    "OSS_DOCS.md",
-    "OSS_AUDIT.md",
-    "OSS_CI.md",
-    "OSS_HARDENING_STATUS.md",
 ]);
 
 function documentationLink(fromTarget, sourceTarget, anchor = "") {
@@ -83,6 +79,7 @@ for (const document of documents) {
     stale.push(document.target);
 
     if (!checkOnly) {
+        await mkdir(path.dirname(path.join(root, document.target)), { recursive: true });
         await writeFile(path.join(root, document.target), expected, "utf8");
     }
 }

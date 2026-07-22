@@ -17,10 +17,6 @@ const rootDocuments = [
     "FAQ.md",
     "SECURITY.md",
     "CHANGELOG.md",
-    "OSS_DOCS.md",
-    "OSS_AUDIT.md",
-    "OSS_CI.md",
-    "OSS_HARDENING_STATUS.md",
 ];
 
 async function contentFiles(directory) {

@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 it('marks every generated technical MDX mirror with its canonical source', function (): void {
     $mirrors = [
-        'GETTING_STARTED.md' => 'docs/src/content/docs/getting-started/installation.mdx',
-        'DEPLOYMENT.md' => 'docs/src/content/docs/getting-started/docker.mdx',
-        'CONFIGURATION.md' => 'docs/src/content/docs/getting-started/configuration.mdx',
-        'TROUBLESHOOTING.md' => 'docs/src/content/docs/getting-started/troubleshooting.mdx',
-        'CONTRIBUTING.md' => 'docs/src/content/docs/getting-started/contributing.mdx',
-        'DEVELOPMENT.md' => 'docs/src/content/docs/development.mdx',
-        'ARCHITECTURE.md' => 'docs/src/content/docs/getting-started/architecture.mdx',
-        'FAQ.md' => 'docs/src/content/docs/getting-started/faq.mdx',
+        'GETTING_STARTED.md' => 'docs/src/content/docs/self-hosting/installation.mdx',
+        'DEPLOYMENT.md' => 'docs/src/content/docs/self-hosting/deployment.mdx',
+        'CONFIGURATION.md' => 'docs/src/content/docs/self-hosting/configuration.mdx',
+        'TROUBLESHOOTING.md' => 'docs/src/content/docs/self-hosting/troubleshooting.mdx',
+        'CONTRIBUTING.md' => 'docs/src/content/docs/start-here/contributing.mdx',
+        'DEVELOPMENT.md' => 'docs/src/content/docs/start-here/development.mdx',
+        'ARCHITECTURE.md' => 'docs/src/content/docs/start-here/architecture.mdx',
+        'FAQ.md' => 'docs/src/content/docs/self-hosting/faq.mdx',
     ];
 
     foreach ($mirrors as $source => $target) {

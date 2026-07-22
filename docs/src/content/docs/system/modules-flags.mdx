@@ -1,0 +1,56 @@
+---
+title: Modules & Feature Flags
+description: The six optional modules, the Pennant feature-flag system, and institution settings — and when to use each.
+---
+
+# Modules & Feature Flags
+
+KoAkademy composes optional functionality at three levels: **modules** (code-level, deployed), **feature flags** (runtime, per installation), and **institution settings** (runtime, per school). This page inventories all three and explains which mechanism to reach for.
+
+## Modules
+
+Modules use **nwidart/laravel-modules** and are registered into the Filament admin panel through `coolsam/modules` (`ModulesPlugin` in `AdminPanelProvider`). Enabled state lives in `modules_statuses.json`; all six ship enabled.
+
+| Module | Registers | Purpose |
+| ------ | --------- | ------- |
+| **Announcement** | Model + policy, Filament resource, admin & student-portal endpoints, banner render hook | School-wide announcements |
+| **Cashier** | Shield-protected Filament page, controllers, notifications | Student balance lookup and payment posting for cashiers |
+| **Inventory** | Filament resources (products, categories, suppliers, borrowings, stock movements, amendments), ledger service | Property and equipment management |
+| **LibrarySystem** | Filament resources (books, authors, categories, borrow records), research papers | Library operations |
+| **NotificationCenter** | Template model + service, 12 template notification classes, bulk-send job, admin UI | Template-based messaging |
+| **StudentMedicalRecords** | Model with confidentiality flags, Filament cluster + resource, stats widget, policy | Clinic visit records |
+
+A module can contain migrations, models, policies, Filament resources/pages/widgets, routes, controllers, jobs, and its own tests — the same conventions as `app/`. Module Filament resources appear in the admin panel automatically once the module is enabled.
+
+## Feature flags (Pennant)
+
+Runtime flags use **Laravel Pennant** with the database store. Flags are **class-based toggles** in `app/Features/Toggles`, catalogued in `FeatureToggleRegistry` and enforced by the `EnsureFeatureEnabled` middleware. There are 36 toggles in three families:
+
+- **`faculty-*` (19)** — dashboard, classes, grades, attendance, schedule, action center, at-risk alerts, assessments, inbox, office hours, requests/approvals, insights, resources, forms, toolkit, announcements, help, settings, developer mode.
+- **`student-*` (12)** — dashboard, classes, tuition, schedule, announcements, settings, information updates, help, grades preview, attendance tracker, developer mode — plus signature-pad and avatar-upload capabilities.
+- **Administrative/enrollment** — `admin-developer-mode`, `online-college-enrollment`, `online-tesda-enrollment`. A `DynamicEnrollmentPolicies` flag exists but its resolver returns `false` (the policy engine runs DB-backed regardless).
+
+Operators manage flags from the **Feature Toggles** page in the admin workspace (daacreators/pennant-manager plus a custom plugin); portal middleware hides disabled areas without deleting data.
+
+## Institution settings
+
+`GeneralSetting` (spatie/laravel-settings) holds institution-wide booleans distinct from Pennant flags: the student portal, online enrollment, clearances, signature capture, QR codes, the inventory and library modules, the support page, and transfer e-mails. These are edited in **General Settings** and seeded by the setup wizard's final step.
+
+## Which mechanism should you use?
+
+| If the capability… | Use |
+| ------------------ | --- |
+| Is a whole optional domain (new models, screens, jobs) | A **module** |
+| Turns an existing screen/flow on or off at runtime | A **Pennant flag** + `EnsureFeatureEnabled` |
+| Is institution configuration an operator edits | A **`GeneralSetting`** value |
+
+## Adding a new toggle
+
+1. Create a class in `app/Features/Toggles` with a `resolve()` method.
+2. Register it in `FeatureToggleRegistry` under the right family.
+3. Guard routes/pages with `EnsureFeatureEnabled` (backend) — not just conditional rendering (frontend).
+4. Cover enabled and disabled behavior with Pest tests.
+
+:::caution[Resolver defaults matter]
+A flag's `resolve()` decides the default for every installation. Hard-coded `false` (like `DynamicEnrollmentPolicies`) keeps a feature dark even when code ships — say so explicitly when you do this.
+:::

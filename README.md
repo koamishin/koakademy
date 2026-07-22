@@ -1,24 +1,37 @@
 # KoAkademy
 
-KoAkademy is a self-hosted school administration and learning platform built with Laravel, Filament, Inertia, and React. It combines enrollment workflows, student and faculty records, classes, schedules, grading, announcements, and optional institutional modules in one application.
+**Self-hosted school administration and learning platform** — enrollment workflows, student and faculty records, classes, schedules, grading, finance, and optional institutional modules in one application.
+
+Built with **Laravel 12**, **Filament 5**, **Inertia**, and **React 19**. Ships as a single FrankenPHP (PHP 8.5) container image.
+
+[![CI](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml/badge.svg)](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/yukazakiri/koakademy?sort=semver)](https://github.com/yukazakiri/koakademy/releases)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE.md)
+[![Docs](https://img.shields.io/badge/docs-yukazakiri.github.io-informational)](https://yukazakiri.github.io/koakademy/)
 
 > **Project status: production-capable beta.** KoAkademy has a documented production topology and automated tests, but operators should validate upgrades in staging, maintain backups, and review the security model for their institution. Only the latest stable release is supported.
 
-## Verified capabilities
+## Highlights
 
-- Guided first-run setup for the institution and initial super administrator
-- Student, faculty, course, class, schedule, enrollment, and grade administration
-- Role- and permission-aware administration through Filament
-- Enrollment blueprints and workflow configuration
-- Announcements, notifications, exports, and Gotenberg-backed PDF generation
-- Optional inventory, library, cashier, and student medical-record modules
-- Public settings, authenticated settings, and authenticated student-verification APIs
+- **Guided first-run setup** — a `/setup` wizard creates the institution and the first super administrator; no CLI user seeding required.
+- **Full academic administration** — students, faculty, courses, classes, rooms, schedules/timetables with conflict detection, enrollment, and grading (point/percent scales, GWA rules) through a Filament admin panel.
+- **Enrollment engine** — a verification pipeline (registrar → cashier) plus versioned enrollment **blueprints**: scoped, inheritable policies with simulation, staged rollout, and rollback.
+- **Three React portals** — dedicated Inertia/React experiences for administrators, faculty (attendance, class posts, submissions, grading), and students (classes, schedule, tuition, digital ID).
+- **Finance** — tuition assessment, cashier workflows with payment posting, statements of account with signed public verification, and finance reports.
+- **Security built in** — role- and permission-aware access (30 roles via Filament Shield), TOTP and email-code MFA, WebAuthn passkeys, impersonation, and full activity logging.
+- **Optional modules** — Inventory, Library, Cashier, Student Medical Records, Announcements, and a template-based Notification Center, all toggleable per institution.
+- **Platform features** — Gotenberg-backed PDF generation (SOA, timetables, assessments), Excel exports, school-scoped multi-tenancy, 36 runtime feature flags (Laravel Pennant), PWA manifest, broadcasting, and a documented Sanctum API.
 
 The API surface is beta. Only endpoints listed in the [API documentation](docs/src/content/docs/api/api-overview.mdx) are part of the documented public contract.
 
-## Supported production topology
+## Screenshots
 
-The supported container topology is:
+<p align="center">
+  <img src="docs/src/assets/enrollment-policies/blueprint-overview.png" alt="Enrollment blueprint overview" width="49%" />
+  <img src="docs/src/assets/enrollment-policies/approval-workflow.png" alt="Enrollment approval workflow editor" width="49%" />
+</p>
+
+## Supported production topology
 
 - KoAkademy application image (PHP 8.5 with FrankenPHP)
 - PostgreSQL
@@ -59,21 +72,21 @@ See [Getting Started](GETTING_STARTED.md) and [Deployment](DEPLOYMENT.md) before
 
 ## Documentation
 
-- [Configuration](CONFIGURATION.md)
-- [Architecture](ARCHITECTURE.md)
+- [Getting started](GETTING_STARTED.md) — production installation
+- [Deployment](DEPLOYMENT.md) — topology, upgrades, backups, rollback
+- [Configuration](CONFIGURATION.md) — environment and service contract
+- [Architecture](ARCHITECTURE.md) — runtime, layers, tenancy, queues
 - [Operations and troubleshooting](TROUBLESHOOTING.md)
 - [Native development](DEVELOPMENT.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
-- [Frequently asked questions](FAQ.md)
+- [FAQ](FAQ.md)
 - [Changelog](CHANGELOG.md)
-- [Hosted documentation](https://koakademy.github.io/koakademy/)
+- [Hosted documentation](https://yukazakiri.github.io/koakademy/) — full Starlight site with user and portal guides
 
 Root Markdown files are canonical for technical and project documentation. Marked MDX copies are generated for Astro and the in-app documentation; run `npm run docs:sync` after editing a canonical file.
 
 ## Contributing and security
 
-Bug reports and pull requests are welcome; start with [CONTRIBUTING.md](CONTRIBUTING.md). Do not report suspected vulnerabilities in public issues—follow [SECURITY.md](SECURITY.md) and use GitHub Security Advisories.
+Bug reports and pull requests are welcome; start with [CONTRIBUTING.md](CONTRIBUTING.md). Do not report suspected vulnerabilities in public issues — follow [SECURITY.md](SECURITY.md) and use GitHub Security Advisories.
 
 ## License
 

@@ -1,0 +1,59 @@
+---
+title: Frontend Architecture
+description: Inertia + React portals, Wayfinder route helpers, the shadcn/Tailwind design system, and the build pipeline.
+---
+
+# Frontend Architecture
+
+KoAkademy's interactive UI is **Inertia 3 with React 19** — server-side routing and authorization, client-side rendering — with SSR enabled (`ssr.tsx`). There is no separate SPA or client-side router.
+
+## Page map
+
+Pages live in `resources/js/pages/` (~184 `.tsx` pages) and mirror the audiences from [Architecture & domain model](./architecture-domain/):
+
+| Directory | Audience | Highlights |
+| --------- | -------- | ---------- |
+| `administrators/` | Staff | Dashboard, students (documents, signature pad, checklists), classes and scheduling, curriculum, enrollments (applicants, assessment preview, analytics), finance, users and online users, roles, audit logs, feature toggles, system management (school, branding, grading, identifiers, mail, notifications, API keys, SEO, social providers, **enrollment-policy blueprints**) |
+| `faculty/` | Teachers | Dashboard, action center, attendance, classes (posts, submissions, grading), schedule (agenda and bird's-eye), forms, resources, toolkit |
+| `student/` | Students | Dashboard, classes and submissions, schedule, tuition and statements of account, digital ID card |
+| `enrollment/` | Public | Registration wizard and "enrollment closed" pages |
+| `setup/` | First run | The institution setup wizard |
+| `auth/`, `docs/`, `errors/`, `NotificationCenter/`, `Help/` | Shared | Sign-in and 2FA challenge, in-app documentation viewer, error pages, notification center, help tickets |
+
+## Routing: Wayfinder + Ziggy
+
+Frontend code calls backend routes through **Laravel Wayfinder** — typed helpers generated from the server's controllers/routes (`@/actions`, `@/routes`), wired by the Wayfinder Vite plugin. **Do not hard-code URLs** in React code; import the generated helper. Ziggy remains available for dynamic cases.
+
+## Design system
+
+- **shadcn/ui** (`components.json`) on Radix UI primitives and base-ui — compose these before adding dependencies.
+- **Tailwind CSS 4** via `@tailwindcss/vite`.
+- Icons: lucide, tabler, phosphor (pick one per surface; lucide is the default).
+- The documentation site you're reading maps the same shadcn palette onto Starlight, so docs and product share one visual identity.
+
+Notable libraries and their roles:
+
+| Library | Used for |
+| ------- | -------- |
+| TanStack Table | Data grids across admin pages |
+| TipTap 3 | Rich text (class posts, announcements) |
+| reactflow | Blueprint workflow/rule editors |
+| recharts + visx | Dashboard and analytics charts |
+| react-hook-form + zod | Form state and client validation |
+| framer-motion | Micro-interactions (respect reduced motion) |
+| sonner | Toasts |
+| signature_pad | Student signature capture |
+| react-to-print, cmdk | Print flows, command palette |
+| laravel-echo + pusher-js | Real-time (see [Queues & PDF](./queues-pdf/)) |
+
+## Build pipeline
+
+**Vite 8** with `laravel-vite-plugin` 3 handles dev HMR and production builds; `vite-module-loader.js` wires module-provided frontend entries (Laravel Modules). The production Docker image builds assets with Bun in a dedicated stage; CI builds with `npm run build` on Node 22.
+
+## Conventions (enforced in review)
+
+- **TypeScript** for all React code.
+- Prefer existing design-system primitives; justify new dependencies.
+- Preserve keyboard access, visible focus, meaningful labels, reduced-motion behavior, loading states, and actionable error messages.
+- Forms: Inertia `useForm` (or Wayfinder form helpers) with server-side validation as the source of truth.
+- Formatting: `npm run format` (Prettier); linting: `npm run lint` (ESLint).

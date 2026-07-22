@@ -1,0 +1,63 @@
+---
+title: Optional Modules
+description: The six optional KoAkademy modules — Announcements, Cashier, Inventory, Library, Notification Center, and Student Medical Records — and how they are enabled.
+---
+
+# Optional Modules
+
+KoAkademy ships six modules that extend the platform for institutions that need them. Modules are enabled or disabled per installation by your system administrator; some areas additionally depend on feature toggles in General Settings. If your school does not use a module, its pages and menus are hidden entirely.
+
+## Announcements
+
+School-wide announcements targeted at staff, faculty, or students.
+
+- Administrators create, schedule, and publish announcements from the administration panel.
+- Active announcements appear as a **banner** in the administration panel and on the **student portal** dashboard and announcements page.
+
+## Cashier
+
+A dedicated workspace for cashier staff, separate from the full finance administration area.
+
+- **Student lookup** with Current Balance, History, and Transactions tabs.
+- **Payment posting** against outstanding assessments.
+- Works together with statements of account and the enrollment payment-verification step.
+
+## Inventory
+
+Property and equipment management for the school.
+
+- Catalog of **products**, **categories**, and **suppliers**.
+- **Stock movements** and amendments with a full inventory ledger.
+- **Borrowings** — track equipment lent to staff or students and its return status.
+
+## Library System
+
+Library operations for school librarians.
+
+- **Books**, **authors**, and **categories** catalog management.
+- **Borrow records** — check books in and out and track overdue items.
+- **Research papers** repository for the institution's archive.
+
+## Notification Center
+
+Template-based messaging to keep the school community informed.
+
+- Prebuilt **templates** for common situations: enrollment updates, grade releases, payment notices, class suspensions, holidays, school events, reminders, warnings, and official announcements.
+- **Bulk sending** to selected audiences, processed in the background.
+- Delivered to the recipient's portal Notification Center and by e-mail where configured.
+
+## Student Medical Records
+
+Clinic visit records managed by authorized medical staff.
+
+- Visit records with type, status, and priority, plus **follow-up scheduling**.
+- **Confidentiality flags** restrict sensitive records to authorized personnel.
+- A dashboard widget summarizes clinic activity.
+
+:::caution[Privacy]
+Medical records contain sensitive personal data. Access is limited by role and confidentiality flags — do not grant the medical records permissions to general administrative accounts.
+:::
+
+## Enabling or disabling a module
+
+Module availability is an **operator decision** made at deployment time (module management) and, for some areas, through institution switches in **General Settings** — for example the inventory and library modules, the student portal, online enrollment, clearances, signature capture, and QR codes. Changes take effect without a redeploy for settings-based switches; fully removing a module requires an application administrator.

@@ -1,0 +1,59 @@
+---
+title: Admin Portal
+description: Daily work in the KoAkademy administration panel and admin workspace — records, enrollment, finance, and system management.
+---
+
+# Admin Portal
+
+Administrative staff work in two connected areas: the **administration panel** at `/admin` (records, resources, and settings) and the **admin workspace** (guided operational screens such as enrollment processing and finance). What you see depends on your role and permissions.
+
+## Sign-in and security
+
+- Sign in with your staff account. Administrators can require **two-factor authentication** (authenticator app or e-mail code) and **passkeys**.
+- Use the **school-year and semester selector** in the panel header before entering data, so records land in the correct academic period.
+- Press **Ctrl+L** (Windows/Linux) or **⌘L** (macOS) for global search across students, classes, and other records.
+
+## Dashboard
+
+The panel dashboard summarizes operations with widgets: enrollment, retention, and attrition statistics, demographics, scholarship distribution, clearance status, geographic distribution, recent enrollments and students, resource availability, and upcoming events. Widgets respect the selected academic period and your permissions.
+
+## Records and resources
+
+The sidebar groups the core resources:
+
+| Resource | Typical work |
+| -------- | ------------ |
+| Students | Student profiles, documents, signature capture, enrollment checklists, clearances |
+| Student Enrollments | Enrollment records, statuses, and history |
+| Faculties and Accounts | Teaching staff and user accounts |
+| Courses and Departments | Programs, curriculum structure, and departments |
+| Classes and Rooms | Sections, schedules, capacity, and room assignment |
+| Events | School calendar events shown on dashboards |
+| Schools | Institutions in a multi-school deployment |
+| Users and Roles | Accounts, role assignment, and permission review |
+| Senior High School | SHS strands and SHS student records (cluster) |
+
+Additional panel pages cover **Timetable** management, **Student Clearances**, **Backups**, and **General Settings**.
+
+## Enrollment processing
+
+The admin workspace provides the operational enrollment flow:
+
+1. **Search and review applicants.** Look up a student and open their application.
+2. **Verify academically.** The registrar or department head verifies subjects, documents, and assessment.
+3. **Verify payment.** The cashier confirms or records payment.
+4. **Complete or reopen.** Finish the enrollment, or use the authorized undo/reopen action with a reason.
+
+Enrollment reports, analytics, and assessment PDFs are available from the same area. Configuration of availability, eligibility, tuition, and approvals is handled by **Enrollment Blueprints** — see the Blueprint guides in the navigation.
+
+## Finance
+
+The finance area provides dashboards, payment recording, invoices and receipts, and reports. Statements of account can be issued to students and include a signed public verification link. Bulk assessment PDFs are generated in the background; downloads appear when ready.
+
+## System management
+
+The System Management area centralizes institution configuration: school profile and branding, academic periods, grading rules, student identifier formats, mail delivery, notification templates, analytics, SEO, social sign-in providers, API keys, and the **Feature Toggles** page that switches portal features on or off.
+
+:::tip[Audit trail]
+Administrative changes are recorded under **Audit Logs**. When something looks wrong, check there first before changing a record back.
+:::

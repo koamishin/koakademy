@@ -1,0 +1,51 @@
+---
+title: Platform Features
+description: A map of what KoAkademy provides, where each capability lives, and how features are switched on or off.
+---
+
+# Platform Features
+
+This page maps KoAkademy's capabilities so you know what exists and where to find it. Details for daily work are in the portal guides; configuration details are in the area-specific guides.
+
+## Core areas
+
+| Area | What it covers | Where |
+| ---- | -------------- | ----- |
+| Academic records | Students, faculty, courses, departments, rooms, senior high strands | Admin panel |
+| Classes and scheduling | Sections, subject assignments, capacity, timetables with conflict detection | Admin panel and Admin workspace |
+| Enrollment | Applications, verification pipeline, class enrollment, reports and analytics | Admin workspace |
+| Grading | Point/percent scales, passing rules, GWA exclusions, finalize and verify workflow | Admin workspace and Faculty portal |
+| Finance | Tuition assessment, cashier payment posting, statements of account, finance reports | Admin workspace and Cashier module |
+| Communication | Announcements with banner display, template-based notifications, e-mail | Announcement and Notification Center modules |
+| Reports and exports | Enrollment reports, student lists, attendance reports (Excel), PDF documents | Admin panel exporters and downloads |
+| PDF documents | Statements of account, timetables, enrollment assessments | Generated server-side via Gotenberg |
+
+## Portals
+
+KoAkademy provides three purpose-built workspaces in addition to the Filament administration panel:
+
+- **Administration panel (`/admin`)** — records, resources, settings, dashboards, backups, and role management for administrative staff. See the [Admin portal guide](./admin-portal/).
+- **Faculty portal** — dashboard, action center, attendance, class posts and submissions, grading, and schedules for teaching staff. See the [Faculty portal guide](./faculty-portal/).
+- **Student portal** — classes, schedule, tuition and statements of account, digital ID card, announcements, and notifications for students. See the [Student portal guide](./student-portal/).
+
+## Optional modules
+
+Six modules extend the platform: Announcements, Cashier, Inventory, Library System, Notification Center, and Student Medical Records. Each can be enabled or disabled per institution. See the [Modules guide](./modules/).
+
+## How features are switched
+
+KoAkademy has two layers of feature control, both managed by administrators without code changes:
+
+1. **Feature toggles** — runtime flags (managed under the admin Feature Toggles page) that enable or disable portal areas such as faculty attendance, student tuition pages, online enrollment, and developer tools. Faculty and student portals check these flags before showing a page.
+2. **General settings** — institution-wide switches in General Settings, including the student portal, online enrollment, clearances, signature capture, QR codes, and the inventory and library modules.
+
+:::note[What this does]
+Disabling a toggle hides the feature immediately for affected users without deleting any data. Re-enabling restores the same records.
+:::
+
+## Security and access control
+
+- **Roles and permissions** — about 30 built-in roles (from super administrator to registrar, cashier, librarian, professor ranks, and student roles) with per-resource permissions.
+- **Multi-factor authentication** — TOTP authenticator codes and e-mail codes, plus WebAuthn passkeys for passwordless sign-in.
+- **Activity logging** — administrative actions are recorded and reviewable under Audit Logs.
+- **Multi-school context** — staff with access to several schools switch the active school from the organization switcher; records stay scoped to the selected school.

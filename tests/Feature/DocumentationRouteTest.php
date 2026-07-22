@@ -34,9 +34,12 @@ it('keeps setup and extension documentation in a separate developer area', funct
             ->where('slug', 'developer-introduction')
             ->where('type', 'developer')
             ->where('page.title', 'Introduction')
-            ->where('page.content', fn (string $content): bool => str_contains($content, 'Self-Host or Contribute?'))
+            ->where('page.content', fn (string $content): bool => str_contains($content, 'Pick your path'))
             ->where('navigation', fn (Collection $navigation): bool => $navigation->pluck('id')->all() === [
-                'getting-started',
+                'start-here',
+                'system',
+                'maintainers',
+                'self-hosting',
                 'development',
             ]),
         );

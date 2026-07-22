@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
-use Symfony\Component\Finder\SplFileInfo;
 
 Route::get('/enrollment', [EnrollmentRegistrationController::class, 'create'])
     ->name('enrollment.create');
@@ -49,13 +48,13 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
         'introduction' => 'user-guide/introduction',
     ];
     $developerDocumentationPaths = [
-        'developer-introduction' => 'getting-started/introduction',
-        'installation' => 'getting-started/installation',
-        'docker' => 'getting-started/docker',
-        'configuration' => 'getting-started/configuration',
-        'troubleshooting' => 'getting-started/troubleshooting',
-        'contributing' => 'getting-started/contributing',
-        'development' => 'development',
+        'developer-introduction' => 'start-here/introduction',
+        'installation' => 'self-hosting/installation',
+        'docker' => 'self-hosting/deployment',
+        'configuration' => 'self-hosting/configuration',
+        'troubleshooting' => 'self-hosting/troubleshooting',
+        'contributing' => 'start-here/contributing',
+        'development' => 'start-here/development',
         'enrollment-policy-extensions' => 'development/enrollment-policy-extensions',
     ];
 
@@ -84,7 +83,7 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
 
             if (! $usesLegacyDocumentation) {
                 $allowedDirectories = $type === 'developer'
-                    ? ['getting-started', 'development']
+                    ? ['start-here', 'system', 'maintainers', 'self-hosting', 'development']
                     : ['user-guide', 'enrollment-policies'];
                 $allowedPrefixes = array_map(
                     fn (string $directory): string => "{$guideDirectory}/{$directory}".DIRECTORY_SEPARATOR,
@@ -181,7 +180,10 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
                 ->all()
             : match ($type) {
                 'developer' => [
-                    'getting-started' => 'Setup and deployment',
+                    'start-here' => 'Getting started',
+                    'system' => 'System internals',
+                    'maintainers' => 'Maintainers',
+                    'self-hosting' => 'Self-hosting',
                     'development' => 'Development and extensions',
                 ],
                 default => [
@@ -197,13 +199,6 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
             }
 
             $files = $usesLegacyDocumentation ? File::files($dir) : File::allFiles($dir);
-            if (! $usesLegacyDocumentation && $directoryName === 'development') {
-                $rootDevelopmentFiles = array_filter(
-                    File::files($guideDirectory),
-                    fn (SplFileInfo $file): bool => $file->getFilenameWithoutExtension() === 'development',
-                );
-                $files = [...$rootDevelopmentFiles, ...$files];
-            }
 
             $children = [];
 
@@ -221,7 +216,7 @@ Route::get('/docs/v1/{slug?}', function (?string $slug = null) {
                     ->toString();
                 $navigationSlug = match ($relativePath) {
                     'user-guide/introduction' => 'introduction',
-                    'getting-started/introduction' => 'developer-introduction',
+                    'start-here/introduction' => 'developer-introduction',
                     default => $file->getFilenameWithoutExtension(),
                 };
 

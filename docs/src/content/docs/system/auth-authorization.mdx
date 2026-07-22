@@ -1,0 +1,60 @@
+---
+title: Auth, Roles & Permissions
+description: Guards, multi-factor authentication, passkeys, the role hierarchy, and how authorization is enforced.
+---
+
+# Auth, Roles & Permissions
+
+KoAkademy handles sensitive student data, so authentication and authorization are layered. This page covers the guards, the sign-in hardening options, the role system, and where checks are enforced.
+
+## Guards and audiences
+
+| Guard | Used by | Notes |
+| ----- | ------- | ----- |
+| `web` | Admin panel, admin workspace, faculty/student portals | Session-based; portals additionally check role middleware |
+| `portal` | The stub Filament `portal` panel | Exists for completeness; real portals use `web` |
+| `sanctum` | `/api/*` | Bearer tokens issued per deployment |
+
+Sign-in options: email/password, **Socialite** social providers (configurable per installation), **passkeys** (WebAuthn — public login options/verify endpoints), and a demo-login route used for evaluation. Signup supports email lookup with OTP verification, and there is a faculty-verification flow for staff accounts.
+
+## Multi-factor authentication
+
+Two second factors ship in the box, implemented as custom Filament authentication responses:
+
+- **TOTP authenticator apps** — recoverable app-based codes (`SecurityAwareAppAuthentication`).
+- **Email codes** — 30-minute one-time codes (`SecurityAwareEmailAuthentication`).
+
+Users manage 2FA, passkeys, active sessions, and personal API keys from their profile settings — in the admin panel (Edit Profile) and in the React portals alike. A dedicated 2FA challenge route handles the post-login step.
+
+## Roles
+
+Roles come from **spatie/laravel-permission** with **Filament Shield** generating and enforcing per-resource permissions in the admin panel.
+
+- `super_admin` bypasses checks and can cross school boundaries.
+- A `UserRole` enum defines roughly **30 institution roles** — developer, super admin, admin, president, registrar, cashier, librarian, support staff, professor ranks, student, graduate, SHS student, and more.
+- The enum carries **hierarchy levels**, `getManageableRoles()` (which roles a given role may assign), and portal-access helpers — use these instead of hard-coding role names.
+
+Typical permission shapes in the panel are Shield-generated (`view_any_student`, `update_student`, …); outside the panel, per-model **policies** authorize actions for both app and module models.
+
+## Where authorization is enforced
+
+1. **Middleware** — first gate at the route level:
+   - `role:` (spatie) and custom `administrators.only`
+   - `EnsureAdministrativePortalAccess`, `EnsureFacultyAccess`, `EnsureStudentAccess` — keep each audience in its own portal
+   - `EnsureFeatureEnabled` — blocks disabled features (see [Modules & feature flags](./modules-flags/))
+   - `EnsureSystemIsSetup` — guards the first-run wizard
+   - `SetTenantContext` — establishes the school scope (see [Architecture & domain model](./architecture-domain/))
+2. **Policies** — model-level authorization in controllers, Filament resources, and API handlers. Filament resources defer to the same policies, so a rule change applies everywhere.
+3. **Form requests / controllers** — validate input and call `authorize` for protected actions; never trust portal-side hiding as a security boundary.
+
+## Audit and impersonation
+
+- **Activity logging** (spatie/laravel-activitylog) records administrative changes; the admin workspace exposes them under **Audit Logs**.
+- **Impersonation** (stechstudio/filament-impersonate) lets privileged staff sign in as another user for support, with an explicit stop-impersonation route. Treat impersonation as an audited, permission-gated action.
+
+## Contributing rules of thumb
+
+- New protected action → new or existing **policy** ability, enforced in the controller/resource — not just hidden UI.
+- New portal route → attach the **audience middleware** for that portal.
+- Never bypass the school scope; super-admin-only features should check the role explicitly.
+- Tokens, codes, and secrets never appear in logs, URLs, or source.

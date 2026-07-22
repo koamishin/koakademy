@@ -1,0 +1,90 @@
+---
+title: Architecture & Domain Model
+description: How KoAkademy's runtime, entry points, core entities, and multi-school tenancy fit together.
+---
+
+# Architecture & Domain Model
+
+This page is the map. It explains which moving parts exist, where requests enter, and how the core school entities relate — read it before the other System Internals pages.
+
+## Runtime shape
+
+KoAkademy is a **modular monolith**. One Laravel 12 application serves everything — admin panel, portals, public pages, and API — running on **PHP 8.5 under Laravel Octane with FrankenPHP** in production. The long-running worker means application boot happens once per worker, not per request; code must not leak mutable state between requests (Octane-safe patterns are expected in contributions).
+
+The production container image is a multi-stage build (`docker/Dockerfile`): Composer dependencies → Wayfinder route generation → Bun/Vite asset build → a `dunglas/frankenphp:1.9-php8.5` runtime. Supervisord variants in the image can run the web worker, queue workers ("station"), scheduler, and Pulse processes; alternative nginx/php-fpm, RoadRunner, and Swoole configurations ship for operators who need them.
+
+Supporting services are external: **PostgreSQL** (primary data), **Redis** (cache, sessions, queues), **Gotenberg** (PDF rendering), and **S3-compatible object storage** (uploads via media library).
+
+## Entry points
+
+| Entry | Path / guard | Implementation | Audience |
+| ----- | ------------ | -------------- | -------- |
+| Administration panel | `/admin` (web guard) | Filament 5 panel, SPA mode | Administrative staff |
+| Admin workspace | `/administrators/*` | Inertia + React pages | Administrative staff |
+| Faculty portal | faculty routes | Inertia + React pages | Teaching staff |
+| Student portal | student routes | Inertia + React pages | Students |
+| Public pages | `/`, `/enrollment*`, `/setup`, `/docs`, `/changelog`, `/id-card/verify/{token}` | Inertia + React pages | Everyone |
+| API | `/api/*` (`auth:sanctum`) | Laravel API routes | Integrations |
+
+Two things to know about this table:
+
+1. **There is no separate admin application.** The Filament panel and the three React portals share the same models, policies, and services.
+2. A second Filament panel (`portal`, `/portal`) exists but is intentionally a stub — the real student/faculty experiences are the Inertia/React portals. Do not build new features into the stub panel.
+
+## Core domain entities
+
+The domain is school administration. The principal entities and their relationships:
+
+- **School** — the tenant. Most records carry a `school_id` (see *Multi-school tenancy* below).
+- **Student** — a person enrolled or enrollable; holds documents, signature, clearances, medical records (module), and a generated institutional **identifier** (configurable format).
+- **Faculty** — teaching staff; assigned to classes and departments.
+- **Course / Department / Program** — the curriculum structure students enroll into. Senior High is modeled as its own cluster (SHS strands and SHS students).
+- **Class** — a taught section of a subject: schedule, room, capacity, assigned faculty, roster. Timetable conflict detection guards scheduling.
+- **StudentEnrollment** — a student's enrollment for an academic period; moves through the verification pipeline (see [Enrollment engine](./enrollment-engine/)).
+- **ClassEnrollment / SubjectEnrollment** — the join between an enrollment and the classes/subjects it includes; **grades** live at this level and follow a submit → finalize → verify workflow.
+- **Transactions / Invoices** — assessments, payments, and statements of account issued to students.
+- **Events, Announcements, NotificationTemplates** — calendar, broadcast messaging, and templated notifications.
+
+Around these sit cross-cutting records: `User` accounts with roles, activity-log entries, media attachments, export jobs, and enrollment-policy records.
+
+## Multi-school tenancy
+
+Tenancy is **lightweight and school-scoped** — there is no stancl/tenancy package and no database-per-tenant:
+
+- A `SchoolScope` global scope applies `school_id` filtering to tenant-owned models.
+- `TenantContext` resolves the active school from the session (`current_school_id`), falling back to the user's default school; super administrators bypass the scope.
+- `SetTenantContext` middleware establishes the context per request; the `/organizations` API (list, current, switch, store, clear-context) powers the organization switcher in the UI.
+
+When you add a tenant-owned model, give it a `school_id` and the global scope — never filter by school manually in controllers.
+
+## Data planes
+
+| Plane | Store | Notes |
+| ----- | ----- | ----- |
+| Relational data | PostgreSQL | Single source of truth; SQLite supported for dev/tests |
+| Cache / sessions / queues | Redis | Separate `redis` and `redis-pdf` queue connections (see [Queues & PDF](./queues-pdf/)) |
+| Files | S3-compatible storage | spatie/laravel-medialibrary; **required** in production |
+| Search | Scout, `database` driver by default | Meilisearch optional |
+| Settings | Database via spatie/laravel-settings | `GeneralSetting` holds institution-wide configuration |
+| Feature flags | Database via Laravel Pennant | See [Modules & feature flags](./modules-flags/) |
+
+## Where things live in the repo
+
+| Path | Contents |
+| ---- | -------- |
+| `app/` | Services, models, middleware, jobs, policies, Filament panel, enrollment engine (`app/Enrollment/`) |
+| `Modules/` | Six optional domain modules (Laravel Modules) |
+| `routes/` | Web route files split per audience, `api.php`, `channels.php` |
+| `resources/js/` | Inertia React pages and components (~184 pages) |
+| `database/` | Migrations, factories, seeders |
+| `docker/` | Production image, supervisord variants, runtime scripts |
+| `docs/` | This documentation site |
+
+## Reading guide for the rest of this section
+
+1. [Auth, roles & permissions](./auth-authorization/) — who can do what, and how sign-in is hardened.
+2. [Modules & feature flags](./modules-flags/) — how optional functionality is composed and toggled.
+3. [The enrollment engine](./enrollment-engine/) — the deepest subsystem: pipeline, policies, blueprints.
+4. [Queues, jobs & PDF](./queues-pdf/) — background work and document generation.
+5. [Frontend architecture](./frontend/) — Inertia, React, Wayfinder, and the design system.
+6. [Extending the enrollment engine](../development/enrollment-policy-extensions/) — contracts for custom rules and actions.

@@ -1,0 +1,58 @@
+---
+title: Repository Automation
+description: Issue and PR automation — auto-labeling, issue quality checks, the roadmap board, and maintainer-access enforcement.
+---
+
+# Repository Automation
+
+Four lightweight workflows keep the issue tracker and PR queue manageable without a bot account. All use `actions/github-script` and run with minimal permissions.
+
+## Auto Label (`auto-label.yml`)
+
+Triggers on issues and PRs (opened/edited; `pull_request_target` for PRs).
+
+- **Issues and PRs:** scans title/body keywords and adds matching labels — `bug`, `feature`, `documentation`, `refactor`, `breaking`, `chore`, `performance`, `security`, `good first issue`, `ui/ux`, `database`, `api`, `tests`, `docker`, `priority: high/low`.
+- **PRs additionally:** maps changed file paths to area labels (`frontend`, `backend`, `ci/cd`, `docker`, `tests`, `database`, `ui/ux`).
+- It **only adds** labels that aren't present — it never removes a maintainer's manual label.
+
+These labels feed the [official release notes](./releases/) categorization, so correcting a wrong auto-label is worth the two seconds.
+
+## Issue Quality Check (`issue-quality.yml`)
+
+Triggers on issues (opened/edited). Skips the repo owner and anything labeled `enhancement`.
+
+It enforces the bug-report template by extracting three sections:
+
+| Section | Rule |
+| ------- | ---- |
+| Reproduction repository | Must contain a `https://github.com/` URL |
+| Steps to reproduce | At least 25 characters |
+| PHP Version | At least 10 characters |
+
+If a check fails, the bot labels the issue `needs more info`, comments with what's missing, and closes it as not-planned. When the author edits the body into compliance, the bot removes the label and reopens (only if the bot itself closed it). Maintainers can always reopen manually — the bot's close is a nudge, not a verdict.
+
+## Project Roadmap Automation (`project-roadmap-automation.yml`)
+
+Keeps a Projects v2 board in sync (requires `secrets.PROJECT_AUTOMATION_TOKEN`; board IDs are configured in the workflow):
+
+- New issues → added to the board with **Status: Todo** (polled until the item appears).
+- PRs → **Todo** when draft, **In Progress** when ready, **Done** on close.
+
+Without the secret configured the workflow fails soft at the API call — safe to ignore on forks.
+
+## PR Maintainer Access (`pr-maintainer-access.yml`)
+
+Triggers on `pull_request_target: opened`. For fork PRs with "Allow edits from maintainers" disabled, it comments with instructions (enable maintainer access, or move an org fork to a personal account) and closes the PR. PRs from the repo owner or same-owner repos are skipped.
+
+## Issue templates & routing
+
+Blank issues are disabled (`.github/ISSUE_TEMPLATE/config.yml`); two templates and two discussion links route people correctly:
+
+- **Bug report** (auto-labels `bug`, `unconfirmed`) — area/module dropdown, KoAkademy/Laravel/PHP versions, problem, expected behavior, steps, and a required **reproduction repository** (enforced by the quality check above).
+- **Feature request** (auto-labels `enhancement`) — description, use case, optional solution/alternatives.
+- Discussions links redirect "Ideas" and "Help" questions out of the issue tracker.
+
+## Maintainer guidance
+
+- The automation is intentionally conservative (adds labels, closes only non-compliant issues). If a rule misfires, fix by hand — no cleanup is required beyond removing a label or reopening.
+- Changing label names? Update `auto-label.yml`, the quality-check label (`needs more info`), and the release-notes categorization together.

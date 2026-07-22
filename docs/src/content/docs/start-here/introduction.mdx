@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: Choose the self-hosting or contribution path for KoAkademy.
+description: What KoAkademy is, the stack it runs on, and where to go next.
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
@@ -10,32 +10,36 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 KoAkademy is a self-hosted school administration and learning platform. It is a production-capable beta: the repository provides a supported topology and automated validation, while each operator remains responsible for staging, backup, monitoring, privacy, and recovery.
 
 <CardGrid stagger>
-    <Card title="Self-host" icon="server">
-        Run Laravel and FrankenPHP with PostgreSQL, Redis, Gotenberg, external S3-compatible storage, and your HTTPS edge.
+    <Card title="Understand the system" icon="open-book">
+        Learn how the domain model, enrollment engine, modules, and portals fit together in **System Internals**.
     </Card>
     <Card title="Contribute" icon="github">
         Develop with PHP 8.5, Laravel 12, Filament 5, React 19, Inertia, Pest, and the canonical documentation workflow.
+    </Card>
+    <Card title="Self-host" icon="server">
+        Run Laravel and FrankenPHP with PostgreSQL, Redis, Gotenberg, external S3-compatible storage, and your HTTPS edge.
     </Card>
     <Card title="Integrate" icon="seti:json">
         Use only the tested beta subset: public settings, authenticated settings, and authenticated student verification.
     </Card>
 </CardGrid>
 
-## Self-Host or Contribute?
+## Pick your path
 
-For self-hosting, begin with [Installation](./installation/), then follow [Deployment](./docker/) and [Configuration](./configuration/). The supported default is one HTTPS hostname with administration at `/admin`.
+- **New contributor?** Start with [Development setup](./development/), read the [Architecture overview](./architecture/), then dive into **System Internals** — beginning with the [domain model](../system/architecture-domain/).
+- **Maintainer?** The **Maintainers** section documents the [CI pipeline](../maintainers/ci/), the [release and versioning process](../maintainers/releases/), [repository automation](../maintainers/automation/), and the [documentation system](../maintainers/documentation/) itself.
+- **Self-hosting?** Begin with [Installation](../self-hosting/installation/), then follow [Deployment](../self-hosting/deployment/) and [Configuration](../self-hosting/configuration/). The supported default is one HTTPS hostname with administration at `/admin`.
+- **Operating a school on KoAkademy?** The [User Guide](../user-guide/introduction/) covers daily staff workflows, and **Enrollment Blueprints** covers no-code enrollment configuration.
 
-For source development, start with [Development](../development/) and [Contributing](./contributing/). Root technical Markdown files are canonical; marked MDX pages are generated with `npm run docs:sync`.
+## The stack at a glance
 
-## Production services
-
-| Role | Supported component |
-| --- | --- |
-| HTTP application | KoAkademy production image, PHP 8.5, FrankenPHP |
-| Database | PostgreSQL |
-| Cache, sessions, queue | Redis |
-| PDF rendering | `spatie/laravel-pdf` with Gotenberg |
-| Uploads | External S3-compatible storage |
-| HTTPS | Operator-managed Caddy, Nginx, Traefik, or tunnel |
+| Layer | Technology |
+| ----- | ---------- |
+| Backend | PHP 8.5, Laravel 12, Octane (FrankenPHP) |
+| Administration | Filament 5 with Shield permissions |
+| Portals | Inertia 3, React 19, Tailwind CSS 4, shadcn/ui |
+| Data | PostgreSQL, Redis (cache, sessions, queues) |
+| Documents | `spatie/laravel-pdf` with Gotenberg |
+| Tests | Pest 4 (parallel, SQLite in-memory) |
 
 Only the latest stable release is supported. KoAkademy is licensed under GNU AGPL-3.0-or-later.

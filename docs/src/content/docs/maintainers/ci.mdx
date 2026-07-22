@@ -1,0 +1,53 @@
+---
+title: CI Pipeline
+description: What the CI workflow validates on every push and pull request, and how to reproduce it locally.
+---
+
+# CI Pipeline
+
+`.github/workflows/ci.yml` ("CI") runs on **every push and pull request** — no branch or path filters. It is intentionally secret-free: forks get the same validation as maintainer branches. One job, `validate`, on `ubuntu-24.04` with a 30-minute timeout and fixed toolchains (no matrix): **PHP 8.5** and **Node 22**.
+
+## What CI checks, in order
+
+| Step | Command | Fails when |
+| ---- | ------- | ---------- |
+| PHP setup | `shivammathur/setup-php` (mbstring, bcmath, pcntl, intl, gd, zip, sqlite3) + `librsvg2-bin` | Toolchain unavailable |
+| Dependencies | `composer install`, `npm ci`, `npm --prefix docs ci` | Lockfile drift |
+| Security audit | `composer audit --locked` | Known-vulnerable locked PHP dependency |
+| PHP formatting | `vendor/bin/pint --test` | Code style violations |
+| Frontend build | `npm run build` | Vite/TypeScript build errors |
+| Test suite | `php artisan test --parallel --compact` | Any Pest failure |
+| Docs drift | `npm run docs:check` | Generated MDX mirrors out of sync, broken local doc links, undocumented tested API endpoints |
+| Docs build | `npm --prefix docs run build` | Astro/Starlight build errors |
+| Production Compose | `docker compose --env-file .env.production.example -f compose.production.yaml config --quiet` | Invalid production topology or env contract |
+| Shell syntax | `sh -n` over `docker/` runtime scripts | Broken container scripts |
+
+The test environment is hermetic: SQLite in-memory, array cache/session/mail, sync queue, null broadcasting, Scout `collection` driver, and Pulse/Telescope/Nightwatch disabled.
+
+## Reproduce locally
+
+```sh
+composer install
+npm ci && npm --prefix docs ci
+composer audit --locked
+vendor/bin/pint --test
+npm run build
+php artisan test --parallel --compact   # or: composer test
+npm run docs:check
+npm --prefix docs run build
+docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+```
+
+Run a focused test while iterating:
+
+```sh
+php artisan test --compact tests/Feature/SetupAvailabilityTest.php
+php artisan test --compact --filter="shows the setup screen"
+```
+
+## Maintainer notes
+
+- **Concurrency:** runs are grouped per ref with `cancel-in-progress: true` — pushing again supersedes the previous run.
+- **No secrets by design:** nothing in CI requires credentials; do not add steps that need them. Publish jobs live in the release workflows (see [Releases & versioning](./releases/)).
+- **Single toolchain:** CI pins exactly one PHP/Node pair. If you need a new PHP extension, add it to both `ci.yml` and the Docker image.
+- **`composer audit` is blocking:** a newly disclosed vulnerability in a locked dependency will fail CI even on unrelated PRs — bump the dependency promptly.

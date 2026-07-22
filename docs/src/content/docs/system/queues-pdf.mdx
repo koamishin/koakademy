@@ -1,0 +1,56 @@
+---
+title: Queues, Jobs & PDF Pipeline
+description: Queue connections, background jobs, Gotenberg-backed PDF generation, exports, and broadcasting.
+---
+
+# Queues, Jobs & PDF Pipeline
+
+Anything slow, retryable, or user-blocking runs in the background: PDF documents, bulk notifications, exports, and search indexing. This page covers the queue topology and the document pipeline.
+
+## Queue connections
+
+Defined in `config/queue.php`:
+
+| Connection | Used for |
+| ---------- | -------- |
+| `database` | Default in development and tests (sync driver in CI) |
+| `redis` | Default application queues in production (`default`, `assessments`) |
+| `redis-pdf` | PDF generation jobs (`pdf-generation`) — isolated so a heavy render batch never delays transactional work |
+
+In production, supervisord **station** workers consume these queues inside the container (the dev Compose stack runs the same layout: three workers on `default,assessments`, two on `pdf-generation` with raised memory and timeout). Production deployments should run the scheduler and workers via the provided supervisord variants.
+
+## Job inventory (by purpose)
+
+- **PDF documents** — `GenerateAssessmentPdfJob`, `GenerateTimetablePdfJob`, `GenerateStudentSoaPdfJob`, plus chunked bulk-assessment jobs that render in slices and merge results.
+- **Notifications** — `SendBulkNotificationJob` for template-based bulk sends (see [Modules & feature flags](./modules-flags/)).
+- **Exports** — `ExportJob` records drive maatwebsite/excel exports (enrollment reports, student lists); completed files are delivered through **signed download routes** with authorization checks.
+- **Housekeeping** — backups (spatie/laravel-backup panel page), search indexing, notification delivery.
+
+## The PDF boundary
+
+Rendering is delegated: application code builds HTML/Blade, **`spatie/laravel-pdf`** sends it to **Gotenberg** (Chromium) over HTTP, and the result lands in storage. `PdfGenerationService` and `FixedPdfService` wrap driver specifics; Gotenberg is the default and supported production driver (`config/laravel-pdf.php`).
+
+Consequences for contributors:
+
+- **No browser in the app container.** Never shell out to Chromium; go through the PDF service.
+- **Documents are queued.** Callers dispatch a job and poll or receive a download link; do not render large documents synchronously in a web request.
+- **Templates must print well.** PDF Blade views share the app's fonts/assets — keep them self-contained (Gotenberg fetches what the HTML references).
+
+Also installed but secondary: `barryvdh/laravel-snappy` and fpdf/fpdi for legacy/specific documents.
+
+## Broadcasting and real-time
+
+Laravel Echo (with Pusher/predis) powers live UI updates. Channels (`routes/channels.php`):
+
+- Private per-user channel and `filament-notifications.{userId}` — panel notification toasts.
+- `administrators` — admin-area events.
+- Presence `online-users` — the online-users widget in the admin workspace.
+
+Queue workers and the web worker share the same Redis, so job status and notifications propagate without extra services. **Laravel Pulse** (with its own supervised processes in dev) provides ops monitoring; Telescope and Nightwatch are available but disabled in tests/CI.
+
+## Contributing rules of thumb
+
+- Expensive work (PDF, exports, bulk mail, indexing) → **dispatch a job**, never inline in a request.
+- Heavy document jobs → the **`redis-pdf` connection**, with explicit memory/timeout budgets.
+- Deliver generated files through **signed, authorized download routes** — never expose storage paths.
+- New channels need authorization in `routes/channels.php` and a Pest test.

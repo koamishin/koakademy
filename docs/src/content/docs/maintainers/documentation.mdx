@@ -1,0 +1,65 @@
+---
+title: Documentation System
+description: Canonical Markdown, generated MDX mirrors, the validation contract, and how this site is built and deployed.
+---
+
+# Documentation System
+
+KoAkademy's documentation has a single-source rule: **root Markdown files are canonical** for project and technical docs; the Astro site and the in-app docs viewer consume **generated mirrors**. This page is the maintainer's map of that machinery.
+
+## The pipeline
+
+```
+Root canonical MD ──▶ scripts/sync-docs.mjs ──▶ MDX mirrors (this site + in-app viewer)
+        │                                              ▲
+        └────── scripts/check-docs.mjs (validation) ◀──┘
+```
+
+`npm run docs:sync` maps eight canonical files to site pages:
+
+| Canonical source | Generated page |
+| ---------------- | -------------- |
+| `GETTING_STARTED.md` | Self-Hosting → Installation |
+| `DEPLOYMENT.md` | Self-Hosting → Deployment |
+| `CONFIGURATION.md` | Self-Hosting → Configuration |
+| `TROUBLESHOOTING.md` | Self-Hosting → Troubleshooting |
+| `FAQ.md` | Self-Hosting → FAQ |
+| `DEVELOPMENT.md` | Start Here → Development |
+| `ARCHITECTURE.md` | Start Here → Architecture |
+| `CONTRIBUTING.md` | Start Here → Contributing |
+
+The generator strips the source H1, prepends Starlight frontmatter and a `{/* GENERATED FILE… */}` warning, and rewrites cross-doc links: mirrored docs become site routes; repo-only docs (`README.md`, `SECURITY.md`, `CHANGELOG.md`, `LICENSE.md`) become absolute GitHub URLs. **Never edit a generated mirror** — edit the canonical file and re-run the sync. Target directories are created automatically.
+
+Everything else on the site — this page, System Internals, Maintainers, the User Guide, Enrollment Blueprints, API docs — is **native MDX**, edited in place under `docs/src/content/docs/`.
+
+## Validation (`npm run docs:check`)
+
+1. `sync-docs.mjs --check` — fails if any generated mirror is stale.
+2. `scripts/check-docs.mjs` — verifies all canonical files exist, every local `.md`/`.mdx` link across root docs and site content resolves, the three tested API endpoints (`GET /api/v1/public/settings`, `GET /api/settings`, `POST /api/students/verify`) are documented, and fictional student-CRUD endpoints were not reintroduced.
+
+CI runs both on every push and PR (see [CI pipeline](./ci/)); run them before committing doc changes.
+
+## The site itself
+
+- **Stack:** Astro 5 + Starlight, MDX content collection, Pagefind search, sitemap — built with Node 22 (`npm --prefix docs ci && npm --prefix docs run build`).
+- **Theme:** `docs/src/styles/custom.css` maps the app's shadcn palette onto Starlight with self-hosted Inter/JetBrains Mono (fontsource — no external requests).
+- **Navigation:** the explicit sidebar in `docs/astro.config.mjs`. New pages need a sidebar entry or they exist but are unreachable.
+- **In-app viewer:** the same generated mirrors render inside the application at `/docs`, so operator docs ship with the product.
+
+## Deployment
+
+`deploy-docs.yml` builds the site on pushes to `master` touching `docs/**` (or itself) and deploys to GitHub Pages via `upload-pages-artifact` + `deploy-pages`.
+
+Requirements for the deploy to succeed:
+
+1. **GitHub Pages enabled:** Settings → Pages → Build and deployment → Source: **GitHub Actions**. Until this is done the deploy job fails with `404 Not Found` from `actions/deploy-pages`.
+2. **Public repo or paid plan:** Pages is unavailable for private repositories on the free plan.
+
+Published at `https://yukazakiri.github.io/koakademy/` (the `site`/`base` in `astro.config.mjs` — keep them in sync if the repository ever moves).
+
+## Writing guidelines for maintainers
+
+- **Factual over aspirational.** Document what the code does today; roadmaps live in issues/projects, not docs.
+- **Screenshots** go in `docs/src/assets/` and are imported by MDX (optimized at build).
+- **API surface:** only tested endpoints may be documented — the contract check enforces it.
+- **Security and changelog** stay on GitHub (SECURITY.md, Releases) and are deliberately not mirrored to the site.
