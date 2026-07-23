@@ -35,17 +35,17 @@ Generated application, database, Redis, and storage credentials live in Swarm's 
 
 ## Application and routing
 
-| Variable | Required | Production guidance |
-| --- | --- | --- |
-| `KOAKADEMY_VERSION` | Yes | Pin the latest stable, non-prerelease image tag. |
-| `APP_KEY` | Yes | Generate once per installation and store as a secret. |
-| `APP_ENV` | Yes | Must be `production`. |
-| `APP_DEBUG` | Yes | Must be `false`; debug output can disclose secrets. |
-| `APP_URL` | Yes | Public HTTPS origin, without a trailing path. |
-| `PORTAL_HOST` | Yes | Hostname only. Normally the host from `APP_URL`. |
-| `ADMIN_HOST` | Yes | Same hostname for the supported `/admin` topology. |
-| `TRUSTED_HOSTS` | No | Comma-separated additional exact hostnames; not regex. |
-| `TRUSTED_PROXIES` | Yes | `*`, addresses, or CIDRs for the HTTPS edge. See the warning below. |
+| Variable            | Required | Production guidance                                                 |
+| ------------------- | -------- | ------------------------------------------------------------------- |
+| `KOAKADEMY_VERSION` | Yes      | Pin the latest stable, non-prerelease image tag.                    |
+| `APP_KEY`           | Yes      | Generate once per installation and store as a secret.               |
+| `APP_ENV`           | Yes      | Must be `production`.                                               |
+| `APP_DEBUG`         | Yes      | Must be `false`; debug output can disclose secrets.                 |
+| `APP_URL`           | Yes      | Public HTTPS origin, without a trailing path.                       |
+| `PORTAL_HOST`       | Yes      | Hostname only. Normally the host from `APP_URL`.                    |
+| `ADMIN_HOST`        | Yes      | Same hostname for the supported `/admin` topology.                  |
+| `TRUSTED_HOSTS`     | No       | Comma-separated additional exact hostnames; not regex.              |
+| `TRUSTED_PROXIES`   | Yes      | `*`, addresses, or CIDRs for the HTTPS edge. See the warning below. |
 
 Host-header validation derives exact patterns from `APP_URL`, `PORTAL_HOST`, `ADMIN_HOST`, and `TRUSTED_HOSTS`. Invalid entries are ignored. `localhost` and `127.0.0.1` remain accepted for local health and maintenance operations.
 
