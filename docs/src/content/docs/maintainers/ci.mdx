@@ -19,7 +19,7 @@ description: What the CI workflow validates on every push and pull request, and 
 | Test suite | `php artisan test --parallel --compact` | Any Pest failure |
 | Docs drift | `npm run docs:check` | Generated MDX mirrors out of sync, broken local doc links, undocumented tested API endpoints |
 | Docs build | `npm --prefix docs run build` | Astro/Starlight build errors |
-| Production Compose | `docker compose --env-file .env.production.example -f compose.production.yaml config --quiet` | Invalid production topology or env contract |
+| Production Compose | `KOAKADEMY_ENV_FILE=.env.production.example docker compose --env-file .env.production.example -f compose.production.yaml config --quiet` | Invalid production topology or env contract |
 | Shell syntax | `sh -n` over `docker/` runtime scripts | Broken container scripts |
 
 The test environment is hermetic: SQLite in-memory, array cache/session/mail, sync queue, null broadcasting, Scout `collection` driver, and Pulse/Telescope/Nightwatch disabled.
@@ -35,7 +35,8 @@ npm run build
 php artisan test --parallel --compact   # or: composer test
 npm run docs:check
 npm --prefix docs run build
-docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+KOAKADEMY_ENV_FILE=.env.production.example \
+  docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
 ```
 
 Run a focused test while iterating:

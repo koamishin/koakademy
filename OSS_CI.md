@@ -33,7 +33,8 @@ npm run build
 php artisan test --parallel --compact
 npm run docs:check
 npm --prefix docs run build
-docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
+KOAKADEMY_ENV_FILE=.env.production.example \
+  docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
 bash -n scripts/install.sh
 shellcheck scripts/install.sh tests/Fixtures/installer/docker tests/Fixtures/installer/curl
 ```

@@ -4,7 +4,7 @@ services:
   app:
     image: ghcr.io/yukazakiri/koakademy:${KOAKADEMY_VERSION:?Set KOAKADEMY_VERSION to a stable release tag}
     env_file:
-      - .env
+      - ${KOAKADEMY_ENV_FILE:-.env}
     ports:
       - "127.0.0.1:${APP_PORT:-8000}:8000"
     volumes:

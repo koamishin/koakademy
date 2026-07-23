@@ -91,6 +91,8 @@ jobs:
         run: npm --prefix docs run build
 
       - name: Validate production Compose file
+        env:
+          KOAKADEMY_ENV_FILE: .env.production.example
         run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet
 
       - name: Check shell syntax
