@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Modules\LibrarySystem\Http\Requests\Administrators;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Modules\LibrarySystem\Models\Book;
 
 final class LibraryBookRequest extends FormRequest
 {
@@ -17,12 +15,9 @@ final class LibraryBookRequest extends FormRequest
 
     public function rules(): array
     {
-        $book = $this->route('book');
-        $bookId = $book instanceof Book ? $book->id : null;
-
         return [
             'title' => ['required', 'string', 'max:255'],
-            'isbn' => ['nullable', 'string', 'max:50', Rule::unique('library_books', 'isbn')->ignore($bookId)],
+            'isbn' => ['nullable', 'string', 'max:50'],
             'call_number' => ['nullable', 'string', 'max:255'],
             'accession_number' => ['nullable', 'string', 'max:255'],
             'author_id' => ['required', 'exists:library_authors,id'],
@@ -48,7 +43,6 @@ final class LibraryBookRequest extends FormRequest
             'author_id.exists' => 'Selected author could not be found.',
             'category_id.required' => 'Select a category for this book.',
             'category_id.exists' => 'Selected category could not be found.',
-            'isbn.unique' => 'This ISBN already exists in the library catalog.',
             'total_copies.required' => 'Total copies is required.',
             'total_copies.min' => 'Total copies must be at least 1.',
             'available_copies.min' => 'Available copies cannot be negative.',

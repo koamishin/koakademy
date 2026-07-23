@@ -53,7 +53,6 @@ final class BookForm
 
             TextInput::make('isbn')
                 ->label('ISBN')
-                ->unique(Book::class, 'isbn', ignoreRecord: true)
                 ->maxLength(20),
 
             TextInput::make('call_number')

@@ -55,3 +55,51 @@ it('stores a book with its library identifiers', function (): void {
         ->and($book?->total_copies)->toBe(3)
         ->and($book?->available_copies)->toBe(3);
 });
+
+it('stores multiple books with the same ISBN', function (): void {
+    $admin = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    $author = Author::query()->create([
+        'name' => 'Duplicate ISBN Author',
+    ]);
+
+    $category = Category::query()->create([
+        'name' => 'Duplicate ISBN Category',
+    ]);
+
+    $isbn = '978-1-4028-9462-6';
+    $payload = [
+        'isbn' => $isbn,
+        'author_id' => $author->id,
+        'category_id' => $category->id,
+        'publisher' => 'KoAcademy Press',
+        'publication_year' => 2026,
+        'pages' => 320,
+        'total_copies' => 1,
+        'available_copies' => 1,
+        'location' => 'Main Library A-12',
+        'status' => 'available',
+    ];
+
+    actingAs($admin)
+        ->post(route('administrators.library.books.store'), [
+            ...$payload,
+            'title' => 'First Catalog Record',
+            'accession_number' => 'ACC-2026-0002',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('administrators.library.books.index'));
+
+    actingAs($admin)
+        ->post(route('administrators.library.books.store'), [
+            ...$payload,
+            'title' => 'Second Catalog Record',
+            'accession_number' => 'ACC-2026-0003',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('administrators.library.books.index'));
+
+    expect(Book::query()->where('isbn', $isbn)->count())->toBe(2);
+});
