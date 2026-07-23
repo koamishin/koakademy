@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.17.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.2",
-  "commit": "9d84420a8177d3be7d49e28c8885d6f5092dabab",
+  "version": "1.10.0-dev.17.3",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.3",
+  "commit": "bcbc47e09c58998d21432b21504f6f13e527396a",
   "branch": "master",
-  "timestamp": "2026-07-23T04:30:21Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29979524907",
-  "release_type": "chore",
+  "timestamp": "2026-07-23T04:44:35Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29980095049",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.17.2 - test: use trusted hosts in branding coverage",
-    "previous": "1.10.0-dev.17.1"
+    "current": "Version 1.10.0-dev.17.3 - fix(ci): validate Compose without local secrets",
+    "previous": "1.10.0-dev.17.2"
   },
   "metadata": {
     "author": "yukazakiri",
