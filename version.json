@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.15.2",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.15.2",
-  "commit": "66e9111bdc2947e4c406dac44548b38f0ac7fc35",
+  "version": "1.10.0-dev.16.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.16.0",
+  "commit": "10df8dfcdf72f66d35a07d5d6ec6c1bc51139721",
   "branch": "master",
-  "timestamp": "2026-07-23T03:23:12Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29976633052",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-23T03:46:43Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29977557642",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.15.2 - fix(library): allow books to share ISBNs",
-    "previous": "1.10.0-dev.15.1"
+    "current": "Version 1.10.0-dev.16.0 - feat(library): add regulated digital library",
+    "previous": "1.10.0-dev.15.2"
   },
   "metadata": {
     "author": "yukazakiri",
