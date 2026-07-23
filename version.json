@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.15.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.15.0",
-  "commit": "74a218a9de3a228183f571b7f0a8b7bd96600236",
+  "version": "1.10.0-dev.15.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.15.1",
+  "commit": "765c0a141efd6717bd71ee04dc5136defb27c1e5",
   "branch": "master",
-  "timestamp": "2026-07-23T00:50:17Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29969949242",
-  "release_type": "feature",
+  "timestamp": "2026-07-23T02:03:16Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29973162538",
+  "release_type": "chore",
   "changelog": {
-    "current": "Version 1.10.0-dev.15.0 - feat(library): add call number and accession number fields to books",
-    "previous": "1.10.0-dev.14.4"
+    "current": "Version 1.10.0-dev.15.1 - test(library): cover book catalog creation",
+    "previous": "1.10.0-dev.15.0"
   },
   "metadata": {
     "author": "yukazakiri",
