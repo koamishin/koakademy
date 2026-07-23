@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.16.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.16.0",
-  "commit": "10df8dfcdf72f66d35a07d5d6ec6c1bc51139721",
+  "version": "1.10.0-dev.17.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.0",
+  "commit": "13e82b914150c13319d19bfd87485ded9b9abd51",
   "branch": "master",
-  "timestamp": "2026-07-23T03:46:43Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29977557642",
+  "timestamp": "2026-07-23T03:59:29Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29978203027",
   "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.16.0 - feat(library): add regulated digital library",
-    "previous": "1.10.0-dev.15.2"
+    "current": "Version 1.10.0-dev.17.0 - feat(self-hosting): add one-line swarm installer",
+    "previous": "1.10.0-dev.16.0"
   },
   "metadata": {
     "author": "yukazakiri",
