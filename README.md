@@ -72,6 +72,7 @@ See [Getting Started](GETTING_STARTED.md) for installer overrides and the manual
 - [FAQ](FAQ.md)
 - [Changelog](CHANGELOG.md)
 - [Open-source readiness](OSS_DOCS.md)
+- [CI contract](OSS_CI.md)
 
 Root Markdown files are canonical for technical and project documentation. Marked MDX copies are generated for Astro and the in-app documentation; run `npm run docs:sync` after editing a canonical file.
 
