@@ -23,6 +23,8 @@ final class LibraryBookRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'isbn' => ['nullable', 'string', 'max:50', Rule::unique('library_books', 'isbn')->ignore($bookId)],
+            'call_number' => ['nullable', 'string', 'max:255'],
+            'accession_number' => ['nullable', 'string', 'max:255'],
             'author_id' => ['required', 'exists:library_authors,id'],
             'category_id' => ['required', 'exists:library_categories,id'],
             'publisher' => ['nullable', 'string', 'max:255'],

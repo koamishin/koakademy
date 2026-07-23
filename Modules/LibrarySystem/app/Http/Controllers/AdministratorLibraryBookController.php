@@ -30,6 +30,8 @@ final class AdministratorLibraryBookController extends Controller
                 $query->where(function ($nested) use ($term): void {
                     $nested->where('title', 'ilike', "%{$term}%")
                         ->orWhere('isbn', 'ilike', "%{$term}%")
+                        ->orWhere('call_number', 'ilike', "%{$term}%")
+                        ->orWhere('accession_number', 'ilike', "%{$term}%")
                         ->orWhereHas('author', fn ($authorQuery) => $authorQuery->where('name', 'ilike', "%{$term}%"))
                         ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery->where('name', 'ilike', "%{$term}%"));
                 });
@@ -42,6 +44,8 @@ final class AdministratorLibraryBookController extends Controller
                 'id' => $book->id,
                 'title' => $book->title,
                 'isbn' => $book->isbn,
+                'call_number' => $book->call_number,
+                'accession_number' => $book->accession_number,
                 'author' => [
                     'id' => $book->author?->id,
                     'name' => $book->author?->name,
@@ -124,6 +128,8 @@ final class AdministratorLibraryBookController extends Controller
                 'id' => $book->id,
                 'title' => $book->title,
                 'isbn' => $book->isbn,
+                'call_number' => $book->call_number,
+                'accession_number' => $book->accession_number,
                 'author_id' => $book->author_id,
                 'category_id' => $book->category_id,
                 'publisher' => $book->publisher,

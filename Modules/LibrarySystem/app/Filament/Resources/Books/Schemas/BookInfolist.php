@@ -48,6 +48,18 @@ final class BookInfolist
                 ->badge()
                 ->color('info'),
 
+            TextEntry::make('call_number')
+                ->label('Call Number')
+                ->badge()
+                ->color('gray')
+                ->placeholder('—'),
+
+            TextEntry::make('accession_number')
+                ->label('Accession Number')
+                ->badge()
+                ->color('gray')
+                ->placeholder('—'),
+
             TextEntry::make('author.name')
                 ->label('Author')
                 ->badge()

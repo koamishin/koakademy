@@ -21,6 +21,8 @@ final class Book extends Model
     protected $fillable = [
         'title',
         'isbn',
+        'call_number',
+        'accession_number',
         'author_id',
         'category_id',
         'publisher',

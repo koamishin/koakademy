@@ -56,6 +56,14 @@ final class BookForm
                 ->unique(Book::class, 'isbn', ignoreRecord: true)
                 ->maxLength(20),
 
+            TextInput::make('call_number')
+                ->label('Call Number')
+                ->maxLength(255),
+
+            TextInput::make('accession_number')
+                ->label('Accession Number')
+                ->maxLength(255),
+
             Select::make('author_id')
                 ->label('Author')
                 ->relationship('author', 'name')

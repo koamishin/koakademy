@@ -20,6 +20,8 @@ interface SelectOption {
 interface BookFormData {
     title: string;
     isbn: string;
+    call_number: string;
+    accession_number: string;
     author_id: string;
     category_id: string;
     publisher: string;
@@ -38,6 +40,8 @@ interface BookRecord {
     id: number;
     title: string;
     isbn: string | null;
+    call_number: string | null;
+    accession_number: string | null;
     author_id: number;
     category_id: number;
     publisher: string | null;
@@ -66,6 +70,8 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
     const form = useForm<BookFormData>({
         title: book?.title ?? "",
         isbn: book?.isbn ?? "",
+        call_number: book?.call_number ?? "",
+        accession_number: book?.accession_number ?? "",
         author_id: book?.author_id ? String(book.author_id) : "",
         category_id: book?.category_id ? String(book.category_id) : "",
         publisher: book?.publisher ?? "",
@@ -145,6 +151,26 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                 <Label htmlFor="isbn">ISBN</Label>
                                 <Input id="isbn" value={form.data.isbn} onChange={(event) => form.setData("isbn", event.target.value)} />
                                 {form.errors.isbn && <p className="text-destructive text-xs">{form.errors.isbn}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="call_number">Call Number</Label>
+                                <Input
+                                    id="call_number"
+                                    value={form.data.call_number}
+                                    onChange={(event) => form.setData("call_number", event.target.value)}
+                                />
+                                {form.errors.call_number && <p className="text-destructive text-xs">{form.errors.call_number}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="accession_number">Accession Number</Label>
+                                <Input
+                                    id="accession_number"
+                                    value={form.data.accession_number}
+                                    onChange={(event) => form.setData("accession_number", event.target.value)}
+                                />
+                                {form.errors.accession_number && <p className="text-destructive text-xs">{form.errors.accession_number}</p>}
                             </div>
 
                             <div className="space-y-2">

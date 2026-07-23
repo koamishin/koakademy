@@ -28,6 +28,8 @@ interface BookItem {
     id: number;
     title: string;
     isbn?: string | null;
+    call_number?: string | null;
+    accession_number?: string | null;
     author: { id?: number | null; name?: string | null } | null;
     category: { id?: number | null; name?: string | null; color?: string | null } | null;
     status: string;
@@ -137,7 +139,7 @@ export default function LibraryBooksIndex({ user, books, stats, filters, options
                     <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div>
                             <CardTitle>Catalog Overview</CardTitle>
-                            <CardDescription>Search by title, author, or ISBN.</CardDescription>
+                            <CardDescription>Search by title, author, ISBN, call number, or accession number.</CardDescription>
                         </div>
                         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
                             <div className="relative w-full sm:w-64">
@@ -206,6 +208,16 @@ export default function LibraryBooksIndex({ user, books, stats, filters, options
                                                     <div className="space-y-1">
                                                         <p className="text-foreground font-medium">{book.title}</p>
                                                         <p className="text-muted-foreground text-xs">{book.isbn ? `ISBN ${book.isbn}` : "No ISBN"}</p>
+                                                        {(book.call_number || book.accession_number) && (
+                                                            <p className="text-muted-foreground text-xs">
+                                                                {[
+                                                                    book.call_number ? `Call ${book.call_number}` : null,
+                                                                    book.accession_number ? `Acc. ${book.accession_number}` : null,
+                                                                ]
+                                                                    .filter(Boolean)
+                                                                    .join(" · ")}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </TableCell>

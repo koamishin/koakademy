@@ -48,6 +48,18 @@ final class BooksTable
                     ->color('info')
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                TextColumn::make('call_number')
+                    ->label('Call Number')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('accession_number')
+                    ->label('Accession Number')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('author.name')
                     ->label('Author')
                     ->searchable()
