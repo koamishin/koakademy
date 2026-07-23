@@ -112,7 +112,7 @@ curl --fail --silent --show-error http://127.0.0.1:8000/up
 
 Test the portal, `/admin`, authentication, uploads, a queued job, and a PDF export after every upgrade.
 
-When an upgrade includes the Digital Library migrations, run the migration command once as the release job before replacing the application replicas. Never let both Swarm replicas run migrations during startup. After the private bucket and its exact-origin CORS policy are configured, smoke-test through the public DCCP origin:
+When an upgrade includes the Digital Library migrations, run the migration command once as the release job before replacing the application replicas. Never let both Swarm replicas run migrations during startup. After the private bucket and its exact-origin CORS policy are configured, smoke-test through the public KoAkademy origin:
 
 1. Confirm a catalog-only title is visible but cannot open the reader.
 2. Upload a small licensed test PDF as a draft and confirm it is unavailable to normal users.

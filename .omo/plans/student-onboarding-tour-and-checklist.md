@@ -54,7 +54,7 @@
 - `OnboardingTour` and `OnboardingChecklistWidget` both call `useOnboarding()` — must be inside `OnboardingProvider`
 - `OnboardingTour` uses `useElementRect` to measure `data-tour` selectors via `document.querySelector`; targets must exist in DOM
 - Faculty's `DashboardContent` is inside `OnboardingProvider` and renders `OnboardingTour` right after `<Head>` — pattern mirrored in student dashboard
-- Student test DB env: `dccp_admin_testing` PostgreSQL DB not provisioned locally — same blocker as faculty test, not a code issue
+- Student test DB env: `koakademy_admin_testing` PostgreSQL DB not provisioned locally — same blocker as faculty test, not a code issue
 - `OnboardingExperience` import path was `@/components/onboarding-experience`; new imports: `@/components/onboarding-checklist`, `@/components/onboarding-tour`
 - `OnboardingExperience` was never deleted from the codebase — it may now be unused; consider removing it in a follow-up if confirmed unused across all callers
 - Pre-existing project-wide casing issues: `resources/js/components/` and `resources/js/Components/` both exist; `types/` and `Types/` both exist. Not caused by these changes.

@@ -100,12 +100,12 @@ LIBRARY_R2_ENDPOINT=https://account-id.r2.cloudflarestorage.com
 
 Grant the application credentials access only to the private library bucket. The application validates uploads, stores random object names and checksums, and authorizes every reader or download request before issuing an expiring URL. Keep downloads disabled unless the documented license permits them.
 
-Configure bucket CORS for the exact DCCP HTTPS origin so PDF.js can make range requests. Do not use `*` for `AllowedOrigins`:
+Configure bucket CORS for the exact KoAkademy HTTPS origin so PDF.js can make range requests. Do not use `*` for `AllowedOrigins`:
 
 ```json
 [
     {
-        "AllowedOrigins": ["https://portal.dccp.edu.ph"],
+        "AllowedOrigins": ["https://portal.koakademy.example"],
         "AllowedMethods": ["GET", "HEAD"],
         "AllowedHeaders": ["Range"],
         "ExposeHeaders": ["Accept-Ranges", "Content-Length", "Content-Range", "Content-Type", "ETag"],
@@ -114,7 +114,7 @@ Configure bucket CORS for the exact DCCP HTTPS origin so PDF.js can make range r
 ]
 ```
 
-Before production publication, the librarian must record the digital rights basis and attest that DCCP may reproduce and communicate the file. Use the takedown address for rights complaints and unpublish or remove disputed material immediately. The feature flag `library_module_enabled` hides and blocks the authenticated Digital Library without affecting the restricted Library Management records.
+Before production publication, the librarian must record the digital rights basis and attest that the KoAkademy operator may reproduce and communicate the file. Use the takedown address for rights complaints and unpublish or remove disputed material immediately. The feature flag `library_module_enabled` hides and blocks the authenticated Digital Library without affecting the restricted Library Management records.
 
 ## PDF rendering
 
