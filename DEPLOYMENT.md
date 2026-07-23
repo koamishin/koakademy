@@ -4,7 +4,11 @@ This is the canonical production and upgrade runbook for KoAkademy.
 
 ## Supported architecture
 
-`compose.production.yaml` runs four private services: the application, PostgreSQL, Redis, and Gotenberg. Only the application is published, and only to `127.0.0.1:8000`. Uploads use external S3-compatible storage. An operator-managed Caddy, Nginx, Traefik, or tunnel terminates HTTPS and proxies to the loopback origin.
+The default installer deploys KoAkademy, PostgreSQL, Redis, and Gotenberg as manager-pinned Docker Swarm services on an attachable overlay. It publishes KoAkademy on host port `8000`; local RustFS additionally publishes its S3 API on host port `9000`. PostgreSQL, Redis, Gotenberg, and the RustFS console are not published.
+
+The manual `compose.production.yaml` topology remains supported. It runs the application, PostgreSQL, Redis, and Gotenberg and binds only the application to `127.0.0.1:8000`. Manual Compose uploads use external S3-compatible storage.
+
+Both topologies require an operator-managed Caddy, Nginx, Traefik, or tunnel for HTTPS. Swarm host-mode ports listen on the manager's host interfaces, so restrict `8000` and `9000` with the host firewall until the HTTPS edge is ready.
 
 The default is one hostname:
 
@@ -17,23 +21,24 @@ Split portal and admin subdomains are an advanced configuration. Add both hostna
 
 ## First deployment
 
-Follow [Getting Started](GETTING_STARTED.md). The required order is:
+Follow [Getting Started](GETTING_STARTED.md). The Swarm installer performs this order:
 
-1. Copy and secure `.env`.
-2. Validate Compose configuration.
-3. Start PostgreSQL, Redis, and Gotenberg.
-4. Generate `APP_KEY`.
-5. Run `php artisan migrate --force` explicitly.
-6. Start the application.
-7. Verify the loopback `/up` endpoint.
-8. Configure HTTPS forwarding.
-9. Complete `/setup` and reach `/admin`.
+1. Verify Docker's Linux engine and initialize Swarm only when it is inactive.
+2. Preserve an existing manager cluster and create an attachable KoAkademy overlay.
+3. Resolve stable image tags and create generated credentials as Docker secrets.
+4. Start manager-pinned PostgreSQL, Redis, Gotenberg, and optional RustFS services.
+5. Create the local RustFS bucket or validate the external S3 bucket.
+6. Run `php artisan migrate --force` as a restartable one-off Swarm job.
+7. Start KoAkademy and verify the host-published `/up` endpoint.
+8. Print `/setup` and `/admin`, then leave HTTPS configuration to the operator.
 
-Container startup never needs migration privileges beyond the application's normal database user, and `RUN_MIGRATIONS=false` is the supported production setting.
+The installer is idempotent for an already-complete installation: it reports the existing service instead of recreating the Swarm or rotating secrets. It never calls `docker swarm leave`, removes the existing overlay, or deletes persistent services. Container startup keeps `RUN_MIGRATIONS=false`; schema changes remain explicit one-off jobs.
+
+For the manual Compose path, the required order remains: secure `.env`, validate Compose, start dependencies, generate `APP_KEY`, run migrations, start the app, verify `/up`, configure HTTPS, and complete `/setup`.
 
 ## Reverse proxy requirements
 
-Terminate TLS at the edge and forward to `http://127.0.0.1:8000`. Preserve these headers:
+Terminate TLS at the edge. Forward Swarm installations to manager port `8000`; forward manual Compose installations to `http://127.0.0.1:8000`. Preserve these headers:
 
 ```text
 Host
@@ -42,7 +47,7 @@ X-Forwarded-Host
 X-Forwarded-Proto
 ```
 
-`TRUSTED_HOSTS` accepts additional comma-separated exact hostnames. `TRUSTED_PROXIES` accepts `*`, IP addresses, or CIDRs. Trusting all proxies is appropriate only while the application port remains loopback-only; use explicit edge proxy addresses if the origin becomes reachable from another network.
+`TRUSTED_HOSTS` accepts additional comma-separated exact hostnames. `TRUSTED_PROXIES` accepts `*`, IP addresses, or CIDRs. The Swarm installer leaves `TRUSTED_PROXIES` empty because its host port is not loopback-only; set `KOAKADEMY_TRUSTED_PROXIES` to the explicit edge addresses/CIDRs before installation when forwarded headers are required. Trusting all proxies is appropriate only for the loopback-only Compose origin.
 
 Example Caddy site:
 
@@ -53,16 +58,29 @@ school.example {
 }
 ```
 
+When local RustFS backs an HTTPS KoAkademy installation, expose port `9000` through a separate HTTPS storage hostname and set `KOAKADEMY_S3_PUBLIC_URL` to the bucket base URL. Serving an HTTP object URL inside an HTTPS page is blocked as mixed content.
+
 ## Backups
 
 Back up both data planes:
 
 - PostgreSQL database, including a periodic restore test
-- S3-compatible bucket, according to the provider's versioning and retention controls
+- S3-compatible bucket or local RustFS volume, according to the storage system's versioning and retention controls
+- Swarm manager state when installer-generated Docker secrets are used
 
-The Redis volume is operational state, not the source of record. Preserve `.env` and `APP_KEY` in an encrypted secret store; losing `APP_KEY` can make encrypted application data and sessions unreadable.
+The Redis volume is operational state, not the source of record. Compose operators preserve `.env` and `APP_KEY` in an encrypted secret store. Swarm operators back up the manager's Swarm state using Docker's documented procedure because generated secret values are not written to a plaintext recovery file. Losing `APP_KEY` can make encrypted application data and sessions unreadable.
 
-Example database backup:
+Example Swarm database backup:
+
+```sh
+docker ps --filter label=com.docker.swarm.service.name=koakademy-postgres \
+  --format '{{.ID}} {{.Names}}'
+docker exec -i <postgres-container-id> sh -c \
+  'PGPASSWORD="$(cat /run/secrets/koakademy-db-password)" exec pg_dump --clean --if-exists --no-owner --username=koakademy koakademy' \
+  > koakademy.sql
+```
+
+Example manual Compose database backup:
 
 ```sh
 docker compose --env-file .env -f compose.production.yaml exec -T postgres \
@@ -74,6 +92,10 @@ Run this from a shell where the variables were loaded safely, or substitute the 
 ## Upgrade
 
 KoAkademy supports upgrades to the latest stable release. Read [CHANGELOG.md](CHANGELOG.md) and the GitHub release notes first.
+
+The one-line installer is deliberately conservative when `koakademy-app` already exists: it reports the installation and does not mutate it. A supported Swarm upgrade needs a backup, an explicit migration job using the existing service's secrets and environment, an image update to a reviewed stable tag, and post-update smoke tests. Until a dedicated upgrade command is published, operators who need a fully scripted upgrade path should use the manual Compose topology or maintain an equivalent reviewed Swarm stack definition.
+
+Manual Compose upgrade:
 
 ```sh
 # 1. Back up PostgreSQL and verify object-storage protection.
@@ -108,7 +130,7 @@ Application-image rollback is safe only when the previous code supports the migr
 - `APP_ENV=production` and `APP_DEBUG=false`
 - Unique `APP_KEY`, database password, Redis password, and S3 credentials
 - `SESSION_SECURE_COOKIE=true`, HTTPS active, and correct trusted hosts/proxies
-- Application published only on `127.0.0.1:8000`
+- Swarm ports `8000` and optional `9000` restricted to the intended edge, or Compose bound only to `127.0.0.1:8000`
 - PostgreSQL, Redis, and Gotenberg have no host port mappings
 - `RUN_MIGRATIONS=false`
 - `/up`, `/setup` or `/admin`, upload, queue, mail, and PDF smoke tests pass

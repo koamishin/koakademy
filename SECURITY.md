@@ -27,12 +27,12 @@ Maintainers will coordinate validation, remediation, release, and disclosure thr
 The supported deployment assumes:
 
 - HTTPS at an operator-managed edge
-- Application origin bound to `127.0.0.1:8000`
+- Swarm host ports restricted to the intended HTTPS edge, or the manual Compose origin bound to `127.0.0.1:8000`
 - PostgreSQL, Redis, and Gotenberg kept private
 - `APP_ENV=production`, `APP_DEBUG=false`, and secure session cookies
 - Exact trusted hosts and controlled trusted proxies
-- External S3-compatible storage with least-privilege credentials
-- Explicit migrations, backups, monitoring, and regular restore tests
+- S3-compatible storage with least-privilege credentials; local RustFS treated as a backed-up single-node service
+- Explicit migrations, Swarm-state and data backups, monitoring, and regular restore tests
 
 Review [Deployment](DEPLOYMENT.md) and [Configuration](CONFIGURATION.md). These defaults reduce common risk but do not certify an installation for any law, regulation, or institutional policy.
 

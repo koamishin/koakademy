@@ -12,16 +12,19 @@ KoAkademy is a modular Laravel monolith. The production application is one deplo
 ```text
 Browser
   -> operator-managed HTTPS edge
-  -> 127.0.0.1:8000
+  -> Swarm manager host port 8000
   -> KoAkademy (Laravel + FrankenPHP + workers + scheduler)
        -> PostgreSQL (source of record)
        -> Redis (cache, sessions, queues)
        -> Gotenberg (PDF rendering)
-       -> external S3-compatible storage (uploads)
+       -> local RustFS + persistent volume
+          or external S3-compatible storage (uploads)
        -> optional operator-configured mail and observability providers
 ```
 
-PostgreSQL, Redis, and Gotenberg remain private in `compose.production.yaml`. The edge is intentionally outside Compose so operators can use Caddy, Nginx, Traefik, or an existing tunnel/certificate platform.
+The default installer creates manager-pinned Docker Swarm services on a private overlay. PostgreSQL, Redis, Gotenberg, and the RustFS console are not published; only KoAkademy and, when selected, the RustFS S3 API receive host ports. Pinning keeps local volumes attached to one node, so this is not a multi-node high-availability design.
+
+The manual `compose.production.yaml` topology binds KoAkademy to `127.0.0.1:8000` and uses external S3-compatible storage. In both topologies the HTTPS edge remains operator-managed so Caddy, Nginx, Traefik, or an existing tunnel/certificate platform can be used.
 
 ## Application layers
 
@@ -48,7 +51,7 @@ The initial super administrator and institution are created only through `/setup
 ## Data and state
 
 - PostgreSQL is the durable relational source of record in the production image.
-- S3-compatible storage is the durable upload store.
+- S3-compatible storage is the durable upload store. Local RustFS is convenient but only as durable as its single host and backups.
 - Redis contains disposable operational state and queued work; it is not the backup source of truth.
 - Container-local `storage/` holds runtime files and temporary artifacts, not supported durable uploads.
 

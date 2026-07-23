@@ -61,7 +61,15 @@ The sync command generates marked MDX mirrors consumed by both Astro and the in-
 
 ## Hosted documentation site
 
-The Astro site in `docs/` deploys to GitHub Pages via the `deploy-docs.yml` workflow on pushes to `master` that touch `docs/**`. For the deploy to succeed, GitHub Pages must be enabled in the repository settings (**Settings → Pages → Build and deployment → Source: GitHub Actions**). GitHub Pages is unavailable for private repositories on the free plan — the deploy reports `404 Not Found` from `actions/deploy-pages` until the repository is public or on a paid plan. The site is published at `https://yukazakiri.github.io/koakademy/`.
+The Astro site in `docs/` is always buildable locally with `npm --prefix docs run build`. Its `deploy-docs.yml` workflow is intentionally disabled while the repository is private.
+
+After making the repository public, enable GitHub Pages in **Settings → Pages → Build and deployment → Source: GitHub Actions**, then re-enable the workflow:
+
+```sh
+gh workflow enable deploy-docs.yml --repo yukazakiri/koakademy
+```
+
+Successful deployments publish to `https://yukazakiri.github.io/koakademy/`.
 
 ## Application structure
 

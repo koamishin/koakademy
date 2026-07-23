@@ -7,7 +7,6 @@ Built with **Laravel 12**, **Filament 5**, **Inertia**, and **React 19**. Ships 
 [![CI](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml/badge.svg)](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/yukazakiri/koakademy?sort=semver)](https://github.com/yukazakiri/koakademy/releases)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE.md)
-[![Docs](https://img.shields.io/badge/docs-yukazakiri.github.io-informational)](https://yukazakiri.github.io/koakademy/)
 
 > **Project status: production-capable beta.** KoAkademy has a documented production topology and automated tests, but operators should validate upgrades in staging, maintain backups, and review the security model for their institution. Only the latest stable release is supported.
 
@@ -37,38 +36,30 @@ The API surface is beta. Only endpoints listed in the [API documentation](docs/s
 - PostgreSQL
 - Redis for cache, sessions, and queues
 - Gotenberg for `spatie/laravel-pdf`
-- External S3-compatible object storage for uploads
+- Local RustFS for single-node evaluation/small installations, or external S3-compatible object storage for redundant production uploads
 - An operator-managed HTTPS edge such as Caddy, Nginx, Traefik, or a tunnel
 
-`compose.production.yaml` publishes the application only on `127.0.0.1:8000`. PostgreSQL, Redis, and Gotenberg are not published to the host. The primary routing model uses one hostname with administration at `/admin`.
+The default installer uses Docker Swarm, publishes the application on host port `8000`, and keeps PostgreSQL, Redis, and Gotenberg on a private overlay. Local RustFS publishes only its S3 API on host port `9000`; its console remains private. The manual `compose.production.yaml` topology remains available and binds the application only to `127.0.0.1:8000`.
 
 ## Quick start
 
-Requirements: Docker Engine with Compose v2, an HTTPS hostname, and an S3-compatible bucket.
+Requirements: Docker Engine on Linux, or Docker Desktop using Linux containers on Windows.
 
 ```sh
-cp .env.production.example .env
-# Replace every change-me value and school.example in .env.
-
-docker compose --env-file .env -f compose.production.yaml config --quiet
-docker compose --env-file .env -f compose.production.yaml pull
-docker compose --env-file .env -f compose.production.yaml up -d postgres redis gotenberg
-
-docker compose --env-file .env -f compose.production.yaml run --rm app php artisan key:generate --show
-# Put the generated value in APP_KEY, then run the explicit database upgrade.
-docker compose --env-file .env -f compose.production.yaml run --rm app php artisan migrate --force
-docker compose --env-file .env -f compose.production.yaml up -d app
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/yukazakiri/koakademy/master/scripts/install.sh)"
 ```
 
-Verify the private origin:
+Windows PowerShell:
 
-```sh
-curl --fail --silent --show-error http://127.0.0.1:8000/up
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/yukazakiri/koakademy/master/scripts/install.ps1)))
 ```
 
-Configure your HTTPS edge to proxy to `http://127.0.0.1:8000`, then open `https://school.example/setup`. The setup wizard creates the institution and first super administrator. Do not use `make:filament-user` for first-run installation.
+The installer preserves an existing Swarm, generates Docker secrets, prompts for local RustFS or external S3 credentials, runs migrations, and verifies the application before printing `/setup`. The raw commands become anonymously available when the repository is public; review the scripts before executing privileged remote code.
 
-See [Getting Started](GETTING_STARTED.md) and [Deployment](DEPLOYMENT.md) before exposing the service.
+Verify the default host port again at any time with `curl --fail http://127.0.0.1:8000/up`.
+
+See [Getting Started](GETTING_STARTED.md) for installer overrides and the manual Compose path, and [Deployment](DEPLOYMENT.md) before exposing the service.
 
 ## Documentation
 
@@ -80,9 +71,11 @@ See [Getting Started](GETTING_STARTED.md) and [Deployment](DEPLOYMENT.md) before
 - [Native development](DEVELOPMENT.md)
 - [FAQ](FAQ.md)
 - [Changelog](CHANGELOG.md)
-- [Hosted documentation](https://yukazakiri.github.io/koakademy/) — full Starlight site with user and portal guides
+- [Open-source readiness](OSS_DOCS.md)
 
 Root Markdown files are canonical for technical and project documentation. Marked MDX copies are generated for Astro and the in-app documentation; run `npm run docs:sync` after editing a canonical file.
+
+The GitHub Pages deployment is intentionally disabled while the repository is private. The complete Starlight site remains buildable locally from `docs/`.
 
 ## Contributing and security
 

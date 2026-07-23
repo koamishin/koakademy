@@ -48,14 +48,15 @@ CI runs both on every push and PR (see [CI pipeline](./ci/)); run them before co
 
 ## Deployment
 
-`deploy-docs.yml` builds the site on pushes to `master` touching `docs/**` (or itself) and deploys to GitHub Pages via `upload-pages-artifact` + `deploy-pages`.
+`deploy-docs.yml` builds the site and can deploy it through `upload-pages-artifact` + `deploy-pages`. The workflow is intentionally disabled while the repository is private.
 
-Requirements for the deploy to succeed:
+After the repository becomes public:
 
-1. **GitHub Pages enabled:** Settings → Pages → Build and deployment → Source: **GitHub Actions**. Until this is done the deploy job fails with `404 Not Found` from `actions/deploy-pages`.
-2. **Public repo or paid plan:** Pages is unavailable for private repositories on the free plan.
+1. Enable **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. Run `gh workflow enable deploy-docs.yml --repo yukazakiri/koakademy`.
+3. Push a change under `docs/**` or manually dispatch the workflow.
 
-Published at `https://yukazakiri.github.io/koakademy/` (the `site`/`base` in `astro.config.mjs` — keep them in sync if the repository ever moves).
+Successful deployments publish at `https://yukazakiri.github.io/koakademy/` (the `site`/`base` in `astro.config.mjs` — keep them in sync if the repository ever moves).
 
 ## Writing guidelines for maintainers
 

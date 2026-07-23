@@ -13,13 +13,21 @@ KoAkademy is a production-capable beta. It provides a hardened reference topolog
 
 Only the latest stable, non-prerelease release is supported. Development and prerelease images are for evaluation. Read the changelog and release notes before upgrading.
 
+## What does the one-line installer change?
+
+It validates an existing Linux Docker engine, initializes Swarm only when inactive, and deploys manager-pinned KoAkademy, PostgreSQL, Redis, Gotenberg, and optional RustFS services. If Swarm is already active, the installer preserves it and requires the current node to be a manager. It does not install Docker, configure TLS, leave a Swarm, or remove unrelated services.
+
+The Bash and PowerShell commands resolve the latest stable KoAkademy GitHub tag at runtime. Local RustFS resolves the newest stable tag with a published Docker image, or the newest published non-preview beta when no stable tag exists. Resolution fails instead of silently using a mutable `latest` image.
+
 ## Can I use MySQL or SQLite in production?
 
 The prebuilt production image supports PostgreSQL only. SQLite remains the default lightweight option for native development and automated tests. Other databases are not part of the supported production contract.
 
-## Why is the app exposed only on `127.0.0.1:8000`?
+## Which ports are exposed?
 
-TLS termination and public routing belong to an operator-managed edge. Loopback binding prevents direct network access to the origin and makes broad forwarded-header trust safer. Proxy HTTPS traffic from Caddy, Nginx, Traefik, or a tunnel to that address.
+The default Swarm installer publishes KoAkademy on manager host port `8000`. Local RustFS also publishes its S3 API on `9000`; its console remains private. Restrict those ports with a firewall and forward HTTPS traffic from an operator-managed edge.
+
+The manual Compose topology publishes only `127.0.0.1:8000`. PostgreSQL, Redis, and Gotenberg are private in both topologies.
 
 ## Can portal and admin use separate subdomains?
 
@@ -37,9 +45,9 @@ Not in the supported production flow. `RUN_MIGRATIONS=false` is the default. Ope
 
 KoAkademy uses `spatie/laravel-pdf` with Gotenberg. Gotenberg runs as a private production service. DOMPDF is not installed and is not a fallback.
 
-## Is local disk supported for production uploads?
+## Is local storage supported for production uploads?
 
-No. Production uploads require external S3-compatible storage. Container-local storage is for framework runtime data and temporary work; treating it as durable upload storage risks data loss during replacement or scaling.
+Container-local application storage is not a durable upload store. The installer can deploy local RustFS, which provides S3-compatible object storage on a persistent Docker volume, for evaluation or a backed-up single-node installation. Use redundant external S3-compatible storage when the upload data must survive a host failure.
 
 ## Are all routes under `/api` public API contracts?
 

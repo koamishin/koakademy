@@ -35,6 +35,14 @@ Two ways to cut a stable release — both validate strict semver (`X.Y.Z`, optio
 - **Push a tag** matching `v*.*.*` → `official-release-on-tag.yml` builds, tags the image with the release tag + `latest` + `stable-{sha}`, and creates a full GitHub release whose notes group merged PRs by label (Breaking / Features / Fixes / Refactors / Docs / Chores). It does **not** commit `version.json` back.
 - **Actions → "Manual Official Release"** (`workflow_dispatch`) — inputs: `version`, `publish_latest`, `draft`, `prerelease`, `update_version_file`, `extra_notes`, `fail_if_tag_exists`. Must run from the default branch; can commit `version.json` back and notify Discord.
 
+Before announcing public self-hosting, confirm that the linked GHCR package is also public; repository visibility does not substitute for package visibility. From a logged-out shell, both the stable image and the raw installer must resolve:
+
+```sh
+docker manifest inspect ghcr.io/yukazakiri/koakademy:<stable-tag>
+curl --fail --silent --show-error --output /dev/null \
+  https://raw.githubusercontent.com/yukazakiri/koakademy/master/scripts/install.sh
+```
+
 For release notes to categorize well, keep PR labels accurate — the [auto-labeler](./automation/) does the first pass.
 
 ## The `version.json` contract

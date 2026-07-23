@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+set -eu
+
+: "${KOAKADEMY_INSTALLER_TEST_STATE:?}"
+
+mkdir -p \
+    "${KOAKADEMY_INSTALLER_TEST_STATE}/services" \
+    "${KOAKADEMY_INSTALLER_TEST_STATE}/secrets" \
+    "${KOAKADEMY_INSTALLER_TEST_STATE}/configs" \
+    "${KOAKADEMY_INSTALLER_TEST_STATE}/networks" \
+    "${KOAKADEMY_INSTALLER_TEST_STATE}/volumes"
+
+printf '%s\n' "$*" >>"${KOAKADEMY_INSTALLER_TEST_STATE}/docker.log"
+
+object_exists() {
+    test -f "${KOAKADEMY_INSTALLER_TEST_STATE}/$1/$2"
+}
+
+create_object() {
+    : >"${KOAKADEMY_INSTALLER_TEST_STATE}/$1/$2"
+}
+
+command_name="${1:-}"
+shift || true
+
+case "${command_name}" in
+    version)
+        exit 0
+        ;;
+    info)
+        case "$*" in
+            *'{{.OSType}}'*) printf 'linux\n' ;;
+            *'{{.Architecture}}'*) printf 'amd64\n' ;;
+            *'{{.Swarm.LocalNodeState}}'*) printf 'active\n' ;;
+            *'{{.Swarm.ControlAvailable}}'*) printf 'true\n' ;;
+            *'{{.Name}}'*) printf 'installer-test-manager\n' ;;
+            *) exit 1 ;;
+        esac
+        ;;
+    manifest)
+        test "${1:-}" = "inspect"
+        ;;
+    swarm)
+        test "${1:-}" = "init"
+        create_object networks swarm-initialized
+        ;;
+    secret|config)
+        object_type="${command_name}s"
+        operation="${1:-}"
+        shift || true
+
+        if test "${operation}" = "inspect"; then
+            name="${*: -1}"
+            object_exists "${object_type}" "${name}" || exit 1
+            case "$*" in
+                *com.koakademy.managed-by*) printf 'swarm-installer\n' ;;
+            esac
+            exit 0
+        fi
+
+        test "${operation}" = "create"
+        while test "$#" -gt 0; do
+            case "$1" in
+                --label)
+                    shift 2
+                    ;;
+                *)
+                    create_object "${object_type}" "$1"
+                    exit 0
+                    ;;
+            esac
+        done
+        exit 1
+        ;;
+    network)
+        operation="${1:-}"
+        shift || true
+
+        if test "${operation}" = "inspect"; then
+            name="${*: -1}"
+            object_exists networks "${name}" || exit 1
+            case "$*" in
+                *com.koakademy.managed-by*) printf 'swarm-installer\n' ;;
+                *'{{.Driver}}'*) printf 'overlay\n' ;;
+                *'{{.Scope}}'*) printf 'swarm\n' ;;
+                *'{{.Attachable}}'*) printf 'true\n' ;;
+            esac
+            exit 0
+        fi
+
+        test "${operation}" = "create"
+        create_object networks "${*: -1}"
+        ;;
+    volume)
+        operation="${1:-}"
+        shift || true
+
+        if test "${operation}" = "inspect"; then
+            name="${*: -1}"
+            object_exists volumes "${name}" || exit 1
+            case "$*" in
+                *com.koakademy.managed-by*) printf 'swarm-installer\n' ;;
+            esac
+            exit 0
+        fi
+
+        test "${operation}" = "create"
+        create_object volumes "${*: -1}"
+        ;;
+    service)
+        operation="${1:-}"
+        shift || true
+
+        case "${operation}" in
+            inspect)
+                name="${*: -1}"
+                object_exists services "${name}" || exit 1
+                case "$*" in
+                    *com.koakademy.managed-by*) printf 'swarm-installer\n' ;;
+                    *ContainerSpec.Env*) printf 'APP_URL=http://127.0.0.1:18000\n' ;;
+                esac
+                ;;
+            create)
+                name=""
+                previous=""
+                for argument in "$@"; do
+                    if test "${previous}" = "--name"; then
+                        name="${argument}"
+                        break
+                    fi
+                    previous="${argument}"
+                done
+                test -n "${name}"
+                create_object services "${name}"
+                ;;
+            ls)
+                printf '1/1\n'
+                ;;
+            ps)
+                case "$*" in
+                    *'{{.CurrentState}}'*) printf 'Complete 1 second ago\n' ;;
+                    *'{{.Error}}'*) printf '\n' ;;
+                esac
+                ;;
+            rm)
+                rm -f -- "${KOAKADEMY_INSTALLER_TEST_STATE}/services/${1:-}"
+                ;;
+            logs)
+                ;;
+            *)
+                exit 1
+                ;;
+        esac
+        ;;
+    *)
+        exit 1
+        ;;
+esac

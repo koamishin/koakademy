@@ -6,6 +6,9 @@ Notable project changes are recorded here. KoAkademy follows semantic versioning
 
 ### Added
 
+- One-line Bash and PowerShell installers for a default Docker Swarm deployment
+- Runtime stable-tag discovery for KoAkademy and optional local RustFS
+- Docker-secret-backed PostgreSQL, Redis, object storage, migration jobs, and first-run health verification
 - Supported production Compose topology with KoAkademy, PostgreSQL, Redis, and Gotenberg
 - Canonical self-hosting, deployment, configuration, troubleshooting, architecture, FAQ, security, and contribution documentation
 - Deterministic root-Markdown-to-MDX synchronization with CI drift checks
@@ -14,10 +17,12 @@ Notable project changes are recorded here. KoAkademy follows semantic versioning
 
 ### Changed
 
+- Self-hosting now defaults to manager-pinned Swarm services with host ports for KoAkademy and optional RustFS; Compose remains the manual path
+- GitHub Pages deployment is paused while the repository is private
 - Production onboarding now uses the real `/setup` wizard
 - Production migrations are an explicit operator action and are disabled on container startup by default
 - Trusted hosts derive from configured application/portal/admin hosts, with optional additional exact hosts
-- Production uploads require external S3-compatible storage
+- Production uploads require S3-compatible storage, either external or the optional local RustFS service
 - `spatie/laravel-pdf` uses Gotenberg without an unavailable DOMPDF fallback
 - Updated the locked Guzzle, passkey, and WebAuthn dependency chain to clear known security advisories
 - Package and container metadata consistently identify KoAkademy and AGPL-3.0-or-later

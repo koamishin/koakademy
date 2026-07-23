@@ -5,7 +5,33 @@ description: Production environment and service configuration.
 
 {/* GENERATED FILE. Source: /CONFIGURATION.md. Run: npm run docs:sync */}
 
-Start from `.env.production.example`; it is the public production contract for `compose.production.yaml`. Keep `.env` out of version control and restart the application after changes.
+The default Docker Swarm installer generates the production environment and stores credentials as Docker secrets. The manual Compose path starts from `.env.production.example`, which is the public contract for `compose.production.yaml`. Keep local environment files out of version control and restart or update the application service after changes.
+
+## Swarm installer inputs
+
+The installer is interactive by default. Set these process environment variables before running it to override a prompt or default:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `KOAKADEMY_VERSION` | Latest stable GitHub tag | Pin a specific stable KoAkademy image tag. |
+| `KOAKADEMY_APP_URL` | `http://<detected-ip>:8000` | Public origin without a path. |
+| `KOAKADEMY_APP_PORT` | `8000` | Host port published for KoAkademy. |
+| `KOAKADEMY_STORAGE` | Interactive, local RustFS first | Choose `rustfs` or `external`. |
+| `RUSTFS_VERSION` | Newest stable or non-preview beta GitHub tag with a published image | Pin the local RustFS image tag. |
+| `KOAKADEMY_RUSTFS_PORT` | `9000` | Host port for the local RustFS S3 API. |
+| `KOAKADEMY_S3_ENDPOINT` | Interactive for external storage | S3-compatible API origin. |
+| `KOAKADEMY_S3_BUCKET` | `koakademy` for RustFS | Existing external bucket or local bucket name. |
+| `KOAKADEMY_S3_REGION` | `us-east-1` for RustFS; `auto` for external | Provider region value. |
+| `KOAKADEMY_S3_PUBLIC_URL` | Local RustFS bucket URL | Browser-visible bucket or CDN base URL. |
+| `KOAKADEMY_S3_PATH_STYLE` | `true` for RustFS; interactive for external | Whether the S3 client uses path-style requests. |
+| `KOAKADEMY_S3_ACCESS_KEY` | Generated for RustFS; interactive for external | Storage access key used only when creating the Docker secret. |
+| `KOAKADEMY_S3_SECRET_KEY` | Generated for RustFS; hidden prompt for external | Storage secret key used only when creating the Docker secret. |
+| `KOAKADEMY_TRUSTED_PROXIES` | Empty | Comma-separated edge IP addresses or CIDRs. |
+| `GITHUB_TOKEN` | Empty | Optional GitHub token for authenticated tag lookup and a higher API rate limit. |
+
+On Bash, prefix the installer command with non-secret values such as `KOAKADEMY_APP_URL=https://school.example`. On PowerShell, set `$env:KOAKADEMY_APP_URL` first. Prefer the hidden credential prompt over putting secrets in shell history.
+
+Generated application, database, Redis, and storage credentials live in Swarm's encrypted state and are reused on subsequent runs. Back up the Swarm manager state as well as application data; the installer does not write a plaintext recovery file.
 
 ## Application and routing
 
@@ -39,7 +65,7 @@ Production defaults encrypt server-side session data and mark cookies Secure, Ht
 
 ## Object storage
 
-Production uploads require `FILESYSTEM_DISK=s3` and all of:
+Production uploads require `FILESYSTEM_DISK=s3`. The Swarm installer can supply these values from local RustFS or an external S3-compatible service; the manual Compose path requires all of:
 
 ```dotenv
 AWS_ACCESS_KEY_ID=
@@ -53,7 +79,7 @@ AWS_USE_PATH_STYLE_ENDPOINT=true
 
 Use a bucket dedicated to this installation and credentials limited to that bucket. `AWS_ENDPOINT` is the provider API endpoint. `AWS_URL` is the public or CDN base URL if objects are served publicly; leave it empty when the provider and application generate URLs without an override. Path-style behavior depends on the provider.
 
-Local storage is retained only for framework runtime files, logs, caches, and temporary work. It is not the supported production upload store.
+Application-container storage is retained only for framework runtime files, logs, caches, and temporary work. It is not the supported production upload store. The optional local RustFS service is object storage backed by its own persistent volume, but it remains a single-node topology that must be backed up.
 
 ### Private Digital Library storage
 
@@ -102,7 +128,7 @@ LARAVEL_PDF_ROLLBACK_DRIVER=gotenberg
 GOTENBERG_URL=http://gotenberg:3000
 ```
 
-Gotenberg remains on the private Compose network. DOMPDF is not installed or supported as a fallback. Treat PDF jobs as failed when Gotenberg is unavailable and restore that service before retrying.
+Gotenberg remains on the private Compose network or Swarm overlay. DOMPDF is not installed or supported as a fallback. Treat PDF jobs as failed when Gotenberg is unavailable and restore that service before retrying.
 
 ## Mail and broadcasting
 
