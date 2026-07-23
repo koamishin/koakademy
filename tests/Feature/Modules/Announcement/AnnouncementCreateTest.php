@@ -57,6 +57,9 @@ test('announcement creation stores starts_at and ends_at', function (): void {
     $user = User::factory()->create(['role' => UserRole::Admin]);
     Permission::findOrCreate('Create:Announcement', 'web');
     $user->givePermissionTo('Create:Announcement');
+    $referenceTime = now()->startOfSecond();
+    $startsAt = $referenceTime->copy()->addDay();
+    $endsAt = $referenceTime->copy()->addWeek();
 
     actingAs($user)
         ->post(route('administrators.announcements.store'), [
@@ -64,14 +67,14 @@ test('announcement creation stores starts_at and ends_at', function (): void {
             'content' => 'This is a scheduled announcement.',
             'type' => 'info',
             'is_active' => true,
-            'starts_at' => now()->addDay()->toDateTimeString(),
-            'ends_at' => now()->addWeek()->toDateTimeString(),
+            'starts_at' => $startsAt->toDateTimeString(),
+            'ends_at' => $endsAt->toDateTimeString(),
         ])
         ->assertRedirect();
 
     assertDatabaseHas(Announcement::class, [
         'title' => 'Scheduled Event',
-        'starts_at' => now()->addDay(),
-        'ends_at' => now()->addWeek(),
+        'starts_at' => $startsAt->toDateTimeString(),
+        'ends_at' => $endsAt->toDateTimeString(),
     ]);
 });
