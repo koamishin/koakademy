@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.17.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.1",
-  "commit": "051288d9fbb31ff5b925e50fb527324cf8faf04e",
+  "version": "1.10.0-dev.17.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.2",
+  "commit": "9d84420a8177d3be7d49e28c8885d6f5092dabab",
   "branch": "master",
-  "timestamp": "2026-07-23T04:16:48Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29978834734",
+  "timestamp": "2026-07-23T04:30:21Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29979524907",
   "release_type": "chore",
   "changelog": {
-    "current": "Version 1.10.0-dev.17.1 - style: satisfy repository Pint rules",
-    "previous": "1.10.0-dev.17.0"
+    "current": "Version 1.10.0-dev.17.2 - test: use trusted hosts in branding coverage",
+    "previous": "1.10.0-dev.17.1"
   },
   "metadata": {
     "author": "yukazakiri",
