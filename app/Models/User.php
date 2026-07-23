@@ -716,6 +716,14 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
     }
 
     /**
+     * The time used by SimpleStats to attribute the user's first tracked event.
+     */
+    public function getTrackingTime(): Carbon
+    {
+        return $this->created_at ?? $this->freshTimestamp();
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -857,13 +865,5 @@ final class User extends Authenticatable implements FilamentUser, HasAppAuthenti
 
             return 'Limited Access';
         });
-    }
-
-    /**
-     * The time used by SimpleStats to attribute the user's first tracked event.
-     */
-    public function getTrackingTime(): Carbon
-    {
-        return $this->created_at ?? $this->freshTimestamp();
     }
 }

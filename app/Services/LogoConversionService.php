@@ -227,5 +227,4 @@ final class LogoConversionService
 
         imagepng($canvas, $destPath, 9);
     }
-
 }
