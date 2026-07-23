@@ -64,9 +64,11 @@ final class HandleInertiaRequests extends Middleware
         $moduleAdminNavigationService = app(ModuleAdminNavigationService::class);
         $administratorSidebarCounts = app(AdministratorSidebarCounts::class);
         $socialiteProviderService = app(SocialiteProviderService::class);
+        $generalSettingsService = app(GeneralSettingsService::class);
 
         $featureValues = $onboardingService->getAllFeatureValues($user);
         $studentInformationUpdatesEnabled = $user && Feature::for($user)->active(StudentInformationUpdates::class);
+        $libraryEnabled = (bool) $generalSettingsService->getGlobalSetting('library_module_enabled', false);
 
         return array_merge(
             parent::share($request),
@@ -94,7 +96,11 @@ final class HandleInertiaRequests extends Middleware
                 ],
                 'featureFlags' => [
                     'experimentalKeys' => config('onboarding.experimental_feature_keys', []),
-                    'enabledRoutes' => $onboardingService->getSidebarFeatureFlags($featureValues),
+                    'enabledRoutes' => array_merge(
+                        $onboardingService->getSidebarFeatureFlags($featureValues),
+                        ['library' => $libraryEnabled]
+                    ),
+                    'library' => $libraryEnabled,
                     'studentSignaturePad' => $user && Feature::for($user)->active(StudentSignaturePad::class),
                     'studentAvatarUpload' => $user && Feature::for($user)->active(StudentAvatarUpload::class),
                     'studentInformationUpdates' => $studentInformationUpdatesEnabled,

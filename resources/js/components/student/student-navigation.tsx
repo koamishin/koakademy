@@ -1,13 +1,7 @@
 import type { NavItem, NavSubItem } from "@/components/nav-main";
 import { Badge } from "@/components/ui/badge";
-import {
-    IconCalendar,
-    IconDashboard,
-    IconReceipt,
-    IconSchool,
-    IconSpeakerphone,
-    IconUsers,
-} from "@tabler/icons-react";
+import { index as libraryIndex } from "@/routes/library";
+import { IconBooks, IconCalendar, IconDashboard, IconReceipt, IconSchool, IconSpeakerphone, IconUsers } from "@tabler/icons-react";
 
 export interface StudentPortalClass {
     id: number;
@@ -75,6 +69,16 @@ export function getStudentPortalNavigation(
                 ) : undefined,
             items: myClassesItems,
         },
+        ...(isEnabled("library")
+            ? [
+                  {
+                      id: "library",
+                      title: "Digital Library",
+                      icon: IconBooks,
+                      url: libraryIndex.url(),
+                  },
+              ]
+            : []),
         {
             id: "tuition",
             title: "Tuition & Fees",

@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Modules\LibrarySystem\Providers;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Modules\LibrarySystem\Models\Book;
+use Modules\LibrarySystem\Policies\BookPolicy;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -23,6 +26,7 @@ final class LibrarySystemServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Book::class, BookPolicy::class);
         $this->registerCommands();
         $this->registerCommandSchedules();
         $this->registerTranslations();

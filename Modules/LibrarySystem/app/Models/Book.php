@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\LibrarySystem\Database\Factories\BookFactory;
 
@@ -57,6 +58,21 @@ final class Book extends Model
     public function borrowRecords(): HasMany
     {
         return $this->hasMany(BorrowRecord::class);
+    }
+
+    public function digitalEdition(): HasOne
+    {
+        return $this->hasOne(DigitalEdition::class);
+    }
+
+    public function userStates(): HasMany
+    {
+        return $this->hasMany(UserBookState::class);
+    }
+
+    public function bookmarks(): HasMany
+    {
+        return $this->hasMany(LibraryBookmark::class);
     }
 
     public function isAvailable(): bool

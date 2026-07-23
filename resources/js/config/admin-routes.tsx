@@ -1,4 +1,5 @@
 import type { Route } from "@/components/sidebar-03/nav-main";
+import { index as libraryIndex } from "@/routes/library";
 import {
     ACADEMIC_ADMIN_ROLES,
     ALL_ADMIN_ROLES,
@@ -212,6 +213,14 @@ export const ADMIN_ROUTES: AdminRoute[] = [
         icon: <IconDashboard className="size-4" />,
         link: "/administrators/dashboard",
         section: "core",
+    },
+    {
+        id: "admin-digital-library",
+        title: "Digital Library",
+        icon: <IconBooks className="size-4" />,
+        link: libraryIndex.url(),
+        section: "core",
+        allowedRoles: ALL_STAFF_ROLES,
     },
     {
         id: "admin-notifications",
@@ -740,7 +749,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
  */
 function isSystemAdminRole(role: string): boolean {
     // Check against enum values string AND labels
-    return [
+    const systemAdminRoles: string[] = [
         UserRole.Developer,
         UserRole.SuperAdmin,
         UserRole.Admin,
@@ -750,7 +759,9 @@ function isSystemAdminRole(role: string): boolean {
         "System Administrator",
         "Super Administrator",
         "System Developer",
-    ].includes(role as any);
+    ];
+
+    return systemAdminRoles.includes(role);
 }
 
 /**

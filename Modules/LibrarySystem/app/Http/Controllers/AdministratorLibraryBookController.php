@@ -11,6 +11,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Modules\LibrarySystem\Enums\DigitalRightsBasis;
 use Modules\LibrarySystem\Http\Requests\Administrators\LibraryBookRequest;
 use Modules\LibrarySystem\Models\Author;
 use Modules\LibrarySystem\Models\Book;
@@ -122,6 +123,9 @@ final class AdministratorLibraryBookController extends Controller
 
     public function edit(Book $book): Response
     {
+        $book->load('digitalEdition');
+        $edition = $book->digitalEdition;
+
         return Inertia::render('administrators/library/books/edit', [
             'user' => $this->getUserProps(),
             'book' => [
@@ -143,6 +147,22 @@ final class AdministratorLibraryBookController extends Controller
                 'available_copies' => $book->available_copies,
                 'location' => $book->location,
                 'status' => $book->status,
+                'digital_edition' => $edition ? [
+                    'id' => $edition->id,
+                    'original_name' => $edition->original_name,
+                    'mime_type' => $edition->mime_type,
+                    'size_bytes' => $edition->size_bytes,
+                    'status' => $edition->status->value,
+                    'downloads_allowed' => $edition->downloads_allowed,
+                    'rights_basis' => $edition->rights_basis?->value,
+                    'rights_holder' => $edition->rights_holder,
+                    'license_url' => $edition->license_url,
+                    'rights_notes' => $edition->rights_notes,
+                    'rights_expires_at' => $edition->rights_expires_at?->format('Y-m-d'),
+                    'uploaded_at' => $edition->uploaded_at?->toIso8601String(),
+                    'published_at' => $edition->published_at?->toIso8601String(),
+                ] : null,
+                'can_manage_digital_edition' => request()->user()?->can('manageDigitalEdition', $book) ?? false,
             ],
             'options' => $this->getBookOptions(),
         ]);
@@ -243,6 +263,12 @@ final class AdministratorLibraryBookController extends Controller
                 ['value' => 'borrowed', 'label' => 'Borrowed'],
                 ['value' => 'maintenance', 'label' => 'Maintenance'],
             ],
+            'digital_rights_bases' => collect(DigitalRightsBasis::cases())
+                ->map(fn (DigitalRightsBasis $basis): array => [
+                    'value' => $basis->value,
+                    'label' => $basis->label(),
+                ])
+                ->all(),
         ];
     }
 

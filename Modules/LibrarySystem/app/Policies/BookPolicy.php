@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\LibrarySystem\Policies;
 
+use App\Enums\UserRole;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Modules\LibrarySystem\Models\Book;
@@ -65,5 +67,15 @@ final class BookPolicy
     public function reorder(AuthUser $authUser): bool
     {
         return $authUser->can('Reorder:Book');
+    }
+
+    public function manageDigitalEdition(User $user, Book $book): bool
+    {
+        return in_array($user->role, [
+            UserRole::Developer,
+            UserRole::SuperAdmin,
+            UserRole::Admin,
+            UserRole::Librarian,
+        ], true);
     }
 }

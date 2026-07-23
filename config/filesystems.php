@@ -48,6 +48,28 @@ return [
             'report' => false,
         ],
 
+        'library' => env('LIBRARY_EBOOK_DRIVER', 'local') === 's3'
+            ? [
+                'driver' => 's3',
+                'key' => env('LIBRARY_R2_ACCESS_KEY_ID'),
+                'secret' => env('LIBRARY_R2_SECRET_ACCESS_KEY'),
+                'region' => env('LIBRARY_R2_DEFAULT_REGION', 'auto'),
+                'bucket' => env('LIBRARY_R2_BUCKET'),
+                'endpoint' => env('LIBRARY_R2_ENDPOINT'),
+                'use_path_style_endpoint' => false,
+                'visibility' => 'private',
+                'throw' => true,
+                'report' => true,
+            ]
+            : [
+                'driver' => 'local',
+                'root' => storage_path('app/private/library'),
+                'serve' => false,
+                'visibility' => 'private',
+                'throw' => true,
+                'report' => true,
+            ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

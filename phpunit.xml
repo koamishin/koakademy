@@ -37,5 +37,6 @@
         <env name="PULSE_DB_CONNECTION" value="sqlite"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="SIMPLESTATS_ENABLED" value="false"/>
     </php>
 </phpunit>

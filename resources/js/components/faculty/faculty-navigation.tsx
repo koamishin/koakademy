@@ -1,6 +1,8 @@
 import type { NavItem, NavSubItem } from "@/components/nav-main";
 import { Badge } from "@/components/ui/badge";
+import { index as libraryIndex } from "@/routes/library";
 import {
+    IconBooks,
     IconBriefcase,
     IconCalendar,
     IconChartBar,
@@ -84,6 +86,16 @@ export function getFacultyPortalNavigation(enabledRoutes: Record<string, boolean
                 ) : undefined,
             items: myClassesItems,
         },
+        ...(isEnabled("library")
+            ? [
+                  {
+                      id: "library",
+                      title: "Digital Library",
+                      icon: IconBooks,
+                      url: libraryIndex.url(),
+                  },
+              ]
+            : []),
         {
             id: "schedule",
             title: "My Schedule",

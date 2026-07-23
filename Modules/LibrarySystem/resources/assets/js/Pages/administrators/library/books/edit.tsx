@@ -1,16 +1,24 @@
+import {
+    destroy as destroyDigitalEdition,
+    store as storeDigitalEdition,
+    update as updateDigitalEdition,
+} from "@/actions/Modules/LibrarySystem/Http/Controllers/AdministratorDigitalEditionController";
+import { store as storeBook, update as updateBook } from "@/actions/Modules/LibrarySystem/Http/Controllers/AdministratorLibraryBookController";
 import AdminLayout from "@/components/administrators/admin-layout";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { index as libraryBooksIndex } from "@/routes/administrators/library/books";
+import { read as readDigitalBook } from "@/routes/library/books";
 import type { User } from "@/types/user";
-import { Head, Link, useForm } from "@inertiajs/react";
-import { BookOpen, Save } from "lucide-react";
+import { Head, Link, router, useForm } from "@inertiajs/react";
+import { BookOpen, Download, FileCheck2, FileText, Save, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import { useState, type FormEvent } from "react";
-
-declare const route: any;
 
 interface SelectOption {
     value: string | number;
@@ -54,6 +62,24 @@ interface BookRecord {
     available_copies: number;
     location: string | null;
     status: string;
+    digital_edition: DigitalEditionRecord | null;
+    can_manage_digital_edition: boolean;
+}
+
+interface DigitalEditionRecord {
+    id: number;
+    original_name: string;
+    mime_type: string;
+    size_bytes: number;
+    status: "draft" | "published";
+    downloads_allowed: boolean;
+    rights_basis: string | null;
+    rights_holder: string | null;
+    license_url: string | null;
+    rights_notes: string | null;
+    rights_expires_at: string | null;
+    uploaded_at: string | null;
+    published_at: string | null;
 }
 
 interface Props {
@@ -63,6 +89,7 @@ interface Props {
         authors: SelectOption[];
         categories: SelectOption[];
         statuses: SelectOption[];
+        digital_rights_bases: SelectOption[];
     };
 }
 
@@ -93,13 +120,14 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
         event.preventDefault();
 
         if (book) {
-            form.put(route("administrators.library.books.update", book.id), {
+            form.transform((data) => ({ ...data, _method: "put" }));
+            form.post(updateBook.url(book.id), {
                 forceFormData: true,
             });
             return;
         }
 
-        form.post(route("administrators.library.books.store"), {
+        form.post(storeBook.url(), {
             forceFormData: true,
         });
     };
@@ -124,7 +152,7 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                         </div>
                         <div className="flex flex-wrap gap-2">
                             <Button type="button" variant="outline" asChild>
-                                <Link href={route("administrators.library.books.index")}>Back to books</Link>
+                                <Link href={libraryBooksIndex.url()}>Back to books</Link>
                             </Button>
                             <Button type="submit" className="gap-2" disabled={form.processing}>
                                 <Save className="h-4 w-4" />
@@ -344,6 +372,327 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                     </div>
                 </div>
             </form>
+
+            {book && <DigitalEditionSection book={book} rightsBases={options.digital_rights_bases} />}
         </AdminLayout>
     );
+}
+
+interface DigitalEditionFormData {
+    pdf: File | null;
+    status: "draft" | "published";
+    downloads_allowed: boolean;
+    rights_basis: string;
+    rights_holder: string;
+    license_url: string;
+    rights_notes: string;
+    rights_expires_at: string;
+    rights_confirmed: boolean;
+}
+
+function DigitalEditionSection({ book, rightsBases }: { book: BookRecord; rightsBases: SelectOption[] }) {
+    const edition = book.digital_edition;
+    const form = useForm<DigitalEditionFormData>({
+        pdf: null,
+        status: edition?.status ?? "draft",
+        downloads_allowed: edition?.downloads_allowed ?? false,
+        rights_basis: edition?.rights_basis ?? "",
+        rights_holder: edition?.rights_holder ?? "",
+        license_url: edition?.license_url ?? "",
+        rights_notes: edition?.rights_notes ?? "",
+        rights_expires_at: edition?.rights_expires_at ?? "",
+        rights_confirmed: false,
+    });
+
+    if (!book.can_manage_digital_edition) {
+        return edition ? (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Digital Edition</CardTitle>
+                    <CardDescription>A digital edition exists, but your account cannot change its publication settings.</CardDescription>
+                </CardHeader>
+            </Card>
+        ) : null;
+    }
+
+    const handleSubmit = (event: FormEvent) => {
+        event.preventDefault();
+
+        if (form.data.pdf) {
+            form.transform((data) => ({
+                ...data,
+                status: "draft",
+                downloads_allowed: false,
+                rights_confirmed: false,
+            }));
+            form.post(storeDigitalEdition.url(book.id), {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => form.setData("pdf", null),
+            });
+            return;
+        }
+
+        if (edition) {
+            form.put(updateDigitalEdition.url(book.id), {
+                preserveScroll: true,
+            });
+        }
+    };
+
+    const removeEdition = () => {
+        if (!window.confirm(`Remove the digital edition of “${book.title}”? This cannot be undone.`)) return;
+
+        router.delete(destroyDigitalEdition.url(book.id), {
+            preserveScroll: true,
+        });
+    };
+
+    const publishing = form.data.status === "published" && !form.data.pdf;
+
+    return (
+        <form onSubmit={handleSubmit} className="mt-6">
+            <Card className="overflow-hidden border-amber-700/20">
+                <CardHeader className="border-b bg-amber-50/70 dark:bg-amber-950/10">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex gap-3">
+                            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-amber-700/10 text-amber-700 dark:text-amber-300">
+                                <BookOpen className="size-5" />
+                            </div>
+                            <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <CardTitle>Digital Edition</CardTitle>
+                                    <Badge variant={edition?.status === "published" ? "default" : "secondary"}>
+                                        {edition?.status === "published" ? "Published" : edition ? "Draft" : "Not uploaded"}
+                                    </Badge>
+                                </div>
+                                <CardDescription className="mt-1">
+                                    Upload a rights-cleared PDF for authenticated online reading. New files default to draft and downloads stay off
+                                    unless explicitly allowed.
+                                </CardDescription>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {edition?.status === "published" && (
+                                <Button type="button" variant="outline" asChild>
+                                    <Link href={readDigitalBook.url(book.id)}>
+                                        <BookOpen className="size-4" />
+                                        Preview reader
+                                    </Link>
+                                </Button>
+                            )}
+                            {edition && (
+                                <Button type="button" variant="destructive" onClick={removeEdition}>
+                                    <Trash2 className="size-4" />
+                                    Remove edition
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </CardHeader>
+
+                <CardContent className="grid gap-7 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.85fr)] lg:p-6">
+                    <div className="space-y-6">
+                        <div className="space-y-3">
+                            <Label htmlFor="digital_pdf">{edition ? "Replace PDF" : "PDF file"}</Label>
+                            <label
+                                htmlFor="digital_pdf"
+                                className="border-border hover:border-primary/50 hover:bg-muted/30 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed p-8 text-center transition-colors"
+                            >
+                                <div className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-2xl">
+                                    <UploadCloud className="size-6" />
+                                </div>
+                                <div>
+                                    <p className="font-medium">
+                                        {form.data.pdf ? form.data.pdf.name : edition ? "Choose a replacement PDF" : "Choose a PDF to upload"}
+                                    </p>
+                                    <p className="text-muted-foreground mt-1 text-xs">PDF only, up to 90 MB. Files are stored privately.</p>
+                                </div>
+                            </label>
+                            <Input
+                                id="digital_pdf"
+                                type="file"
+                                accept=".pdf,application/pdf"
+                                className="sr-only"
+                                onChange={(event) => form.setData("pdf", event.target.files?.[0] ?? null)}
+                            />
+                            {form.errors.pdf && <p className="text-destructive text-sm">{form.errors.pdf}</p>}
+                        </div>
+
+                        {edition && (
+                            <div className="bg-muted/35 grid gap-3 rounded-2xl border p-4 sm:grid-cols-3">
+                                <FileMetric icon={FileText} label="Current file" value={edition.original_name} />
+                                <FileMetric icon={Download} label="File size" value={formatBytes(edition.size_bytes)} />
+                                <FileMetric
+                                    icon={FileCheck2}
+                                    label="Uploaded"
+                                    value={edition.uploaded_at ? new Date(edition.uploaded_at).toLocaleDateString() : "Unknown"}
+                                />
+                            </div>
+                        )}
+
+                        <div className="grid gap-5 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label>Publication status</Label>
+                                <Select
+                                    disabled={Boolean(form.data.pdf) || !edition}
+                                    value={form.data.pdf || !edition ? "draft" : form.data.status}
+                                    onValueChange={(value) => form.setData("status", value as "draft" | "published")}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="draft">Draft — staff only</SelectItem>
+                                        <SelectItem value="published">Published — authenticated users</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {(form.data.pdf || !edition) && (
+                                    <p className="text-muted-foreground text-xs leading-5">
+                                        Every new or replacement file is saved as a draft. Publish it in a separate reviewed step after the upload
+                                        completes.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Rights basis</Label>
+                                <Select value={form.data.rights_basis || undefined} onValueChange={(value) => form.setData("rights_basis", value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select documented rights" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {rightsBases.map((basis) => (
+                                            <SelectItem key={basis.value} value={String(basis.value)}>
+                                                {basis.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {form.errors.rights_basis && <p className="text-destructive text-sm">{form.errors.rights_basis}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="rights_holder">Rights holder</Label>
+                                <Input
+                                    id="rights_holder"
+                                    value={form.data.rights_holder}
+                                    onChange={(event) => form.setData("rights_holder", event.target.value)}
+                                    placeholder="Author, publisher, or DCCP"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="license_url">License or permission URL</Label>
+                                <Input
+                                    id="license_url"
+                                    type="url"
+                                    value={form.data.license_url}
+                                    onChange={(event) => form.setData("license_url", event.target.value)}
+                                    placeholder="https://…"
+                                />
+                                {form.errors.license_url && <p className="text-destructive text-sm">{form.errors.license_url}</p>}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="rights_expires_at">Rights expiration</Label>
+                                <Input
+                                    id="rights_expires_at"
+                                    type="date"
+                                    value={form.data.rights_expires_at}
+                                    onChange={(event) => form.setData("rights_expires_at", event.target.value)}
+                                />
+                                <p className="text-muted-foreground text-xs">Leave blank when rights do not expire.</p>
+                            </div>
+
+                            <div className="flex items-start gap-3 rounded-xl border p-4">
+                                <Checkbox
+                                    id="downloads_allowed"
+                                    checked={form.data.downloads_allowed}
+                                    onCheckedChange={(checked) => form.setData("downloads_allowed", checked === true)}
+                                />
+                                <div>
+                                    <Label htmlFor="downloads_allowed">Allow PDF downloads</Label>
+                                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                        Keep disabled unless the documented rights explicitly permit downloadable copies.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 sm:col-span-2">
+                                <Label htmlFor="rights_notes">Rights and review notes</Label>
+                                <Textarea
+                                    id="rights_notes"
+                                    rows={4}
+                                    value={form.data.rights_notes}
+                                    onChange={(event) => form.setData("rights_notes", event.target.value)}
+                                    placeholder="Record the permission source, license limits, librarian review, or takedown considerations."
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-5">
+                        <div className="rounded-2xl border border-amber-700/20 bg-amber-50/70 p-5 dark:bg-amber-950/10">
+                            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                                <ShieldCheck className="size-5" />
+                                <h3 className="font-serif text-lg font-semibold">Publication attestation</h3>
+                            </div>
+                            <div className="text-muted-foreground mt-3 space-y-3 text-sm leading-6">
+                                <p>Only publish files that DCCP owns or is authorized to reproduce and communicate digitally.</p>
+                                <p>
+                                    Physical ownership, educational purpose, or disabling the download button does not itself grant digital
+                                    distribution rights.
+                                </p>
+                            </div>
+                            {publishing && (
+                                <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-800/20 bg-white/60 p-4 dark:bg-black/20">
+                                    <Checkbox
+                                        id="rights_confirmed"
+                                        checked={form.data.rights_confirmed}
+                                        onCheckedChange={(checked) => form.setData("rights_confirmed", checked === true)}
+                                    />
+                                    <Label htmlFor="rights_confirmed" className="text-sm leading-6">
+                                        I reviewed the documentation and confirm DCCP has the right to provide this PDF to authenticated users under
+                                        the selected terms.
+                                    </Label>
+                                </div>
+                            )}
+                            {form.errors.rights_confirmed && <p className="text-destructive mt-2 text-sm">{form.errors.rights_confirmed}</p>}
+                        </div>
+
+                        <Button type="submit" className="w-full gap-2" size="lg" disabled={form.processing || (!edition && !form.data.pdf)}>
+                            <Save className="size-4" />
+                            {form.processing
+                                ? "Saving digital edition…"
+                                : form.data.pdf
+                                  ? edition
+                                      ? "Replace PDF as draft"
+                                      : "Upload PDF as draft"
+                                  : "Save publication settings"}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </form>
+    );
+}
+
+function FileMetric({ icon: Icon, label, value }: { icon: typeof FileText; label: string; value: string }) {
+    return (
+        <div className="flex min-w-0 gap-2">
+            <Icon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+            <div className="min-w-0">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">{label}</p>
+                <p className="mt-1 truncate text-sm font-medium" title={value}>
+                    {value}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function formatBytes(bytes: number): string {
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

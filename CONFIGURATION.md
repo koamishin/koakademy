@@ -50,6 +50,41 @@ Use a bucket dedicated to this installation and credentials limited to that buck
 
 Local storage is retained only for framework runtime files, logs, caches, and temporary work. It is not the supported production upload store.
 
+### Private Digital Library storage
+
+Digital editions use a separate private S3-compatible bucket. Do not reuse the public upload bucket, add a public custom domain, or place an object-storage URL in Inertia data.
+
+```dotenv
+LIBRARY_EBOOK_DRIVER=s3
+LIBRARY_EBOOK_MAX_KB=92160
+LIBRARY_READER_URL_MINUTES=60
+LIBRARY_DOWNLOAD_URL_MINUTES=5
+LIBRARY_TAKEDOWN_EMAIL=library@example.edu
+LIBRARY_R2_ACCESS_KEY_ID=
+LIBRARY_R2_SECRET_ACCESS_KEY=
+LIBRARY_R2_DEFAULT_REGION=auto
+LIBRARY_R2_BUCKET=
+LIBRARY_R2_ENDPOINT=https://account-id.r2.cloudflarestorage.com
+```
+
+Grant the application credentials access only to the private library bucket. The application validates uploads, stores random object names and checksums, and authorizes every reader or download request before issuing an expiring URL. Keep downloads disabled unless the documented license permits them.
+
+Configure bucket CORS for the exact DCCP HTTPS origin so PDF.js can make range requests. Do not use `*` for `AllowedOrigins`:
+
+```json
+[
+    {
+        "AllowedOrigins": ["https://portal.dccp.edu.ph"],
+        "AllowedMethods": ["GET", "HEAD"],
+        "AllowedHeaders": ["Range"],
+        "ExposeHeaders": ["Accept-Ranges", "Content-Length", "Content-Range", "Content-Type", "ETag"],
+        "MaxAgeSeconds": 3600
+    }
+]
+```
+
+Before production publication, the librarian must record the digital rights basis and attest that DCCP may reproduce and communicate the file. Use the takedown address for rights complaints and unpublish or remove disputed material immediately. The feature flag `library_module_enabled` hides and blocks the authenticated Digital Library without affecting the restricted Library Management records.
+
 ## PDF rendering
 
 KoAkademy uses `spatie/laravel-pdf` with the Gotenberg driver:

@@ -95,6 +95,15 @@ curl --fail --silent --show-error http://127.0.0.1:8000/up
 
 Test the portal, `/admin`, authentication, uploads, a queued job, and a PDF export after every upgrade.
 
+When an upgrade includes the Digital Library migrations, run the migration command once as the release job before replacing the application replicas. Never let both Swarm replicas run migrations during startup. After the private bucket and its exact-origin CORS policy are configured, smoke-test through the public DCCP origin:
+
+1. Confirm a catalog-only title is visible but cannot open the reader.
+2. Upload a small licensed test PDF as a draft and confirm it is unavailable to normal users.
+3. Publish it with a rights basis and confirm inline reading, page navigation, bookmarks, and saved progress.
+4. Verify downloads return `403` while disabled, then enable and verify the attachment response.
+5. Repeat reader and download requests while routing through each application replica.
+6. Unpublish or remove the edition and confirm the previous signed URL expires and no new URL is issued.
+
 ## Rollback
 
 Application-image rollback is safe only when the previous code supports the migrated database schema. If release notes do not explicitly allow a code-only rollback, restore the pre-upgrade database backup and matching image together in a maintenance window. Never run `migrate:rollback` blindly on production data.
@@ -108,5 +117,7 @@ Application-image rollback is safe only when the previous code supports the migr
 - PostgreSQL, Redis, and Gotenberg have no host port mappings
 - `RUN_MIGRATIONS=false`
 - `/up`, `/setup` or `/admin`, upload, queue, mail, and PDF smoke tests pass
+- Private Digital Library bucket has no public domain, exact-origin CORS supports PDF range requests, and the takedown address is monitored
+- Librarian and legal approval exists before publishing production digital editions
 - Database and object-storage recovery tested
 - Logs, disk use, queue depth, certificate expiry, and backup failures monitored

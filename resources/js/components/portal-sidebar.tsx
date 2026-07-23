@@ -23,9 +23,11 @@ import {
 import { resolveBranding, type Branding } from "@/lib/branding";
 import { isFacultyPortalRole, isStudentPortalRole, normalizePortalRole } from "@/lib/portal-role";
 import { cn } from "@/lib/utils";
+import { index as libraryIndex } from "@/routes/library";
 import { User } from "@/types/user";
 import { Link, router, usePage } from "@inertiajs/react";
 import {
+    IconBooks,
     IconBriefcase,
     IconCalendar,
     IconChartBar,
@@ -99,6 +101,16 @@ function getStaffRoutes(enabledRoutes: Record<string, boolean>): NavItem[] {
             icon: IconDashboard,
             url: "/admin/dashboard",
         },
+        ...(isEnabled("library")
+            ? [
+                  {
+                      id: "library",
+                      title: "Digital Library",
+                      icon: IconBooks,
+                      url: libraryIndex.url(),
+                  },
+              ]
+            : []),
         {
             id: "users",
             title: "User Management",
