@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.14.4",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.14.4",
-  "commit": "1f9fb2d96ae70fe224f5b69f858fd494b51b67a2",
+  "version": "1.10.0-dev.15.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.15.0",
+  "commit": "74a218a9de3a228183f571b7f0a8b7bd96600236",
   "branch": "master",
-  "timestamp": "2026-07-23T00:11:43Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29968134975",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-23T00:50:17Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29969949242",
+  "release_type": "feature",
   "changelog": {
-    "current": "Version 1.10.0-dev.14.4 - fix: stop writing public icons and include patches in Docker build",
-    "previous": "1.10.0-dev.14.3"
+    "current": "Version 1.10.0-dev.15.0 - feat(library): add call number and accession number fields to books",
+    "previous": "1.10.0-dev.14.4"
   },
   "metadata": {
     "author": "yukazakiri",
