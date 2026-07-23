@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.17.0",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.0",
-  "commit": "13e82b914150c13319d19bfd87485ded9b9abd51",
+  "version": "1.10.0-dev.17.1",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.1",
+  "commit": "051288d9fbb31ff5b925e50fb527324cf8faf04e",
   "branch": "master",
-  "timestamp": "2026-07-23T03:59:29Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29978203027",
-  "release_type": "feature",
+  "timestamp": "2026-07-23T04:16:48Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29978834734",
+  "release_type": "chore",
   "changelog": {
-    "current": "Version 1.10.0-dev.17.0 - feat(self-hosting): add one-line swarm installer",
-    "previous": "1.10.0-dev.16.0"
+    "current": "Version 1.10.0-dev.17.1 - style: satisfy repository Pint rules",
+    "previous": "1.10.0-dev.17.0"
   },
   "metadata": {
     "author": "yukazakiri",
