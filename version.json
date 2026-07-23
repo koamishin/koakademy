@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.17.3",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.3",
-  "commit": "bcbc47e09c58998d21432b21504f6f13e527396a",
+  "version": "1.10.0-dev.17.4",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.4",
+  "commit": "c00485fbab3b39e3e08dcab407ed31ae76c37142",
   "branch": "master",
-  "timestamp": "2026-07-23T04:44:35Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29980095049",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-23T04:58:21Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29980713376",
+  "release_type": "chore",
   "changelog": {
-    "current": "Version 1.10.0-dev.17.3 - fix(ci): validate Compose without local secrets",
-    "previous": "1.10.0-dev.17.2"
+    "current": "Version 1.10.0-dev.17.4 - test: stabilize announcement schedule timestamps",
+    "previous": "1.10.0-dev.17.3"
   },
   "metadata": {
     "author": "yukazakiri",
