@@ -18,7 +18,7 @@ return [
 
     'logo' => [
         'enabled' => true, // set to false to disable the logo
-        'location' => '/web-app-manifest-192x192.png', // path (relative to public directory) or url to the logo to be added to the open graph image
+        'location' => '/logo.png', // path (relative to public directory) or url to the logo to be added to the open graph image
     ],
 
     'render_timeout' => 10000, // maximum time to wait for the screenshot to render before failing

@@ -290,7 +290,7 @@ export function DashboardSidebar({ user }: { user: User }) {
             <SidebarHeader className={cn("flex items-center justify-between gap-2 px-3 py-2 md:pt-3", isCollapsed ? "flex-col" : "flex-row")}>
                 <Link href={isStudent ? "/student/dashboard" : "/dashboard"} className={cn("flex items-center gap-2", isCollapsed && "flex-col")}>
                     <div className="flex aspect-square size-7 items-center justify-center overflow-hidden rounded bg-white">
-                        <img src={branding?.logo || "/web-app-manifest-192x192.png"} alt={`${organizationShortName} Logo`} className="size-5 object-contain" />
+                        <img src={branding?.logo || "/logo.png"} alt={`${organizationShortName} Logo`} className="size-5 object-contain" />
                     </div>
                     {!isCollapsed && (
                         <div className="flex flex-col">

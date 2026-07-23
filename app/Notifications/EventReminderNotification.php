@@ -76,8 +76,8 @@ final class EventReminderNotification extends Notification implements ShouldQueu
         return [
             'title' => "Event Reminder: {$event->title}",
             'body' => $this->reminder->message ?: "Don't forget about {$event->title} {$timeUntilEvent}!",
-            'icon' => '/favicon.ico', // App icon for push notifications
-            'badge' => '/favicon.ico',
+            'icon' => '/logo.png',
+            'badge' => '/logo.png',
             'tag' => "event-reminder-{$this->reminder->id}",
             'data' => [
                 'event_id' => $event->id,

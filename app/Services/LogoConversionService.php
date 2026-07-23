@@ -32,8 +32,6 @@ final class LogoConversionService
      * Each upload uses a unique timestamp-based subdirectory so previous uploads
      * are never overwritten — reverting the database leaves old logo files intact.
      *
-     * Also copies PWA files to public/ for direct browser access.
-     *
      * @return array{logo: string, favicon: string, og_image: string}
      */
     public function process(UploadedFile $file, ?string $disk = null): array
@@ -103,10 +101,7 @@ final class LogoConversionService
         $this->createOgImage($sourceImage, $tmpDir.'/og-image.png');
         Storage::disk($disk)->put("{$prefix}/og-image.png", file_get_contents($tmpDir.'/og-image.png'));
 
-        // ── 6. Copy PWA icons to public/ ──
-        $this->copyToPublic($tmpDir);
-
-        // ── 7. Cleanup ──
+        // ── 6. Cleanup ──
         File::cleanDirectory($tmpDir);
 
         return [
@@ -233,65 +228,4 @@ final class LogoConversionService
         imagepng($canvas, $destPath, 9);
     }
 
-    /**
-     * Copy web-accessible icon files to the public directory.
-     */
-    private function copyToPublic(string $tmpDir): void
-    {
-        $publicDir = public_path();
-        $copies = [
-            'favicon-16x16.png',
-            'favicon-32x32.png',
-            'favicon-96x96.png',
-            'apple-touch-icon.png',
-            'web-app-manifest-192x192.png',
-            'web-app-manifest-512x512.png',
-        ];
-
-        foreach ($copies as $filename) {
-            $source = $tmpDir.'/'.$filename;
-            if (File::exists($source)) {
-                File::copy($source, $publicDir.'/'.$filename);
-            }
-        }
-
-        // Copy 32x32 PNG as favicon.ico
-        if (File::exists($tmpDir.'/favicon-32x32.png')) {
-            File::copy($tmpDir.'/favicon-32x32.png', $publicDir.'/favicon.ico');
-        }
-
-        $this->updateWebManifest($publicDir);
-    }
-
-    /**
-     * Update the PWA web manifest with current icon paths.
-     */
-    private function updateWebManifest(string $publicDir): void
-    {
-        $manifestPath = $publicDir.'/site.webmanifest';
-
-        $manifest = [
-            'name' => config('app.name', 'KoAkademy'),
-            'short_name' => 'KOA',
-            'icons' => [
-                [
-                    'src' => '/web-app-manifest-192x192.png',
-                    'sizes' => '192x192',
-                    'type' => 'image/png',
-                    'purpose' => 'maskable',
-                ],
-                [
-                    'src' => '/web-app-manifest-512x512.png',
-                    'sizes' => '512x512',
-                    'type' => 'image/png',
-                    'purpose' => 'maskable',
-                ],
-            ],
-            'theme_color' => '#0f172a',
-            'background_color' => '#0f172a',
-            'display' => 'standalone',
-        ];
-
-        File::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-    }
 }

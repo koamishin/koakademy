@@ -70,7 +70,7 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
     const primaryColor = brandForm.data.theme_color || "#0f172a";
     const isDirty = brandForm.isDirty || brandForm.data.logo !== null;
 
-    const currentLogo = logoPreview || branding?.logo || "/web-app-manifest-192x192.png";
+    const currentLogo = logoPreview || branding?.logo || "/logo.png";
     const displayName = brandForm.data.app_name || "Your School Portal";
     const displayShortName = brandForm.data.app_short_name || displayName;
     const displayTagline = brandForm.data.tagline || "Your Campus, Your Connection";

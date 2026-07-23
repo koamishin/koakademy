@@ -305,7 +305,7 @@
         <!-- Official Header -->
         <div class="official-header">
             <div class="header-content">
-                <img src="{{ public_path('web-app-manifest-192x192.png') }}" alt="School Logo" class="school-logo">
+                <img src="{{ public_path('logo.png') }}" alt="School Logo" class="school-logo">
                 <div class="school-info">
                     <h1 class="school-name">{{ app(\App\Settings\SiteSettings::class)->getOrganizationName() }}</h1>
                     <div class="document-title">Student Timetable</div>

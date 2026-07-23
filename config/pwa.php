@@ -29,13 +29,8 @@ return [
         'theme_color' => '#0f172a',
         'icons' => [
             [
-                'src' => 'web-app-manifest-192x192.png',
-                'sizes' => '192x192',
-                'type' => 'image/png',
-            ],
-            [
-                'src' => 'web-app-manifest-512x512.png',
-                'sizes' => '512x512',
+                'src' => 'logo.png',
+                'sizes' => 'any',
                 'type' => 'image/png',
             ],
         ],

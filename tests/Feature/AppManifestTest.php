@@ -46,8 +46,7 @@ it('returns dynamic app manifest metadata from branding settings', function (): 
         ->assertJsonPath('short_name', 'DCCP')
         ->assertJsonPath('description', 'DCCP administrative portal progressive web application.')
         ->assertJsonPath('theme_color', '#123456')
-        ->assertJsonPath('icons.0.src', '/web-app-manifest-192x192.png')
-        ->assertJsonPath('icons.1.src', '/web-app-manifest-512x512.png');
+        ->assertJsonPath('icons.0.src', '/logo.png');
 
     expect($response->getContent())->not->toContain('KoAkademy');
 });

@@ -30,8 +30,8 @@ export const DEFAULT_BRANDING: Branding = {
     themeColor: "#0f172a",
     currency: "PHP",
     authLayout: "split",
-    logo: "/web-app-manifest-192x192.png",
-    favicon: "/web-app-manifest-192x192.png",
+    logo: "/logo.png",
+    favicon: "/logo.png",
 };
 
 export function resolveBranding(branding?: Partial<Branding> | null): Branding {

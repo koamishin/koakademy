@@ -49,7 +49,7 @@ final class SchoolBrandingService
             }
         }
 
-        return asset('web-app-manifest-192x192.png');
+        return asset('logo.png');
     }
 
     private function embedLogo(?string $storedPath, string $resolvedUrl): string

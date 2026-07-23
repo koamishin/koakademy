@@ -24,14 +24,8 @@ final class AppManifestController extends Controller
             'theme_color' => $siteSettings->getThemeColor(),
             'icons' => [
                 [
-                    'src' => '/web-app-manifest-192x192.png',
-                    'sizes' => '192x192',
-                    'type' => 'image/png',
-                    'purpose' => 'any maskable',
-                ],
-                [
-                    'src' => '/web-app-manifest-512x512.png',
-                    'sizes' => '512x512',
+                    'src' => $siteSettings->getLogo(),
+                    'sizes' => 'any',
                     'type' => 'image/png',
                     'purpose' => 'any maskable',
                 ],

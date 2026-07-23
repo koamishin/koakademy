@@ -216,7 +216,7 @@ final class SiteSettings extends Settings
      */
     public function getLogo(): string
     {
-        return $this->resolveAssetUrl($this->logo, '/web-app-manifest-192x192.png');
+        return $this->resolveAssetUrl($this->logo, '/logo.png');
     }
 
     /**
@@ -224,7 +224,7 @@ final class SiteSettings extends Settings
      */
     public function getFavicon(): string
     {
-        return $this->resolveAssetUrl($this->favicon, '/web-app-manifest-192x192.png');
+        return $this->resolveAssetUrl($this->favicon, '/logo.png');
     }
 
     /**
