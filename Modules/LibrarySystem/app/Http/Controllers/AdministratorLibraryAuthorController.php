@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\LibrarySystem\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -53,9 +54,18 @@ final class AdministratorLibraryAuthorController extends Controller
         ]);
     }
 
-    public function store(LibraryAuthorRequest $request): RedirectResponse
+    public function store(LibraryAuthorRequest $request): JsonResponse|RedirectResponse
     {
         $author = Author::create($request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'author' => [
+                    'id' => $author->id,
+                    'name' => $author->name,
+                ],
+            ], 201);
+        }
 
         return redirect()
             ->route('administrators.library.authors.index')

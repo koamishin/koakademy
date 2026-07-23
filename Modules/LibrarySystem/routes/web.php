@@ -50,6 +50,8 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/library', [AdministratorLibraryController::class, 'index'])->name('library.index');
 
         Route::get('/library/books', [AdministratorLibraryBookController::class, 'index'])->name('library.books.index');
+        Route::get('/library/books/field-values', [AdministratorLibraryBookController::class, 'fieldValues'])
+            ->name('library.books.field-values');
         Route::get('/library/books/create', [AdministratorLibraryBookController::class, 'create'])->name('library.books.create');
         Route::post('/library/books', [AdministratorLibraryBookController::class, 'store'])->name('library.books.store');
         Route::get('/library/books/{book}/edit', [AdministratorLibraryBookController::class, 'edit'])->name('library.books.edit');

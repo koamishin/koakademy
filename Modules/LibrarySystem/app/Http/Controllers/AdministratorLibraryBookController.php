@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\LibrarySystem\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\LibrarySystem\Enums\DigitalRightsBasis;
+use Modules\LibrarySystem\Http\Requests\Administrators\LibraryBookIdentifierSuggestionsRequest;
 use Modules\LibrarySystem\Http\Requests\Administrators\LibraryBookRequest;
 use Modules\LibrarySystem\Models\Author;
 use Modules\LibrarySystem\Models\Book;
@@ -97,6 +99,31 @@ final class AdministratorLibraryBookController extends Controller
             'user' => $this->getUserProps(),
             'book' => null,
             'options' => $this->getBookOptions(),
+        ]);
+    }
+
+    public function fieldValues(LibraryBookIdentifierSuggestionsRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $field = match ($validated['field']) {
+            'isbn' => 'isbn',
+            'call_number' => 'call_number',
+        };
+        $search = mb_trim((string) ($validated['search'] ?? ''));
+
+        $values = Book::query()
+            ->select($field)
+            ->whereNotNull($field)
+            ->where($field, '!=', '')
+            ->when($search !== '', fn ($query) => $query->whereLike($field, "%{$search}%"))
+            ->distinct()
+            ->orderBy($field)
+            ->limit(25)
+            ->pluck($field)
+            ->values();
+
+        return response()->json([
+            'values' => $values,
         ]);
     }
 
@@ -241,6 +268,7 @@ final class AdministratorLibraryBookController extends Controller
     {
         return [
             'authors' => Author::query()
+                ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get()
                 ->map(fn (Author $author): array => [
@@ -250,6 +278,7 @@ final class AdministratorLibraryBookController extends Controller
                 ->values()
                 ->all(),
             'categories' => Category::query()
+                ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get()
                 ->map(fn (Category $category): array => [

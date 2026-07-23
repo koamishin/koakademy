@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\LibrarySystem\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -52,9 +53,19 @@ final class AdministratorLibraryCategoryController extends Controller
         ]);
     }
 
-    public function store(LibraryCategoryRequest $request): RedirectResponse
+    public function store(LibraryCategoryRequest $request): JsonResponse|RedirectResponse
     {
         $category = Category::create($this->normalizeCategoryData($request->validated()));
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'color' => $category->color,
+                ],
+            ], 201);
+        }
 
         return redirect()
             ->route('administrators.library.categories.index')
@@ -103,7 +114,7 @@ final class AdministratorLibraryCategoryController extends Controller
 
     private function normalizeCategoryData(array $validated): array
     {
-        $validated['color'] = $validated['color'] ?: '#6366f1';
+        $validated['color'] = ($validated['color'] ?? null) ?: '#6366f1';
 
         return $validated;
     }

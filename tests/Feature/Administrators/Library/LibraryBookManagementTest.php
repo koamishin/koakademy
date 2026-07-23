@@ -103,3 +103,103 @@ it('stores multiple books with the same ISBN', function (): void {
 
     expect(Book::query()->where('isbn', $isbn)->count())->toBe(2);
 });
+
+it('quick creates and returns selectable authors and categories', function (): void {
+    $admin = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    $authorResponse = actingAs($admin)
+        ->postJson(route('administrators.library.authors.store'), [
+            'name' => 'Ursula K. Le Guin',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('author.name', 'Ursula K. Le Guin')
+        ->assertJsonStructure([
+            'author' => ['id', 'name'],
+        ]);
+
+    $author = Author::query()->findOrFail($authorResponse->json('author.id'));
+    $this->assertModelExists($author);
+
+    $categoryResponse = actingAs($admin)
+        ->postJson(route('administrators.library.categories.store'), [
+            'name' => 'Speculative Fiction',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('category.name', 'Speculative Fiction')
+        ->assertJsonPath('category.color', '#6366f1')
+        ->assertJsonStructure([
+            'category' => ['id', 'name', 'color'],
+        ]);
+
+    $category = Category::query()->findOrFail($categoryResponse->json('category.id'));
+    $this->assertModelExists($category);
+
+    actingAs($admin)
+        ->postJson(route('administrators.library.categories.store'), [
+            'name' => 'Speculative Fiction',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('name');
+});
+
+it('returns distinct filtered identifier suggestions with a bounded result set', function (): void {
+    $admin = User::factory()->create([
+        'role' => UserRole::Admin,
+    ]);
+
+    $author = Author::query()->create([
+        'name' => 'Identifier Suggestion Author',
+    ]);
+
+    $category = Category::query()->create([
+        'name' => 'Identifier Suggestion Category',
+    ]);
+
+    foreach (range(1, 27) as $number) {
+        Book::query()->create([
+            'title' => "Identifier Suggestion Book {$number}",
+            'isbn' => sprintf('978-TEST-%02d', $number),
+            'call_number' => sprintf('QA76.%02d', $number),
+            'author_id' => $author->id,
+            'category_id' => $category->id,
+        ]);
+    }
+
+    Book::query()->create([
+        'title' => 'Duplicate Identifier Suggestion Book',
+        'isbn' => '978-TEST-01',
+        'call_number' => 'QA76.01',
+        'author_id' => $author->id,
+        'category_id' => $category->id,
+    ]);
+
+    actingAs($admin)
+        ->getJson(route('administrators.library.books.field-values', [
+            'field' => 'isbn',
+            'search' => '978-TEST',
+        ]))
+        ->assertSuccessful()
+        ->assertJsonCount(25, 'values')
+        ->assertJsonPath('values.0', '978-TEST-01')
+        ->assertJsonPath('values.24', '978-TEST-25');
+
+    actingAs($admin)
+        ->getJson(route('administrators.library.books.field-values', [
+            'field' => 'call_number',
+            'search' => 'QA76.27',
+        ]))
+        ->assertSuccessful()
+        ->assertExactJson([
+            'values' => ['QA76.27'],
+        ]);
+
+    actingAs($admin)
+        ->getJson(route('administrators.library.books.field-values', [
+            'field' => 'title',
+            'search' => 'Identifier',
+        ]))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('field');
+});

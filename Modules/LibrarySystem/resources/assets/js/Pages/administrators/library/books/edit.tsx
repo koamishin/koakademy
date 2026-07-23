@@ -17,13 +17,9 @@ import { index as libraryBooksIndex } from "@/routes/administrators/library/book
 import { read as readDigitalBook } from "@/routes/library/books";
 import type { User } from "@/types/user";
 import { Head, Link, router, useForm } from "@inertiajs/react";
-import { BookOpen, Download, FileCheck2, FileText, Save, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
+import { ArrowLeft, BookOpen, BookPlus, CheckCircle2, Download, FileCheck2, FileText, Save, ShieldCheck, Trash2, UploadCloud } from "lucide-react";
 import { useState, type FormEvent } from "react";
-
-interface SelectOption {
-    value: string | number;
-    label: string;
-}
+import { CatalogIdentifierField, CatalogRelationField, type CatalogOption } from "./components/catalog-entry-controls";
 
 interface BookFormData {
     title: string;
@@ -86,10 +82,10 @@ interface Props {
     user: User;
     book: BookRecord | null;
     options: {
-        authors: SelectOption[];
-        categories: SelectOption[];
-        statuses: SelectOption[];
-        digital_rights_bases: SelectOption[];
+        authors: CatalogOption[];
+        categories: CatalogOption[];
+        statuses: CatalogOption[];
+        digital_rights_bases: CatalogOption[];
     };
 }
 
@@ -107,14 +103,25 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
         description: book?.description ?? "",
         cover_image: book?.cover_image ?? "",
         cover_image_upload: null,
-        total_copies: book?.total_copies ? String(book.total_copies) : "1",
-        available_copies: book?.available_copies ? String(book.available_copies) : "",
+        total_copies: book ? String(book.total_copies) : "1",
+        available_copies: book ? String(book.available_copies) : "1",
         location: book?.location ?? "",
         status: book?.status ?? "available",
     });
 
     const [coverUploadPreview, setCoverUploadPreview] = useState<string | null>(null);
     const coverPreview = coverUploadPreview ?? (form.data.cover_image ? form.data.cover_image : book?.cover_image_url ? book.cover_image_url : null);
+    const HeaderIcon = book ? BookOpen : BookPlus;
+
+    const handleTotalCopiesChange = (value: string) => {
+        const availableCopiesFollowTotal = !book && form.data.available_copies === form.data.total_copies;
+
+        form.setData("total_copies", value);
+
+        if (availableCopiesFollowTotal) {
+            form.setData("available_copies", value);
+        }
+    };
 
     const handleSubmit = (event: FormEvent) => {
         event.preventDefault();
@@ -137,59 +144,101 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
             <Head title={`Administrators • ${book ? "Edit" : "Add"} Book`} />
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                <Card className="via-background border-0 bg-gradient-to-br from-emerald-500/10 to-sky-500/10">
-                    <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-                                    <BookOpen className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <CardTitle>{book ? "Update Catalog Entry" : "Add New Book"}</CardTitle>
-                                    <CardDescription>Keep book metadata, copies, and availability up to date.</CardDescription>
-                                </div>
+                <Card className="to-background relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/12 via-sky-500/5 shadow-xs ring-1 ring-emerald-700/10">
+                    <div className="pointer-events-none absolute -top-20 -right-16 size-52 rounded-full bg-emerald-400/10 blur-3xl" />
+                    <CardHeader className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-start gap-3.5">
+                            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm shadow-emerald-900/15">
+                                <HeaderIcon className="size-5" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-300">
+                                    {book ? "Catalog maintenance" : "Fast catalog entry"}
+                                </p>
+                                <CardTitle className="text-xl text-balance">{book ? "Update catalog entry" : "Create a book record"}</CardTitle>
+                                <CardDescription className="max-w-2xl text-pretty">
+                                    Search existing catalog data, quick-add missing authors or categories, and finish the record without leaving this
+                                    page.
+                                </CardDescription>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" asChild>
-                                <Link href={libraryBooksIndex.url()}>Back to books</Link>
+                            <Button type="button" variant="outline" asChild className="min-h-10 transition-transform active:scale-[0.96]">
+                                <Link href={libraryBooksIndex.url()} prefetch>
+                                    <ArrowLeft className="size-4" />
+                                    Back to books
+                                </Link>
                             </Button>
-                            <Button type="submit" className="gap-2" disabled={form.processing}>
-                                <Save className="h-4 w-4" />
+                            <Button type="submit" size="lg" className="transition-transform active:scale-[0.96]" disabled={form.processing}>
+                                <Save className="size-4" />
                                 {book ? "Save changes" : "Create book"}
                             </Button>
                         </div>
                     </CardHeader>
                 </Card>
 
-                <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Book Details</CardTitle>
-                            <CardDescription>Core catalog information for this book.</CardDescription>
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(19rem,1fr)]">
+                    <Card className="rounded-2xl shadow-xs">
+                        <CardHeader className="bg-muted/25 border-b pb-4">
+                            <div className="flex items-start gap-3">
+                                <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold">
+                                    1
+                                </span>
+                                <div>
+                                    <CardTitle>Identity and classification</CardTitle>
+                                    <CardDescription className="text-pretty">
+                                        Start with the searchable relationships, then reuse or enter catalog identifiers.
+                                    </CardDescription>
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent className="grid gap-5 sm:grid-cols-2">
                             <div className="space-y-2 sm:col-span-2">
                                 <Label htmlFor="title">Title</Label>
-                                <Input id="title" value={form.data.title} onChange={(event) => form.setData("title", event.target.value)} />
+                                <Input
+                                    id="title"
+                                    value={form.data.title}
+                                    onChange={(event) => form.setData("title", event.target.value)}
+                                    placeholder="Enter the title as it appears on the book"
+                                    className="h-11 rounded-xl"
+                                    autoFocus={!book}
+                                />
                                 {form.errors.title && <p className="text-destructive text-xs">{form.errors.title}</p>}
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="isbn">ISBN</Label>
-                                <Input id="isbn" value={form.data.isbn} onChange={(event) => form.setData("isbn", event.target.value)} />
-                                {form.errors.isbn && <p className="text-destructive text-xs">{form.errors.isbn}</p>}
-                            </div>
+                            <CatalogRelationField
+                                id="author_id"
+                                kind="author"
+                                options={options.authors}
+                                value={form.data.author_id}
+                                onValueChange={(value) => form.setData("author_id", value)}
+                                error={form.errors.author_id}
+                            />
 
-                            <div className="space-y-2">
-                                <Label htmlFor="call_number">Call Number</Label>
-                                <Input
-                                    id="call_number"
-                                    value={form.data.call_number}
-                                    onChange={(event) => form.setData("call_number", event.target.value)}
-                                />
-                                {form.errors.call_number && <p className="text-destructive text-xs">{form.errors.call_number}</p>}
-                            </div>
+                            <CatalogRelationField
+                                id="category_id"
+                                kind="category"
+                                options={options.categories}
+                                value={form.data.category_id}
+                                onValueChange={(value) => form.setData("category_id", value)}
+                                error={form.errors.category_id}
+                            />
+
+                            <CatalogIdentifierField
+                                id="isbn"
+                                kind="isbn"
+                                value={form.data.isbn}
+                                onValueChange={(value) => form.setData("isbn", value)}
+                                error={form.errors.isbn}
+                            />
+
+                            <CatalogIdentifierField
+                                id="call_number"
+                                kind="call_number"
+                                value={form.data.call_number}
+                                onValueChange={(value) => form.setData("call_number", value)}
+                                error={form.errors.call_number}
+                            />
 
                             <div className="space-y-2">
                                 <Label htmlFor="accession_number">Accession Number</Label>
@@ -197,42 +246,11 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                     id="accession_number"
                                     value={form.data.accession_number}
                                     onChange={(event) => form.setData("accession_number", event.target.value)}
+                                    placeholder="Copy-specific accession code"
+                                    className="h-11 rounded-xl"
                                 />
+                                <p className="text-muted-foreground text-xs text-pretty">Use a unique code for this physical catalog record.</p>
                                 {form.errors.accession_number && <p className="text-destructive text-xs">{form.errors.accession_number}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Author</Label>
-                                <Select value={form.data.author_id} onValueChange={(value) => form.setData("author_id", value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select author" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {options.authors.map((author) => (
-                                            <SelectItem key={author.value} value={String(author.value)}>
-                                                {author.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {form.errors.author_id && <p className="text-destructive text-xs">{form.errors.author_id}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Category</Label>
-                                <Select value={form.data.category_id} onValueChange={(value) => form.setData("category_id", value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select category" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {options.categories.map((category) => (
-                                            <SelectItem key={category.value} value={String(category.value)}>
-                                                {category.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {form.errors.category_id && <p className="text-destructive text-xs">{form.errors.category_id}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -241,6 +259,8 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                     id="publisher"
                                     value={form.data.publisher}
                                     onChange={(event) => form.setData("publisher", event.target.value)}
+                                    placeholder="Publisher name"
+                                    className="h-11 rounded-xl"
                                 />
                             </div>
 
@@ -251,6 +271,8 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                     type="number"
                                     value={form.data.publication_year}
                                     onChange={(event) => form.setData("publication_year", event.target.value)}
+                                    placeholder="YYYY"
+                                    className="h-11 rounded-xl"
                                 />
                                 {form.errors.publication_year && <p className="text-destructive text-xs">{form.errors.publication_year}</p>}
                             </div>
@@ -262,6 +284,8 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                     type="number"
                                     value={form.data.pages}
                                     onChange={(event) => form.setData("pages", event.target.value)}
+                                    placeholder="Number of pages"
+                                    className="h-11 rounded-xl"
                                 />
                             </div>
 
@@ -272,16 +296,27 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                     rows={4}
                                     value={form.data.description}
                                     onChange={(event) => form.setData("description", event.target.value)}
+                                    placeholder="Optional summary or catalog notes"
+                                    className="rounded-xl"
                                 />
                             </div>
                         </CardContent>
                     </Card>
 
                     <div className="flex flex-col gap-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Inventory</CardTitle>
-                                <CardDescription>Control availability and shelf details.</CardDescription>
+                        <Card className="rounded-2xl shadow-xs">
+                            <CardHeader className="bg-muted/25 border-b pb-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold">
+                                        2
+                                    </span>
+                                    <div>
+                                        <CardTitle>Inventory and cover</CardTitle>
+                                        <CardDescription className="text-pretty">
+                                            Set ready-to-use copy defaults and shelf information.
+                                        </CardDescription>
+                                    </div>
+                                </div>
                             </CardHeader>
                             <CardContent className="flex flex-col gap-4">
                                 <div className="space-y-2">
@@ -290,7 +325,8 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                         id="total_copies"
                                         type="number"
                                         value={form.data.total_copies}
-                                        onChange={(event) => form.setData("total_copies", event.target.value)}
+                                        onChange={(event) => handleTotalCopiesChange(event.target.value)}
+                                        className="h-10 rounded-xl tabular-nums"
                                     />
                                     {form.errors.total_copies && <p className="text-destructive text-xs">{form.errors.total_copies}</p>}
                                 </div>
@@ -301,6 +337,7 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                         type="number"
                                         value={form.data.available_copies}
                                         onChange={(event) => form.setData("available_copies", event.target.value)}
+                                        className="h-10 rounded-xl tabular-nums"
                                     />
                                     {form.errors.available_copies && <p className="text-destructive text-xs">{form.errors.available_copies}</p>}
                                 </div>
@@ -310,12 +347,14 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                         id="location"
                                         value={form.data.location}
                                         onChange={(event) => form.setData("location", event.target.value)}
+                                        placeholder="e.g. Main Library · A-12"
+                                        className="h-10 rounded-xl"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Status</Label>
                                     <Select value={form.data.status} onValueChange={(value) => form.setData("status", value)}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-xl">
                                             <SelectValue placeholder="Select status" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -334,6 +373,8 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                         id="cover_image"
                                         value={form.data.cover_image}
                                         onChange={(event) => form.setData("cover_image", event.target.value)}
+                                        placeholder="https://…"
+                                        className="h-10 rounded-xl"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -342,6 +383,7 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                         id="cover_image_upload"
                                         type="file"
                                         accept="image/*"
+                                        className="h-10 rounded-xl"
                                         onChange={(event) => {
                                             const file = event.target.files?.[0] || null;
                                             form.setData("cover_image_upload", file);
@@ -351,22 +393,33 @@ export default function LibraryBookEdit({ user, book, options }: Props) {
                                     {form.errors.cover_image_upload && <p className="text-destructive text-xs">{form.errors.cover_image_upload}</p>}
                                 </div>
                                 {coverPreview && (
-                                    <div className="overflow-hidden rounded-lg border">
-                                        <img src={coverPreview} alt="Book cover preview" className="h-40 w-full object-cover" />
+                                    <div className="bg-muted/40 overflow-hidden rounded-xl p-2">
+                                        <img
+                                            src={coverPreview}
+                                            alt="Book cover preview"
+                                            className="h-40 w-full rounded-lg object-cover outline -outline-offset-1 outline-black/10 dark:outline-white/10"
+                                        />
                                     </div>
                                 )}
                             </CardContent>
                         </Card>
 
-                        <Card>
+                        <Card className="rounded-2xl shadow-xs">
                             <CardHeader>
-                                <CardTitle>Catalog Tips</CardTitle>
-                                <CardDescription>Keep entries consistent across the library.</CardDescription>
+                                <CardTitle>Fast-entry checklist</CardTitle>
+                                <CardDescription>Small choices that keep the catalog easy to search.</CardDescription>
                             </CardHeader>
-                            <CardContent className="text-muted-foreground space-y-2 text-sm">
-                                <p>Use a consistent ISBN format for easier search and reporting.</p>
-                                <p>Match available copies with active borrow records to avoid mismatches.</p>
-                                <p>Add a shelf location to speed up staff retrieval.</p>
+                            <CardContent className="space-y-3 text-sm">
+                                {[
+                                    "Reuse an existing ISBN or call number when the catalog already has it.",
+                                    "Quick-add missing authors and categories without abandoning this form.",
+                                    "Add a shelf location so staff can retrieve the book immediately.",
+                                ].map((tip) => (
+                                    <div key={tip} className="text-muted-foreground flex items-start gap-2.5">
+                                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                        <p className="text-pretty">{tip}</p>
+                                    </div>
+                                ))}
                             </CardContent>
                         </Card>
                     </div>
@@ -390,7 +443,7 @@ interface DigitalEditionFormData {
     rights_confirmed: boolean;
 }
 
-function DigitalEditionSection({ book, rightsBases }: { book: BookRecord; rightsBases: SelectOption[] }) {
+function DigitalEditionSection({ book, rightsBases }: { book: BookRecord; rightsBases: CatalogOption[] }) {
     const edition = book.digital_edition;
     const form = useForm<DigitalEditionFormData>({
         pdf: null,
