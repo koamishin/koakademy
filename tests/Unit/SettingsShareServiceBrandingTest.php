@@ -49,15 +49,15 @@ it('shares normalized branding values for frontend consumers', function (): void
 });
 
 it('detects the configured portal host and ignores legacy portal names on that domain', function (): void {
-    config(['app.portal_host' => 'portal.koakademy.test']);
+    config(['app.portal_host' => 'localhost']);
 
     $settings = app(SiteSettings::class);
     $settings->app_name = 'DCCP Hub';
     $settings->portal_name = 'KoAkademy';
 
     $service = app(SettingsShareService::class);
-    $portalRequest = Request::create('https://portal.koakademy.test/login');
-    $adminRequest = Request::create('https://admin.koakademy.test/login');
+    $portalRequest = Request::create('https://localhost/login');
+    $adminRequest = Request::create('https://127.0.0.1/login');
 
     expect($service->isPortalDomain($portalRequest))->toBeTrue()
         ->and($service->getAppName($portalRequest))->toBe('DCCP Hub')
@@ -66,14 +66,14 @@ it('detects the configured portal host and ignores legacy portal names on that d
 });
 
 it('keeps a custom portal name on the portal domain', function (): void {
-    config(['app.portal_host' => 'portal.koakademy.test']);
+    config(['app.portal_host' => 'localhost']);
 
     $settings = app(SiteSettings::class);
     $settings->app_name = 'DCCP Hub';
     $settings->portal_name = 'DCCP Faculty Portal';
 
     $service = app(SettingsShareService::class);
-    $portalRequest = Request::create('https://portal.koakademy.test/login');
+    $portalRequest = Request::create('https://localhost/login');
 
     expect($service->getAppName($portalRequest))->toBe('DCCP Faculty Portal');
 });
