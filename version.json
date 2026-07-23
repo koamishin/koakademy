@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.15.1",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.15.1",
-  "commit": "765c0a141efd6717bd71ee04dc5136defb27c1e5",
+  "version": "1.10.0-dev.15.2",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.15.2",
+  "commit": "66e9111bdc2947e4c406dac44548b38f0ac7fc35",
   "branch": "master",
-  "timestamp": "2026-07-23T02:03:16Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29973162538",
-  "release_type": "chore",
+  "timestamp": "2026-07-23T03:23:12Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29976633052",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.15.1 - test(library): cover book catalog creation",
-    "previous": "1.10.0-dev.15.0"
+    "current": "Version 1.10.0-dev.15.2 - fix(library): allow books to share ISBNs",
+    "previous": "1.10.0-dev.15.1"
   },
   "metadata": {
     "author": "yukazakiri",
