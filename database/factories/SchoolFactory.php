@@ -73,7 +73,7 @@ final class SchoolFactory extends Factory
             ]),
             'phone' => $this->faker->phoneNumber(),
             'email' => mb_strtolower($code).'@university.edu',
-            'is_active' => $this->faker->boolean(90), // 90% chance of being active
+            'is_active' => true,
             'metadata' => [
                 'established_year' => $this->faker->numberBetween(1980, 2020),
                 'accreditation_status' => $this->faker->randomElement(['Accredited', 'Candidate', 'Pending']),

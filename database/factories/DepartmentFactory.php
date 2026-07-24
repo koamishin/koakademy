@@ -92,7 +92,7 @@ final class DepartmentFactory extends Factory
             ]),
             'phone' => $this->faker->phoneNumber(),
             'email' => mb_strtolower($selected['code'].$uniqueId).'@university.edu',
-            'is_active' => $this->faker->boolean(95), // 95% chance of being active
+            'is_active' => true,
             'metadata' => [
                 'faculty_count' => $this->faker->numberBetween(5, 25),
                 'student_count' => $this->faker->numberBetween(100, 800),

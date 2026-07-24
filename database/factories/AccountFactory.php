@@ -39,7 +39,7 @@ final class AccountFactory extends Factory
             'role' => $this->faker->randomElement(['admin', 'student', 'faculty', 'staff']),
             'person_id' => $this->faker->optional(0.7)->numberBetween(100000, 999999),
             'person_type' => $this->faker->optional(0.7)->randomElement([Student::class]),
-            'is_active' => $this->faker->boolean(80), // 80% chance of being active
+            'is_active' => true,
             'last_login' => $this->faker->optional(0.6)->dateTimeBetween('-1 month', 'now'),
             'remember_token' => Str::random(10),
         ];
