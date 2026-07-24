@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.17.4",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.4",
-  "commit": "c00485fbab3b39e3e08dcab407ed31ae76c37142",
+  "version": "1.10.0-dev.17.5",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.5",
+  "commit": "7318dabe4ad5355a5786b49527b086c38ea2be1d",
   "branch": "master",
-  "timestamp": "2026-07-23T04:58:21Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/29980713376",
-  "release_type": "chore",
+  "timestamp": "2026-07-24T03:05:27Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/30063158940",
+  "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.17.4 - test: stabilize announcement schedule timestamps",
-    "previous": "1.10.0-dev.17.3"
+    "current": "Version 1.10.0-dev.17.5 - fix(factory): set Course factory is_active default to true",
+    "previous": "1.10.0-dev.17.4"
   },
   "metadata": {
     "author": "yukazakiri",
