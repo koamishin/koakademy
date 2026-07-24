@@ -1,14 +1,14 @@
 {
-  "version": "1.10.0-dev.17.5",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.5",
-  "commit": "7318dabe4ad5355a5786b49527b086c38ea2be1d",
+  "version": "1.10.0-dev.17.6",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.6",
+  "commit": "18783396df9ac5b160fcf8cb645e06b68148aaf2",
   "branch": "master",
-  "timestamp": "2026-07-24T03:05:27Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/30063158940",
+  "timestamp": "2026-07-24T04:20:44Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/30066390102",
   "release_type": "bugfix",
   "changelog": {
-    "current": "Version 1.10.0-dev.17.5 - fix(factory): set Course factory is_active default to true",
-    "previous": "1.10.0-dev.17.4"
+    "current": "Version 1.10.0-dev.17.6 - fix(factory): make is_active default true in School, Department, and Account factories",
+    "previous": "1.10.0-dev.17.5"
   },
   "metadata": {
     "author": "yukazakiri",
