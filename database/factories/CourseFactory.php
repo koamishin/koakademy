@@ -33,7 +33,7 @@ final class CourseFactory extends Factory
             'miscellaneous' => $this->faker->numberBetween(3500, 3700),
             'miscelaneous' => $this->faker->numberBetween(3500, 3700),
             'remarks' => $this->faker->optional()->sentence(),
-            'is_active' => $this->faker->boolean(90), // 90% chance of being active
+            'is_active' => true,
         ];
     }
 }
