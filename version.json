@@ -1,18 +1,18 @@
 {
-  "version": "1.10.0-dev.17.6",
-  "image": "ghcr.io/yukazakiri/koakademy:v1.10.0-dev.17.6",
-  "commit": "18783396df9ac5b160fcf8cb645e06b68148aaf2",
+  "version": "1.11.0",
+  "image": "ghcr.io/yukazakiri/koakademy:v1.11.0",
+  "commit": "2e607f00dd3459b868e1d771b6a17a62dcd78d30",
   "branch": "master",
-  "timestamp": "2026-07-24T04:20:44Z",
-  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/30066390102",
-  "release_type": "bugfix",
+  "timestamp": "2026-07-24T04:46:35Z",
+  "build_url": "https://github.com/yukazakiri/koakademy/actions/runs/30067473219",
+  "release_type": "official",
   "changelog": {
-    "current": "Version 1.10.0-dev.17.6 - fix(factory): make is_active default true in School, Department, and Account factories",
-    "previous": "1.10.0-dev.17.5"
+    "current": "Version 1.11.0 - manual release",
+    "previous": "1.10.0-dev.17.6"
   },
   "metadata": {
     "author": "yukazakiri",
-    "workflow": "Auto Pre-release and Docker Tag",
+    "workflow": "Manual Official Release",
     "repository": "yukazakiri/koakademy"
   }
 }
