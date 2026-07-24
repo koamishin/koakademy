@@ -4,6 +4,9 @@
 
 Built with **Laravel 12**, **Filament 5**, **Inertia**, and **React 19**. Ships as a single FrankenPHP (PHP 8.5) container image.
 
+> [!WARNING]
+> KoAkademy is currently in **Beta** and is **not recommended for production use**. Data loss, breaking changes, and incompatible upgrades are possible between pre-v2 releases. A stable, production-recommended release stream is planned starting at **v2.0.0**.
+
 [![CI](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml/badge.svg)](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/yukazakiri/koakademy?sort=semver)](https://github.com/yukazakiri/koakademy/releases)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE.md)
