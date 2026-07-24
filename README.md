@@ -10,6 +10,17 @@ Built with **Laravel 12**, **Filament 5**, **Inertia**, and **React 19**. Ships 
 [![CI](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml/badge.svg)](https://github.com/yukazakiri/koakademy/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/yukazakiri/koakademy?sort=semver)](https://github.com/yukazakiri/koakademy/releases)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE.md)
+[![PHP](https://img.shields.io/badge/PHP-8.5-8892BF.svg?logo=php)](https://www.php.net/)
+[![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20.svg?logo=laravel)](https://laravel.com/)
+[![Filament](https://img.shields.io/badge/Filament-5-27AE60.svg?logo=filament)](https://filamentphp.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react)](https://react.dev/)
+[![FrankenPHP](https://img.shields.io/badge/FrankenPHP-1.0-461B73.svg?logo=frankenphp)](https://frankenphp.com/)
+[![Docker](https://img.shields.io/docker/pulls/yukazakiri/koakademy?logo=docker)](https://hub.docker.com/r/yukazakiri/koakademy)
+[![GitHub stars](https://img.shields.io/github/stars/yukazakiri/koakademy?logo=github)](https://github.com/yukazakiri/koakademy/stars)
+[![GitHub forks](https://img.shields.io/github/forks/yukazakiri/koakademy?logo=github)](https://github.com/yukazakiri/koakademy/network)
+[![GitHub last commit](https://img.shields.io/github/last-commit/yukazakiri/koakademy)](https://github.com/yukazakiri/koakademy/commits)
+[![Maintenance](https://img.shields.io/badge/maintenance-✓-green.svg)](https://github.com/yukazakiri/koakademy)
+[![Status: Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/yukazakiri/koakademy)
 
 > **Project status: production-capable beta.** KoAkademy has a documented production topology and automated tests, but operators should validate upgrades in staging, maintain backups, and review the security model for their institution. Only the latest stable release is supported.
 
