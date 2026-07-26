@@ -1,3 +1,4 @@
+import { store as storeDiscount } from "@/actions/App/Http/Controllers/AdministratorEnrollmentDiscountController";
 import AdminLayout from "@/components/administrators/admin-layout";
 import {
     AlertDialog,
@@ -14,6 +15,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -27,6 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 import { Head, Link, router, usePage } from "@inertiajs/react";
+import axios from "axios";
 import {
     AlertTriangle,
     ArrowLeft,
@@ -130,6 +133,12 @@ interface AdditionalFee {
     amount: number;
 }
 
+interface DiscountOption {
+    id: number;
+    name: string;
+    percentage: number;
+}
+
 interface PendingOverloadConfirmation {
     mode: "select" | "submit";
     subjectId?: number;
@@ -165,7 +174,9 @@ interface EnrollmentData {
     subjects: EnrollmentSubject[];
     tuition: {
         discount: number;
+        discount_id: number | null;
         downpayment: number;
+        miscellaneous_fee: number;
     } | null;
     additional_fees: Array<{
         fee_name: string;
@@ -181,6 +192,7 @@ interface CreateEnrollmentProps {
         availableSemesters: { value: number; label: string }[];
         availableAcademicYears: Record<string, string>;
     };
+    discounts: DiscountOption[];
     enrollment?: EnrollmentData;
     flash?: {
         success?: string;
@@ -232,7 +244,7 @@ const COLORS = [
 // Modular fee constant
 const MODULAR_FEE_PER_SUBJECT = 2400;
 
-export default function AdministratorEnrollmentCreate({ user, settings, enrollment, flash }: CreateEnrollmentProps) {
+export default function AdministratorEnrollmentCreate({ user, settings, discounts, enrollment, flash }: CreateEnrollmentProps) {
     const { props } = usePage<{ branding?: Branding }>();
     const currency = props.branding?.currency || "PHP";
 
@@ -284,6 +296,16 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
     const [semester, setSemester] = useState((enrollment?.semester ?? settings.currentSemester).toString());
     const [academicYear, setAcademicYear] = useState((enrollment?.academic_year ?? 1).toString());
     const [discount, setDiscount] = useState((enrollment?.tuition?.discount ?? 0).toString());
+    const [discountId, setDiscountId] = useState<number | null>(enrollment?.tuition?.discount_id ?? null);
+    const [discountOptions, setDiscountOptions] = useState<DiscountOption[]>(discounts);
+    const [miscellaneousFee, setMiscellaneousFee] = useState(
+        Number(enrollment?.tuition?.miscellaneous_fee ?? enrollment?.student.miscellaneous_fee ?? 3500) || 0,
+    );
+    const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
+    const [discountName, setDiscountName] = useState("");
+    const [discountPercentage, setDiscountPercentage] = useState("");
+    const [discountErrors, setDiscountErrors] = useState<Record<string, string>>({});
+    const [creatingDiscount, setCreatingDiscount] = useState(false);
     const [downpayment, setDownpayment] = useState(Number(enrollment?.tuition?.downpayment ?? 3500) || 0);
     const [additionalFees, setAdditionalFees] = useState<AdditionalFee[]>(
         enrollment
@@ -364,6 +386,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                 );
                 const details: StudentDetails = await response.json();
                 setSelectedStudent(details);
+                setMiscellaneousFee(Number(details.miscellaneous_fee) || 0);
 
                 if (details.academic_year) {
                     setAcademicYear(details.academic_year.toString());
@@ -565,7 +588,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
         const discountAmount = totalLectures - discountedLectures;
 
         const totalTuition = discountedLectures + totalLaboratory;
-        const miscellaneous = Number(selectedStudent?.miscellaneous_fee ?? 3500) || 0;
+        const miscellaneous = Number(miscellaneousFee) || 0;
         const totalAdditionalFees = additionalFees.reduce((sum, f) => sum + Number(f.amount || 0), 0);
 
         const overallTotal = totalTuition + miscellaneous + totalAdditionalFees + totalModularFee;
@@ -592,7 +615,7 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             overallTotal,
             balance,
         };
-    }, [subjectsEnrolled, discount, downpayment, selectedStudent, additionalFees]);
+    }, [subjectsEnrolled, discount, downpayment, miscellaneousFee, additionalFees]);
 
     // Filter subjects based on search
     const filteredSubjects = useMemo(() => {
@@ -645,6 +668,8 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
             academic_year: parseInt(academicYear),
             subjects,
             discount: parseInt(discount),
+            discount_id: discountId,
+            miscellaneous_fee: miscellaneousFee,
             downpayment,
             additional_fees: fees,
             force_overload: forceOverload || selectedFullSections.some(({ section }) => confirmedOverloadClassIds.includes(section.id)),
@@ -716,14 +741,68 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
         }
     }, [subjectSearch, selectedStudent?.course_id, loadSubjects]);
 
-    // Discount options
-    const discountOptions = [
-        { value: "0", label: "No Discount" },
-        ...Array.from({ length: 20 }, (_, i) => ({
-            value: ((i + 1) * 5).toString(),
-            label: `${(i + 1) * 5}%`,
-        })),
-    ];
+    const selectedDiscountValue = discountId !== null ? discountId.toString() : parseInt(discount) > 0 ? "legacy" : "none";
+
+    const handleDiscountChange = (value: string) => {
+        if (value === "none") {
+            setDiscountId(null);
+            setDiscount("0");
+            return;
+        }
+
+        if (value === "legacy") {
+            return;
+        }
+
+        const selectedDiscount = discountOptions.find((option) => option.id === Number(value));
+        if (!selectedDiscount) {
+            return;
+        }
+
+        setDiscountId(selectedDiscount.id);
+        setDiscount(selectedDiscount.percentage.toString());
+    };
+
+    const handleCreateDiscount = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setDiscountErrors({});
+        setCreatingDiscount(true);
+
+        try {
+            const response = await axios.post<DiscountOption>(storeDiscount.url(), {
+                name: discountName,
+                percentage: Number(discountPercentage),
+            });
+            const createdDiscount = response.data;
+
+            setDiscountOptions((current) =>
+                [...current, createdDiscount].sort((left, right) => left.percentage - right.percentage || left.name.localeCompare(right.name)),
+            );
+            setDiscountId(createdDiscount.id);
+            setDiscount(createdDiscount.percentage.toString());
+            setDiscountDialogOpen(false);
+            setDiscountName("");
+            setDiscountPercentage("");
+            toast.success(`${createdDiscount.name} was created and selected.`);
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                const errors = error.response?.data?.errors as Record<string, string[]> | undefined;
+                if (errors) {
+                    setDiscountErrors({
+                        name: errors.name?.[0] ?? errors.normalized_name?.[0] ?? "",
+                        percentage: errors.percentage?.[0] ?? "",
+                    });
+                } else {
+                    toast.error("Failed to create discount");
+                }
+            } else {
+                toast.error("Failed to create discount");
+            }
+        } finally {
+            setCreatingDiscount(false);
+        }
+    };
 
     const pageTitle = isEdit ? "Edit Enrollment" : "Create Enrollment";
     const displaySchoolYear = enrollment?.school_year ?? settings.currentSchoolYear;
@@ -1361,18 +1440,53 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                                     {/* Discount */}
                                     <div className="space-y-2">
                                         <Label className="text-xs">Discount</Label>
-                                        <Select value={discount} onValueChange={(value) => value && setDiscount(value)}>
-                                            <SelectTrigger className="h-9">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {discountOptions.map((opt) => (
-                                                    <SelectItem key={opt.value} value={opt.value}>
-                                                        {opt.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="flex items-center gap-2">
+                                            <Select value={selectedDiscountValue} onValueChange={handleDiscountChange}>
+                                                <SelectTrigger className="h-9 flex-1">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">No Discount</SelectItem>
+                                                    {discountId === null && parseInt(discount) > 0 && (
+                                                        <SelectItem value="legacy">Current Discount ({discount}%)</SelectItem>
+                                                    )}
+                                                    {discountOptions.map((option) => (
+                                                        <SelectItem key={option.id} value={option.id.toString()}>
+                                                            {option.name} ({option.percentage}%)
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-9 w-9 shrink-0"
+                                                aria-label="Create discount"
+                                                title="Create discount"
+                                                onClick={() => setDiscountDialogOpen(true)}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <p className="text-muted-foreground text-xs">Discounts apply to lecture fees only.</p>
+                                    </div>
+
+                                    {/* Miscellaneous fee override */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="miscellaneous-fee" className="text-xs">
+                                            Miscellaneous Fee
+                                        </Label>
+                                        <Input
+                                            id="miscellaneous-fee"
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={miscellaneousFee}
+                                            onChange={(event) => setMiscellaneousFee(Math.max(0, Number(event.target.value)))}
+                                            className="h-9"
+                                        />
+                                        <p className="text-muted-foreground text-xs">Overrides the course fee for this enrollment only.</p>
                                     </div>
 
                                     {/* Fees Breakdown */}
@@ -1511,6 +1625,60 @@ export default function AdministratorEnrollmentCreate({ user, settings, enrollme
                     </div>
                 </div>
             </form>
+
+            <Dialog
+                open={discountDialogOpen}
+                onOpenChange={(open) => {
+                    setDiscountDialogOpen(open);
+                    if (!open) {
+                        setDiscountErrors({});
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Create Discount</DialogTitle>
+                        <DialogDescription>Add a reusable discount preset for future enrollments.</DialogDescription>
+                    </DialogHeader>
+                    <form className="space-y-4" onSubmit={handleCreateDiscount}>
+                        <div className="space-y-2">
+                            <Label htmlFor="discount-name">Discount name</Label>
+                            <Input
+                                id="discount-name"
+                                value={discountName}
+                                onChange={(event) => setDiscountName(event.target.value)}
+                                placeholder="e.g., Athletic Scholarship"
+                                maxLength={120}
+                                autoFocus
+                            />
+                            {discountErrors.name && <p className="text-destructive text-xs">{discountErrors.name}</p>}
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="discount-percentage">Lecture fee discount (%)</Label>
+                            <Input
+                                id="discount-percentage"
+                                type="number"
+                                min="1"
+                                max="100"
+                                step="1"
+                                value={discountPercentage}
+                                onChange={(event) => setDiscountPercentage(event.target.value)}
+                                placeholder="1–100"
+                            />
+                            {discountErrors.percentage && <p className="text-destructive text-xs">{discountErrors.percentage}</p>}
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setDiscountDialogOpen(false)} disabled={creatingDiscount}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={creatingDiscount || !discountName.trim() || !discountPercentage}>
+                                {creatingDiscount && <Loader2 className="h-4 w-4 animate-spin" />}
+                                Create Discount
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             <AlertDialog
                 open={Boolean(pendingOverloadConfirmation)}

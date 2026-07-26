@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\AdministratorAuditLogController;
 use App\Http\Controllers\AdministratorClassManagementController;
 use App\Http\Controllers\AdministratorCurriculumManagementController;
+use App\Http\Controllers\AdministratorEnrollmentDiscountController;
 use App\Http\Controllers\AdministratorEnrollmentManagementController;
 use App\Http\Controllers\AdministratorEnrollmentPolicyController;
 use App\Http\Controllers\AdministratorFacultyManagementController;
@@ -124,6 +125,7 @@ Route::middleware(['auth', 'administrators.only'])
         Route::get('/enrollments/applicants', [AdministratorEnrollmentManagementController::class, 'applicants'])->name('enrollments.applicants');
         Route::get('/enrollments/create', [AdministratorEnrollmentManagementController::class, 'create'])->name('enrollments.create');
         Route::post('/enrollments', [AdministratorEnrollmentManagementController::class, 'store'])->name('enrollments.store');
+        Route::post('/enrollments/discounts', [AdministratorEnrollmentDiscountController::class, 'store'])->name('enrollments.discounts.store');
 
         // Enrollment Form Data API endpoints
         Route::get('/enrollments/api/students', [AdministratorEnrollmentManagementController::class, 'searchStudents'])->name('enrollments.api.students');

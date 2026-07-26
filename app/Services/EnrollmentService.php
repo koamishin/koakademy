@@ -87,6 +87,7 @@ final readonly class EnrollmentService
             $subjectsEnrolled = $formData['subjectsEnrolled'] ?? [];
             $totalLecture = 0;
             $totalLaboratory = 0;
+            $totalModularFee = 0;
 
             // It's safer to load the course relationship here if needed for fees
             $subjectIds = collect($subjectsEnrolled)
@@ -147,10 +148,9 @@ final readonly class EnrollmentService
                         $laboratoryFee = $calculatedLaboratoryFee;
                     }
 
-                    // Handle modular fee override
                     if (! empty($subjectEnrolled['is_modular'])) {
-                        $lectureFee = 2400; // Fixed modular fee
-                        $laboratoryFee = 0; // No lab fee for modular
+                        $laboratoryFee = (float) $laboratoryFee / 2;
+                        $totalModularFee += 2400;
                     }
 
                     $totalLecture += (float) $lectureFee;
@@ -159,15 +159,13 @@ final readonly class EnrollmentService
             }
 
             $discount = (int) ($formData['discount'] ?? 0);
+            $discountId = isset($formData['discount_id']) ? (int) $formData['discount_id'] : null;
             $discountedLecture = $totalLecture * (1 - $discount / 100);
-            $discountedTuition = $discountedLecture + $totalLaboratory;
+            $discountedTuition = $discountedLecture + $totalLaboratory + $totalModularFee;
 
-            // Fetch miscellaneous fee from the enrollment's course based on curriculum year
-            $miscellaneousFee = 3500; // Default fallback
-            $enrollmentCourse = $studentEnrollment->course; // Load enrollment course
-            if ($enrollmentCourse) {
-                $miscellaneousFee = $enrollmentCourse->getMiscellaneousFee();
-            }
+            $miscellaneousFee = array_key_exists('miscellaneous_fee', $formData)
+                ? (float) $formData['miscellaneous_fee']
+                : (float) ($studentEnrollment->course?->getMiscellaneousFee() ?? 3500);
 
             // Calculate additional fees total
             $additionalFeesTotal = 0;
@@ -199,6 +197,7 @@ final readonly class EnrollmentService
                 'total_laboratory' => $totalLaboratory,
                 'total_miscelaneous_fees' => $miscellaneousFee,
                 'discount' => $discount,
+                'discount_id' => $discountId,
                 'downpayment' => $downPayment,
                 'overall_tuition' => $overallTotal,
                 // Add other relevant fields if needed (semester, school_year, etc.)

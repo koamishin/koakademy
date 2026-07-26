@@ -12,6 +12,7 @@ use App\Services\EnrollmentBillingService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Override;
 
@@ -19,6 +20,7 @@ use Override;
  * Class StudentTuition
  *
  * @property-read StudentEnrollment|null $enrollment
+ * @property-read EnrollmentDiscount|null $enrollmentDiscount
  * @property-read string $formatted_discount
  * @property-read string $formatted_downpayment
  * @property-read string $formatted_overall_tuition
@@ -63,6 +65,7 @@ final class StudentTuition extends Model
         'student_id',
         'enrollment_id',
         'discount',
+        'discount_id',
         'downpayment',
         'overall_tuition',
         'paid',
@@ -85,6 +88,11 @@ final class StudentTuition extends Model
             'enrollment_id',
             'id'
         );
+    }
+
+    public function enrollmentDiscount(): BelongsTo
+    {
+        return $this->belongsTo(EnrollmentDiscount::class, 'discount_id');
     }
 
     /**
@@ -228,6 +236,7 @@ final class StudentTuition extends Model
             'student_id' => 'integer',
             'enrollment_id' => 'integer',
             'discount' => 'integer',
+            'discount_id' => 'integer',
             'downpayment' => 'float',
             'overall_tuition' => 'float',
             'paid' => 'integer',

@@ -7,6 +7,7 @@ use App\Jobs\SendAssessmentNotificationJob;
 use App\Models\Classes;
 use App\Models\Course;
 use App\Models\Department;
+use App\Models\EnrollmentDiscount;
 use App\Models\GeneralSetting;
 use App\Models\Resource;
 use App\Models\Room;
@@ -660,6 +661,18 @@ it('allows administrators to edit enrollment details', function (): void {
         'academic_year' => $enrollment->academic_year,
     ]);
 
+    $discount = EnrollmentDiscount::query()->create([
+        'name' => 'Merit Discount',
+        'normalized_name' => 'merit discount',
+        'percentage' => 10,
+    ]);
+
+    $enrollment->studentTuition()->update([
+        'discount' => 10,
+        'discount_id' => $discount->id,
+        'total_miscelaneous_fees' => 3250,
+    ]);
+
     $this->actingAs($user)
         ->get(portalUrlForAdministrators("/administrators/enrollments/{$enrollment->id}/edit"))
         ->assertOk()
@@ -667,7 +680,12 @@ it('allows administrators to edit enrollment details', function (): void {
             ->component('administrators/enrollments/edit', false)
             ->where('enrollment.id', $enrollment->id)
             ->where('enrollment.student.id', $student->id)
+            ->where('enrollment.tuition.discount_id', $discount->id)
+            ->where('enrollment.tuition.miscellaneous_fee', 3250)
             ->has('enrollment.subjects', 1)
+            ->where('discounts', fn ($discounts): bool => collect($discounts)->contains(
+                fn (array $option): bool => $option['id'] === $discount->id
+            ))
         );
 
     $this->actingAs($user)
@@ -687,6 +705,7 @@ it('allows administrators to edit enrollment details', function (): void {
                 ],
             ],
             'discount' => 10,
+            'discount_id' => $discount->id,
             'downpayment' => 0,
             'additional_fees' => [
                 [
@@ -699,10 +718,10 @@ it('allows administrators to edit enrollment details', function (): void {
 
     $tuition = $enrollment->studentTuition()->first();
 
-    expect($tuition?->overall_tuition)->toBe(5060.0)
+    expect($tuition?->overall_tuition)->toBe(4810.0)
         ->and($tuition?->total_lectures)->toBe(360.0)
         ->and($tuition?->total_laboratory)->toBe(200.0)
-        ->and($tuition?->total_balance)->toBe(5060.0);
+        ->and($tuition?->total_balance)->toBe(4810.0);
 });
 
 it('removes class enrollment when subject is removed from enrollment', function (): void {
@@ -1081,6 +1100,336 @@ it('only returns sections whose subject code matches exactly when fetching secti
     expect($ids)->toContain($correctClass->id)
         ->and($ids)->not->toContain($falsePositivePrefixClass->id)
         ->and($ids)->not->toContain($falsePositiveCsvClass->id);
+});
+
+it('exposes reusable discount presets on the enrollment form', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    EnrollmentDiscount::query()->create([
+        'name' => 'Athletic Scholarship',
+        'normalized_name' => 'athletic scholarship',
+        'percentage' => 75,
+    ]);
+
+    $this->actingAs($user)
+        ->get(portalUrlForAdministrators('/administrators/enrollments/create'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('administrators/enrollments/create', false)
+            ->where('discounts', fn ($discounts): bool => collect($discounts)->contains(
+                fn (array $discount): bool => $discount['name'] === 'Academic Discount' && $discount['percentage'] === 50
+            )
+                && collect($discounts)->contains(
+                    fn (array $discount): bool => $discount['name'] === 'Full Academic Discount' && $discount['percentage'] === 100
+                )
+                && collect($discounts)->contains(
+                    fn (array $discount): bool => $discount['name'] === 'Athletic Scholarship' && $discount['percentage'] === 75
+                ))
+        );
+});
+
+it('allows administrators to create reusable discount presets', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($user)
+        ->postJson(portalUrlForAdministrators('/administrators/enrollments/discounts'), [
+            'name' => '  Athletic Scholarship  ',
+            'percentage' => 25,
+        ])
+        ->assertCreated()
+        ->assertJson([
+            'name' => 'Athletic Scholarship',
+            'percentage' => 25,
+        ]);
+
+    $this->assertDatabaseHas('enrollment_discounts', [
+        'name' => 'Athletic Scholarship',
+        'normalized_name' => 'athletic scholarship',
+        'percentage' => 25,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(portalUrlForAdministrators('/administrators/enrollments/discounts'), [
+            'name' => 'ATHLETIC SCHOLARSHIP',
+            'percentage' => 30,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['normalized_name']);
+});
+
+it('rejects discount percentages outside the supported range', function (int $percentage): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+
+    $this->actingAs($user)
+        ->postJson(portalUrlForAdministrators('/administrators/enrollments/discounts'), [
+            'name' => 'Invalid Discount',
+            'percentage' => $percentage,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['percentage']);
+})->with([
+    'zero percent' => 0,
+    'over one hundred percent' => 101,
+]);
+
+it('rejects invalid miscellaneous overrides and tampered discount percentages', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create();
+    $student = Student::factory()->create([
+        'id' => fake()->numberBetween(900000, 999999),
+        'course_id' => $course->id,
+    ]);
+    $subject = Subject::factory()->create(['course_id' => $course->id]);
+    $discount = EnrollmentDiscount::query()->where('percentage', 50)->firstOrFail();
+    $payload = [
+        'student_id' => $student->id,
+        'semester' => 1,
+        'academic_year' => 1,
+        'subjects' => [[
+            'subject_id' => $subject->id,
+            'class_id' => null,
+            'is_modular' => false,
+            'exclude_from_tuition' => false,
+            'lecture_fee' => 0,
+            'laboratory_fee' => 0,
+            'enrolled_lecture_units' => 0,
+            'enrolled_laboratory_units' => 0,
+        ]],
+        'discount' => 50,
+        'discount_id' => $discount->id,
+        'miscellaneous_fee' => -1,
+        'downpayment' => 0,
+        'additional_fees' => [],
+    ];
+
+    $this->actingAs($user)
+        ->postJson(portalUrlForAdministrators('/administrators/enrollments'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['miscellaneous_fee']);
+
+    $this->actingAs($user)
+        ->postJson(portalUrlForAdministrators('/administrators/enrollments'), [
+            ...$payload,
+            'discount' => 49,
+            'miscellaneous_fee' => 0,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['discount']);
+});
+
+it('persists a miscellaneous override and discounts lecture fees only', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    GeneralSetting::factory()->create([
+        'school_starting_date' => '2026-06-01',
+        'school_ending_date' => '2027-03-31',
+        'semester' => 1,
+    ]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create([
+        'lec_per_unit' => 100,
+        'lab_per_unit' => 200,
+        'miscelaneous' => 3500,
+    ]);
+    $student = Student::factory()->create([
+        'id' => fake()->numberBetween(900000, 999999),
+        'course_id' => $course->id,
+        'academic_year' => 1,
+    ]);
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'SCI-101',
+        'lecture' => 3,
+        'laboratory' => 1,
+    ]);
+    $discount = EnrollmentDiscount::query()->where('percentage', 50)->firstOrFail();
+
+    $this->actingAs($user)
+        ->post(portalUrlForAdministrators('/administrators/enrollments'), [
+            'student_id' => $student->id,
+            'semester' => 1,
+            'academic_year' => 1,
+            'subjects' => [[
+                'subject_id' => $subject->id,
+                'class_id' => null,
+                'is_modular' => false,
+                'exclude_from_tuition' => false,
+                'lecture_fee' => 400,
+                'laboratory_fee' => 200,
+                'enrolled_lecture_units' => 3,
+                'enrolled_laboratory_units' => 1,
+            ]],
+            'discount' => 50,
+            'discount_id' => $discount->id,
+            'miscellaneous_fee' => 1200,
+            'downpayment' => 0,
+            'additional_fees' => [[
+                'fee_name' => 'Identification Card',
+                'amount' => 100,
+            ]],
+        ])
+        ->assertRedirect();
+
+    $tuition = StudentTuition::query()->where('student_id', $student->id)->firstOrFail();
+
+    expect($tuition->discount_id)->toBe($discount->id)
+        ->and($tuition->discount)->toBe(50)
+        ->and($tuition->total_lectures)->toBe(200.0)
+        ->and($tuition->total_laboratory)->toBe(200.0)
+        ->and($tuition->total_miscelaneous_fees)->toBe(1200.0)
+        ->and($tuition->overall_tuition)->toBe(1700.0)
+        ->and($tuition->total_balance)->toBe(1700.0);
+});
+
+it('keeps laboratory modular miscellaneous and additional fees outside a full lecture discount', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    GeneralSetting::factory()->create([
+        'school_starting_date' => '2026-06-01',
+        'school_ending_date' => '2027-03-31',
+        'semester' => 1,
+    ]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create([
+        'lec_per_unit' => 100,
+        'lab_per_unit' => 200,
+        'miscelaneous' => 3500,
+    ]);
+    $student = Student::factory()->create([
+        'id' => fake()->numberBetween(900000, 999999),
+        'course_id' => $course->id,
+        'academic_year' => 1,
+    ]);
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'MOD-101',
+        'lecture' => 3,
+        'laboratory' => 1,
+    ]);
+    $discount = EnrollmentDiscount::query()->where('percentage', 100)->firstOrFail();
+
+    $this->actingAs($user)
+        ->post(portalUrlForAdministrators('/administrators/enrollments'), [
+            'student_id' => $student->id,
+            'semester' => 1,
+            'academic_year' => 1,
+            'subjects' => [[
+                'subject_id' => $subject->id,
+                'class_id' => null,
+                'is_modular' => true,
+                'exclude_from_tuition' => false,
+                'lecture_fee' => 400,
+                'laboratory_fee' => 100,
+                'enrolled_lecture_units' => 3,
+                'enrolled_laboratory_units' => 1,
+            ]],
+            'discount' => 100,
+            'discount_id' => $discount->id,
+            'miscellaneous_fee' => 800,
+            'downpayment' => 0,
+            'additional_fees' => [[
+                'fee_name' => 'Processing',
+                'amount' => 50,
+            ]],
+        ])
+        ->assertRedirect();
+
+    $tuition = StudentTuition::query()->where('student_id', $student->id)->firstOrFail();
+
+    expect($tuition->total_lectures)->toBe(0.0)
+        ->and($tuition->total_laboratory)->toBe(100.0)
+        ->and($tuition->total_tuition)->toBe(2500.0)
+        ->and($tuition->total_miscelaneous_fees)->toBe(800.0)
+        ->and($tuition->overall_tuition)->toBe(3350.0);
+});
+
+it('preserves an existing legacy discount while updating its miscellaneous fee', function (): void {
+    config(['activitylog.enabled' => false]);
+
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create([
+        'lec_per_unit' => 100,
+        'lab_per_unit' => 200,
+        'miscelaneous' => 3500,
+    ]);
+    $student = Student::factory()->createQuietly([
+        'id' => fake()->numberBetween(900000, 999999),
+        'course_id' => $course->id,
+        'academic_year' => 1,
+    ]);
+    $enrollment = StudentEnrollment::factory()->create([
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+        'academic_year' => 1,
+    ]);
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'LEG-101',
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+    $enrollment->subjectsEnrolled()->create([
+        'subject_id' => $subject->id,
+        'student_id' => $student->id,
+        'academic_year' => 1,
+        'school_year' => $enrollment->school_year,
+        'semester' => 1,
+        'is_modular' => false,
+        'lecture_fee' => 300,
+        'laboratory_fee' => 0,
+        'enrolled_lecture_units' => 3,
+        'enrolled_laboratory_units' => 0,
+    ]);
+    StudentTuition::query()->create([
+        'enrollment_id' => $enrollment->id,
+        'student_id' => $student->id,
+        'total_tuition' => 225,
+        'total_balance' => 3725,
+        'total_lectures' => 225,
+        'total_laboratory' => 0,
+        'total_miscelaneous_fees' => 3500,
+        'discount' => 25,
+        'discount_id' => null,
+        'downpayment' => 0,
+        'overall_tuition' => 3725,
+        'semester' => 1,
+        'school_year' => $enrollment->school_year,
+        'academic_year' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->put(portalUrlForAdministrators("/administrators/enrollments/{$enrollment->id}"), [
+            'student_id' => $student->id,
+            'semester' => 1,
+            'academic_year' => 1,
+            'subjects' => [[
+                'subject_id' => $subject->id,
+                'class_id' => null,
+                'is_modular' => false,
+                'exclude_from_tuition' => false,
+                'lecture_fee' => 300,
+                'laboratory_fee' => 0,
+                'enrolled_lecture_units' => 3,
+                'enrolled_laboratory_units' => 0,
+            ]],
+            'discount' => 25,
+            'discount_id' => null,
+            'miscellaneous_fee' => 2750,
+            'downpayment' => 0,
+            'additional_fees' => [],
+        ])
+        ->assertRedirect();
+
+    $tuition = $enrollment->studentTuition()->firstOrFail();
+
+    expect($tuition->discount_id)->toBeNull()
+        ->and($tuition->discount)->toBe(25)
+        ->and($tuition->total_miscelaneous_fees)->toBe(2750.0)
+        ->and($tuition->overall_tuition)->toBe(2975.0);
 });
 
 it('returns sections whose course_codes store the course id as a string', function (): void {

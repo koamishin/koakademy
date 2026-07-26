@@ -7,12 +7,14 @@ namespace App\Http\Controllers;
 use App\Enrollment\EnrollmentWorkflowCoordinator;
 use App\Enums\StudentStatus;
 use App\Exports\EnrollmentReportExport;
+use App\Http\Requests\Administrators\SaveEnrollmentRequest;
 use App\Jobs\GenerateAssessmentPdfJob;
 use App\Jobs\GenerateBulkAssessmentsJob;
 use App\Jobs\GenerateEnrollmentReportPreviewPdfJob;
 use App\Jobs\SendClassChangeNotificationJob;
 use App\Models\ClassEnrollment;
 use App\Models\Classes;
+use App\Models\EnrollmentDiscount;
 use App\Models\Resource;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
@@ -40,6 +42,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1140,41 +1143,25 @@ final class AdministratorEnrollmentManagementController extends Controller
                 ])->values(),
                 'tuition' => $tuition ? [
                     'discount' => $tuition->discount,
+                    'discount_id' => $tuition->discount_id,
                     'downpayment' => $tuition->downpayment,
+                    'miscellaneous_fee' => $tuition->total_miscelaneous_fees,
                 ] : null,
                 'additional_fees' => $enrollment->additionalFees->map(fn ($fee): array => [
                     'fee_name' => $fee->fee_name,
                     'amount' => $fee->amount,
                 ])->values(),
             ],
+            'discounts' => $this->discountOptions(),
             'flash' => session('flash'),
         ]);
     }
 
-    public function updateEnrollment(Request $request, StudentEnrollment $enrollment): RedirectResponse
+    public function updateEnrollment(SaveEnrollmentRequest $request, StudentEnrollment $enrollment): RedirectResponse
     {
-        $validated = $request->validate([
-            'student_id' => ['required', 'exists:students,id'],
-            'semester' => ['required', 'integer', 'in:1,2'],
-            'academic_year' => ['required', 'integer', 'in:1,2,3,4'],
-            'subjects' => ['required', 'array', 'min:1'],
-            'subjects.*.subject_id' => ['required', 'exists:subject,id'],
-            'subjects.*.class_id' => ['nullable', 'exists:classes,id'],
-            'subjects.*.is_modular' => ['boolean'],
-            'subjects.*.exclude_from_tuition' => ['boolean'],
-            'subjects.*.lecture_fee' => ['required', 'numeric', 'min:0'],
-            'subjects.*.laboratory_fee' => ['required', 'numeric', 'min:0'],
-            'subjects.*.enrolled_lecture_units' => ['required', 'integer', 'min:0'],
-            'subjects.*.enrolled_laboratory_units' => ['required', 'integer', 'min:0'],
-            'discount' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'downpayment' => ['nullable', 'numeric', 'min:0'],
-            'additional_fees' => ['nullable', 'array'],
-            'additional_fees.*.fee_name' => ['required_with:additional_fees', 'string'],
-            'additional_fees.*.amount' => ['required_with:additional_fees', 'numeric', 'min:0'],
-            'notify_student' => ['nullable', 'boolean'],
-            'change_reason' => ['nullable', 'string', 'max:1000'],
-            'force_overload' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validated();
+
+        $validated = array_merge($validated, $this->resolveDiscountSelection($validated, $enrollment));
 
         if ((int) $validated['student_id'] !== (int) $enrollment->student_id) {
             return back()->with('flash', ['error' => 'Student selection cannot be changed for this enrollment.']);
@@ -1316,7 +1303,12 @@ final class AdministratorEnrollmentManagementController extends Controller
                 $this->updateEnrollmentTuition(
                     $enrollment,
                     $validated['subjects'],
-                    (int) ($validated['discount'] ?? 0),
+                    $validated['discount'],
+                    $validated['discount_id'],
+                    (float) ($validated['miscellaneous_fee']
+                        ?? $enrollment->studentTuition?->total_miscelaneous_fees
+                        ?? $enrollment->course?->getMiscellaneousFee()
+                        ?? 3500),
                     (float) ($validated['downpayment'] ?? 0),
                     $validated['additional_fees'] ?? []
                 );
@@ -1377,6 +1369,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                     '4' => '4th Year',
                 ],
             ],
+            'discounts' => $this->discountOptions(),
             'flash' => session('flash'),
         ]);
     }
@@ -1384,28 +1377,11 @@ final class AdministratorEnrollmentManagementController extends Controller
     /**
      * Store a newly created enrollment in storage.
      */
-    public function store(Request $request, GeneralSettingsService $settingsService): RedirectResponse
+    public function store(SaveEnrollmentRequest $request, GeneralSettingsService $settingsService): RedirectResponse
     {
-        $validated = $request->validate([
-            'student_id' => ['required', 'exists:students,id'],
-            'semester' => ['required', 'integer', 'in:1,2'],
-            'academic_year' => ['required', 'integer', 'in:1,2,3,4'],
-            'subjects' => ['required', 'array', 'min:1'],
-            'subjects.*.subject_id' => ['required', 'exists:subject,id'],
-            'subjects.*.class_id' => ['nullable', 'exists:classes,id'],
-            'subjects.*.is_modular' => ['boolean'],
-            'subjects.*.exclude_from_tuition' => ['boolean'],
-            'subjects.*.lecture_fee' => ['required', 'numeric', 'min:0'],
-            'subjects.*.laboratory_fee' => ['required', 'numeric', 'min:0'],
-            'subjects.*.enrolled_lecture_units' => ['required', 'integer', 'min:0'],
-            'subjects.*.enrolled_laboratory_units' => ['required', 'integer', 'min:0'],
-            'discount' => ['nullable', 'integer', 'min:0', 'max:100'],
-            'downpayment' => ['nullable', 'numeric', 'min:0'],
-            'additional_fees' => ['nullable', 'array'],
-            'additional_fees.*.fee_name' => ['required_with:additional_fees', 'string'],
-            'additional_fees.*.amount' => ['required_with:additional_fees', 'numeric', 'min:0'],
-            'force_overload' => ['nullable', 'boolean'],
-        ]);
+        $validated = $request->validated();
+
+        $validated = array_merge($validated, $this->resolveDiscountSelection($validated));
 
         try {
             $result = $this->withoutEnrollmentSearchSyncing(fn (): array => DB::transaction(function () use ($validated, $settingsService): array {
@@ -1477,12 +1453,20 @@ final class AdministratorEnrollmentManagementController extends Controller
                 }
 
                 // Create tuition record
-                $this->enrollmentService->createStudentTuition($enrollment, [
+                $tuition = $this->enrollmentService->createStudentTuition($enrollment, [
                     'subjectsEnrolled' => $validated['subjects'],
                     'discount' => $validated['discount'] ?? 0,
+                    'discount_id' => $validated['discount_id'],
+                    'miscellaneous_fee' => isset($validated['miscellaneous_fee'])
+                        ? (float) $validated['miscellaneous_fee']
+                        : (float) ($student->Course?->getMiscellaneousFee() ?? 3500),
                     'downpayment' => $validated['downpayment'] ?? 0,
                     'additionalFees' => $validated['additional_fees'] ?? [],
                 ]);
+
+                if (! $tuition) {
+                    throw new Exception('Failed to create the tuition assessment.');
+                }
 
                 // Create additional fees if provided
                 if (! empty($validated['additional_fees'])) {
@@ -2668,10 +2652,70 @@ final class AdministratorEnrollmentManagementController extends Controller
         return $subjectsWithClasses->unique();
     }
 
+    /**
+     * @return array<int, array{id: int, name: string, percentage: int}>
+     */
+    private function discountOptions(): array
+    {
+        return EnrollmentDiscount::query()
+            ->orderBy('percentage')
+            ->orderBy('name')
+            ->get(['id', 'name', 'percentage'])
+            ->map(fn (EnrollmentDiscount $discount): array => [
+                'id' => $discount->id,
+                'name' => $discount->name,
+                'percentage' => $discount->percentage,
+            ])
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{discount_id: int|null, discount: int}
+     */
+    private function resolveDiscountSelection(array $validated, ?StudentEnrollment $enrollment = null): array
+    {
+        $discountId = isset($validated['discount_id']) ? (int) $validated['discount_id'] : null;
+        $submittedPercentage = (int) ($validated['discount'] ?? 0);
+
+        if ($discountId === null) {
+            $tuition = $enrollment?->studentTuition;
+            $isUnchangedLegacyDiscount = $tuition !== null
+                && $tuition->discount_id === null
+                && (int) $tuition->discount === $submittedPercentage;
+
+            if ($submittedPercentage !== 0 && ! $isUnchangedLegacyDiscount) {
+                throw ValidationException::withMessages([
+                    'discount_id' => 'Please select a saved discount preset.',
+                ]);
+            }
+
+            return [
+                'discount_id' => null,
+                'discount' => $submittedPercentage,
+            ];
+        }
+
+        $discount = EnrollmentDiscount::query()->findOrFail($discountId);
+
+        if ($submittedPercentage !== $discount->percentage) {
+            throw ValidationException::withMessages([
+                'discount' => 'The selected discount percentage is no longer valid. Please select the discount again.',
+            ]);
+        }
+
+        return [
+            'discount_id' => $discount->id,
+            'discount' => $discount->percentage,
+        ];
+    }
+
     private function updateEnrollmentTuition(
         StudentEnrollment $enrollment,
         array $subjects,
         int $discount,
+        ?int $discountId,
+        float $miscellaneousFee,
         float $downpayment,
         array $additionalFees
     ): void {
@@ -2686,6 +2730,7 @@ final class AdministratorEnrollmentManagementController extends Controller
 
         $totalLecture = 0.0;
         $totalLaboratory = 0.0;
+        $totalModularFee = 0.0;
 
         foreach ($subjects as $subjectData) {
             $subject = $subjectModels->get($subjectData['subject_id'] ?? 0);
@@ -2709,8 +2754,8 @@ final class AdministratorEnrollmentManagementController extends Controller
             $laboratoryFee = $subject->laboratory ? 1 * ($subject->course?->lab_per_unit ?? 0) : 0;
 
             if ($isModular) {
-                $lectureFee = 2400;
-                $laboratoryFee = 0;
+                $laboratoryFee /= 2;
+                $totalModularFee += 2400;
             }
 
             $totalLecture += (float) $lectureFee;
@@ -2718,8 +2763,7 @@ final class AdministratorEnrollmentManagementController extends Controller
         }
 
         $discountedLecture = $totalLecture * (1 - $discount / 100);
-        $totalTuition = $discountedLecture + $totalLaboratory;
-        $miscellaneousFee = $enrollment->course?->getMiscellaneousFee() ?? 3500;
+        $totalTuition = $discountedLecture + $totalLaboratory + $totalModularFee;
 
         $additionalFeesTotal = collect($additionalFees)
             ->sum(fn (array $fee): float => (float) ($fee['amount'] ?? 0));
@@ -2736,6 +2780,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                 'total_laboratory' => $totalLaboratory,
                 'total_miscelaneous_fees' => $miscellaneousFee,
                 'discount' => $discount,
+                'discount_id' => $discountId,
                 'downpayment' => $downpayment,
                 'overall_tuition' => $overallTotal,
                 'semester' => $enrollment->semester,
