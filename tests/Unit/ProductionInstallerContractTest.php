@@ -86,6 +86,165 @@ it('parses the Bash installer', function (): void {
         ->toBeTrue($process->getErrorOutput() ?: $process->getOutput());
 });
 
+it('accepts only the explicit edge rolling override and warns prominently', function (): void {
+    $bash = productionInstallerContents('install.sh');
+    $powerShell = productionInstallerContents('install.ps1');
+
+    expect($bash)
+        ->toContain('if [[ "${KOAKADEMY_VERSION}" == "edge" ]]')
+        ->toContain('KOAKADEMY_VERSION=edge selects the unsupported rolling channel.')
+        ->toContain('pin an exact vX.Y.Z tag for production')
+        ->and($powerShell)
+        ->toContain("if (\$KoAkademyVersion -ceq 'edge')")
+        ->toContain('KOAKADEMY_VERSION=edge selects the unsupported rolling channel.')
+        ->toContain('pin an exact vX.Y.Z tag for production')
+        ->and($bash)
+        ->not->toContain('KOAKADEMY_VERSION:-edge')
+        ->and($powerShell)
+        ->not->toContain("[string]\$KoAkademyVersion = 'edge'");
+});
+
+it('keeps automatic KoAkademy discovery restricted to exact stable tags', function (): void {
+    $bash = productionInstallerContents('install.sh');
+    $powerShell = productionInstallerContents('install.ps1');
+
+    expect($bash)
+        ->toContain('api.github.com/repos/${repository}/releases/latest')
+        ->toContain('"draft":[[:space:]]*false')
+        ->toContain('"prerelease":[[:space:]]*false')
+        ->and($powerShell)
+        ->toContain('api.github.com/repos/$RepositoryName/releases/latest')
+        ->toContain('$release.draft')
+        ->toContain('$release.prerelease');
+});
+
+it('accepts Docker architecture names for AMD64 and ARM64', function (): void {
+    $bash = productionInstallerContents('install.sh');
+    $powerShell = productionInstallerContents('install.ps1');
+
+    expect($bash)
+        ->toContain('"x86_64" || "${architecture}" == "amd64"')
+        ->toContain('"aarch64" || "${architecture}" == "arm64"')
+        ->toContain('supports linux/amd64 and linux/arm64')
+        ->and($powerShell)
+        ->toContain("@('x86_64', 'amd64', 'aarch64', 'arm64')")
+        ->toContain('supports linux/amd64 and linux/arm64');
+});
+
+it('discovers and pins the latest published stable release', function (): void {
+    $bash = (new ExecutableFinder)->find('bash');
+
+    if ($bash === null || DIRECTORY_SEPARATOR === '\\') {
+        $this->markTestSkipped('The Bash smoke test requires a Unix-like host.');
+    }
+
+    $filesystem = new Filesystem;
+    $state = storage_path('framework/testing/installer-release-'.bin2hex(random_bytes(6)));
+    $filesystem->mkdir($state);
+
+    $environment = [
+        'PATH' => base_path('tests/Fixtures/installer').PATH_SEPARATOR.getenv('PATH'),
+        'KOAKADEMY_INSTALLER_TEST_STATE' => $state,
+        'KOAKADEMY_INSTALLER_TEST_RELEASE_TAG' => 'v1.12.0',
+        'KOAKADEMY_APP_URL' => 'http://127.0.0.1:18003',
+        'KOAKADEMY_APP_PORT' => '18003',
+        'KOAKADEMY_RUSTFS_PORT' => '19003',
+        'KOAKADEMY_STORAGE' => 'rustfs',
+        'RUSTFS_VERSION' => '1.0.0-beta.10',
+    ];
+
+    try {
+        $process = new Process([$bash, base_path('scripts/install.sh')], base_path(), $environment);
+        $process->setTimeout(30);
+        $process->run();
+
+        expect($process->isSuccessful())
+            ->toBeTrue($process->getErrorOutput().$process->getOutput());
+
+        $log = file_get_contents($state.'/docker.log') ?: '';
+        expect($log)->toContain('ghcr.io/yukazakiri/koakademy:v1.12.0');
+    } finally {
+        $filesystem->remove($state);
+    }
+});
+
+it('smoke tests the explicit edge installer warning and image selection', function (): void {
+    $bash = (new ExecutableFinder)->find('bash');
+
+    if ($bash === null || DIRECTORY_SEPARATOR === '\\') {
+        $this->markTestSkipped('The Bash smoke test requires a Unix-like host.');
+    }
+
+    $filesystem = new Filesystem;
+    $state = storage_path('framework/testing/installer-edge-'.bin2hex(random_bytes(6)));
+    $filesystem->mkdir($state);
+
+    $environment = [
+        'PATH' => base_path('tests/Fixtures/installer').PATH_SEPARATOR.getenv('PATH'),
+        'KOAKADEMY_INSTALLER_TEST_STATE' => $state,
+        'KOAKADEMY_APP_URL' => 'http://127.0.0.1:18001',
+        'KOAKADEMY_APP_PORT' => '18001',
+        'KOAKADEMY_RUSTFS_PORT' => '19001',
+        'KOAKADEMY_STORAGE' => 'rustfs',
+        'KOAKADEMY_VERSION' => 'edge',
+        'KOAKADEMY_INSTALLER_TEST_ARCHITECTURE' => 'aarch64',
+        'RUSTFS_VERSION' => '1.0.0-beta.10',
+    ];
+
+    try {
+        $process = new Process([$bash, base_path('scripts/install.sh')], base_path(), $environment);
+        $process->setTimeout(30);
+        $process->run();
+
+        expect($process->isSuccessful())
+            ->toBeTrue($process->getErrorOutput().$process->getOutput())
+            ->and($process->getErrorOutput())
+            ->toContain('KOAKADEMY_VERSION=edge selects the unsupported rolling channel.')
+            ->toContain('pin an exact vX.Y.Z tag for production');
+
+        $log = file_get_contents($state.'/docker.log') ?: '';
+        expect($log)->toContain('ghcr.io/yukazakiri/koakademy:edge');
+    } finally {
+        $filesystem->remove($state);
+    }
+});
+
+it('rejects edge-like tags that are not the exact rolling channel name', function (): void {
+    $bash = (new ExecutableFinder)->find('bash');
+
+    if ($bash === null || DIRECTORY_SEPARATOR === '\\') {
+        $this->markTestSkipped('The Bash smoke test requires a Unix-like host.');
+    }
+
+    $filesystem = new Filesystem;
+    $state = storage_path('framework/testing/installer-invalid-edge-'.bin2hex(random_bytes(6)));
+    $filesystem->mkdir($state);
+
+    $environment = [
+        'PATH' => base_path('tests/Fixtures/installer').PATH_SEPARATOR.getenv('PATH'),
+        'KOAKADEMY_INSTALLER_TEST_STATE' => $state,
+        'KOAKADEMY_APP_URL' => 'http://127.0.0.1:18002',
+        'KOAKADEMY_APP_PORT' => '18002',
+        'KOAKADEMY_RUSTFS_PORT' => '19002',
+        'KOAKADEMY_STORAGE' => 'rustfs',
+        'KOAKADEMY_VERSION' => 'edge-latest',
+        'RUSTFS_VERSION' => '1.0.0-beta.10',
+    ];
+
+    try {
+        $process = new Process([$bash, base_path('scripts/install.sh')], base_path(), $environment);
+        $process->setTimeout(30);
+        $process->run();
+
+        expect($process->isSuccessful())
+            ->toBeFalse()
+            ->and($process->getErrorOutput())
+            ->toContain("KOAKADEMY_VERSION 'edge-latest' is not a safe container tag.");
+    } finally {
+        $filesystem->remove($state);
+    }
+});
+
 it('smoke tests a fresh and repeated Bash installation without a Docker daemon', function (): void {
     $bash = (new ExecutableFinder)->find('bash');
 
