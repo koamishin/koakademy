@@ -42,7 +42,7 @@ RUN APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= php artisan wayf
 # -----------------------------------------------------------------------------
 # Stage 3: Build Frontend Assets
 # -----------------------------------------------------------------------------
-FROM node:26-bookworm-slim@sha256:2d49d876e96237d76de412761cf05dbfe5aee325cc4406a4d41d5824c5bb8beb AS build-assets
+FROM node:22-bookworm-slim@sha256:6c74791e557ce11fc957704f6d4fe134a7bc8d6f5ca4403205b2966bd488f6b3 AS build-assets
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
