@@ -432,7 +432,7 @@ jobs:
           provenance: mode=max
           sbom: true
           cache-from: type=gha,scope=delivery
-          cache-to: type=gha,mode=max,scope=delivery
+          cache-to: type=gha,mode=max,scope=delivery,ignore-error=true
 
       - name: Replicate immutable image to Docker Hub
         if: steps.existing.outputs.replication_required == 'true'
