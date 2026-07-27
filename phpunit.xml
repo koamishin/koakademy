@@ -38,5 +38,13 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="SIMPLESTATS_ENABLED" value="false"/>
+        <env name="LARAVEL_PDF_DRIVER" value="gotenberg"/>
+        <env name="LARAVEL_PDF_PRODUCTION_DRIVER" value="gotenberg"/>
+        <env name="LARAVEL_PDF_STAGING_DRIVER" value="gotenberg"/>
+        <env name="LARAVEL_PDF_LOCAL_DRIVER" value="gotenberg"/>
+        <env name="LARAVEL_PDF_PRODUCTION_FALLBACK" value=""/>
+        <env name="LARAVEL_PDF_STAGING_FALLBACK" value=""/>
+        <env name="LARAVEL_PDF_LOCAL_FALLBACK" value=""/>
+        <env name="LARAVEL_PDF_ROLLBACK_DRIVER" value="gotenberg"/>
     </php>
 </phpunit>

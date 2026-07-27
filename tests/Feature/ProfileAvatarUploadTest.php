@@ -69,8 +69,11 @@ it('can handle profile avatar form component', function () {
 
     $this->actingAs($user);
 
+    // The admin panel is served on the configured admin host.
+    $adminHost = config('app.admin_host');
+
     // Test that the edit profile page is accessible
-    $response = $this->get('/admin/edit-profile');
+    $response = $this->get("http://{$adminHost}/admin/edit-profile");
 
     $response->assertSuccessful();
     $response->assertSeeLivewire(EditProfileForm::class);
