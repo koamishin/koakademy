@@ -227,7 +227,10 @@ jobs:
 
   publish:
     name: Publish ${{ needs.prepare.outputs.channel }} containers
-    if: needs.prepare.outputs.publish == 'true'
+    if: >-
+      always() &&
+      needs.prepare.result == 'success' &&
+      needs.prepare.outputs.publish == 'true'
     needs:
       - prepare
     runs-on: ubuntu-24.04
