@@ -100,7 +100,7 @@ final class SubjectsRelationManager extends RelationManager
                                                     ->get()
                                                     ->mapWithKeys(fn ($subject): array => [$subject->id => "{$subject->code} - {$subject->title}"]);
                                             })
-                                            ->getOptionLabelUsing(function ($value) {
+                                            ->getOptionLabelUsing(function ($value): ?string {
                                                 $subject = Subject::find($value);
 
                                                 return $subject ? "{$subject->code} - {$subject->title}" : null;

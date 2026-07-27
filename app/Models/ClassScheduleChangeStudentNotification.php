@@ -8,11 +8,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class ClassScheduleChangeStudentNotification extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'class_schedule_change_id',
         'student_id',

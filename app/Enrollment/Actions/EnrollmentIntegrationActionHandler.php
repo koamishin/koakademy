@@ -38,7 +38,7 @@ final readonly class EnrollmentIntegrationActionHandler implements EnrollmentAct
     public function metadata(): array
     {
         return [
-            'key' => $this->key(),
+            'key' => $this->handlerKey,
             'label' => $this->label,
             'category' => 'integration',
             'requires_configuration' => false,
@@ -355,9 +355,9 @@ final readonly class EnrollmentIntegrationActionHandler implements EnrollmentAct
             'additionalFees' => $enrollment->additionalFees()->get(['fee_name', 'amount'])->toArray(),
         ]);
 
-        return $tuition === null
-            ? ActionResult::failure('The existing tuition service could not calculate tuition for this enrollment.')
-            : ActionResult::success(['tuition_id' => $tuition->id, 'overall_tuition' => $tuition->overall_tuition]);
+        return $tuition instanceof \App\Models\StudentTuition
+            ? ActionResult::success(['tuition_id' => $tuition->id, 'overall_tuition' => $tuition->overall_tuition])
+            : ActionResult::failure('The existing tuition service could not calculate tuition for this enrollment.');
     }
 
     /** @param array<string, mixed> $configuration */
@@ -458,7 +458,7 @@ final readonly class EnrollmentIntegrationActionHandler implements EnrollmentAct
         $enrollmentSubjectCode = mb_trim((string) $subjectEnrollment->subject?->code);
         $matchesSubject = (int) $class->subject_id === (int) $subjectEnrollment->subject_id
             || ($classSubjectCode !== '' && $enrollmentSubjectCode !== '' && $classSubjectCode === $enrollmentSubjectCode)
-            || in_array((int) $subjectEnrollment->subject_id, array_map('intval', $class->subject_ids ?? []), true);
+            || in_array((int) $subjectEnrollment->subject_id, array_map(intval(...), $class->subject_ids ?? []), true);
 
         return $matchesPeriod && $matchesSchool && $matchesSubject;
     }

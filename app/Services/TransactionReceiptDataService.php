@@ -6,9 +6,9 @@ namespace App\Services;
 
 use App\Models\Transaction;
 
-final class TransactionReceiptDataService
+final readonly class TransactionReceiptDataService
 {
-    public function __construct(private readonly GeneralSettingsService $settingsService) {}
+    public function __construct(private GeneralSettingsService $settingsService) {}
 
     /**
      * @return array<string, mixed>

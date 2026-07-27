@@ -8,10 +8,12 @@ use App\Enrollment\EnrollmentPolicyPreset;
 use App\Models\EnrollmentPolicy;
 use App\Models\EnrollmentPolicyVersion;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /** @extends Factory<EnrollmentPolicyVersion> */
 final class EnrollmentPolicyVersionFactory extends Factory
 {
+    #[Override]
     protected $model = EnrollmentPolicyVersion::class;
 
     public function definition(): array

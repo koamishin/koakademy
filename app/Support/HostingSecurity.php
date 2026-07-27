@@ -53,7 +53,7 @@ final class HostingSecurity
         }
 
         return array_values(array_filter(array_map(
-            static fn (string $proxy): string => mb_trim($proxy),
+            mb_trim(...),
             explode(',', $configured),
         )));
     }

@@ -77,7 +77,7 @@ final class HandleInertiaRequests extends Middleware
                 'socialMediaSettings' => $settingsService->getSocialMediaSettings(),
                 'siteSettings' => $settingsService->getSiteSettings($request),
                 'branding' => $settingsService->getBranding(),
-                'seo' => fn () => $settingsService->getSeoSettings(),
+                'seo' => $settingsService->getSeoSettings(...),
                 'grading' => $settingsService->getGrading(),
                 'analytics' => $analyticsService->getFrontendConfig(),
                 'meta' => [
@@ -87,7 +87,7 @@ final class HandleInertiaRequests extends Middleware
                 'demoMode' => $this->getDemoModeData(),
                 'status' => session('status'),
                 'settings' => $settingsService->getSettings(),
-                'socialAuthProviders' => fn () => $socialiteProviderService->enabledProviders(),
+                'socialAuthProviders' => $socialiteProviderService->enabledProviders(...),
                 'version' => config('app.version'),
                 'onboarding' => [
                     'forceOnLogin' => (bool) config('onboarding.force_on_login'),
@@ -112,15 +112,15 @@ final class HandleInertiaRequests extends Middleware
                 'unresolvedHelpTicketsCount' => $onboardingService->getUnresolvedHelpTicketsCount($user),
                 'adminSidebarCounts' => fn () => $administratorSidebarCounts->resolve($request),
                 'moduleAdminRoutes' => $moduleAdminNavigationService->getRoutes(),
-                'institutionOnboarding' => fn () => $this->getInstitutionOnboardingData($request, $user),
+                'institutionOnboarding' => fn (): ?array => $this->getInstitutionOnboardingData($request, $user),
             ],
             [
-                'announcements' => fn () => $this->getSharedAnnouncements(
+                'announcements' => fn (): array => $this->getSharedAnnouncements(
                     request: $request,
                     user: $user,
                     announcementService: $announcementService,
                     studentProfileCompletionService: $studentProfileCompletionService,
-                    studentInformationUpdatesEnabled: (bool) $studentInformationUpdatesEnabled,
+                    studentInformationUpdatesEnabled: $studentInformationUpdatesEnabled,
                 ),
             ]
         );

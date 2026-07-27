@@ -26,7 +26,7 @@ final class StatementOfAccountVerificationController extends Controller
         $snapshot = $issuance->snapshot;
 
         return Inertia::render('student/tuition/verify-soa', [
-            'status' => ! $integrityValid ? 'integrity_failed' : ($issuance->revoked_at ? 'revoked' : 'valid'),
+            'status' => $integrityValid ? ($issuance->revoked_at ? 'revoked' : 'valid') : ('integrity_failed'),
             'document' => [
                 'document_number' => $issuance->document_number,
                 'student' => $this->maskName((string) data_get($snapshot, 'student.name', '')),

@@ -9,9 +9,9 @@ use App\Settings\SiteSettings;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
-final class SchoolBrandingService
+final readonly class SchoolBrandingService
 {
-    public function __construct(private readonly SiteSettings $siteSettings) {}
+    public function __construct(private SiteSettings $siteSettings) {}
 
     /** @return array{name: string, address: string, logo: string, logo_embedded: string, tagline: string, email: string, phone: string} */
     public function resolve(): array
@@ -59,7 +59,7 @@ final class SchoolBrandingService
                 $contents = Storage::disk('supabase')->get($storedPath);
                 $mime = Storage::disk('supabase')->mimeType($storedPath) ?: 'image/png';
 
-                return 'data:'.$mime.';base64,'.base64_encode($contents);
+                return 'data:'.$mime.';base64,'.base64_encode((string) $contents);
             } catch (Throwable) {
                 // The PDF renderer can still load the public URL.
             }

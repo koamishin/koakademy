@@ -29,22 +29,38 @@ final class NonOverlappingScheduleBlocksRule implements ValidationRule
             $leftStart = $this->timeToMinutes($left['start_time'] ?? null);
             $leftEnd = $this->timeToMinutes($left['end_time'] ?? null);
             $leftDay = $this->normalizeDay($left['day_of_week'] ?? null);
-
-            if ($leftDay === null || $leftStart === null || $leftEnd === null || $leftEnd <= $leftStart) {
+            if ($leftDay === null) {
                 continue;
             }
+            if ($leftStart === null) {
+                continue;
+            }
+            if ($leftEnd === null) {
+                continue;
+            }
+            if ($leftEnd <= $leftStart) {
+                continue;
+            }
+            $counter = count($blocks);
 
-            for ($rightIndex = $leftIndex + 1; $rightIndex < count($blocks); $rightIndex++) {
+            for ($rightIndex = $leftIndex + 1; $rightIndex < $counter; $rightIndex++) {
                 $right = $blocks[$rightIndex];
-
-                if (! is_array($right) || $this->normalizeDay($right['day_of_week'] ?? null) !== $leftDay) {
+                if (! is_array($right)) {
+                    continue;
+                }
+                if ($this->normalizeDay($right['day_of_week'] ?? null) !== $leftDay) {
                     continue;
                 }
 
                 $rightStart = $this->timeToMinutes($right['start_time'] ?? null);
                 $rightEnd = $this->timeToMinutes($right['end_time'] ?? null);
-
-                if ($rightStart === null || $rightEnd === null || $rightEnd <= $rightStart) {
+                if ($rightStart === null) {
+                    continue;
+                }
+                if ($rightEnd === null) {
+                    continue;
+                }
+                if ($rightEnd <= $rightStart) {
                     continue;
                 }
 

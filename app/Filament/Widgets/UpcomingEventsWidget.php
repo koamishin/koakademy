@@ -51,7 +51,7 @@ final class UpcomingEventsWidget extends BaseWidget
                 TextColumn::make('title')
                     ->searchable()
                     ->weight('medium')
-                    ->description(fn ($record) => $record->location ? "📍 {$record->location}" : null),
+                    ->description(fn ($record): ?string => $record->location ? "📍 {$record->location}" : null),
 
                 TextColumn::make('type')
                     ->badge()

@@ -6,10 +6,12 @@ namespace Database\Factories;
 
 use App\Models\EnrollmentPolicy;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /** @extends Factory<EnrollmentPolicy> */
 final class EnrollmentPolicyFactory extends Factory
 {
+    #[Override]
     protected $model = EnrollmentPolicy::class;
 
     public function definition(): array

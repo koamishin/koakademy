@@ -76,7 +76,7 @@ return new class extends Migration
         }
 
         $entryKey = (string) ($legacy['entry_step_key'] ?? $legacySteps[0]['key']);
-        $completionKey = (string) ($legacy['completion_step_key'] ?? $legacySteps[array_key_last($legacySteps)]['key']);
+        $completionKey = (string) ($legacy['completion_step_key'] ?? array_last($legacySteps)['key']);
         $steps = [];
 
         foreach ($legacySteps as $index => $step) {
@@ -215,8 +215,13 @@ return new class extends Migration
         foreach ($configuration['workflow']['steps'] as &$step) {
             $roles = $step['legacy_allowed_roles'] ?? [];
             unset($step['legacy_allowed_roles']);
-
-            if (! $canAssignPermissions || ! is_array($roles) || $roles === []) {
+            if (! $canAssignPermissions) {
+                continue;
+            }
+            if (! is_array($roles)) {
+                continue;
+            }
+            if ($roles === []) {
                 continue;
             }
 

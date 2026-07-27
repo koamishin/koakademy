@@ -888,7 +888,7 @@ final class EnrollmentPipelineService
      */
     private function stepKeyExists(array $steps, string $key): bool
     {
-        return array_any($steps, fn ($step): bool => ($step['key'] ?? null) === $key);
+        return array_any($steps, fn (array $step): bool => ($step['key'] ?? null) === $key);
     }
 
     /**
@@ -1000,7 +1000,7 @@ final class EnrollmentPipelineService
             ];
         })->values()->all();
         $entry = collect($policySteps)->firstWhere('entry', true) ?? $policySteps[0];
-        $terminal = collect($policySteps)->firstWhere('terminal', true) ?? $policySteps[array_key_last($policySteps)];
+        $terminal = collect($policySteps)->firstWhere('terminal', true) ?? array_last($policySteps);
 
         return $this->appendLegacyAliases([
             'submitted_label' => $entry['label'] ?? 'Submitted',

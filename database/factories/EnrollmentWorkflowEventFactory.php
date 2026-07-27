@@ -7,10 +7,12 @@ namespace Database\Factories;
 use App\Models\EnrollmentWorkflowEvent;
 use App\Models\StudentEnrollment;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Override;
 
 /** @extends Factory<EnrollmentWorkflowEvent> */
 final class EnrollmentWorkflowEventFactory extends Factory
 {
+    #[Override]
     protected $model = EnrollmentWorkflowEvent::class;
 
     public function definition(): array

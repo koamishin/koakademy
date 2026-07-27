@@ -37,10 +37,10 @@ final class AuthServiceProvider extends ServiceProvider
         Gate::define('create-accounts', fn ($user) => $user->is_admin ?? false);
         Gate::define('update-accounts', fn ($user) => $user->is_admin ?? false);
         Gate::define('delete-accounts', fn ($user) => $user->is_admin ?? false);
-        Gate::define('viewStation', fn ($user = null): bool => $user instanceof User && self::canViewStation($user));
+        Gate::define('viewStation', fn ($user = null): bool => $user instanceof User && $this->canViewStation($user));
     }
 
-    private static function canViewStation(User $user): bool
+    private function canViewStation(User $user): bool
     {
         return $user->role === UserRole::SuperAdmin || $user->hasRole(UserRole::SuperAdmin);
     }

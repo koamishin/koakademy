@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('statement_of_account_issuances', function (Blueprint $table) {
+        Schema::create('statement_of_account_issuances', function (Blueprint $table): void {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('student_id')->constrained('students')->cascadeOnDelete();

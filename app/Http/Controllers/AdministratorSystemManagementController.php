@@ -112,7 +112,7 @@ final class AdministratorSystemManagementController extends Controller
             }
         }
         $serializeVersion = function (?EnrollmentPolicyVersion $version) use ($permissionRoles): ?array {
-            if (! $version) {
+            if (! $version instanceof EnrollmentPolicyVersion) {
                 return null;
             }
 

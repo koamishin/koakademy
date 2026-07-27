@@ -18,12 +18,11 @@ use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
-final class StatementOfAccountService
+final readonly class StatementOfAccountService
 {
     public function __construct(
-        private readonly GeneralSettingsService $settings,
-        private readonly SchoolBrandingService $branding,
-        private readonly SiteSettings $siteSettings,
+        private SchoolBrandingService $branding,
+        private SiteSettings $siteSettings,
     ) {}
 
     /** @return array<string, mixed> */

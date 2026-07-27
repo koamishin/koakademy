@@ -56,7 +56,7 @@ return new class extends Migration
             )
         SQL);
 
-        Schema::table('connected_accounts', function (Blueprint $table) {
+        Schema::table('connected_accounts', function (Blueprint $table): void {
             $table->unique(['provider', 'provider_id'], 'connected_accounts_provider_provider_id_unique');
             $table->index(['user_id', 'provider'], 'connected_accounts_user_id_provider_index');
         });
@@ -67,7 +67,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('connected_accounts', function (Blueprint $table) {
+        Schema::table('connected_accounts', function (Blueprint $table): void {
             $table->dropUnique('connected_accounts_provider_provider_id_unique');
             $table->dropIndex('connected_accounts_user_id_provider_index');
         });

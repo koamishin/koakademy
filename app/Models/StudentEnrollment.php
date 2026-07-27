@@ -63,9 +63,9 @@ final class StudentEnrollment extends Model
     use Searchable;
     use SoftDeletes;
 
-    public const WorkflowRuntimeLegacy = 'legacy';
+    public const string WorkflowRuntimeLegacy = 'legacy';
 
-    public const WorkflowRuntimePolicyV1 = 'policy_v1';
+    public const string WorkflowRuntimePolicyV1 = 'policy_v1';
 
     #[Override]
     protected $table = 'student_enrollment';

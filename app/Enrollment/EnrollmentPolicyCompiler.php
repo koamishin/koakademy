@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 
 final readonly class EnrollmentPolicyCompiler
 {
-    public const CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 1;
 
     public function __construct(
         private EnrollmentPolicyRegistry $registry,
@@ -121,10 +121,12 @@ final readonly class EnrollmentPolicyCompiler
     {
         foreach (['rules', 'requirements'] as $collectionKey) {
             foreach ($configuration[$collectionKey] ?? [] as $entry) {
-                if (! is_array($entry) || ! is_string($entry['key'] ?? null)) {
+                if (! is_array($entry)) {
                     continue;
                 }
-
+                if (! is_string($entry['key'] ?? null)) {
+                    continue;
+                }
                 $path = "{$collectionKey}.{$entry['key']}";
                 if (($entry['enabled'] ?? true) === false) {
                     unset($sourceMap[$path]);
@@ -237,7 +239,7 @@ final readonly class EnrollmentPolicyCompiler
                 throw ValidationException::withMessages(["workflow.steps.{$index}.transitions" => 'Each non-terminal step must have exactly one fallback transition.']);
             }
 
-            if (($transitions[array_key_last($transitions)]['fallback'] ?? false) !== true) {
+            if ((array_last($transitions)['fallback'] ?? false) !== true) {
                 throw ValidationException::withMessages(["workflow.steps.{$index}.transitions" => 'The Otherwise transition must be last.']);
             }
 

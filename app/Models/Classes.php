@@ -600,9 +600,6 @@ final class Classes extends Model
         return $builder->where('classification', 'shs');
     }
 
-    /**
-     * @return mixed[]
-     */
     protected function formattedWeeklySchedule(): Attribute
     {
         return Attribute::make(get: function (): array {
@@ -614,7 +611,7 @@ final class Classes extends Model
                 'friday',
                 'saturday',
             ];
-            $scheduleByDay = $this->schedules->groupBy(fn ($schedule) => mb_strtolower((string) $schedule->day_of_week));
+            $scheduleByDay = $this->schedules->groupBy(fn ($schedule): string => mb_strtolower((string) $schedule->day_of_week));
             $formattedSchedule = [];
             foreach ($days as $day) {
                 $formattedSchedule[$day] = $scheduleByDay

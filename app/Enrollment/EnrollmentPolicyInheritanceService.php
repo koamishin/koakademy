@@ -71,13 +71,16 @@ final readonly class EnrollmentPolicyInheritanceService
     /** @param array<string, mixed> $scope */
     public function hasPublishedGlobalPolicy(array $scope = []): bool
     {
-        return $this->ancestors($scope)
-            ->contains(fn (EnrollmentPolicy $policy): bool => $this->specificity($this->scopeFromPolicy($policy)) === 0)
-            || EnrollmentPolicy::query()
-                ->enabled()
-                ->where('scope_key', EnrollmentPolicy::scopeKey([]))
-                ->whereNotNull('active_version_id')
-                ->exists();
+        if ($this->ancestors($scope)
+            ->contains(fn (EnrollmentPolicy $policy): bool => $this->specificity($this->scopeFromPolicy($policy)) === 0)) {
+            return true;
+        }
+
+        return (bool) EnrollmentPolicy::query()
+            ->enabled()
+            ->where('scope_key', EnrollmentPolicy::scopeKey([]))
+            ->whereNotNull('active_version_id')
+            ->exists();
     }
 
     /**

@@ -7,13 +7,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class FacultyDeadline extends Model
 {
     use HasFactory;
 
+    #[Override]
     protected $table = 'faculty_deadlines';
 
+    #[Override]
     protected $fillable = [
         'title',
         'description',

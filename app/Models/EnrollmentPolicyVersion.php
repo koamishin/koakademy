@@ -10,18 +10,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
+use Override;
 
 final class EnrollmentPolicyVersion extends Model
 {
     /** @use HasFactory<EnrollmentPolicyVersionFactory> */
     use HasFactory;
 
-    public const Draft = 'draft';
+    public const string Draft = 'draft';
 
-    public const Published = 'published';
+    public const string Published = 'published';
 
-    public const Archived = 'archived';
+    public const string Archived = 'archived';
 
+    #[Override]
     protected $fillable = [
         'enrollment_policy_id', 'version', 'state', 'schema_version', 'configuration',
         'checksum', 'change_notes', 'created_by', 'published_by', 'published_at',

@@ -244,7 +244,7 @@ final class Course extends Model
 
     protected function courseCode(): Attribute
     {
-        return Attribute::make(get: fn () => mb_strtoupper((string) $this->attributes['code']));
+        return Attribute::make(get: fn (): string => mb_strtoupper((string) $this->attributes['code']));
     }
 
     protected function casts(): array

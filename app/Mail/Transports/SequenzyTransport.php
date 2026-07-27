@@ -67,10 +67,7 @@ final class SequenzyTransport extends AbstractTransport
                 'http_errors' => false,
             ]);
         } catch (GuzzleException $exception) {
-            throw new TransportException(
-                'Unable to connect to the Sequenzy API: '.$exception->getMessage(),
-                previous: $exception,
-            );
+            throw new TransportException('Unable to connect to the Sequenzy API: '.$exception->getMessage(), $exception->getCode(), previous: $exception);
         }
 
         $statusCode = $response->getStatusCode();
@@ -83,10 +80,7 @@ final class SequenzyTransport extends AbstractTransport
                 JSON_THROW_ON_ERROR,
             );
         } catch (JsonException $exception) {
-            throw new TransportException(
-                "Sequenzy returned an invalid JSON response (HTTP {$statusCode}).",
-                previous: $exception,
-            );
+            throw new TransportException("Sequenzy returned an invalid JSON response (HTTP {$statusCode}).", $exception->getCode(), previous: $exception);
         }
 
         if (! is_array($responseData)) {

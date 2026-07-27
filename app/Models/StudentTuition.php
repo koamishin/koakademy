@@ -113,8 +113,6 @@ final class StudentTuition extends Model
 
     /**
      * Calculate the payment progress percentage
-     *
-     * @return int
      */
     protected function paymentProgress(): Attribute
     {

@@ -204,7 +204,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         return array_values(array_filter(
             $paths,
-            static fn (string $path): bool => is_dir($path),
+            is_dir(...),
         ));
     }
 }

@@ -1464,7 +1464,7 @@ final class AdministratorEnrollmentManagementController extends Controller
                     'additionalFees' => $validated['additional_fees'] ?? [],
                 ]);
 
-                if (! $tuition) {
+                if (! $tuition instanceof StudentTuition) {
                     throw new Exception('Failed to create the tuition assessment.');
                 }
 
@@ -3024,7 +3024,10 @@ final class AdministratorEnrollmentManagementController extends Controller
 
         foreach ($classIds as $classId) {
             $class = $classes->get($classId);
-            if (! $class instanceof Classes || ! $class->maximum_slots) {
+            if (! $class instanceof Classes) {
+                continue;
+            }
+            if (! $class->maximum_slots) {
                 continue;
             }
 

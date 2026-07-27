@@ -128,8 +128,13 @@ final class StudentScheduleService
             foreach ($class['schedules'] as $schedule) {
                 $startMinutes = $this->timeToMinutes((string) $schedule['start_time']);
                 $endMinutes = $this->timeToMinutes((string) $schedule['end_time']);
-
-                if ($startMinutes === null || $endMinutes === null || $endMinutes <= $startMinutes) {
+                if ($startMinutes === null) {
+                    continue;
+                }
+                if ($endMinutes === null) {
+                    continue;
+                }
+                if ($endMinutes <= $startMinutes) {
                     continue;
                 }
 

@@ -10,12 +10,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Override;
 
 final class EnrollmentPolicy extends Model
 {
     /** @use HasFactory<EnrollmentPolicyFactory> */
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'name', 'scope_key', 'school_id', 'student_type', 'course_id', 'school_year',
         'semester', 'is_enabled', 'created_by', 'active_version_id',

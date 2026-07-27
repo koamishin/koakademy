@@ -8,12 +8,14 @@ use Database\Factories\EnrollmentWorkflowEventFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class EnrollmentWorkflowEvent extends Model
 {
     /** @use HasFactory<EnrollmentWorkflowEventFactory> */
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'student_enrollment_id', 'enrollment_policy_snapshot_id', 'actor_id', 'event_type',
         'from_step_key', 'to_step_key', 'status', 'terminal_outcome', 'idempotency_key',

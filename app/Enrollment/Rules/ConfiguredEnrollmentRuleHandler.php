@@ -21,7 +21,7 @@ final readonly class ConfiguredEnrollmentRuleHandler implements EnrollmentOperat
 
     public function metadata(): array
     {
-        return ['key' => $this->key(), 'label' => $this->label, 'category' => $this->category];
+        return ['key' => $this->handlerKey, 'label' => $this->label, 'category' => $this->category];
     }
 
     public function configurationSchema(): array
@@ -105,7 +105,7 @@ final readonly class ConfiguredEnrollmentRuleHandler implements EnrollmentOperat
     /** @param array<int, mixed> $allowed */
     private function allowed(mixed $actual, array $allowed, string $message): RuleResult
     {
-        if ($allowed === [] || in_array($actual, $allowed, true) || in_array((string) $actual, array_map('strval', $allowed), true)) {
+        if ($allowed === [] || in_array($actual, $allowed, true) || in_array((string) $actual, array_map(strval(...), $allowed), true)) {
             return RuleResult::pass(['actual' => $actual]);
         }
 
@@ -137,7 +137,7 @@ final readonly class ConfiguredEnrollmentRuleHandler implements EnrollmentOperat
 
     private function duplicateEnrollment(EnrollmentContext $context): RuleResult
     {
-        if (! $context->enrollment) {
+        if (! $context->enrollment instanceof \App\Models\StudentEnrollment) {
             return RuleResult::pass();
         }
 
@@ -200,7 +200,7 @@ final readonly class ConfiguredEnrollmentRuleHandler implements EnrollmentOperat
             'required' => $required,
             'options' => $options,
             'option_source' => $optionSource,
-        ], fn (mixed $value): bool => $value !== null && $value !== [] && $value !== false);
+        ], fn (mixed $value): bool => ! in_array($value, [null, [], false], true));
     }
 
     private function fieldDescription(string $key): string

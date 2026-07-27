@@ -9,12 +9,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
+use Override;
 
 final class EnrollmentPolicySnapshot extends Model
 {
     /** @use HasFactory<EnrollmentPolicySnapshotFactory> */
     use HasFactory;
 
+    #[Override]
     protected $fillable = ['schema_version', 'checksum', 'configuration', 'source_version_ids'];
 
     /** @return HasMany<StudentEnrollment, $this> */

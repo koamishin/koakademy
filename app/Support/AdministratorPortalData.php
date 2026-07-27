@@ -446,14 +446,6 @@ final class AdministratorPortalData
     }
 
     /**
-     * @return array<int, array{status: string, count: int}>
-     */
-    private static function getEnrollmentStatusDistribution(int $pendingCount, int $enrolledCount): array
-    {
-        return self::getEnrollmentPipelineDistribution($pendingCount, $enrolledCount);
-    }
-
-    /**
      * @return array<int, array{status: string, count: int, color: string}>
      */
     private static function getEnrollmentPipelineDistribution(int $pendingCount, int $enrolledCount): array

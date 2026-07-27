@@ -175,10 +175,10 @@ final class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->domain((string) config('app.admin_host'))
             ->brandName(fn (): string => $settings->getAppName())
-            ->brandLogo(fn () => $settings->logo ? '/'.$settings->logo : null)
+            ->brandLogo(fn (): ?string => $settings->logo ? '/'.$settings->logo : null)
             ->brandLogoHeight('3rem')
             ->passwordReset()
-            ->favicon(fn () => $settings->favicon ? '/'.$settings->favicon : null)
+            ->favicon(fn (): ?string => $settings->favicon ? '/'.$settings->favicon : null)
             ->login()
 
             ->navigationGroups([

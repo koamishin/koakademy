@@ -131,7 +131,7 @@ final class GradingSystemService
         ), fn (string $k): bool => $k !== ''));
 
         $subjectIds = array_values(array_unique(array_map(
-            fn ($id): int => (int) $id,
+            fn (float|int|string $id): int => (int) $id,
             array_filter(
                 is_array($config['excluded_subject_ids'] ?? null) ? $config['excluded_subject_ids'] : [],
                 fn ($id): bool => is_numeric($id) && (int) $id > 0

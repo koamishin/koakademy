@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 
 final class OnlineUserPresenceService
 {
-    private const ONLINE_WINDOW_MINUTES = 15;
+    private const int ONLINE_WINDOW_MINUTES = 15;
 
     /**
      * @return list<int>
@@ -94,6 +94,6 @@ final class OnlineUserPresenceService
 
     private function redisKey(): string
     {
-        return (string) config('cache.prefix', '').'online-users';
+        return config('cache.prefix', '').'online-users';
     }
 }

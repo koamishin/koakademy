@@ -229,6 +229,6 @@ final class VersionService
 
         $requiredMetadata = ['author', 'workflow', 'repository'];
 
-        return array_all($requiredMetadata, fn ($field): bool => isset($data['metadata'][$field]) && is_string($data['metadata'][$field]));
+        return array_all($requiredMetadata, fn (string $field): bool => isset($data['metadata'][$field]) && is_string($data['metadata'][$field]));
     }
 }

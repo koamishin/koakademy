@@ -240,7 +240,7 @@ final class AdministratorFacultyManagementController extends Controller
             ->get();
 
         $portalUser = $this->portalUserFor($faculty);
-        $recentNotifications = $portalUser
+        $recentNotifications = $portalUser instanceof User
             ? $portalUser->notifications()->latest()->take(5)->get()->map(fn ($notification): array => [
                 'id' => $notification->id,
                 'title' => $notification->data['title'] ?? 'Notification',
@@ -341,7 +341,7 @@ final class AdministratorFacultyManagementController extends Controller
         $faculty->update($data);
 
         $portalUser = $this->portalUserFor($faculty);
-        if ($portalUser) {
+        if ($portalUser instanceof User) {
             $portalUser->forceFill([
                 'name' => $faculty->full_name,
                 'email' => $faculty->email,
@@ -492,7 +492,7 @@ final class AdministratorFacultyManagementController extends Controller
         $data = $request->validated();
         $portalUser = $this->portalUserFor($faculty);
 
-        if (! $portalUser) {
+        if (! $portalUser instanceof User) {
             throw ValidationException::withMessages([
                 'title' => 'Create or repair the portal account before sending a notice.',
             ]);
@@ -547,7 +547,7 @@ final class AdministratorFacultyManagementController extends Controller
         ]);
 
         $portalUser = $this->portalUserFor($faculty);
-        if ($portalUser) {
+        if ($portalUser instanceof User) {
             $portalUser->forceFill([
                 'faculty_id_number' => $data['faculty_id_number'],
                 'record_id' => $faculty->id,
@@ -772,11 +772,9 @@ final class AdministratorFacultyManagementController extends Controller
      */
     private function matchingPortalUser(Faculty $faculty, Collection $users): ?User
     {
-        return $users->first(function (User $user) use ($faculty): bool {
-            return $user->email === $faculty->email
-                && ((string) $user->record_id === (string) $faculty->id
-                    || $user->faculty_id_number === $faculty->faculty_id_number);
-        }) ?? $users->first(fn (User $user): bool => $user->email === $faculty->email);
+        return $users->first(fn (User $user): bool => $user->email === $faculty->email
+            && ((string) $user->record_id === (string) $faculty->id
+                || $user->faculty_id_number === $faculty->faculty_id_number)) ?? $users->first(fn (User $user): bool => $user->email === $faculty->email);
     }
 
     private function portalUserFor(Faculty $faculty): ?User
@@ -793,7 +791,7 @@ final class AdministratorFacultyManagementController extends Controller
 
     private function portalAccountPayload(Faculty $faculty, ?User $user): array
     {
-        if (! $user) {
+        if (! $user instanceof User) {
             return [
                 'status' => 'not_linked',
                 'label' => 'Portal not linked',
@@ -965,7 +963,7 @@ final class AdministratorFacultyManagementController extends Controller
     {
         $portalUser = $this->portalUserFor($faculty);
 
-        if (! $portalUser) {
+        if (! $portalUser instanceof User) {
             return;
         }
 

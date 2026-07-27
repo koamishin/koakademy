@@ -103,8 +103,10 @@ final readonly class EnrollmentTransitionEngine
                 }
 
                 foreach ($snapshot->configuration['notifications'] ?? [] as $index => $notification) {
-                    if (($notification['enabled'] ?? true) === false
-                        || ! in_array($notification['event'] ?? null, ['any_transition', $target['key'], $target['outcome'] ?? null], true)) {
+                    if (($notification['enabled'] ?? true) === false) {
+                        continue;
+                    }
+                    if (! in_array($notification['event'] ?? null, ['any_transition', $target['key'], $target['outcome'] ?? null], true)) {
                         continue;
                     }
                     if (($notification['channel'] ?? 'mail') !== 'mail') {

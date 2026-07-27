@@ -111,8 +111,13 @@ final readonly class EnrollmentConfigurationValidator
                 && (! array_key_exists($key, $configuration) || $configuration[$key] === null || $configuration[$key] === '')) {
                 throw ValidationException::withMessages(["{$path}.{$key}" => 'This setting is required.']);
             }
-
-            if (! array_key_exists($key, $configuration) || $configuration[$key] === null || $configuration[$key] === '') {
+            if (! array_key_exists($key, $configuration)) {
+                continue;
+            }
+            if ($configuration[$key] === null) {
+                continue;
+            }
+            if ($configuration[$key] === '') {
                 continue;
             }
 

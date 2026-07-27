@@ -215,13 +215,11 @@ final class FacultyClassController extends Controller
         $classPosts = ClassPost::where('class_id', $class->id)
             ->latest()
             ->get()
-            ->map(function (ClassPost $post) use ($payloads): array {
-                return [
-                    ...$payloads->serialize($post),
-                    'submission_count' => $post->submissions()->count(),
-                    'graded_count' => $post->submissions()->whereNotNull('points')->count(),
-                ];
-            });
+            ->map(fn (ClassPost $post): array => [
+                ...$payloads->serialize($post),
+                'submission_count' => $post->submissions()->count(),
+                'graded_count' => $post->submissions()->whereNotNull('points')->count(),
+            ]);
 
         $attendance = $this->buildAttendancePayload($class);
 
@@ -1607,7 +1605,7 @@ final class FacultyClassController extends Controller
 
         // Get Schedule Days (lower case day names)
         $scheduleDays = $class->schedules->pluck('day_of_week')
-            ->map(fn ($day) => mb_strtolower((string) $day))
+            ->map(fn ($day): string => mb_strtolower((string) $day))
             ->unique()
             ->all();
 

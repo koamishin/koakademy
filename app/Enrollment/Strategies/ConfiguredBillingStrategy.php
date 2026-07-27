@@ -19,7 +19,7 @@ final readonly class ConfiguredBillingStrategy implements EnrollmentBillingStrat
 
     public function metadata(): array
     {
-        return ['key' => $this->key(), 'label' => $this->label];
+        return ['key' => $this->strategyKey, 'label' => $this->label];
     }
 
     public function operatorSchema(): array
@@ -53,6 +53,6 @@ final readonly class ConfiguredBillingStrategy implements EnrollmentBillingStrat
 
     public function calculate(EnrollmentContext $context, array $configuration): array
     {
-        return ['strategy' => $this->key(), 'configuration' => $configuration, 'enrollment_id' => $context->enrollment?->id];
+        return ['strategy' => $this->strategyKey, 'configuration' => $configuration, 'enrollment_id' => $context->enrollment?->id];
     }
 }

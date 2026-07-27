@@ -8,9 +8,9 @@ use App\Models\StudentEnrollment;
 use App\Models\StudentTuition;
 use App\Settings\SiteSettings;
 
-final class AssessmentFormDataService
+final readonly class AssessmentFormDataService
 {
-    private const DAYS_OF_WEEK = [
+    private const array DAYS_OF_WEEK = [
         'monday',
         'tuesday',
         'wednesday',
@@ -20,9 +20,9 @@ final class AssessmentFormDataService
     ];
 
     public function __construct(
-        private readonly EnrollmentBillingService $enrollmentBillingService,
-        private readonly GeneralSettingsService $settingsService,
-        private readonly SiteSettings $siteSettings,
+        private EnrollmentBillingService $enrollmentBillingService,
+        private GeneralSettingsService $settingsService,
+        private SiteSettings $siteSettings,
     ) {}
 
     /**

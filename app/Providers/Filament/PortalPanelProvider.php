@@ -45,7 +45,7 @@ final class PortalPanelProvider extends PanelProvider
             ->login()
             ->passwordReset()
             ->brandName(fn (): string => $this->settings->getPortalName())
-            ->brandLogo(fn () => $this->settings->logo ? '/'.$this->settings->logo : null)
+            ->brandLogo(fn (): ?string => $this->settings->logo ? '/'.$this->settings->logo : null)
             ->brandLogoHeight('3rem')
             ->colors([
                 'primary' => Color::Amber,

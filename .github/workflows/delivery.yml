@@ -1,12 +1,14 @@
 name: Delivery
 
 run-name: >-
-  Delivery / ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.workflow_run.head_sha }}
+  Delivery / ${{ github.event_name == 'workflow_dispatch' && inputs.tag || format('{0} CI / {1}', github.event.workflow_run.conclusion, github.event.workflow_run.head_sha) }}
 
 on:
   workflow_run:
     workflows:
       - CI
+    branches:
+      - master
     types:
       - completed
   workflow_dispatch:

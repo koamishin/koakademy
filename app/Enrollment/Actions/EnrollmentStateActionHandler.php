@@ -20,7 +20,7 @@ final readonly class EnrollmentStateActionHandler implements EnrollmentActionHan
 
     public function metadata(): array
     {
-        return ['key' => $this->key(), 'label' => $this->label, 'category' => 'workflow'];
+        return ['key' => $this->handlerKey, 'label' => $this->label, 'category' => 'workflow'];
     }
 
     public function payloadSchema(): array
@@ -64,7 +64,7 @@ final readonly class EnrollmentStateActionHandler implements EnrollmentActionHan
     public function execute(EnrollmentContext $context, array $configuration, string $idempotencyKey): ActionResult
     {
         $enrollment = $context->enrollment;
-        if (! $enrollment) {
+        if (! $enrollment instanceof \App\Models\StudentEnrollment) {
             return ActionResult::failure('This action requires a persisted enrollment.');
         }
 

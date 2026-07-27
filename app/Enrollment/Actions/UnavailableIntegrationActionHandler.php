@@ -19,7 +19,7 @@ final readonly class UnavailableIntegrationActionHandler implements EnrollmentAc
 
     public function metadata(): array
     {
-        return ['key' => $this->key(), 'label' => $this->label, 'category' => 'integration', 'requires_configuration' => true];
+        return ['key' => $this->handlerKey, 'label' => $this->label, 'category' => 'integration', 'requires_configuration' => true];
     }
 
     public function payloadSchema(): array

@@ -9,9 +9,9 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-final class OnlineUserTrackingMiddleware
+final readonly class OnlineUserTrackingMiddleware
 {
-    public function __construct(private readonly OnlineUserPresenceService $onlineUserPresence) {}
+    public function __construct(private OnlineUserPresenceService $onlineUserPresence) {}
 
     /**
      * Handle an incoming request.

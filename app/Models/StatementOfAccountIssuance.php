@@ -7,12 +7,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Override;
 
 final class StatementOfAccountIssuance extends Model
 {
     /** @use HasFactory<\Database\Factories\StatementOfAccountIssuanceFactory> */
     use HasFactory;
 
+    #[Override]
     protected $fillable = [
         'uuid', 'student_id', 'enrollment_id', 'tuition_id', 'issued_by',
         'document_number', 'verification_token_hash', 'integrity_signature',

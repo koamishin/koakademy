@@ -49,7 +49,7 @@ final class SchoolsTable
                 TextColumn::make('school_level')
                     ->label('Level')
                     ->badge()
-                    ->color(fn (?SchoolLevel $state): string|array|null => $state?->getColor() ?? 'warning')
+                    ->color(fn (?SchoolLevel $state): string|array => $state?->getColor() ?? 'warning')
                     ->formatStateUsing(fn (?SchoolLevel $state): string => $state?->getLabel() ?? 'Not configured')
                     ->sortable(),
 

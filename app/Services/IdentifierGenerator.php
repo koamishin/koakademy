@@ -13,9 +13,9 @@ use InvalidArgumentException;
 
 final class IdentifierGenerator
 {
-    public const Student = 'student';
+    public const string Student = 'student';
 
-    public const Staff = 'staff';
+    public const string Staff = 'staff';
 
     public function preview(string $key): string
     {
