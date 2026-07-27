@@ -90,9 +90,7 @@ See [Getting Started](GETTING_STARTED.md) for installer overrides and the manual
 - [Open-source readiness](OSS_DOCS.md)
 - [CI contract](OSS_CI.md)
 
-Root Markdown files are canonical for technical and project documentation. Marked MDX copies are generated for Astro and the in-app documentation; run `npm run docs:sync` after editing a canonical file.
 
-The GitHub Pages deployment is intentionally disabled while the repository is private. The complete Starlight site remains buildable locally from `docs/`.
 
 ## Contributing and security
 
