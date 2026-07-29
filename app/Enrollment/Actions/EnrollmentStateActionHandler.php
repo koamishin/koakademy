@@ -8,10 +8,15 @@ use App\Contracts\Enrollment\EnrollmentActionHandler;
 use App\Contracts\Enrollment\EnrollmentOperatorSchemaProvider;
 use App\Data\Enrollment\ActionResult;
 use App\Data\Enrollment\EnrollmentContext;
+use App\Enrollment\EnrollmentStudentSynchronizationService;
 
 final readonly class EnrollmentStateActionHandler implements EnrollmentActionHandler, EnrollmentOperatorSchemaProvider
 {
-    public function __construct(private string $handlerKey, private string $label) {}
+    public function __construct(
+        private string $handlerKey,
+        private string $label,
+        private EnrollmentStudentSynchronizationService $studentSynchronization,
+    ) {}
 
     public function key(): string
     {
@@ -84,9 +89,7 @@ final readonly class EnrollmentStateActionHandler implements EnrollmentActionHan
             return ActionResult::failure('A compatibility status is required.');
         }
 
-        $context->enrollment?->setAttribute('status', $status);
-
-        return ActionResult::success(['status' => $status]);
+        return ActionResult::success(['compatibility_status' => $status, 'owned_by_engine' => true]);
     }
 
     /** @param array<string, mixed> $configuration */
@@ -97,27 +100,12 @@ final readonly class EnrollmentStateActionHandler implements EnrollmentActionHan
             return ActionResult::failure('Terminal outcome must be completed, rejected, or cancelled.');
         }
 
-        $context->enrollment?->setAttribute('terminal_outcome', $outcome);
-
-        return ActionResult::success(['terminal_outcome' => $outcome]);
+        return ActionResult::success(['terminal_outcome' => $outcome, 'owned_by_engine' => true]);
     }
 
     /** @param array<string, mixed> $configuration */
     private function syncStudent(EnrollmentContext $context, array $configuration): ActionResult
     {
-        $attribute = (string) ($configuration['attribute'] ?? 'student_status');
-        $value = $configuration['value'] ?? null;
-
-        if (! in_array($attribute, ['status', 'student_status'], true)) {
-            return ActionResult::failure('Student synchronization attribute is not allowed.');
-        }
-
-        if ($value === null || ! $context->enrollment?->student) {
-            return ActionResult::failure('Student synchronization requires an attribute and value.');
-        }
-
-        $context->enrollment->student->forceFill([$attribute => $value])->save();
-
-        return ActionResult::success(['attribute' => $attribute, 'value' => $value]);
+        return $this->studentSynchronization->synchronize($context, $configuration);
     }
 }

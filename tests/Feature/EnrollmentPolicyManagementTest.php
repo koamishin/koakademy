@@ -8,6 +8,7 @@ use App\Enrollment\EnrollmentPolicyManager;
 use App\Enrollment\EnrollmentPolicyPreset;
 use App\Enrollment\EnrollmentPolicyResolver;
 use App\Enrollment\EnrollmentPolicyRolloutService;
+use App\Enrollment\EnrollmentPolicySimulationService;
 use App\Features\DynamicEnrollmentPolicies;
 use App\Models\EnrollmentPolicyVersion;
 use App\Models\School;
@@ -46,6 +47,37 @@ it('publishes scoped drafts and resolves them after the global layer', function 
     expect(collect($compiled->configuration['rules'])->pluck('key'))
         ->toContain('school_documents')
         ->and($compiled->sourceVersionIds)->toContain($draft->id);
+});
+
+it('reports completion payment rules as deferred instead of enrollment blockers during simulation', function (): void {
+    $manager = app(EnrollmentPolicyManager::class);
+    $school = School::factory()->create();
+    $author = User::factory()->create();
+    $configuration = EnrollmentPolicyPreset::standard();
+    $configuration['rules'][] = [
+        'key' => 'minimum_payment',
+        'handler' => 'billing.minimum_payment',
+        'configuration' => ['type' => 'percentage', 'value' => 20],
+    ];
+    $policy = $manager->create([
+        'name' => 'Deferred payment simulation',
+        'school_id' => $school->id,
+        'configuration' => $configuration,
+    ], $author);
+    $manager->publish($policy, $policy->versions->first(), $author);
+
+    $result = app(EnrollmentPolicySimulationService::class)->simulate(new EnrollmentContext(
+        schoolId: $school->id,
+        studentType: 'college',
+        courseId: null,
+        schoolYear: '2035 - 2036',
+        semester: 1,
+    ));
+    $minimumPayment = collect($result['eligibility'])->firstWhere('handler', 'billing.minimum_payment');
+
+    expect($minimumPayment['passed'])->toBeTrue()
+        ->and($minimumPayment['metadata']['deferred'])->toBeTrue()
+        ->and(collect($result['blockers'])->pluck('handler'))->not->toContain('billing.minimum_payment');
 });
 
 it('stores sparse scoped drafts and reports inherited source provenance', function (): void {
@@ -197,4 +229,21 @@ it('keeps workflow state mutation behind the coordinator and compatibility servi
         $source = file_get_contents($path);
         expect($source)->not->toMatch('/\$(?:enrollment|record)->status\s*=/');
     }
+});
+
+it('creates an unpublished compatibility draft without changing activation state', function (): void {
+    $policy = App\Models\EnrollmentPolicy::query()
+        ->where('name', 'Global enrollment policy (migrated)')
+        ->firstOrFail();
+    $activeVersionId = $policy->active_version_id;
+    $draft = $policy->versions()
+        ->where('change_notes', 'Compatibility draft: explicit database-driven enrollment runtime actions.')
+        ->sole();
+
+    expect($draft->state)->toBe(EnrollmentPolicyVersion::Draft)
+        ->and($draft->id)->not->toBe($activeVersionId)
+        ->and($policy->refresh()->active_version_id)->toBe($activeVersionId)
+        ->and(data_get($draft->configuration, 'workflow.steps.0.actions.0.handler'))->toBe('enrollment.assign_subjects')
+        ->and(data_get($draft->configuration, 'billing.configuration.discount_scope'))->toBe('lecture_only')
+        ->and(Feature::active(DynamicEnrollmentPolicies::class))->toBeFalse();
 });
