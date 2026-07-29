@@ -12,10 +12,14 @@ use App\Models\StudentEnrollment;
 use App\Models\StudentTransaction;
 use App\Models\Transaction;
 use App\Services\EnrollmentBillingService;
+use App\Services\FinancialDocumentService;
 
 final readonly class EnrollmentPaymentService
 {
-    public function __construct(private EnrollmentBillingService $billing) {}
+    public function __construct(
+        private EnrollmentBillingService $billing,
+        private FinancialDocumentService $financialDocuments,
+    ) {}
 
     /** @param array<string, mixed> $configuration */
     public function record(
@@ -127,7 +131,6 @@ final readonly class EnrollmentPaymentService
                     settlements: ['others' => (float) $fee->amount],
                     invoiceNumber: $invoiceNumberForFee,
                     signature: $payload['signature'] ?? null,
-                    amount: (float) $fee->amount,
                     idempotencyKey: $feeIdempotencyKey,
                 );
             }
@@ -162,7 +165,6 @@ final readonly class EnrollmentPaymentService
                 settlements: $settlements,
                 invoiceNumber: $invoiceNumber,
                 signature: $payload['signature'] ?? null,
-                amount: $tuitionPayment,
                 idempotencyKey: $idempotencyKey,
             );
         }
@@ -183,12 +185,16 @@ final readonly class EnrollmentPaymentService
         ]);
     }
 
-    /** @return array{transactions:int, amount:float} */
+    /** @return array{transactions:int, amount:float, documents_revoked:int} */
     public function reverseLinked(StudentEnrollment $enrollment): array
     {
         $links = $enrollment->enrollmentTransactions()->lockForUpdate()->get();
         $amount = (float) $links->sum('amount');
         $transactionIds = $links->pluck('transaction_id')->filter()->unique()->values();
+        $documentsRevoked = $this->financialDocuments->revokeForTransactions(
+            $transactionIds,
+            'The related enrollment payment was reversed.',
+        );
 
         $links->each->delete();
         foreach ($transactionIds as $transactionId) {
@@ -207,7 +213,11 @@ final readonly class EnrollmentPaymentService
             ->whereNotNull('transaction_number')
             ->update(['transaction_number' => null]);
 
-        return ['transactions' => $transactionIds->count(), 'amount' => $amount];
+        return [
+            'transactions' => $transactionIds->count(),
+            'amount' => $amount,
+            'documents_revoked' => $documentsRevoked,
+        ];
     }
 
     /**
@@ -222,7 +232,6 @@ final readonly class EnrollmentPaymentService
         array $settlements,
         string $invoiceNumber,
         mixed $signature,
-        float $amount,
         string $idempotencyKey,
     ): StudentTransaction {
         $transaction = Transaction::query()->create([
@@ -235,6 +244,10 @@ final readonly class EnrollmentPaymentService
             'signature' => $signature,
             'user_id' => $actorId,
         ]);
+        $amount = (float) collect($settlements)
+            ->map(fn (mixed $value): float => (float) $value)
+            ->filter(fn (float $value): bool => $value > 0)
+            ->sum();
 
         $studentTransaction = StudentTransaction::query()->create([
             'student_id' => $enrollment->student_id,

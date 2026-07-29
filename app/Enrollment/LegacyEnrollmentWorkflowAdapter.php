@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Notifications\StudentEnrolledVerified;
 use App\Services\EnrollmentBillingService;
 use App\Services\EnrollmentPipelineService;
+use App\Services\FinancialDocumentService;
 use Exception;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -34,7 +35,10 @@ use Illuminate\Support\Facades\Notification as NotificationFacade;
 
 final readonly class LegacyEnrollmentWorkflowAdapter
 {
-    public function __construct(private EnrollmentBillingService $billingService) {}
+    public function __construct(
+        private EnrollmentBillingService $billingService,
+        private FinancialDocumentService $financialDocuments,
+    ) {}
 
     /**
      * Checks if any selected classes for enrollment are full based on their maximum slots.
@@ -310,6 +314,7 @@ final readonly class LegacyEnrollmentWorkflowAdapter
             $settlements = $actionData['settlements'] ?? [];
             $invoiceNumber = $actionData['invoicenumber'] ?? null;
             $paymentMethod = (string) ($actionData['payment_method'] ?? 'Cash');
+            $transactionDate = now();
 
             if (empty($invoiceNumber)) {
                 throw new Exception('Invoice number is required.');
@@ -349,6 +354,7 @@ final readonly class LegacyEnrollmentWorkflowAdapter
                     'payment_method' => $paymentMethod,
                     'settlements' => ['others' => $separateTransactionFee->amount], // Put in 'others' category
                     'status' => 'Paid',
+                    'transaction_date' => $transactionDate,
                     'invoicenumber' => $transactionNumber,
                     'signature' => $generalSettings?->enable_signatures && $signatureData
                             ? $signatureData
@@ -381,14 +387,13 @@ final readonly class LegacyEnrollmentWorkflowAdapter
                 $separateTransactions[] = $separateTransaction;
             }
 
-            $tuitionPayment = (float) ($settlements['tuition_fee'] ?? 0);
-
             // Create Transaction
             $transaction = Transaction::query()->create([
                 'description' => 'Downpayment for student Tuition', // Consider making this more dynamic
                 'payment_method' => $paymentMethod,
                 'settlements' => $settlements,
                 'status' => 'Paid', // Assuming paid upon verification
+                'transaction_date' => $transactionDate,
                 'invoicenumber' => $invoiceNumber,
                 'signature' => $generalSettings?->enable_signatures && $signatureData
                         ? $signatureData
@@ -396,13 +401,17 @@ final readonly class LegacyEnrollmentWorkflowAdapter
                 // Add user_id if applicable
                 'user_id' => Auth::id(), // Record which admin performed the action
             ]);
+            $paymentTotal = (float) collect($settlements)
+                ->map(fn (mixed $value): float => (float) $value)
+                ->filter(fn (float $value): bool => $value > 0)
+                ->sum();
 
             // Link Transaction to Student
             StudentTransaction::query()->create([
                 'student_id' => $studentEnrollment->student_id,
                 'student_enrollment_id' => $studentEnrollment->id,
                 'transaction_id' => $transaction->id,
-                'amount' => $tuitionPayment,
+                'amount' => $paymentTotal,
                 'status' => $transaction->status,
             ]);
 
@@ -410,7 +419,7 @@ final readonly class LegacyEnrollmentWorkflowAdapter
             AdminTransaction::query()->create([
                 'admin_id' => Auth::id(),
                 'transaction_id' => $transaction->id,
-                'amount' => $tuitionPayment,
+                'amount' => $paymentTotal,
                 'type' => 'credit',
                 'description' => 'Enrollment tuition payment',
                 'status' => $transaction->status,
@@ -809,6 +818,10 @@ final readonly class LegacyEnrollmentWorkflowAdapter
                 ->filter(fn ($id): bool => $id !== null)
                 ->unique()
                 ->values();
+            $this->financialDocuments->revokeForTransactions(
+                $transactionIds,
+                'The related enrollment payment was reversed.',
+            );
 
             // Restore the record if it was soft-deleted
             if ($enrollmentRecord->trashed()) {
