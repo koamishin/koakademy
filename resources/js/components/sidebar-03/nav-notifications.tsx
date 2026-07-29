@@ -11,37 +11,15 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import type { NotificationAction, PortalNotification } from "@/types/notification";
 import { router, usePage } from "@inertiajs/react";
-import { IconBell, IconBellOff, IconCheck, IconChecks, IconTrash } from "@tabler/icons-react";
+import { IconArrowRight, IconBell, IconBellOff, IconCheck, IconChecks, IconTrash } from "@tabler/icons-react";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState, type ComponentProps, type MouseEvent } from "react";
 
-export interface NotificationAction {
-    name: string;
-    label: string;
-    url: string | null;
-    color: string | null;
-    icon: string | null;
-    shouldOpenInNewTab: boolean;
-}
-
-export interface Notification {
-    id: string;
-    type: string;
-    title: string;
-    message: string;
-    icon: string;
-    notificationType: "info" | "success" | "warning" | "error";
-    actionUrl: string | null;
-    actions?: NotificationAction[];
-    readAt: string | null;
-    createdAt: string;
-}
-
 interface PageProps {
-    notifications: Notification[];
+    notifications: PortalNotification[];
     unreadNotificationsCount: number;
     auth?: {
         user?: {
@@ -58,9 +36,18 @@ interface NotificationsPopoverProps {
      * Use "/administrators/notifications" for admin portal.
      */
     baseUrl?: string;
+    inboxUrl?: string;
 }
 
-export function NotificationsPopover({ baseUrl = "/notifications" }: NotificationsPopoverProps) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
+}
+
+function nullableString(value: unknown): string | null {
+    return typeof value === "string" && value !== "" ? value : null;
+}
+
+export function NotificationsPopover({ baseUrl = "/notifications", inboxUrl }: NotificationsPopoverProps) {
     const { props } = usePage<PageProps>();
     const initialNotifications = props.notifications ?? [];
     const initialUnreadCount = props.unreadNotificationsCount ?? 0;
@@ -84,22 +71,21 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
 
         const channel = window.Echo.private(`App.Models.User.${userId}`);
 
-        channel.notification((notification: any) => {
-            const data = notification?.data ?? notification ?? {};
+        channel.notification((payload: unknown) => {
+            const notification = isRecord(payload) ? payload : {};
+            const data = isRecord(notification.data) ? notification.data : notification;
             const actionsRaw = Array.isArray(data.actions) ? data.actions : [];
 
-            let actions: NotificationAction[] = actionsRaw
-                .filter((action: any) => action && typeof action === "object")
-                .map((action: any) => ({
-                    name: String(action.name ?? action.id ?? ""),
-                    label: String(action.label ?? action.name ?? "View"),
-                    url: action.url ?? null,
-                    color: action.color ?? null,
-                    icon: action.icon ?? null,
-                    shouldOpenInNewTab: Boolean(action.shouldOpenInNewTab ?? action.shouldOpenUrlInNewTab ?? action.openUrlInNewTab ?? false),
-                }));
+            let actions: NotificationAction[] = actionsRaw.filter(isRecord).map((action) => ({
+                name: String(action.name ?? action.id ?? ""),
+                label: String(action.label ?? action.name ?? "View"),
+                url: nullableString(action.url),
+                color: nullableString(action.color),
+                icon: nullableString(action.icon),
+                shouldOpenInNewTab: Boolean(action.shouldOpenInNewTab ?? action.shouldOpenUrlInNewTab ?? action.openUrlInNewTab ?? false),
+            }));
 
-            let actionUrl = data.action_url ?? data.actionUrl ?? data.download_url ?? null;
+            let actionUrl = nullableString(data.action_url ?? data.actionUrl ?? data.download_url);
 
             if (actions.length === 0 && actionUrl) {
                 actions = [
@@ -119,13 +105,13 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
             }
 
             // Add new notification to the top of the list
-            const newNotification: Notification = {
+            const newNotification: PortalNotification = {
                 id: String(notification.id ?? data.id),
                 type: String(notification.type ?? "DatabaseNotification"),
                 title: String(data.title ?? "Notification"),
                 message: String(data.message ?? data.body ?? ""),
                 icon: String(data.icon ?? "bell"),
-                notificationType: (String(data.type ?? data.status ?? "info") as Notification["notificationType"]) || "info",
+                notificationType: (String(data.type ?? data.status ?? "info") as PortalNotification["notificationType"]) || "info",
                 actionUrl,
                 actions,
                 readAt: null,
@@ -281,11 +267,7 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
                     </Badge>
                 )}
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-                side="right"
-                align="start"
-                className="my-2 flex max-h-[min(var(--available-height),24rem)] w-80 flex-col overflow-hidden! p-0"
-            >
+            <DropdownMenuContent side="right" align="start" className="my-2 w-80 max-w-[calc(100vw-1rem)] overscroll-contain p-0">
                 <DropdownMenuLabel className="flex items-center justify-between">
                     <span>Notifications</span>
                     {unreadCount > 0 && (
@@ -309,79 +291,86 @@ export function NotificationsPopover({ baseUrl = "/notifications" }: Notificatio
                         <p className="text-muted-foreground/70 text-xs">You're all caught up!</p>
                     </div>
                 ) : (
-                    <ScrollArea className="h-[300px] max-h-[calc(var(--available-height)-3.5rem)] min-h-0 flex-1">
-                        <div className="p-1">
-                            {notifications.map((notification) => (
-                                <DropdownMenuItem
-                                    key={notification.id}
-                                    className={cn("flex cursor-pointer items-start gap-3 p-3", !notification.readAt && "bg-muted/50")}
-                                    onClick={() => handleNotificationClick(notification)}
-                                >
-                                    <Avatar className={cn("size-8 shrink-0", getNotificationTypeStyles(notification.notificationType))}>
-                                        <AvatarFallback className="text-xs">{getIconForType(notification.notificationType)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <span className={cn("text-sm leading-tight font-medium", !notification.readAt && "font-semibold")}>
-                                                {notification.title}
-                                            </span>
-                                            {!notification.readAt && <span className="bg-primary size-2 shrink-0 rounded-full" />}
-                                        </div>
-                                        <p className="text-muted-foreground line-clamp-2 text-xs">{notification.message}</p>
+                    <div className="p-1">
+                        {notifications.map((notification) => (
+                            <DropdownMenuItem
+                                key={notification.id}
+                                className={cn("flex cursor-pointer items-start gap-3 p-3", !notification.readAt && "bg-muted/50")}
+                                onClick={() => handleNotificationClick(notification)}
+                            >
+                                <Avatar className={cn("size-8 shrink-0", getNotificationTypeStyles(notification.notificationType))}>
+                                    <AvatarFallback className="text-xs">{getIconForType(notification.notificationType)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <span className={cn("text-sm leading-tight font-medium", !notification.readAt && "font-semibold")}>
+                                            {notification.title}
+                                        </span>
+                                        {!notification.readAt && <span className="bg-primary size-2 shrink-0 rounded-full" />}
+                                    </div>
+                                    <p className="text-muted-foreground line-clamp-2 text-xs">{notification.message}</p>
 
-                                        {notification.actions && notification.actions.length > 0 && (
-                                            <div className="flex flex-wrap items-center gap-2 pt-1">
-                                                {notification.actions
-                                                    .filter((action) => action.url)
-                                                    .slice(0, 2)
-                                                    .map((action) => (
-                                                        <Button
-                                                            key={`${notification.id}-${action.name}`}
-                                                            variant={getActionButtonVariant(action.color)}
-                                                            size="sm"
-                                                            className="h-7 px-2 text-xs"
-                                                            onClick={(e) => handleActionClick(e, notification, action)}
-                                                        >
-                                                            {action.label}
-                                                        </Button>
-                                                    ))}
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-muted-foreground/70 text-[10px]">
-                                                {formatDistanceToNow(new Date(notification.createdAt), {
-                                                    addSuffix: true,
-                                                })}
-                                            </span>
-                                            <div className="flex items-center gap-1">
-                                                {!notification.readAt && (
+                                    {notification.actions && notification.actions.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                                            {notification.actions
+                                                .filter((action) => action.url)
+                                                .slice(0, 2)
+                                                .map((action) => (
                                                     <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="size-6"
-                                                        onClick={(e) => handleMarkAsRead(e, notification.id)}
-                                                        title="Mark as read"
+                                                        key={`${notification.id}-${action.name}`}
+                                                        variant={getActionButtonVariant(action.color)}
+                                                        size="sm"
+                                                        className="h-7 px-2 text-xs"
+                                                        onClick={(e) => handleActionClick(e, notification, action)}
                                                     >
-                                                        <IconCheck className="size-3" />
+                                                        {action.label}
                                                     </Button>
-                                                )}
+                                                ))}
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground/70 text-[10px]">
+                                            {formatDistanceToNow(new Date(notification.createdAt), {
+                                                addSuffix: true,
+                                            })}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            {!notification.readAt && (
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-muted-foreground hover:text-destructive size-6"
-                                                    onClick={(e) => handleDelete(e, notification.id)}
-                                                    title="Delete"
+                                                    className="size-6"
+                                                    onClick={(e) => handleMarkAsRead(e, notification.id)}
+                                                    title="Mark as read"
                                                 >
-                                                    <IconTrash className="size-3" />
+                                                    <IconCheck className="size-3" />
                                                 </Button>
-                                            </div>
+                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-muted-foreground hover:text-destructive size-6"
+                                                onClick={(e) => handleDelete(e, notification.id)}
+                                                title="Delete"
+                                            >
+                                                <IconTrash className="size-3" />
+                                            </Button>
                                         </div>
                                     </div>
-                                </DropdownMenuItem>
-                            ))}
-                        </div>
-                    </ScrollArea>
+                                </div>
+                            </DropdownMenuItem>
+                        ))}
+                    </div>
+                )}
+                {inboxUrl && (
+                    <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="m-1 justify-between px-3 py-2 font-medium" onClick={() => router.visit(inboxUrl)}>
+                            <span>View all notifications</span>
+                            <IconArrowRight className="size-4" />
+                        </DropdownMenuItem>
+                    </>
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
