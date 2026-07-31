@@ -487,8 +487,346 @@ function Assert-Image {
         [Parameter(Mandatory)][string]$Name
     )
 
-    Write-Info "Verifying $Name image $Image..."
-    Invoke-Docker -Arguments @('manifest', 'inspect', $Image) -DiscardOutput
+    Write-Info "Pulling $Name image $Image..."
+    Invoke-Docker -Arguments @('pull', $Image)
+}
+
+function Get-ServiceReplicaStatus {
+    param([Parameter(Mandatory)][string]$Name)
+
+    # Swarm's name filter is prefix-only (not regex). Exact-match after filtering.
+    $rows = Get-DockerOutput -Arguments @(
+        'service', 'ls', '--filter', "name=$Name", '--format', '{{.Name}} {{.Replicas}}'
+    ) -AllowFailure
+
+    foreach ($row in ($rows -split "`r?`n")) {
+        if ([string]::IsNullOrWhiteSpace($row)) {
+            continue
+        }
+        $parts = $row.Trim() -split '\s+', 2
+        if ($parts.Count -eq 2 -and $parts[0] -eq $Name) {
+            return $parts[1]
+        }
+    }
+
+    return ''
+}
+
+function Get-ServiceLatestTaskField {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Field
+    )
+
+    $value = Get-DockerOutput -Arguments @(
+        'service', 'ps', '--no-trunc', '--format', "{{.$Field}}", $Name
+    ) -AllowFailure
+
+    return (($value -split "`r?`n") | Where-Object { $_ } | Select-Object -First 1)
+}
+
+function Test-ServiceReady {
+    param([Parameter(Mandatory)][string]$Name)
+
+    $replicas = Get-ServiceReplicaStatus -Name $Name
+    if ($replicas -notmatch '^([0-9]+)/([0-9]+)$') {
+        return $false
+    }
+
+    return ([int]$Matches[1] -ge 1 -and $Matches[1] -eq $Matches[2])
+}
+
+function Test-InstallationDetected {
+    foreach ($name in @($AppService, $PostgresService, $RedisService, $GotenbergService, $RustFsService)) {
+        if ((Test-DockerObject -Type service -Name $name) -and (Test-ServiceManaged -Name $name)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Get-ExpectedServices {
+    $services = [System.Collections.Generic.List[string]]::new()
+    $services.Add($PostgresService) | Out-Null
+    $services.Add($RedisService) | Out-Null
+    $services.Add($GotenbergService) | Out-Null
+    if ($StorageMode -eq 'rustfs' -or (Test-DockerObject -Type service -Name $RustFsService)) {
+        $services.Add($RustFsService) | Out-Null
+    }
+    $services.Add($AppService) | Out-Null
+    return $services
+}
+
+function Get-ServiceImage {
+    param([Parameter(Mandatory)][string]$Name)
+
+    return (Get-DockerOutput -Arguments @(
+        'service', 'inspect', '--format', '{{.Spec.TaskTemplate.ContainerSpec.Image}}', $Name
+    ) -AllowFailure)
+}
+
+function Get-ImageWithoutDigest {
+    param([AllowEmptyString()][string]$Image)
+
+    if ([string]::IsNullOrWhiteSpace($Image)) {
+        return ''
+    }
+
+    return ($Image -split '@')[0]
+}
+
+function Get-ImageTag {
+    param([AllowEmptyString()][string]$Image)
+
+    $image = Get-ImageWithoutDigest -Image $Image
+    if ([string]::IsNullOrWhiteSpace($image) -or -not $image.Contains(':')) {
+        return ''
+    }
+
+    return $image.Substring($image.LastIndexOf(':') + 1)
+}
+
+function Get-ServicePublishedPort {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][int]$TargetPort
+    )
+
+    return (Get-DockerOutput -Arguments @(
+        'service', 'inspect', '--format',
+        "{{range .Endpoint.Spec.Ports}}{{if eq .TargetPort $TargetPort}}{{.PublishedPort}}{{end}}{{end}}",
+        $Name
+    ) -AllowFailure)
+}
+
+function Get-ServiceEnvValue {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Key
+    )
+
+    $envBlock = Get-DockerOutput -Arguments @(
+        'service', 'inspect', '--format',
+        '{{range .Spec.TaskTemplate.ContainerSpec.Env}}{{println .}}{{end}}',
+        $Name
+    ) -AllowFailure
+
+    foreach ($line in ($envBlock -split "`r?`n")) {
+        if ($line -like "$Key=*") {
+            return $line.Substring($Key.Length + 1)
+        }
+    }
+
+    return ''
+}
+
+function Remove-ServiceIfPresent {
+    param([Parameter(Mandatory)][string]$Name)
+
+    if (-not (Test-DockerObject -Type service -Name $Name)) {
+        return
+    }
+
+    Write-Info "Removing service $Name..."
+    Invoke-Docker -Arguments @('service', 'rm', $Name) -DiscardOutput
+    for ($waited = 0; $waited -lt 60; $waited++) {
+        if (-not (Test-DockerObject -Type service -Name $Name)) {
+            return
+        }
+        Start-Sleep -Seconds 1
+    }
+
+    Stop-Installer "Service $Name could not be removed."
+}
+
+function Write-ServiceStatusLine {
+    param([Parameter(Mandatory)][string]$Name)
+
+    if (-not (Test-DockerObject -Type service -Name $Name)) {
+        Write-Host "  ${Name}: missing"
+        return $false
+    }
+
+    $replicas = Get-ServiceReplicaStatus -Name $Name
+    $state = Get-ServiceLatestTaskField -Name $Name -Field 'CurrentState'
+    if (Test-ServiceReady -Name $Name) {
+        Write-Host "  ${Name}: healthy ($replicas)"
+        return $true
+    }
+
+    Write-Host "  ${Name}: unhealthy (replicas=$(if ($replicas) { $replicas } else { 'n/a' }) state=$(if ($state) { $state } else { 'unknown' }))"
+    return $false
+}
+
+function Write-InstallationStatus {
+    Write-Host ''
+    Write-Host 'Service status:'
+    $healthy = $true
+    foreach ($name in (Get-ExpectedServices)) {
+        if (-not (Write-ServiceStatusLine -Name $name)) {
+            $healthy = $false
+        }
+    }
+
+    return $healthy
+}
+
+function Initialize-RuntimeFromExisting {
+    if ((Test-DockerObject -Type service -Name $AppService) -and (Test-ServiceManaged -Name $AppService)) {
+        if (-not $AppUrl) {
+            $script:AppUrl = Get-ServiceEnvValue -Name $AppService -Key 'APP_URL'
+        }
+
+        $published = Get-ServicePublishedPort -Name $AppService -TargetPort 8000
+        if ($published -match '^[0-9]+$') {
+            $script:AppPort = [int]$published
+        }
+
+        $image = Get-ImageWithoutDigest -Image (Get-ServiceImage -Name $AppService)
+        if (-not $KoAkademyVersion -and $image) {
+            $script:KoAkademyVersion = Get-ImageTag -Image $image
+        }
+
+        if (-not $AwsEndpointValue) {
+            $script:AwsEndpointValue = Get-ServiceEnvValue -Name $AppService -Key 'AWS_ENDPOINT'
+        }
+        if (-not $AwsBucketValue) {
+            $script:AwsBucketValue = Get-ServiceEnvValue -Name $AppService -Key 'AWS_BUCKET'
+        }
+        if (-not $AwsRegionValue) {
+            $script:AwsRegionValue = Get-ServiceEnvValue -Name $AppService -Key 'AWS_DEFAULT_REGION'
+        }
+        if (-not $AwsUrlValue) {
+            $script:AwsUrlValue = Get-ServiceEnvValue -Name $AppService -Key 'AWS_URL'
+        }
+        $pathStyle = Get-ServiceEnvValue -Name $AppService -Key 'AWS_USE_PATH_STYLE_ENDPOINT'
+        if ($pathStyle) {
+            $script:AwsPathStyleValue = $pathStyle
+        }
+    }
+
+    if ((Test-DockerObject -Type service -Name $RustFsService) -and (Test-ServiceManaged -Name $RustFsService)) {
+        if (-not $StorageMode) {
+            $script:StorageMode = 'rustfs'
+        }
+        $image = Get-ImageWithoutDigest -Image (Get-ServiceImage -Name $RustFsService)
+        if (-not $RustFsVersion -and $image) {
+            $script:RustFsVersion = Get-ImageTag -Image $image
+        }
+        $published = Get-ServicePublishedPort -Name $RustFsService -TargetPort 9000
+        if ($published -match '^[0-9]+$') {
+            $script:RustFsPort = [int]$published
+        }
+    } elseif (-not $StorageMode -and (Test-DockerObject -Type service -Name $AppService)) {
+        $script:StorageMode = 'external'
+    }
+
+    if (Test-DockerObject -Type service -Name $PostgresService) {
+        $image = Get-ImageWithoutDigest -Image (Get-ServiceImage -Name $PostgresService)
+        if ($image) { $script:PostgresImage = $image }
+    }
+    if (Test-DockerObject -Type service -Name $RedisService) {
+        $image = Get-ImageWithoutDigest -Image (Get-ServiceImage -Name $RedisService)
+        if ($image) { $script:RedisImage = $image }
+    }
+    if (Test-DockerObject -Type service -Name $GotenbergService) {
+        $image = Get-ImageWithoutDigest -Image (Get-ServiceImage -Name $GotenbergService)
+        if ($image) { $script:GotenbergImage = $image }
+    }
+}
+
+function Initialize-Runtime {
+    if (Test-InstallationDetected) {
+        Write-Info 'Existing KoAkademy deployment detected; checking service health...'
+        Initialize-RuntimeFromExisting
+    }
+
+    if (-not $AppUrl) {
+        Initialize-ApplicationUrl
+    } else {
+        $script:AppUrl = $AppUrl.TrimEnd('/')
+        $uri = ConvertTo-HttpUri -Value $AppUrl -Name 'Application URL' -OriginOnly
+        $script:AppHost = $uri.Host
+        Assert-Port -Port $AppPort -Name 'KOAKADEMY_APP_PORT'
+        if ($uri.Scheme -eq 'https') {
+            $script:SessionSecureCookie = 'true'
+        } else {
+            $script:SessionSecureCookie = 'false'
+        }
+    }
+
+    if (-not $StorageMode) {
+        Initialize-Storage
+        return
+    }
+
+    switch ($StorageMode) {
+        'rustfs' {
+            Assert-Port -Port $RustFsPort -Name 'KOAKADEMY_RUSTFS_PORT'
+            $script:RustFsVersion = Resolve-RustFsVersion
+            if (-not $AwsBucketValue) {
+                $script:AwsBucketValue = if ($env:KOAKADEMY_S3_BUCKET) { $env:KOAKADEMY_S3_BUCKET } else { 'koakademy' }
+            }
+            Assert-Bucket -Bucket $AwsBucketValue
+            if (-not $AwsRegionValue) {
+                $script:AwsRegionValue = if ($env:KOAKADEMY_S3_REGION) { $env:KOAKADEMY_S3_REGION } else { 'us-east-1' }
+            }
+            if (-not $AwsEndpointValue) {
+                $script:AwsEndpointValue = "http://${RustFsService}:9000"
+            }
+            if (-not $AwsUrlValue) {
+                $script:AwsUrlValue = if ($env:KOAKADEMY_S3_PUBLIC_URL) { $env:KOAKADEMY_S3_PUBLIC_URL } else { "http://${AppHost}:${RustFsPort}/${AwsBucketValue}" }
+            }
+            ConvertTo-HttpUri -Value $AwsUrlValue -Name 'RustFS public object URL' | Out-Null
+            $script:AwsPathStyleValue = 'true'
+
+            if ($AppUrl.StartsWith('https://') -and $AwsUrlValue.StartsWith('http://')) {
+                Stop-Installer "HTTPS KoAkademy cannot use an HTTP RustFS public URL. Set KOAKADEMY_S3_PUBLIC_URL to an HTTPS edge for port $RustFsPort."
+            }
+
+            if (-not (Test-DockerObject -Type secret -Name $S3AccessKeySecret)) {
+                if (-not $AwsAccessKeyValue) {
+                    $script:AwsAccessKeyValue = "koa$(New-RandomHex -Bytes 12)"
+                }
+                if (-not $AwsSecretKeyValue) {
+                    $script:AwsSecretKeyValue = New-RandomHex
+                }
+            }
+        }
+        'external' {
+            if (-not $AwsEndpointValue -or -not $AwsBucketValue -or -not $AwsUrlValue) {
+                Initialize-Storage
+            } else {
+                ConvertTo-HttpUri -Value $AwsEndpointValue -Name 'S3 endpoint' | Out-Null
+                Assert-Bucket -Bucket $AwsBucketValue
+                if (-not $AwsRegionValue) { $script:AwsRegionValue = 'auto' }
+                Assert-Region -Region $AwsRegionValue
+                ConvertTo-HttpUri -Value $AwsUrlValue -Name 'S3 public object URL' | Out-Null
+                if (-not $AwsPathStyleValue) { $script:AwsPathStyleValue = 'false' }
+
+                if (-not (Test-DockerObject -Type secret -Name $S3AccessKeySecret)) {
+                    if ($env:KOAKADEMY_S3_ACCESS_KEY) {
+                        $script:AwsAccessKeyValue = $env:KOAKADEMY_S3_ACCESS_KEY
+                    } else {
+                        $script:AwsAccessKeyValue = Read-Value -Message 'S3 access key ID'
+                    }
+                    if ([string]::IsNullOrWhiteSpace($AwsAccessKeyValue)) {
+                        Stop-Installer 'S3 access key ID cannot be empty.'
+                    }
+
+                    if ($env:KOAKADEMY_S3_SECRET_KEY) {
+                        $script:AwsSecretKeyValue = $env:KOAKADEMY_S3_SECRET_KEY
+                    } else {
+                        $script:AwsSecretKeyValue = Read-SecretValue -Message 'S3 secret access key'
+                    }
+                }
+            }
+        }
+        default {
+            Stop-Installer "KOAKADEMY_STORAGE must be 'rustfs' or 'external'."
+        }
+    }
 }
 
 function New-SecretIfMissing {
@@ -714,10 +1052,18 @@ function New-ServiceIfMissing {
 
     Assert-ServiceAvailable -Name $Name
     if (Test-DockerObject -Type service -Name $Name) {
-        Write-Info "Reusing service $Name."
-        return
+        if (Test-ServiceReady -Name $Name) {
+            Write-Info "Reusing healthy service $Name."
+            return
+        }
+
+        $replicas = Get-ServiceReplicaStatus -Name $Name
+        $state = Get-ServiceLatestTaskField -Name $Name -Field 'CurrentState'
+        Write-WarningMessage "Service $Name is unhealthy (replicas=$(if ($replicas) { $replicas } else { 'n/a' }) state=$(if ($state) { $state } else { 'unknown' })); recreating..."
+        Remove-ServiceIfPresent -Name $Name
     }
 
+    Write-Info "Creating service $Name..."
     $command = @('service', 'create', '--name', $Name, '--label', $InstallerLabel) + $Arguments
     Invoke-Docker -Arguments $command -DiscardOutput
     Write-Info "Created service $Name."
@@ -730,19 +1076,49 @@ function Wait-Service {
     )
 
     Write-Info "Waiting for $Name..."
+    $lastStatus = ''
+    $terminalFailureStreak = 0
     for ($elapsed = 0; $elapsed -lt $TimeoutSeconds; $elapsed += 2) {
-        $replicas = Get-DockerOutput -Arguments @(
-            'service', 'ls', '--filter', "name=^$Name`$", '--format', '{{.Replicas}}'
-        ) -AllowFailure
+        $replicas = Get-ServiceReplicaStatus -Name $Name
 
         if ($replicas -match '^([0-9]+)/([0-9]+)$' -and
             [int]$Matches[1] -ge 1 -and $Matches[1] -eq $Matches[2]) {
+            Write-Info "$Name is ready ($replicas)."
             return
         }
+
+        $state = Get-ServiceLatestTaskField -Name $Name -Field 'CurrentState'
+        $errorText = Get-ServiceLatestTaskField -Name $Name -Field 'Error'
+        $desiredState = Get-ServiceLatestTaskField -Name $Name -Field 'DesiredState'
+
+        if ($state -like 'Rejected*' -or ($desiredState -eq 'Shutdown' -and $state -like 'Failed*')) {
+            $terminalFailureStreak++
+        } else {
+            $terminalFailureStreak = 0
+        }
+
+        if ($terminalFailureStreak -ge 3) {
+            & docker service ps --no-trunc $Name | Out-Host
+            & docker service logs --tail 80 $Name | Out-Host
+            $failureReason = if ($errorText) { $errorText } elseif ($state) { $state } else { 'unknown state' }
+            Stop-Installer "Service $Name failed before becoming ready: $failureReason"
+        }
+
+        $status = "$(if ($replicas) { $replicas } else { 'n/a' })|$(if ($state) { $state } else { 'pending' })"
+        if ($status -ne $lastStatus) {
+            $message = "$Name`: replicas=$(if ($replicas) { $replicas } else { 'n/a' }) state=$(if ($state) { $state } else { 'pending' })"
+            if ($errorText) {
+                $message = "$message ($errorText)"
+            }
+            Write-Info $message
+            $lastStatus = $status
+        }
+
         Start-Sleep -Seconds 2
     }
 
     & docker service ps --no-trunc $Name | Out-Host
+    & docker service logs --tail 80 $Name | Out-Host
     Stop-Installer "Service $Name did not converge within $TimeoutSeconds seconds."
 }
 
@@ -752,24 +1128,47 @@ function Wait-Job {
         [int]$TimeoutSeconds = 300
     )
 
+    Write-Info "Waiting for job $Name..."
+    $lastStatus = ''
+    $terminalFailureStreak = 0
     for ($elapsed = 0; $elapsed -lt $TimeoutSeconds; $elapsed += 2) {
-        $state = Get-DockerOutput -Arguments @(
-            'service', 'ps', '--no-trunc', '--format', '{{.CurrentState}}', $Name
-        ) -AllowFailure
-        $state = ($state -split "`r?`n")[0]
-        $errorText = Get-DockerOutput -Arguments @(
-            'service', 'ps', '--no-trunc', '--format', '{{.Error}}', $Name
-        ) -AllowFailure
-        $errorText = ($errorText -split "`r?`n")[0]
+        $state = Get-ServiceLatestTaskField -Name $Name -Field 'CurrentState'
+        $errorText = Get-ServiceLatestTaskField -Name $Name -Field 'Error'
+        $desiredState = Get-ServiceLatestTaskField -Name $Name -Field 'DesiredState'
 
         if ($state -like 'Complete*') {
             Invoke-Docker -Arguments @('service', 'rm', $Name) -DiscardOutput
+            Write-Info "Job $Name completed."
             return
         }
+
+        if ($state -like 'Rejected*' -or ($desiredState -eq 'Shutdown' -and $state -like 'Failed*')) {
+            $terminalFailureStreak++
+        } else {
+            $terminalFailureStreak = 0
+        }
+
+        if ($terminalFailureStreak -ge 3) {
+            & docker service ps --no-trunc $Name | Out-Host
+            & docker service logs --tail 80 $Name | Out-Host
+            $failureReason = if ($errorText) { $errorText } elseif ($state) { $state } else { 'unknown state' }
+            Stop-Installer "One-off service $Name failed: $failureReason"
+        }
+
+        if ($state -ne $lastStatus) {
+            $message = if ($state) { $state } else { 'pending' }
+            if ($errorText) {
+                $message = "$message ($errorText)"
+            }
+            Write-Info "$Name`: $message"
+            $lastStatus = $state
+        }
+
         Start-Sleep -Seconds 2
     }
 
     & docker service ps --no-trunc $Name | Out-Host
+    & docker service logs --tail 80 $Name | Out-Host
     $failureReason = if ($errorText) { $errorText } elseif ($state) { $state } else { 'unknown state' }
     Stop-Installer "One-off service $Name did not complete within $TimeoutSeconds seconds: $failureReason"
 }
@@ -1126,6 +1525,11 @@ function Install-Dependencies {
 function Install-Application {
     param([Parameter(Mandatory)][string]$Image)
 
+    if ((Test-DockerObject -Type service -Name $AppService) -and (Test-ServiceReady -Name $AppService)) {
+        Write-Info "Reusing healthy service $AppService."
+        return
+    }
+
     Start-StorageInitJob
     Start-MigrationJob -Image $Image
 
@@ -1180,21 +1584,16 @@ try {
     Write-Host ''
 
     Initialize-SwarmManager
-
-    if (Test-DockerObject -Type service -Name $AppService) {
-        if (-not (Test-ServiceManaged -Name $AppService)) {
-            Stop-Installer "Service $AppService already exists but is not installer-managed."
-        }
-        Write-Host 'KoAkademy is already installed.'
-        exit 0
-    }
-
-    Initialize-ApplicationUrl
-    Initialize-Storage
+    Initialize-Runtime
 
     $KoAkademyVersion = Resolve-KoAkademyVersion
     $koAkademyImage = "ghcr.io/$Repository`:$KoAkademyVersion"
     Assert-Image -Image $koAkademyImage -Name 'KoAkademy'
+    Assert-Image -Image $PostgresImage -Name 'PostgreSQL'
+    Assert-Image -Image $RedisImage -Name 'Redis'
+    Assert-Image -Image $GotenbergImage -Name 'Gotenberg'
+    Assert-Image -Image $AwsCliImage -Name 'AWS CLI'
+    Assert-Image -Image $AlpineImage -Name 'Alpine'
     if ($StorageMode -eq 'rustfs') {
         Assert-Image -Image "rustfs/rustfs:$RustFsVersion" -Name 'RustFS'
     }
@@ -1213,7 +1612,11 @@ try {
     Test-ApplicationHealth
 
     Write-Host ''
-    Write-Host "KoAkademy $KoAkademyVersion is installed."
+    if (Write-InstallationStatus) {
+        Write-Host "KoAkademy $KoAkademyVersion is ready."
+    } else {
+        Stop-Installer "KoAkademy $KoAkademyVersion is still reporting unhealthy services."
+    }
     Write-Host "Application: $AppUrl"
     Write-Host "First-time setup: $AppUrl/setup"
     Write-Host "Admin portal: $AppUrl/admin"

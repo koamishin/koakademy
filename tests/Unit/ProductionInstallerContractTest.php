@@ -50,13 +50,29 @@ it('keeps the Bash and PowerShell Swarm contracts aligned', function (): void {
         ->toContain('mode=host')
         ->toContain('docker secret create')
         ->toContain('Swarm is already active; preserving the existing cluster.')
+        ->toContain('service_replica_status')
+        ->toContain('--filter "name=${service}"')
+        ->not->toContain('name=^${service}$')
         ->and($powerShell)
         ->toContain('api.github.com/repos/$RepositoryName/tags')
         ->toContain('https://github.com/$RepositoryName/tags.atom')
         ->toContain("'--mode', 'replicated-job'")
         ->toContain('mode=host')
         ->toContain('docker secret create')
-        ->toContain('Docker Swarm is already active; preserving the existing cluster.');
+        ->toContain('Docker Swarm is already active; preserving the existing cluster.')
+        ->toContain('Get-ServiceReplicaStatus')
+        ->toContain("'--filter', \"name=\$Name\"")
+        ->not->toContain('name=^$Name')
+        ->and($bash)
+        ->toContain('installation_detected')
+        ->toContain('hydrate_runtime_from_existing')
+        ->toContain('Service ${service} is unhealthy')
+        ->toContain('Existing KoAkademy deployment detected; checking service health...')
+        ->and($powerShell)
+        ->toContain('Test-InstallationDetected')
+        ->toContain('Initialize-RuntimeFromExisting')
+        ->toContain('is unhealthy')
+        ->toContain('Existing KoAkademy deployment detected; checking service health...');
 });
 
 it('does not use destructive Swarm operations or mutable application images', function (): void {
@@ -295,10 +311,30 @@ it('smoke tests a fresh and repeated Bash installation without a Docker daemon',
 
         expect($secondRun->isSuccessful())
             ->toBeTrue($secondRun->getErrorOutput().$secondRun->getOutput())
-            ->and($secondRun->getOutput())->toContain('KoAkademy is already installed.');
+            ->and($secondRun->getOutput())
+            ->toContain('Existing KoAkademy deployment detected; checking service health...')
+            ->toContain('KoAkademy v1.9.0 is ready.')
+            ->toContain('koakademy-postgres: healthy');
 
         $repeatedLog = file_get_contents($state.'/docker.log') ?: '';
         expect(mb_substr_count($repeatedLog, 'service create --name'))->toBe($createsBeforeRepeat);
+
+        $filesystem->dumpFile($state.'/unhealthy/koakademy-postgres', '');
+        $repairRun = new Process([$bash, base_path('scripts/install.sh')], base_path(), $environment);
+        $repairRun->setTimeout(30);
+        $repairRun->run();
+
+        expect($repairRun->isSuccessful())
+            ->toBeTrue($repairRun->getErrorOutput().$repairRun->getOutput())
+            ->and($repairRun->getErrorOutput().$repairRun->getOutput())
+            ->toContain('Service koakademy-postgres is unhealthy')
+            ->toContain('KoAkademy v1.9.0 is ready.');
+
+        $repairLog = file_get_contents($state.'/docker.log') ?: '';
+        expect($repairLog)
+            ->toContain('service rm koakademy-postgres')
+            ->and(mb_substr_count($repairLog, 'service create --name koakademy-postgres'))
+            ->toBeGreaterThan(1);
     } finally {
         $filesystem->remove($state);
     }

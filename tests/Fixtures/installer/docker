@@ -9,7 +9,8 @@ mkdir -p \
     "${KOAKADEMY_INSTALLER_TEST_STATE}/secrets" \
     "${KOAKADEMY_INSTALLER_TEST_STATE}/configs" \
     "${KOAKADEMY_INSTALLER_TEST_STATE}/networks" \
-    "${KOAKADEMY_INSTALLER_TEST_STATE}/volumes"
+    "${KOAKADEMY_INSTALLER_TEST_STATE}/volumes" \
+    "${KOAKADEMY_INSTALLER_TEST_STATE}/unhealthy"
 
 printf '%s\n' "$*" >>"${KOAKADEMY_INSTALLER_TEST_STATE}/docker.log"
 
@@ -19,6 +20,10 @@ object_exists() {
 
 create_object() {
     : >"${KOAKADEMY_INSTALLER_TEST_STATE}/$1/$2"
+}
+
+service_is_unhealthy() {
+    object_exists unhealthy "$1"
 }
 
 command_name="${1:-}"
@@ -40,6 +45,9 @@ case "${command_name}" in
         ;;
     manifest)
         test "${1:-}" = "inspect"
+        ;;
+    pull)
+        test -n "${1:-}"
         ;;
     swarm)
         test "${1:-}" = "init"
@@ -118,7 +126,26 @@ case "${command_name}" in
                 object_exists services "${name}" || exit 1
                 case "$*" in
                     *com.koakademy.managed-by*) printf 'swarm-installer\n' ;;
-                    *ContainerSpec.Env*) printf 'APP_URL=http://127.0.0.1:18000\n' ;;
+                    *ContainerSpec.Image*)
+                        case "${name}" in
+                            koakademy-app) printf 'ghcr.io/yukazakiri/koakademy:v1.9.0\n' ;;
+                            koakademy-postgres) printf 'postgres:18-alpine\n' ;;
+                            koakademy-redis) printf 'redis:8-alpine\n' ;;
+                            koakademy-gotenberg) printf 'gotenberg/gotenberg:8\n' ;;
+                            koakademy-rustfs) printf 'rustfs/rustfs:1.0.0-beta.10\n' ;;
+                            *) printf 'alpine:3.22\n' ;;
+                        esac
+                        ;;
+                    *'TargetPort 8000'*) printf '18000\n' ;;
+                    *'TargetPort 9000'*) printf '19000\n' ;;
+                    *ContainerSpec.Env*)
+                        printf 'APP_URL=http://127.0.0.1:18000\n'
+                        printf 'AWS_ENDPOINT=http://koakademy-rustfs:9000\n'
+                        printf 'AWS_BUCKET=koakademy\n'
+                        printf 'AWS_DEFAULT_REGION=us-east-1\n'
+                        printf 'AWS_URL=http://127.0.0.1:19000/koakademy\n'
+                        printf 'AWS_USE_PATH_STYLE_ENDPOINT=true\n'
+                        ;;
                 esac
                 ;;
             create)
@@ -133,18 +160,49 @@ case "${command_name}" in
                 done
                 test -n "${name}"
                 create_object services "${name}"
+                rm -f -- "${KOAKADEMY_INSTALLER_TEST_STATE}/unhealthy/${name}"
                 ;;
             ls)
-                printf '1/1\n'
+                shopt -s nullglob
+                for service_path in "${KOAKADEMY_INSTALLER_TEST_STATE}/services/"*; do
+                    name="$(basename "${service_path}")"
+                    if service_is_unhealthy "${name}"; then
+                        printf '%s 0/1\n' "${name}"
+                    else
+                        printf '%s 1/1\n' "${name}"
+                    fi
+                done
                 ;;
             ps)
-                case "$*" in
-                    *'{{.CurrentState}}'*) printf 'Complete 1 second ago\n' ;;
-                    *'{{.Error}}'*) printf '\n' ;;
+                name="${*: -1}"
+                case "${name}" in
+                    koakademy-*-init|koakademy-migrate|koakademy-storage-init|koakademy-rustfs-volume-init)
+                        case "$*" in
+                            *'{{.CurrentState}}'*) printf 'Complete 1 second ago\n' ;;
+                            *'{{.Error}}'*) printf '\n' ;;
+                            *'{{.DesiredState}}'*) printf 'Shutdown\n' ;;
+                        esac
+                        ;;
+                    *)
+                        if service_is_unhealthy "${name}"; then
+                            case "$*" in
+                                *'{{.CurrentState}}'*) printf 'Failed 2 seconds ago\n' ;;
+                                *'{{.Error}}'*) printf 'task failed\n' ;;
+                                *'{{.DesiredState}}'*) printf 'Shutdown\n' ;;
+                            esac
+                        else
+                            case "$*" in
+                                *'{{.CurrentState}}'*) printf 'Running 1 second ago\n' ;;
+                                *'{{.Error}}'*) printf '\n' ;;
+                                *'{{.DesiredState}}'*) printf 'Running\n' ;;
+                            esac
+                        fi
+                        ;;
                 esac
                 ;;
             rm)
                 rm -f -- "${KOAKADEMY_INSTALLER_TEST_STATE}/services/${1:-}"
+                rm -f -- "${KOAKADEMY_INSTALLER_TEST_STATE}/unhealthy/${1:-}"
                 ;;
             logs)
                 ;;

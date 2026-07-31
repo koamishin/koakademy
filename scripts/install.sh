@@ -23,9 +23,9 @@ readonly S3_SECRET_KEY_SECRET="koakademy-s3-secret-key"
 readonly APP_ENTRYPOINT_CONFIG="koakademy-app-entrypoint-v1"
 readonly REDIS_ENTRYPOINT_CONFIG="koakademy-redis-entrypoint-v1"
 readonly STORAGE_INIT_CONFIG="koakademy-storage-init-v1"
-readonly POSTGRES_IMAGE="${KOAKADEMY_POSTGRES_IMAGE:-postgres:18-alpine}"
-readonly REDIS_IMAGE="${KOAKADEMY_REDIS_IMAGE:-redis:8-alpine}"
-readonly GOTENBERG_IMAGE="${KOAKADEMY_GOTENBERG_IMAGE:-gotenberg/gotenberg:8}"
+POSTGRES_IMAGE="${KOAKADEMY_POSTGRES_IMAGE:-postgres:18-alpine}"
+REDIS_IMAGE="${KOAKADEMY_REDIS_IMAGE:-redis:8-alpine}"
+GOTENBERG_IMAGE="${KOAKADEMY_GOTENBERG_IMAGE:-gotenberg/gotenberg:8}"
 readonly AWS_CLI_IMAGE="${KOAKADEMY_AWS_CLI_IMAGE:-amazon/aws-cli:2}"
 readonly ALPINE_IMAGE="${KOAKADEMY_ALPINE_IMAGE:-alpine:3.22}"
 
@@ -612,9 +612,323 @@ ensure_image() {
     local image="$1"
     local label="$2"
 
-    info "Verifying ${label} image ${image}..."
-    docker manifest inspect "${image}" >/dev/null 2>&1 \
-        || fail "Container image ${image} could not be resolved."
+    info "Pulling ${label} image ${image}..."
+    docker pull "${image}" \
+        || fail "Container image ${image} could not be pulled."
+}
+
+service_replica_status() {
+    local service="$1"
+    local rows=""
+
+    # Buffer first so an exact-match awk exit cannot SIGPIPE `docker service ls`
+    # under `set -o pipefail` when multiple services are listed.
+    rows="$(docker service ls --filter "name=${service}" --format '{{.Name}} {{.Replicas}}' 2>/dev/null || true)"
+    printf '%s\n' "${rows}" \
+        | awk -v name="${service}" '$1 == name { print $2; exit }'
+}
+
+service_latest_task() {
+    local service="$1"
+    local field="$2"
+    local rows=""
+
+    rows="$(docker service ps --no-trunc --format "{{.${field}}}" "${service}" 2>/dev/null || true)"
+    printf '%s\n' "${rows}" | head -n 1
+}
+
+service_is_ready() {
+    local service="$1"
+    local replicas=""
+    local running=""
+    local desired=""
+
+    replicas="$(service_replica_status "${service}")"
+    [[ "${replicas}" =~ ^([0-9]+)/([0-9]+)$ ]] || return 1
+    running="${BASH_REMATCH[1]}"
+    desired="${BASH_REMATCH[2]}"
+    (( running >= 1 && running == desired ))
+}
+
+installation_detected() {
+    local service=""
+
+    for service in \
+        "${APP_SERVICE}" \
+        "${POSTGRES_SERVICE}" \
+        "${REDIS_SERVICE}" \
+        "${GOTENBERG_SERVICE}" \
+        "${RUSTFS_SERVICE}"
+    do
+        if docker_object_exists service "${service}" && service_is_installer_managed "${service}"; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+expected_services() {
+    printf '%s\n' \
+        "${POSTGRES_SERVICE}" \
+        "${REDIS_SERVICE}" \
+        "${GOTENBERG_SERVICE}"
+
+    if [[ "${STORAGE_MODE}" == "rustfs" ]] ||
+       docker_object_exists service "${RUSTFS_SERVICE}"; then
+        printf '%s\n' "${RUSTFS_SERVICE}"
+    fi
+
+    printf '%s\n' "${APP_SERVICE}"
+}
+
+service_image() {
+    local service="$1"
+
+    docker service inspect --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}' "${service}" 2>/dev/null \
+        || true
+}
+
+strip_image_digest() {
+    local image="$1"
+
+    printf '%s' "${image%%@*}"
+}
+
+image_tag() {
+    local image="$1"
+
+    image="$(strip_image_digest "${image}")"
+    if [[ "${image}" == *:* ]]; then
+        printf '%s' "${image##*:}"
+    else
+        printf ''
+    fi
+}
+
+service_published_port() {
+    local service="$1"
+    local target_port="$2"
+
+    docker service inspect --format \
+        "{{range .Endpoint.Spec.Ports}}{{if eq .TargetPort ${target_port}}}{{.PublishedPort}}{{end}}{{end}}" \
+        "${service}" 2>/dev/null || true
+}
+
+service_env_value() {
+    local service="$1"
+    local key="$2"
+
+    docker service inspect --format \
+        '{{range .Spec.TaskTemplate.ContainerSpec.Env}}{{println .}}{{end}}' \
+        "${service}" 2>/dev/null \
+        | sed -n "s/^${key}=//p" \
+        | head -n 1
+}
+
+remove_service() {
+    local service="$1"
+    local waited=0
+
+    if ! docker_object_exists service "${service}"; then
+        return
+    fi
+
+    info "Removing service ${service}..."
+    docker service rm "${service}" >/dev/null
+    while docker_object_exists service "${service}"; do
+        sleep 1
+        waited=$((waited + 1))
+        (( waited < 60 )) || fail "Service ${service} could not be removed."
+    done
+}
+
+report_service_status_line() {
+    local service="$1"
+    local replicas=""
+    local state=""
+
+    if ! docker_object_exists service "${service}"; then
+        log "  ${service}: missing"
+        return 1
+    fi
+
+    replicas="$(service_replica_status "${service}")"
+    state="$(service_latest_task "${service}" CurrentState)"
+    if service_is_ready "${service}"; then
+        log "  ${service}: healthy (${replicas})"
+        return 0
+    fi
+
+    log "  ${service}: unhealthy (replicas=${replicas:-n/a} state=${state:-unknown})"
+    return 1
+}
+
+report_installation_status() {
+    local service=""
+    local unhealthy=0
+
+    log ""
+    log "Service status:"
+    while IFS= read -r service; do
+        [[ -n "${service}" ]] || continue
+        if ! report_service_status_line "${service}"; then
+            unhealthy=1
+        fi
+    done < <(expected_services)
+
+    return "${unhealthy}"
+}
+
+hydrate_runtime_from_existing() {
+    local image=""
+    local published=""
+    local path_style=""
+
+    if docker_object_exists service "${APP_SERVICE}" && service_is_installer_managed "${APP_SERVICE}"; then
+        if [[ -z "${APP_URL}" ]]; then
+            APP_URL="$(service_env_value "${APP_SERVICE}" APP_URL)"
+        fi
+
+        published="$(service_published_port "${APP_SERVICE}" 8000)"
+        if [[ "${published}" =~ ^[0-9]+$ ]]; then
+            APP_PORT="${published}"
+        fi
+
+        image="$(strip_image_digest "$(service_image "${APP_SERVICE}")")"
+        if [[ -z "${KOAKADEMY_VERSION}" && -n "${image}" ]]; then
+            KOAKADEMY_VERSION="$(image_tag "${image}")"
+        fi
+
+        if [[ -z "${AWS_ENDPOINT_VALUE}" ]]; then
+            AWS_ENDPOINT_VALUE="$(service_env_value "${APP_SERVICE}" AWS_ENDPOINT)"
+        fi
+        if [[ -z "${AWS_BUCKET_VALUE}" ]]; then
+            AWS_BUCKET_VALUE="$(service_env_value "${APP_SERVICE}" AWS_BUCKET)"
+        fi
+        if [[ -z "${AWS_DEFAULT_REGION_VALUE}" ]]; then
+            AWS_DEFAULT_REGION_VALUE="$(service_env_value "${APP_SERVICE}" AWS_DEFAULT_REGION)"
+        fi
+        if [[ -z "${AWS_URL_VALUE}" ]]; then
+            AWS_URL_VALUE="$(service_env_value "${APP_SERVICE}" AWS_URL)"
+        fi
+        path_style="$(service_env_value "${APP_SERVICE}" AWS_USE_PATH_STYLE_ENDPOINT)"
+        if [[ -n "${path_style}" ]]; then
+            AWS_USE_PATH_STYLE_VALUE="${path_style}"
+        fi
+    fi
+
+    if docker_object_exists service "${RUSTFS_SERVICE}" && service_is_installer_managed "${RUSTFS_SERVICE}"; then
+        STORAGE_MODE="${STORAGE_MODE:-rustfs}"
+        image="$(strip_image_digest "$(service_image "${RUSTFS_SERVICE}")")"
+        if [[ -z "${RUSTFS_VERSION}" && -n "${image}" ]]; then
+            RUSTFS_VERSION="$(image_tag "${image}")"
+        fi
+        published="$(service_published_port "${RUSTFS_SERVICE}" 9000)"
+        if [[ "${published}" =~ ^[0-9]+$ ]]; then
+            RUSTFS_PORT="${published}"
+        fi
+    elif [[ -z "${STORAGE_MODE}" ]] && docker_object_exists service "${APP_SERVICE}"; then
+        STORAGE_MODE="external"
+    fi
+
+    if docker_object_exists service "${POSTGRES_SERVICE}"; then
+        image="$(strip_image_digest "$(service_image "${POSTGRES_SERVICE}")")"
+        [[ -n "${image}" ]] && POSTGRES_IMAGE="${image}"
+    fi
+    if docker_object_exists service "${REDIS_SERVICE}"; then
+        image="$(strip_image_digest "$(service_image "${REDIS_SERVICE}")")"
+        [[ -n "${image}" ]] && REDIS_IMAGE="${image}"
+    fi
+    if docker_object_exists service "${GOTENBERG_SERVICE}"; then
+        image="$(strip_image_digest "$(service_image "${GOTENBERG_SERVICE}")")"
+        [[ -n "${image}" ]] && GOTENBERG_IMAGE="${image}"
+    fi
+}
+
+configure_runtime() {
+    if installation_detected; then
+        info "Existing KoAkademy deployment detected; checking service health..."
+        hydrate_runtime_from_existing
+    fi
+
+    if [[ -z "${APP_URL}" ]]; then
+        configure_application_url
+    else
+        APP_URL="${APP_URL%/}"
+        validate_app_url "${APP_URL}"
+        APP_HOST="${APP_URL#*://}"
+        APP_HOST="${APP_HOST%%:*}"
+        [[ -n "${APP_HOST}" ]] || fail "Could not derive a trusted host from APP_URL."
+        if [[ "${APP_URL}" == https://* ]]; then
+            SESSION_SECURE_COOKIE="true"
+        else
+            SESSION_SECURE_COOKIE="false"
+        fi
+        validate_port "${APP_PORT}" "KOAKADEMY_APP_PORT"
+    fi
+
+    if [[ -z "${STORAGE_MODE}" ]]; then
+        configure_storage
+    else
+        case "${STORAGE_MODE}" in
+            rustfs)
+                validate_port "${RUSTFS_PORT}" "KOAKADEMY_RUSTFS_PORT"
+                RUSTFS_VERSION="$(resolve_latest_rustfs_version)"
+                AWS_BUCKET_VALUE="${AWS_BUCKET_VALUE:-${KOAKADEMY_S3_BUCKET:-koakademy}}"
+                validate_bucket "${AWS_BUCKET_VALUE}"
+                AWS_DEFAULT_REGION_VALUE="${AWS_DEFAULT_REGION_VALUE:-${KOAKADEMY_S3_REGION:-us-east-1}}"
+                AWS_ENDPOINT_VALUE="${AWS_ENDPOINT_VALUE:-http://${RUSTFS_SERVICE}:9000}"
+                if [[ -z "${AWS_URL_VALUE}" ]]; then
+                    AWS_URL_VALUE="${KOAKADEMY_S3_PUBLIC_URL:-}"
+                fi
+                if [[ -z "${AWS_URL_VALUE}" ]]; then
+                    AWS_URL_VALUE="http://${APP_HOST}:${RUSTFS_PORT}/${AWS_BUCKET_VALUE}"
+                fi
+                validate_http_url "${AWS_URL_VALUE}" "RustFS public object URL"
+                AWS_USE_PATH_STYLE_VALUE="true"
+
+                if [[ "${APP_URL}" == https://* && "${AWS_URL_VALUE}" == http://* ]]; then
+                    fail "HTTPS KoAkademy cannot use an HTTP RustFS public URL. Set KOAKADEMY_S3_PUBLIC_URL to an HTTPS edge for port ${RUSTFS_PORT}."
+                fi
+
+                if ! docker_object_exists secret "${S3_ACCESS_KEY_SECRET}"; then
+                    AWS_ACCESS_KEY_ID_VALUE="${AWS_ACCESS_KEY_ID_VALUE:-koa$(random_hex 12)}"
+                    AWS_SECRET_ACCESS_KEY_VALUE="${AWS_SECRET_ACCESS_KEY_VALUE:-$(random_hex 32)}"
+                fi
+                ;;
+            external)
+                if [[ -z "${AWS_ENDPOINT_VALUE}" || -z "${AWS_BUCKET_VALUE}" || -z "${AWS_URL_VALUE}" ]]; then
+                    configure_storage
+                else
+                    validate_http_url "${AWS_ENDPOINT_VALUE}" "S3 endpoint"
+                    validate_bucket "${AWS_BUCKET_VALUE}"
+                    AWS_DEFAULT_REGION_VALUE="${AWS_DEFAULT_REGION_VALUE:-auto}"
+                    validate_region "${AWS_DEFAULT_REGION_VALUE}"
+                    validate_http_url "${AWS_URL_VALUE}" "S3 public object URL"
+                    AWS_USE_PATH_STYLE_VALUE="${AWS_USE_PATH_STYLE_VALUE:-false}"
+
+                    if ! docker_object_exists secret "${S3_ACCESS_KEY_SECRET}"; then
+                        if [[ -n "${KOAKADEMY_S3_ACCESS_KEY:-}" ]]; then
+                            AWS_ACCESS_KEY_ID_VALUE="${KOAKADEMY_S3_ACCESS_KEY}"
+                        else
+                            prompt AWS_ACCESS_KEY_ID_VALUE "S3 access key ID"
+                        fi
+                        [[ -n "${AWS_ACCESS_KEY_ID_VALUE}" ]] || fail "S3 access key ID cannot be empty."
+
+                        if [[ -n "${KOAKADEMY_S3_SECRET_KEY:-}" ]]; then
+                            AWS_SECRET_ACCESS_KEY_VALUE="${KOAKADEMY_S3_SECRET_KEY}"
+                        else
+                            prompt_secret AWS_SECRET_ACCESS_KEY_VALUE "S3 secret access key"
+                        fi
+                    fi
+                fi
+                ;;
+            *)
+                fail "KOAKADEMY_STORAGE must be 'rustfs' or 'external'."
+                ;;
+        esac
+    fi
 }
 
 ensure_service_absent_or_owned() {
@@ -631,13 +945,23 @@ ensure_service_absent_or_owned() {
 create_service_if_missing() {
     local service="$1"
     shift
+    local replicas=""
+    local state=""
 
     ensure_service_absent_or_owned "${service}"
     if docker_object_exists service "${service}"; then
-        info "Reusing service ${service}."
-        return
+        if service_is_ready "${service}"; then
+            info "Reusing healthy service ${service}."
+            return
+        fi
+
+        replicas="$(service_replica_status "${service}")"
+        state="$(service_latest_task "${service}" CurrentState)"
+        warn "Service ${service} is unhealthy (replicas=${replicas:-n/a} state=${state:-unknown}); recreating..."
+        remove_service "${service}"
     fi
 
+    info "Creating service ${service}..."
     docker service create \
         --name "${service}" \
         --label "${INSTALLER_LABEL}" \
@@ -652,16 +976,48 @@ wait_for_service() {
     local replicas=""
     local running=""
     local desired=""
+    local state=""
+    local error=""
+    local desired_state=""
+    local last_status=""
+    local status=""
+    local terminal_failure_streak=0
 
     info "Waiting for ${service}..."
     while (( elapsed < timeout_seconds )); do
-        replicas="$(docker service ls --filter "name=^${service}$" --format '{{.Replicas}}' 2>/dev/null || true)"
+        replicas="$(service_replica_status "${service}")"
         if [[ "${replicas}" =~ ^([0-9]+)/([0-9]+)$ ]]; then
             running="${BASH_REMATCH[1]}"
             desired="${BASH_REMATCH[2]}"
             if (( running >= 1 && running == desired )); then
+                info "${service} is ready (${replicas})."
                 return
             fi
+        fi
+
+        state="$(service_latest_task "${service}" CurrentState)"
+        error="$(service_latest_task "${service}" Error)"
+        desired_state="$(service_latest_task "${service}" DesiredState)"
+
+        if [[ "${state}" == Rejected* ]] ||
+           { [[ "${desired_state}" == "Shutdown" ]] && [[ "${state}" == Failed* ]]; }; then
+            terminal_failure_streak=$((terminal_failure_streak + 1))
+        else
+            terminal_failure_streak=0
+        fi
+
+        # Require a short streak so a Failed task that is about to be replaced
+        # does not abort the wait before Swarm schedules the next attempt.
+        if (( terminal_failure_streak >= 3 )); then
+            docker service ps --no-trunc "${service}" >&2 || true
+            docker service logs --tail 80 "${service}" >&2 || true
+            fail "Service ${service} failed before becoming ready: ${error:-${state}}"
+        fi
+
+        status="${replicas:-n/a}|${state:-pending}"
+        if [[ "${status}" != "${last_status}" ]]; then
+            info "${service}: replicas=${replicas:-n/a} state=${state:-pending}${error:+ (${error})}"
+            last_status="${status}"
         fi
 
         sleep 2
@@ -669,6 +1025,7 @@ wait_for_service() {
     done
 
     docker service ps --no-trunc "${service}" >&2 || true
+    docker service logs --tail 80 "${service}" >&2 || true
     fail "Service ${service} did not converge within ${timeout_seconds} seconds."
 }
 
@@ -678,14 +1035,38 @@ wait_for_job() {
     local elapsed=0
     local state=""
     local error=""
+    local desired_state=""
+    local last_status=""
+    local terminal_failure_streak=0
 
+    info "Waiting for job ${service}..."
     while (( elapsed < timeout_seconds )); do
-        state="$(docker service ps --no-trunc --format '{{.CurrentState}}' "${service}" 2>/dev/null | head -n 1)"
-        error="$(docker service ps --no-trunc --format '{{.Error}}' "${service}" 2>/dev/null | head -n 1)"
+        state="$(service_latest_task "${service}" CurrentState)"
+        error="$(service_latest_task "${service}" Error)"
+        desired_state="$(service_latest_task "${service}" DesiredState)"
 
         if [[ "${state}" == Complete* ]]; then
             docker service rm "${service}" >/dev/null
+            info "Job ${service} completed."
             return
+        fi
+
+        if [[ "${state}" == Rejected* ]] ||
+           { [[ "${desired_state}" == "Shutdown" ]] && [[ "${state}" == Failed* ]]; }; then
+            terminal_failure_streak=$((terminal_failure_streak + 1))
+        else
+            terminal_failure_streak=0
+        fi
+
+        if (( terminal_failure_streak >= 3 )); then
+            docker service ps --no-trunc "${service}" >&2 || true
+            docker service logs --tail 80 "${service}" >&2 || true
+            fail "One-off service ${service} failed: ${error:-${state}}"
+        fi
+
+        if [[ "${state}" != "${last_status}" ]]; then
+            info "${service}: ${state:-pending}${error:+ (${error})}"
+            last_status="${state}"
         fi
 
         sleep 2
@@ -693,6 +1074,7 @@ wait_for_job() {
     done
 
     docker service ps --no-trunc "${service}" >&2 || true
+    docker service logs --tail 80 "${service}" >&2 || true
     fail "One-off service ${service} did not complete within ${timeout_seconds} seconds: ${error:-${state:-unknown state}}"
 }
 
@@ -1050,6 +1432,11 @@ deploy_dependencies() {
 deploy_application() {
     local image="ghcr.io/${KOAKADEMY_REPOSITORY}:${KOAKADEMY_VERSION}"
 
+    if docker_object_exists service "${APP_SERVICE}" && service_is_ready "${APP_SERVICE}"; then
+        info "Reusing healthy service ${APP_SERVICE}."
+        return
+    fi
+
     run_storage_init_job
     run_migration_job "${image}"
 
@@ -1086,6 +1473,12 @@ verify_application() {
     local health_url="http://127.0.0.1:${APP_PORT}/up"
     local attempt=0
 
+    # The unit-test harness mocks Docker but not a listening app port.
+    if [[ -n "${KOAKADEMY_INSTALLER_TEST_STATE:-}" ]]; then
+        info "Skipping HTTP health check in installer test harness."
+        return
+    fi
+
     info "Checking ${health_url}..."
     while (( attempt < 90 )); do
         if curl -fsS --max-time 5 "${health_url}" >/dev/null 2>&1; then
@@ -1107,22 +1500,16 @@ main() {
     log ""
 
     ensure_swarm_manager
-
-    if docker_object_exists service "${APP_SERVICE}"; then
-        service_is_installer_managed "${APP_SERVICE}" \
-            || fail "Service ${APP_SERVICE} already exists but is not installer-managed."
-        log "KoAkademy is already installed."
-        log "Application: $(docker service inspect --format '{{range .Spec.TaskTemplate.ContainerSpec.Env}}{{println .}}{{end}}' "${APP_SERVICE}" \
-            | sed -n 's/^APP_URL=//p' | head -n 1)"
-        exit 0
-    fi
-
-    configure_application_url
-    configure_storage
+    configure_runtime
 
     KOAKADEMY_VERSION="$(resolve_latest_koakademy_version)"
     koakademy_image="ghcr.io/${KOAKADEMY_REPOSITORY}:${KOAKADEMY_VERSION}"
     ensure_image "${koakademy_image}" "KoAkademy"
+    ensure_image "${POSTGRES_IMAGE}" "PostgreSQL"
+    ensure_image "${REDIS_IMAGE}" "Redis"
+    ensure_image "${GOTENBERG_IMAGE}" "Gotenberg"
+    ensure_image "${AWS_CLI_IMAGE}" "AWS CLI"
+    ensure_image "${ALPINE_IMAGE}" "Alpine"
     if [[ "${STORAGE_MODE}" == "rustfs" ]]; then
         ensure_image "rustfs/rustfs:${RUSTFS_VERSION}" "RustFS"
     fi
@@ -1141,7 +1528,11 @@ main() {
     verify_application
 
     log ""
-    log "KoAkademy ${KOAKADEMY_VERSION} is installed."
+    if report_installation_status; then
+        log "KoAkademy ${KOAKADEMY_VERSION} is ready."
+    else
+        fail "KoAkademy ${KOAKADEMY_VERSION} is still reporting unhealthy services."
+    fi
     log "Application: ${APP_URL}"
     log "First-time setup: ${APP_URL}/setup"
     log "Admin portal: ${APP_URL}/admin"
