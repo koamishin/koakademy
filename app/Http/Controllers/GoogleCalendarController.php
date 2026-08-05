@@ -15,6 +15,7 @@ use Google\Service\Calendar\Event;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
 final class GoogleCalendarController extends Controller
@@ -110,7 +111,7 @@ final class GoogleCalendarController extends Controller
                     'recurrence' => ['RRULE:FREQ=WEEKLY;COUNT=18'], // Assuming ~18 weeks semester
                     'extendedProperties' => [
                         'private' => [
-                            'app_event_type' => 'dccp_schedule',
+                            'app_event_type' => $this->eventType(),
                         ],
                     ],
                 ]);
@@ -152,7 +153,7 @@ final class GoogleCalendarController extends Controller
 
             // 1. Try to delete events with our extended property (Safe & Robust)
             $events = $service->events->listEvents($calendarId, [
-                'privateExtendedProperty' => 'app_event_type=dccp_schedule',
+                'privateExtendedProperty' => 'app_event_type='.$this->eventType(),
                 'singleEvents' => false, // Delete the series
             ]);
 
@@ -225,6 +226,16 @@ final class GoogleCalendarController extends Controller
         }
 
         return $client;
+    }
+
+    /**
+     * Derive the private extended-property event type used to tag the
+     * synced events, based on the configured application name (APP_NAME).
+     * Google extended property values cannot contain spaces, hence the slug.
+     */
+    private function eventType(): string
+    {
+        return Str::slug((string) config('app.name')).'_schedule';
     }
 
     private function getUserSchedules(User $user)

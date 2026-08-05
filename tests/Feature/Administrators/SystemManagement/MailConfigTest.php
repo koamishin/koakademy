@@ -31,8 +31,8 @@ it('encrypts the Sequenzy API key and preserves it when the field is blank', fun
 
     actingAs($user)
         ->put(portalUrlForAdministrators('/administrators/system-management/mail'), [
-            'email_from_address' => 'noreply@dccp.edu.ph',
-            'email_from_name' => 'DCCP Portal',
+            'email_from_address' => 'noreply@koakademy.edu.ph',
+            'email_from_name' => 'KoAkademy Portal',
             'driver' => 'sequenzy',
             'sequenzy_api_key' => 'seq_secret_test_key',
         ])
@@ -50,8 +50,8 @@ it('encrypts the Sequenzy API key and preserves it when the field is blank', fun
 
     actingAs($user)
         ->put(portalUrlForAdministrators('/administrators/system-management/mail'), [
-            'email_from_address' => 'noreply@dccp.edu.ph',
-            'email_from_name' => 'DCCP Portal',
+            'email_from_address' => 'noreply@koakademy.edu.ph',
+            'email_from_name' => 'KoAkademy Portal',
             'driver' => 'sequenzy',
             'sequenzy_api_key' => '',
         ])

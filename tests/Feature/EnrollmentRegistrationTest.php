@@ -35,11 +35,11 @@ it('can view enrollment page', function () {
 
 it('uses the configured school name on the enrollment privacy notice', function () {
     School::factory()->inactive()->create(['name' => 'Archived School']);
-    School::factory()->create(['name' => 'DCCP Main Campus', 'is_active' => true]);
+    School::factory()->create(['name' => 'KoAkademy Main Campus', 'is_active' => true]);
 
     $this->get(route('enrollment.create'))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('school_name', 'DCCP Main Campus'));
+        ->assertInertia(fn (Assert $page) => $page->where('school_name', 'KoAkademy Main Campus'));
 });
 
 it('allows tesda student registration', function () {

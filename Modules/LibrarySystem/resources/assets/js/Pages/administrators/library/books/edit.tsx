@@ -631,7 +631,7 @@ function DigitalEditionSection({ book, rightsBases }: { book: BookRecord; rights
                                     id="rights_holder"
                                     value={form.data.rights_holder}
                                     onChange={(event) => form.setData("rights_holder", event.target.value)}
-                                    placeholder="Author, publisher, or DCCP"
+                                    placeholder="Author, publisher, or KoAkademy"
                                 />
                             </div>
 
@@ -692,7 +692,7 @@ function DigitalEditionSection({ book, rightsBases }: { book: BookRecord; rights
                                 <h3 className="font-serif text-lg font-semibold">Publication attestation</h3>
                             </div>
                             <div className="text-muted-foreground mt-3 space-y-3 text-sm leading-6">
-                                <p>Only publish files that DCCP owns or is authorized to reproduce and communicate digitally.</p>
+                                <p>Only publish files that KoAkademy owns or is authorized to reproduce and communicate digitally.</p>
                                 <p>
                                     Physical ownership, educational purpose, or disabling the download button does not itself grant digital
                                     distribution rights.
@@ -706,7 +706,7 @@ function DigitalEditionSection({ book, rightsBases }: { book: BookRecord; rights
                                         onCheckedChange={(checked) => form.setData("rights_confirmed", checked === true)}
                                     />
                                     <Label htmlFor="rights_confirmed" className="text-sm leading-6">
-                                        I reviewed the documentation and confirm DCCP has the right to provide this PDF to authenticated users under
+                                        I reviewed the documentation and confirm KoAkademy has the right to provide this PDF to authenticated users under
                                         the selected terms.
                                     </Label>
                                 </div>

@@ -13,13 +13,13 @@ final class SiteSettings extends Settings
      * Default branding values for backward compatibility.
      * These are used when settings are not configured in the database.
      */
-    private const string DEFAULT_APP_NAME = 'DCCP Hub';
+    private const string DEFAULT_APP_NAME = 'KoAkademy';
 
-    private const string DEFAULT_APP_SHORT_NAME = 'DCCP';
+    private const string DEFAULT_APP_SHORT_NAME = 'KOA';
 
-    private const string DEFAULT_ORG_NAME = 'DCCP Hub';
+    private const string DEFAULT_ORG_NAME = 'KoAkademy';
 
-    private const string DEFAULT_ORG_SHORT_NAME = 'DCCP';
+    private const string DEFAULT_ORG_SHORT_NAME = 'KOA';
 
     private const string DEFAULT_THEME_COLOR = '#0f172a';
 

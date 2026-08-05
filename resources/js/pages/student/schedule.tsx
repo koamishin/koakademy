@@ -1,5 +1,5 @@
-import { ClassData } from "@/components/data-table";
 import { StudentScheduleBoard } from "@/components/class/student-schedule-board";
+import { ClassData } from "@/components/data-table";
 import StudentLayout from "@/components/student/student-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -135,13 +135,13 @@ export default function StudentSchedule({ user, faculty_data, schedule_conflicts
     const [viewMode, setViewMode] = useState<"schedule" | "classes">("schedule");
 
     useEffect(() => {
-        const savedMode = window.localStorage.getItem("dccp.student.schedule.viewMode");
+        const savedMode = window.localStorage.getItem("koakademy.student.schedule.viewMode");
         setViewMode(savedMode === "classes" || savedMode === "gallery" || savedMode === "list" ? "classes" : "schedule");
     }, []);
 
     const setAndSaveViewMode = (mode: "schedule" | "classes") => {
         setViewMode(mode);
-        window.localStorage.setItem("dccp.student.schedule.viewMode", mode);
+        window.localStorage.setItem("koakademy.student.schedule.viewMode", mode);
     };
 
     const processedClasses = useMemo(
@@ -163,7 +163,7 @@ export default function StudentSchedule({ user, faculty_data, schedule_conflicts
         events,
         canonicalConflictIds,
         unscheduled,
-        "dccp.student.schedule",
+        "koakademy.student.schedule",
     );
 
     const effectiveClassIds = useMemo(() => new Set(effectiveClasses.map((classItem) => String(classItem.id))), [effectiveClasses]);

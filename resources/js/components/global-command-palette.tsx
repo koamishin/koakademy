@@ -30,7 +30,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-const OPEN_EVENT_NAME = "dccp:commandPalette:open";
+const OPEN_EVENT_NAME = "koakademy:commandPalette:open";
 
 type ActionItem = {
     id: string;
@@ -340,7 +340,7 @@ export function GlobalCommandContent({
             return { navigation, productivity: [] };
         }
 
-        const scheduleViewKey = `dccp:scheduleView:v1:${user.email}`;
+        const scheduleViewKey = `koakademy:scheduleView:v1:${user.email}`;
 
         const navigation: ActionItem[] = isInstructor
             ? [
@@ -455,7 +455,7 @@ export function GlobalCommandContent({
                 shortcut: "C B",
                 icon: <IconGridDots className="h-4 w-4" />,
                 onSelect: () => {
-                    setLocalStorageSafe("dccp.classes.viewMode", "board");
+                    setLocalStorageSafe("koakademy.classes.viewMode", "board");
                     router.visit("/classes");
                 },
             },
@@ -473,12 +473,12 @@ export function GlobalCommandContent({
                 keywords: "clear filters",
                 icon: <IconSettings className="h-4 w-4" />,
                 onSelect: () => {
-                    setLocalStorageSafe("dccp.classes.search", "");
-                    setLocalStorageSafe("dccp.classes.filter.classification", "all");
-                    setLocalStorageSafe("dccp.classes.filter.day", "all");
-                    setLocalStorageSafe("dccp.classes.filter.room", "all");
-                    setLocalStorageSafe("dccp.classes.filter.onlyConflicts", "false");
-                    setLocalStorageSafe("dccp.classes.filter.onlyUnscheduled", "false");
+                    setLocalStorageSafe("koakademy.classes.search", "");
+                    setLocalStorageSafe("koakademy.classes.filter.classification", "all");
+                    setLocalStorageSafe("koakademy.classes.filter.day", "all");
+                    setLocalStorageSafe("koakademy.classes.filter.room", "all");
+                    setLocalStorageSafe("koakademy.classes.filter.onlyConflicts", "false");
+                    setLocalStorageSafe("koakademy.classes.filter.onlyUnscheduled", "false");
                     router.visit("/classes");
                 },
             },

@@ -36,6 +36,16 @@ test('pdf queue connection has retry_after greater than longest job timeout', fu
     expect($pdfConnection['retry_after'])->toBe(7200);
 });
 
+test('default redis queue driver remains station-redis for production', function (): void {
+    // REDIS_QUEUE_DRIVER is intentionally unset in the test environment, so the
+    // config default must stay 'station-redis'. Local environments override it
+    // to 'redis' because the ojbaeza/station package is production-only.
+    $redisConnection = config('queue.connections.redis');
+
+    expect($redisConnection)->not->toBeNull();
+    expect($redisConnection['driver'])->toBe('station-redis');
+});
+
 test('station dashboard is guarded by the station authorization gate', function (): void {
     expect(config('station.dashboard.authorization'))->toBe('viewStation');
 

@@ -40,7 +40,7 @@ export function useClassFilters(
     events: ScheduleEvent[],
     conflictIds: Set<string>,
     unscheduled: ClassData[],
-    storagePrefix = "dccp.classes",
+    storagePrefix = "koakademy.classes",
 ) {
     const [search, setSearch] = useLocalStorageState<string>(`${storagePrefix}.search`, "");
     const [filterClassification, setFilterClassification] = useLocalStorageState<string>(`${storagePrefix}.filter.classification`, "all");

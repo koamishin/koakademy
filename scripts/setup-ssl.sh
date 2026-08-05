@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# DCCP Local SSL Certificate Setup for Linux
+# KoAkademy Local SSL Certificate Setup for Linux
 #
 # This script automates the process of:
 # - Installing mkcert (via paru on Arch Linux, or other package managers)
@@ -34,11 +34,11 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 # Determine main domain from env or fallback
-PORTAL_HOST=${PORTAL_HOST:-portal.dccp.test}
-ADMIN_HOST=${ADMIN_HOST:-admin.dccp.test}
+PORTAL_HOST=${PORTAL_HOST:-portal.koakademy.test}
+ADMIN_HOST=${ADMIN_HOST:-admin.koakademy.test}
 MAILPIT_HOST=${MAILPIT_HOST:-mailpit.local.test}
 
-# Extract base domain from PORTAL_HOST (e.g., dccp.test from portal.dccp.test)
+# Extract base domain from PORTAL_HOST (e.g., koakademy.test from portal.koakademy.test)
 # This assumes the structure [subdomain].[domain].[tld] or [subdomain].[tld]
 BASE_DOMAIN=$(echo "$PORTAL_HOST" | sed 's/^[^.]*\.//')
 
@@ -173,7 +173,7 @@ install_mkcert() {
 # Banner
 echo ""
 echo -e "${BLUE}================================================================${NC}"
-echo -e "${BLUE}           DCCP Local Development Setup (Linux)               ${NC}"
+echo -e "${BLUE}           KoAkademy Local Development Setup (Linux)               ${NC}"
 echo -e "${BLUE}================================================================${NC}"
 echo ""
 

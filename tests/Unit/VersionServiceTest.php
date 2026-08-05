@@ -29,7 +29,7 @@ describe('VersionService', function (): void {
     test('can get version data from valid version.json', function (): void {
         $versionData = [
             'version' => '1.24.3',
-            'image' => 'docker.io/yukazaki/dccpadminv3:v1.24.3',
+            'image' => 'docker.io/yukazaki/koakademy:v1.24.3',
             'commit' => '6ef467e3c60eac270e47828c3cd271aa4f42b965',
             'branch' => 'main',
             'timestamp' => '2025-12-08T06:41:26Z',
@@ -113,7 +113,7 @@ describe('VersionService', function (): void {
     test('can get version info with metadata', function (): void {
         $versionData = [
             'version' => '1.24.3',
-            'image' => 'docker.io/yukazaki/dccpadminv3:v1.24.3',
+            'image' => 'docker.io/yukazaki/koakademy:v1.24.3',
             'commit' => '6ef467e3c60eac270e47828c3cd271aa4f42b965',
             'branch' => 'main',
             'timestamp' => '2025-12-08T06:41:26Z',
@@ -153,7 +153,7 @@ describe('VersionService', function (): void {
     test('can determine if version is latest', function (): void {
         $versionData = [
             'version' => '1.24.3',
-            'image' => 'docker.io/yukazaki/dccpadminv3:v1.24.3',
+            'image' => 'docker.io/yukazaki/koakademy:v1.24.3',
             'commit' => '6ef467e3c60eac270e47828c3cd271aa4f42b965',
             'branch' => 'main',
             'timestamp' => '2025-12-08T06:41:26Z',
@@ -199,7 +199,7 @@ describe('VersionService', function (): void {
     test('can clear cache', function (): void {
         $versionData = [
             'version' => '1.24.3',
-            'image' => 'docker.io/yukazaki/dccpadminv3:v1.24.3',
+            'image' => 'docker.io/yukazaki/koakademy:v1.24.3',
             'commit' => '6ef467e3c60eac270e47828c3cd271aa4f42b965',
             'branch' => 'main',
             'timestamp' => '2025-12-08T06:41:26Z',
@@ -241,7 +241,7 @@ describe('VersionService', function (): void {
     test('can refresh version data', function (): void {
         $versionData = [
             'version' => '1.24.3',
-            'image' => 'docker.io/yukazaki/dccpadminv3:v1.24.3',
+            'image' => 'docker.io/yukazaki/koakademy:v1.24.3',
             'commit' => '6ef467e3c60eac270e47828c3cd271aa4f42b965',
             'branch' => 'main',
             'timestamp' => '2025-12-08T06:41:26Z',
@@ -325,7 +325,7 @@ describe('VersionService', function (): void {
     test('caches version data for performance', function (): void {
         $versionData = [
             'version' => '1.24.3',
-            'image' => 'docker.io/yukazaki/dccpadminv3:v1.24.3',
+            'image' => 'docker.io/yukazaki/koakademy:v1.24.3',
             'commit' => '6ef467e3c60eac270e47828c3cd271aa4f42b965',
             'branch' => 'main',
             'timestamp' => '2025-12-08T06:41:26Z',

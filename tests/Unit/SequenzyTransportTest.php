@@ -45,11 +45,11 @@ it('sends Laravel email fields and attachments through the Sequenzy REST API', f
 
     $pdfContent = "%PDF-test-content\xFF\x00";
     $email = (new Email)
-        ->from('DCCP Portal <noreply@dccp.edu.ph>')
-        ->to('student@dccp.edu.ph')
-        ->cc('registrar@dccp.edu.ph')
-        ->bcc('audit@dccp.edu.ph')
-        ->replyTo('support@dccp.edu.ph')
+        ->from('KoAkademy Portal <noreply@koakademy.edu.ph>')
+        ->to('student@koakademy.edu.ph')
+        ->cc('registrar@koakademy.edu.ph')
+        ->bcc('audit@koakademy.edu.ph')
+        ->replyTo('support@koakademy.edu.ph')
         ->subject('Assessment form')
         ->html('<p>Your assessment form is attached.</p>')
         ->attach($pdfContent, 'assessment.pdf', 'application/pdf');
@@ -64,11 +64,11 @@ it('sends Laravel email fields and attachments through the Sequenzy REST API', f
     $payload = json_decode((string) $request->getBody(), true, 512, JSON_THROW_ON_ERROR);
 
     expect($request->getHeaderLine('Authorization'))->toBe('Bearer test-api-key')
-        ->and($payload['to'])->toBe('student@dccp.edu.ph')
-        ->and($payload['cc'])->toBe(['registrar@dccp.edu.ph'])
-        ->and($payload['bcc'])->toBe(['audit@dccp.edu.ph'])
-        ->and($payload['from'])->toBe('"DCCP Portal" <noreply@dccp.edu.ph>')
-        ->and($payload['replyTo'])->toBe('support@dccp.edu.ph')
+        ->and($payload['to'])->toBe('student@koakademy.edu.ph')
+        ->and($payload['cc'])->toBe(['registrar@koakademy.edu.ph'])
+        ->and($payload['bcc'])->toBe(['audit@koakademy.edu.ph'])
+        ->and($payload['from'])->toBe('"KoAkademy Portal" <noreply@koakademy.edu.ph>')
+        ->and($payload['replyTo'])->toBe('support@koakademy.edu.ph')
         ->and($payload['subject'])->toBe('Assessment form')
         ->and($payload['body'])->toContain('assessment form is attached')
         ->and($payload['attachments'])->toBe([[
@@ -85,8 +85,8 @@ it('converts a text-only email to an HTML body', function (): void {
 
     $transport->send(
         (new Email)
-            ->from('noreply@dccp.edu.ph')
-            ->to('student@dccp.edu.ph')
+            ->from('noreply@koakademy.edu.ph')
+            ->to('student@koakademy.edu.ph')
             ->subject('Plain message')
             ->text("First line\nSecond line"),
     );
@@ -101,7 +101,7 @@ it('fails before making a request when the API key is missing', function (): voi
     $transport = buildSequenzyTransport([], $history, fn (): null => null);
 
     $send = fn () => $transport->send(
-        (new Email)->from('noreply@dccp.edu.ph')->to('student@dccp.edu.ph')->subject('Test')->html('<p>Test</p>'),
+        (new Email)->from('noreply@koakademy.edu.ph')->to('student@koakademy.edu.ph')->subject('Test')->html('<p>Test</p>'),
     );
 
     expect($send)->toThrow(TransportException::class, 'API key is not configured')
@@ -112,8 +112,8 @@ it('rejects inline attachments because Sequenzy only supports regular files', fu
     $history = [];
     $transport = buildSequenzyTransport([], $history);
     $email = (new Email)
-        ->from('noreply@dccp.edu.ph')
-        ->to('student@dccp.edu.ph')
+        ->from('noreply@koakademy.edu.ph')
+        ->to('student@koakademy.edu.ph')
         ->subject('Inline image')
         ->html('<p>Image</p>')
         ->embed('image-bytes', 'logo.png', 'image/png');
@@ -126,8 +126,8 @@ it('rejects attachments over the configured total size limit', function (): void
     $history = [];
     $transport = buildSequenzyTransport([], $history, maxAttachmentBytes: 4);
     $email = (new Email)
-        ->from('noreply@dccp.edu.ph')
-        ->to('student@dccp.edu.ph')
+        ->from('noreply@koakademy.edu.ph')
+        ->to('student@koakademy.edu.ph')
         ->subject('Large attachment')
         ->html('<p>Attachment</p>')
         ->attach('12345', 'large.pdf', 'application/pdf');
@@ -146,7 +146,7 @@ it('turns Sequenzy API failures into transport exceptions for queue retries', fu
     ], $history);
 
     $send = fn () => $transport->send(
-        (new Email)->from('noreply@dccp.edu.ph')->to('student@dccp.edu.ph')->subject('Test')->html('<p>Test</p>'),
+        (new Email)->from('noreply@koakademy.edu.ph')->to('student@koakademy.edu.ph')->subject('Test')->html('<p>Test</p>'),
     );
 
     expect($send)->toThrow(TransportException::class, 'Sequenzy send failed (HTTP 401): Unauthorized');
@@ -159,7 +159,7 @@ it('turns connection failures into transport exceptions for queue retries', func
     ], $history);
 
     $send = fn () => $transport->send(
-        (new Email)->from('noreply@dccp.edu.ph')->to('student@dccp.edu.ph')->subject('Test')->html('<p>Test</p>'),
+        (new Email)->from('noreply@koakademy.edu.ph')->to('student@koakademy.edu.ph')->subject('Test')->html('<p>Test</p>'),
     );
 
     expect($send)->toThrow(TransportException::class, 'Unable to connect to the Sequenzy API');

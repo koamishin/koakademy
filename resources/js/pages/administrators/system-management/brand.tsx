@@ -361,7 +361,7 @@ export default function SystemManagementBrandPage({ user, branding, access }: Sy
                                         id="organization_short_name"
                                         value={brandForm.data.organization_short_name}
                                         onChange={(e) => brandForm.setData("organization_short_name", e.target.value)}
-                                        placeholder="Example: DCCP"
+                                        placeholder="Example: KOA"
                                     />
                                 </div>
                             </div>

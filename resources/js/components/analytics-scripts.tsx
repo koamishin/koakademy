@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 declare global {
     interface Window {
-        __dccpAnalyticsState?: {
+        __koakademyAnalyticsState?: {
             signature?: string;
             cleanup?: () => void;
         };
@@ -31,10 +31,10 @@ export function AnalyticsScripts() {
         }
 
         const signature = JSON.stringify(analytics ?? null);
-        const state = window.__dccpAnalyticsState ?? {};
+        const state = window.__koakademyAnalyticsState ?? {};
 
         if (state.signature === signature) {
-            window.__dccpAnalyticsState = state;
+            window.__koakademyAnalyticsState = state;
             return;
         }
 
@@ -43,13 +43,13 @@ export function AnalyticsScripts() {
 
         if (!analytics?.enabled) {
             state.cleanup = undefined;
-            window.__dccpAnalyticsState = state;
+            window.__koakademyAnalyticsState = state;
 
             return;
         }
 
         state.cleanup = analytics.script.trim() !== "" ? injectHtmlSnippet(analytics.script) : injectProviderScripts(analytics);
-        window.__dccpAnalyticsState = state;
+        window.__koakademyAnalyticsState = state;
     }, [analytics]);
 
     useEffect(() => {

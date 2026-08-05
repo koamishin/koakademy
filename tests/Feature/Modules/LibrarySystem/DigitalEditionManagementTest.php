@@ -58,8 +58,8 @@ it('keeps staff uploads as drafts until a separate rights-confirmed publication'
         ->put(route('administrators.library.books.digital-edition.update', $book), [
             'status' => 'published',
             'downloads_allowed' => false,
-            'rights_basis' => 'dccp_owned',
-            'rights_holder' => 'DCCP',
+            'rights_basis' => 'koakademy_owned',
+            'rights_holder' => 'KoAkademy',
             'rights_notes' => 'Institution-owned material.',
             'rights_confirmed' => true,
         ])
@@ -233,7 +233,7 @@ it('preserves the previous edition and removes the new object when the database 
             [
                 'status' => 'published',
                 'downloads_allowed' => false,
-                'rights_basis' => 'dccp_owned',
+                'rights_basis' => 'koakademy_owned',
             ],
             $librarian
         );
@@ -253,8 +253,8 @@ function validDigitalEditionPayload(string $filename = 'book.pdf'): array
         'pdf' => UploadedFile::fake()->createWithContent($filename, "%PDF-1.4\nDigital edition fixture"),
         'status' => 'published',
         'downloads_allowed' => false,
-        'rights_basis' => 'dccp_owned',
-        'rights_holder' => 'DCCP',
+        'rights_basis' => 'koakademy_owned',
+        'rights_holder' => 'KoAkademy',
         'rights_notes' => 'Institution-owned material.',
         'rights_confirmed' => true,
     ];
@@ -293,8 +293,8 @@ function createManagedPublishedDigitalEdition(Book $book): DigitalEdition
         'sha256' => str_repeat('a', 64),
         'status' => DigitalEditionStatus::Published,
         'downloads_allowed' => false,
-        'rights_basis' => DigitalRightsBasis::DccpOwned,
-        'rights_holder' => 'DCCP',
+        'rights_basis' => DigitalRightsBasis::KoakademyOwned,
+        'rights_holder' => 'KoAkademy',
         'uploaded_at' => now(),
         'published_at' => now(),
         'rights_confirmed_at' => now(),

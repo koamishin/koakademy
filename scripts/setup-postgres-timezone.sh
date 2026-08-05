@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# PostgreSQL Timezone Setup Script for DCCP Admin
+# PostgreSQL Timezone Setup Script for KoAkademy Admin
 # 
 # This script sets the PostgreSQL timezone to Asia/Manila to match the Laravel app timezone.
 # Run this on your production server to ensure consistent timestamp handling.
@@ -22,7 +22,7 @@ set -e
 TIMEZONE="${DB_TIMEZONE:-Asia/Manila}"
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-5432}"
-DB_NAME="${DB_DATABASE:-dccp_admin2}"
+DB_NAME="${DB_DATABASE:-koakademy_admin2}"
 DB_USER="${DB_USERNAME:-postgres}"
 
 echo "=================================================="

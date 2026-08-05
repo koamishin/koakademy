@@ -16,8 +16,8 @@ set -a
 set +a
 
 # Get domains
-PORTAL_HOST=${PORTAL_HOST:-portal.dccp.com}
-ADMIN_HOST=${ADMIN_HOST:-admin.dccp.com}
+PORTAL_HOST=${PORTAL_HOST:-portal.koakademy.com}
+ADMIN_HOST=${ADMIN_HOST:-admin.koakademy.com}
 BASE_DOMAIN=$(echo "$PORTAL_HOST" | sed 's/^[^.]*\.//')
 
 CERT_FILE="${BASE_DOMAIN}.pem"

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# DCCP Admin V3 - Local Development Setup
+# KoAkademy - Local Development Setup
 #
 # This script sets up the local development environment including:
 # - Docker Compose services
@@ -79,8 +79,8 @@ repair_env_file_syntax() {
 }
 
 # Determine main domain and service ports from env or fallback without sourcing .env
-PORTAL_HOST=$(read_env_value PORTAL_HOST portal.dccp.test)
-ADMIN_HOST=$(read_env_value ADMIN_HOST admin.dccp.test)
+PORTAL_HOST=$(read_env_value PORTAL_HOST portal.koakademy.test)
+ADMIN_HOST=$(read_env_value ADMIN_HOST admin.koakademy.test)
 MAILPIT_HOST=$(read_env_value MAILPIT_HOST mailpit.local.test)
 LARAVEL_INTERNAL_PORT=$(read_env_value LARAVEL_INTERNAL_PORT 80)
 TRAEFIK_APP_UPSTREAM=$(read_env_value TRAEFIK_APP_UPSTREAM "http://laravel:${LARAVEL_INTERNAL_PORT}")
@@ -382,7 +382,7 @@ done
 # Banner
 echo ""
 echo -e "${BLUE}╔═══════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║       DCCP Admin V3 - Local Development Setup          ║${NC}"
+echo -e "${BLUE}║       KoAkademy - Local Development Setup          ║${NC}"
 echo -e "${BLUE}╚═══════════════════════════════════════════════════════╝${NC}"
 echo ""
 

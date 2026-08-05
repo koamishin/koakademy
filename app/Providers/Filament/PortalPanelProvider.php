@@ -41,7 +41,6 @@ final class PortalPanelProvider extends PanelProvider
             ->id('portal')
             ->path('portal')
             ->authGuard('portal')
-//            ->domain('dccpportalv3.test')
             ->login()
             ->passwordReset()
             ->brandName(fn (): string => $this->settings->getPortalName())

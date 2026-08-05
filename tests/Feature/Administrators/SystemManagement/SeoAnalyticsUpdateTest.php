@@ -73,16 +73,16 @@ it('updates seo metadata without modifying analytics configuration', function ()
 
     actingAs($user)
         ->put(portalUrlForAdministrators('/administrators/system-management/seo'), [
-            'site_name' => 'DCCP Hub',
-            'site_description' => 'Official administrative portal for Data Center College of the Philippines.',
-            'seo_title' => 'DCCP Administrator Panel',
-            'seo_keywords' => 'dccp, enrollment, student records',
+            'site_name' => 'KoAkademy',
+            'site_description' => 'Official Portal for KoAkademy',
+            'seo_title' => 'KoAkademy Administrator Panel',
+            'seo_keywords' => 'koakademy, enrollment, student records',
             'seo_metadata' => [
                 'robots' => 'noindex, follow',
-                'og_image' => 'https://dccp.example.edu/share.png',
-                'twitter_handle' => 'dccphub',
+                'og_image' => 'https://koakademy.example.edu/share.png',
+                'twitter_handle' => 'koakademyhub',
                 'twitter_card' => 'summary_large_image',
-                'canonical_url' => 'https://dccp.example.edu/admin',
+                'canonical_url' => 'https://koakademy.example.edu/admin',
             ],
         ])
         ->assertRedirect()
@@ -90,16 +90,16 @@ it('updates seo metadata without modifying analytics configuration', function ()
 
     $settings->refresh();
 
-    expect($settings->site_name)->toBe('DCCP Hub')
+    expect($settings->site_name)->toBe('KoAkademy')
         ->and($settings->site_description)->toBe('Official administrative portal for Data Center College of the Philippines.')
-        ->and($settings->seo_title)->toBe('DCCP Administrator Panel')
-        ->and($settings->seo_keywords)->toBe('dccp, enrollment, student records')
+        ->and($settings->seo_title)->toBe('KoAkademy Administrator Panel')
+        ->and($settings->seo_keywords)->toBe('koakademy, enrollment, student records')
         ->and($settings->seo_metadata)->toMatchArray([
             'robots' => 'noindex, follow',
-            'og_image' => 'https://dccp.example.edu/share.png',
-            'twitter_handle' => '@dccphub',
+            'og_image' => 'https://koakademy.example.edu/share.png',
+            'twitter_handle' => '@koakademyhub',
             'twitter_card' => 'summary_large_image',
-            'canonical_url' => 'https://dccp.example.edu/admin',
+            'canonical_url' => 'https://koakademy.example.edu/admin',
         ])
         ->and($settings->analytics_enabled)->toBeTrue()
         ->and($settings->analytics_provider)->toBe('google')

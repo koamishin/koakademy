@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# DCCP Admin V3 - Local Development Setup (Non-Docker)
+# KoAkademy - Local Development Setup (Non-Docker)
 #
 # This script sets up a local development environment on Linux:
 # - Auto-detects Linux distribution
@@ -25,9 +25,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 CERTS_DIR="$PROJECT_ROOT/storage/certs"
 HOSTS_FILE="/etc/hosts"
-HOSTS_BACKUP_PREFIX="/etc/hosts.dccp-admin-v3"
-HOSTS_MANAGED_START="# >>> DCCP Admin V3 local domains >>>"
-HOSTS_MANAGED_END="# <<< DCCP Admin V3 local domains <<<"
+HOSTS_BACKUP_PREFIX="/etc/hosts.koakademy"
+HOSTS_MANAGED_START="# >>> KoAkademy local domains >>>"
+HOSTS_MANAGED_END="# <<< KoAkademy local domains <<<"
 NGINX_SITES_AVAILABLE="/etc/nginx/sites-available"
 NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
 
@@ -43,8 +43,8 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 # Default domains from .env.production.example if not set in .env
-PORTAL_HOST=${PORTAL_HOST:-portal.dccp.com}
-ADMIN_HOST=${ADMIN_HOST:-admin.dccp.com}
+PORTAL_HOST=${PORTAL_HOST:-portal.koakademy.com}
+ADMIN_HOST=${ADMIN_HOST:-admin.koakademy.com}
 MAILPIT_HOST=${MAILPIT_HOST:-mailpit.local.com}
 
 # Extract base domain
@@ -67,8 +67,8 @@ DOMAINS=(
 SERVER_TYPE=${1:-octane}  # Default to octane, can be "artisan"
 
 # Database configuration
-DB_NAME=${DB_DATABASE:-dccp_admin}
-DB_USER=${DB_USERNAME:-dccp_user}
+DB_NAME=${DB_DATABASE:-koakademy}
+DB_USER=${DB_USERNAME:-koakademy}
 DB_PASSWORD=${DB_PASSWORD:-secure_password_here}
 DB_HOST=${DB_HOST:-127.0.0.1}
 DB_PORT=${DB_PORT:-5432}
@@ -182,7 +182,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-db-network    Skip PostgreSQL network access configuration"
             echo "  --force-db-reconfig  Force database reconfiguration"
             echo "  --allow-external-hosts  Allow mapping non-local domains in /etc/hosts"
-            echo "  --repair-hosts          Remove DCCP host overrides from /etc/hosts"
+            echo "  --repair-hosts          Remove KoAkademy host overrides from /etc/hosts"
             echo "  --restore-hosts-backup  Restore latest /etc/hosts backup made by this script"
             echo "  -h, --help           Show this help message"
             exit 0
@@ -1092,7 +1092,7 @@ repair_hosts_file() {
     run_sudo cp "$tmp_hosts_file" "$HOSTS_FILE"
     rm -f "$tmp_hosts_file"
 
-    success "Removed DCCP host overrides from $HOSTS_FILE"
+    success "Removed KoAkademy host overrides from $HOSTS_FILE"
     info "If DNS is still cached, restart NetworkManager: sudo systemctl restart NetworkManager"
 }
 
@@ -1112,7 +1112,7 @@ setup_hosts() {
         fi
 
         case "$domain" in
-            *.test|*.localhost|*.local|*.localdomain|*.local.com|*.dccp.com)
+            *.test|*.localhost|*.local|*.localdomain|*.local.com|*.koakademy.com)
                 return 0
                 ;;
             *)
@@ -1627,8 +1627,8 @@ set -a
 set +a
 
 # Get domains
-PORTAL_HOST=${PORTAL_HOST:-portal.dccp.com}
-ADMIN_HOST=${ADMIN_HOST:-admin.dccp.com}
+PORTAL_HOST=${PORTAL_HOST:-portal.koakademy.com}
+ADMIN_HOST=${ADMIN_HOST:-admin.koakademy.com}
 BASE_DOMAIN=$(echo "$PORTAL_HOST" | sed 's/^[^.]*\.//')
 
 CERT_FILE="${BASE_DOMAIN}.pem"
@@ -1764,7 +1764,7 @@ main() {
     # Banner
     echo ""
     echo -e "${BLUE}╔═══════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║   DCCP Admin V3 - Local Development Setup            ║${NC}"
+    echo -e "${BLUE}║   KoAkademy - Local Development Setup            ║${NC}"
     echo -e "${BLUE}║   (Non-Docker - Nginx + HTTPS)                      ║${NC}"
     echo -e "${BLUE}╚═══════════════════════════════════════════════════════╝${NC}"
     echo ""

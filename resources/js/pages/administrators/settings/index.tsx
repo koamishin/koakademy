@@ -382,7 +382,7 @@ export default function AdministratorSettingsIndex({ user, settings, flash }: Se
                                             id="seo_keywords"
                                             value={data.seo_keywords || ""}
                                             onChange={(e) => setData("seo_keywords", e.target.value)}
-                                            placeholder="school, enrollment, education, dccp"
+                                            placeholder="school, enrollment, education, koakademy"
                                         />
                                         <p className="text-muted-foreground text-xs">Comma-separated list of keywords.</p>
                                     </div>

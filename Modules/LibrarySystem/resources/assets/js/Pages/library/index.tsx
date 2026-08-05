@@ -113,11 +113,11 @@ export default function DigitalLibraryIndex({ auth, books, filters, options, sta
                     <div className="max-w-3xl space-y-5">
                         <div className="inline-flex items-center gap-2 rounded-full border border-amber-900/20 bg-white/45 px-3 py-1.5 text-xs font-semibold tracking-[0.18em] uppercase backdrop-blur-sm dark:border-amber-100/15 dark:bg-black/20">
                             <Sparkles className="size-3.5 text-amber-700 dark:text-amber-300" />
-                            DCCP Digital Library
+                            KoAkademy Digital Library
                         </div>
                         <div className="space-y-3">
                             <h1 className="max-w-2xl font-serif text-4xl leading-[1.05] font-semibold tracking-tight text-balance md:text-6xl">
-                                Knowledge, kept open for the DCCP community.
+                                Knowledge, kept open for the KoAkademy community.
                             </h1>
                             <p className="max-w-2xl text-sm leading-7 text-stone-700 md:text-base dark:text-amber-100/70">
                                 Explore the complete library catalog, save titles for later, and read rights-cleared digital editions from any device.

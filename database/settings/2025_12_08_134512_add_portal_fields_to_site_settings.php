@@ -10,8 +10,8 @@ return new class extends SettingsMigration
     public function up(): void
     {
         $defaults = [
-            'portal_name' => 'DCCP Faculty Portal',
-            'portal_description' => 'Divine Child Catholic Parish Faculty Portal - Manage your classes, students, and schedules',
+            'portal_name' => 'KoAkademy',
+            'portal_description' => 'KoAkademy portal - manage your classes, students, and schedules',
             'portal_og_image' => '',
         ];
 

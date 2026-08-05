@@ -53,15 +53,15 @@ if (Test-Path $EnvFile) {
 }
 
 # Determine main domain from env or fallback
-$PortalHost = if ($EnvVars.ContainsKey("PORTAL_HOST")) { $EnvVars["PORTAL_HOST"] } else { "portal.dccp.test" }
-$AdminHost = if ($EnvVars.ContainsKey("ADMIN_HOST")) { $EnvVars["ADMIN_HOST"] } else { "admin.dccp.test" }
+$PortalHost = if ($EnvVars.ContainsKey("PORTAL_HOST")) { $EnvVars["PORTAL_HOST"] } else { "portal.koakademy.test" }
+$AdminHost = if ($EnvVars.ContainsKey("ADMIN_HOST")) { $EnvVars["ADMIN_HOST"] } else { "admin.koakademy.test" }
 $MailpitHost = if ($EnvVars.ContainsKey("MAILPIT_HOST")) { $EnvVars["MAILPIT_HOST"] } else { "mailpit.local.test" }
 
 # Extract base domain from PORTAL_HOST
 if ($PortalHost -match '^[^.]+\.(.+)$') {
     $BaseDomain = $matches[1]
 } else {
-    $BaseDomain = "dccp.test" # Fallback if regex fails
+    $BaseDomain = "koakademy.test" # Fallback if regex fails
 }
 
 $CertFile = "${BaseDomain}.pem"
@@ -99,7 +99,7 @@ function Test-Administrator {
 # Banner
 Write-Host ""
 Write-Host "================================================================" -ForegroundColor Blue
-Write-Host "           DCCP Local Development Setup                        " -ForegroundColor Blue
+Write-Host "           KoAkademy Local Development Setup                        " -ForegroundColor Blue
 Write-Host "================================================================" -ForegroundColor Blue
 Write-Host ""
 

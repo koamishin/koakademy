@@ -6,7 +6,7 @@ namespace Modules\LibrarySystem\Enums;
 
 enum DigitalRightsBasis: string
 {
-    case DccpOwned = 'dccp_owned';
+    case KoakademyOwned = 'koakademy_owned';
     case WrittenPermission = 'written_permission';
     case Licensed = 'licensed';
     case OpenLicense = 'open_license';
@@ -15,7 +15,7 @@ enum DigitalRightsBasis: string
     public function label(): string
     {
         return match ($this) {
-            self::DccpOwned => 'DCCP-owned work',
+            self::KoakademyOwned => 'KoAkademy-owned work',
             self::WrittenPermission => 'Written permission',
             self::Licensed => 'Licensed digital distribution',
             self::OpenLicense => 'Open license',

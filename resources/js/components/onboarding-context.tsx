@@ -85,14 +85,7 @@ function normalizeProgress(progress?: StoredOnboardingProgress | null): Onboardi
     };
 }
 
-export function OnboardingProvider({
-    variant,
-    userId,
-    children,
-    checklist,
-    totalSteps = 100,
-    enabled = true,
-}: OnboardingProviderProps) {
+export function OnboardingProvider({ variant, userId, children, checklist, totalSteps = 100, enabled = true }: OnboardingProviderProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +96,7 @@ export function OnboardingProvider({
         isDismissed: false,
     });
 
-    const storageKey = useMemo(() => `dccp.onboarding.${variant}.${userId ?? "guest"}`, [variant, userId]);
+    const storageKey = useMemo(() => `koakademy.onboarding.${variant}.${userId ?? "guest"}`, [variant, userId]);
 
     // Load progress from backend or localStorage
     useEffect(() => {
@@ -194,7 +187,7 @@ export function OnboardingProvider({
                 // Silent fail - localStorage is fallback
             }
         },
-        [variant, storageKey]
+        [variant, storageKey],
     );
 
     const openOnboarding = useCallback(() => setIsOpen(true), []);
@@ -207,17 +200,20 @@ export function OnboardingProvider({
             const updated = { ...progress, currentStepIndex: index };
             persistProgress(updated);
         },
-        [progress, persistProgress]
+        [progress, persistProgress],
     );
 
-    const nextStep = useCallback((maxSteps?: number) => {
-        setCurrentStepIndex((prev) => {
-            const next = Math.min(prev + 1, (maxSteps ?? 100) - 1);
-            const updated = { ...progress, currentStepIndex: next };
-            persistProgress(updated);
-            return next;
-        });
-    }, [progress, persistProgress]);
+    const nextStep = useCallback(
+        (maxSteps?: number) => {
+            setCurrentStepIndex((prev) => {
+                const next = Math.min(prev + 1, (maxSteps ?? 100) - 1);
+                const updated = { ...progress, currentStepIndex: next };
+                persistProgress(updated);
+                return next;
+            });
+        },
+        [progress, persistProgress],
+    );
 
     const previousStep = useCallback(() => {
         setCurrentStepIndex((prev) => {
@@ -236,7 +232,7 @@ export function OnboardingProvider({
             };
             persistProgress(updated);
         },
-        [progress, persistProgress]
+        [progress, persistProgress],
     );
 
     const toggleChecklistItem = useCallback(
@@ -250,7 +246,7 @@ export function OnboardingProvider({
             };
             persistProgress(updated);
         },
-        [progress, persistProgress]
+        [progress, persistProgress],
     );
 
     const dismissOnboarding = useCallback(() => {
@@ -272,25 +268,28 @@ export function OnboardingProvider({
             persistProgress(updated);
             setIsOpen(false);
         },
-        [currentStepIndex, progress, persistProgress]
+        [currentStepIndex, progress, persistProgress],
     );
 
-    const trackEvent = useCallback((event: string, metadata?: Record<string, unknown>) => {
-        // Analytics tracking - can be integrated with analytics service
-        if (typeof window !== "undefined" && "gtag" in window) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (window as any).gtag?.("event", `onboarding_${event}`, {
-                event_category: "onboarding",
-                variant,
-                ...metadata,
-            });
-        }
+    const trackEvent = useCallback(
+        (event: string, metadata?: Record<string, unknown>) => {
+            // Analytics tracking - can be integrated with analytics service
+            if (typeof window !== "undefined" && "gtag" in window) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (window as any).gtag?.("event", `onboarding_${event}`, {
+                    event_category: "onboarding",
+                    variant,
+                    ...metadata,
+                });
+            }
 
-        // Console log for development
-        if (import.meta.env.DEV) {
-            console.log("[Onboarding]", event, metadata);
-        }
-    }, [variant]);
+            // Console log for development
+            if (import.meta.env.DEV) {
+                console.log("[Onboarding]", event, metadata);
+            }
+        },
+        [variant],
+    );
 
     const value = useMemo(
         () => ({
@@ -332,7 +331,7 @@ export function OnboardingProvider({
             dismissOnboarding,
             finishOnboarding,
             trackEvent,
-        ]
+        ],
     );
 
     return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

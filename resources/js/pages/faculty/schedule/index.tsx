@@ -38,8 +38,8 @@ interface SchedulePageProps {
 export default function SchedulePage({ user, faculty_data }: SchedulePageProps) {
     const baseSchedule = faculty_data.weekly_schedule ?? [];
 
-    const baselineKey = useMemo(() => `dccp:scheduleBaseline:v1:${user.email}`, [user.email]);
-    const viewKey = useMemo(() => `dccp:scheduleView:v1:${user.email}`, [user.email]);
+    const baselineKey = useMemo(() => `koakademy:scheduleBaseline:v1:${user.email}`, [user.email]);
+    const viewKey = useMemo(() => `koakademy:scheduleView:v1:${user.email}`, [user.email]);
 
     const [view, setView] = useState<ScheduleView>("overview");
     const [baseline, setBaseline] = useState<ScheduleBaselineSnapshot | null>(null);

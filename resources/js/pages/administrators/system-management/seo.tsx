@@ -111,7 +111,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
     }, [seoForm.data.seo_metadata.og_image]);
 
     const errors = seoForm.errors as Record<string, string | undefined>;
-    const resolvedTitle = seoForm.data.seo_title || seoForm.data.site_name || "DCCP Hub";
+    const resolvedTitle = seoForm.data.seo_title || seoForm.data.site_name || "KoAkademy";
     const resolvedDescription =
         seoForm.data.site_description || "Add a clear description so people understand what this portal offers before they click.";
     const resolvedCanonical =
@@ -213,7 +213,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
                                         value={seoForm.data.site_name}
                                         disabled={!canUpdate}
                                         onChange={(event) => seoForm.setData("site_name", event.target.value)}
-                                        placeholder="DCCP Hub"
+                                        placeholder="KoAkademy"
                                     />
                                     {errors.site_name ? <p className="text-destructive text-xs">{errors.site_name}</p> : null}
                                 </div>
@@ -227,7 +227,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
                                         value={seoForm.data.seo_title}
                                         disabled={!canUpdate}
                                         onChange={(event) => seoForm.setData("seo_title", event.target.value)}
-                                        placeholder="DCCP Administrator Panel"
+                                        placeholder="KoAkademy Administrator Panel"
                                     />
                                     {errors.seo_title ? <p className="text-destructive text-xs">{errors.seo_title}</p> : null}
                                 </div>
@@ -307,7 +307,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
                                         value={seoForm.data.seo_metadata.twitter_handle}
                                         disabled={!canUpdate}
                                         onChange={(event) => setSeoMetadata("twitter_handle", event.target.value)}
-                                        placeholder="@dccphub"
+                                        placeholder="@koakademy"
                                     />
                                     {errors["seo_metadata.twitter_handle"] ? (
                                         <p className="text-destructive text-xs">{errors["seo_metadata.twitter_handle"]}</p>
@@ -427,7 +427,7 @@ export default function SystemManagementSeoPage({ user, general_settings, access
                                         <Globe2 className="h-3.5 w-3.5" />
                                     </span>
                                     <div className="min-w-0">
-                                        <p className="truncate text-sm">{seoForm.data.site_name || "DCCP Hub"}</p>
+                                        <p className="truncate text-sm">{seoForm.data.site_name || "KoAkademy"}</p>
                                         <p className="truncate text-xs text-slate-500 dark:text-slate-400">{compactUrl(resolvedCanonical)}</p>
                                     </div>
                                 </div>

@@ -19,14 +19,21 @@ final class ChangelogController extends Controller
      *
      * This page is publicly accessible - users do not need to be authenticated.
      */
-    public function __invoke(Request $request, ChangelogService $changelogService, VersionService $versionService): Response
+    public function __invoke(Request $request, VersionService $versionService): Response
     {
         $user = Auth::user();
         $canAccessAdminPortal = $user?->canAccessAdminPortal() ?? false;
 
+        // Resolve the configured GitHub source for the release history. This
+        // application ships from yukazakiri/koakademy; the value is overridable
+        // through the `services.github.repo` configuration key.
+        $githubRepo = config('services.github.repo', 'yukazakiri/koakademy');
+        $githubToken = config('services.github.token');
+
         // The deployment workflow publishes every application update as a
         // pre-release, so these entries are part of the public product history.
-        $changelog = $changelogService->getChangelog(30, includePrereleases: true);
+        $changelog = (new ChangelogService($githubRepo, $githubToken))
+            ->getChangelog(30, includePrereleases: true);
 
         // Get version info for the current release
         $versionInfo = $versionService->getVersionInfo();
@@ -62,7 +69,7 @@ final class ChangelogController extends Controller
             'changelog_source' => $changelogSource,
             'show_technical_links' => $canAccessAdminPortal,
             'github_repo' => $canAccessAdminPortal
-                ? config('services.github.repo', 'dccp-developers/DccpAdminV3')
+                ? $githubRepo
                 : null,
         ]);
     }

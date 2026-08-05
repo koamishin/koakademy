@@ -12,8 +12,8 @@ return new class extends SettingsMigration
         $defaults = [
             'app_name' => 'KoAkademy',
             'app_short_name' => 'KOA',
-            'organization_name' => 'KoAcademy',
-            'organization_short_name' => 'DCCP',
+            'organization_name' => 'KoAkademy',
+            'organization_short_name' => 'KOA',
             'organization_address' => '',
             'support_email' => '',
             'support_phone' => '',

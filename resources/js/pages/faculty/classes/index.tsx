@@ -48,7 +48,7 @@ export default function Classes({ user, faculty_data, shs_strands, rooms, curren
     const [viewMode, setViewMode] = useState<"board" | "gallery" | "list">("gallery");
 
     useEffect(() => {
-        const savedMode = localStorage.getItem("dccp.classes.viewMode");
+        const savedMode = localStorage.getItem("koakademy.classes.viewMode");
         if (savedMode === "gallery" || savedMode === "list" || savedMode === "board") {
             setViewMode(savedMode as any);
         }
@@ -56,7 +56,7 @@ export default function Classes({ user, faculty_data, shs_strands, rooms, curren
 
     function handleSetViewMode(mode: "board" | "gallery" | "list") {
         setViewMode(mode);
-        localStorage.setItem("dccp.classes.viewMode", mode);
+        localStorage.setItem("koakademy.classes.viewMode", mode);
     }
 
     // --- Logic Hooks ---
@@ -117,7 +117,7 @@ export default function Classes({ user, faculty_data, shs_strands, rooms, curren
     const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
         if (typeof window === "undefined") return [];
         try {
-            return JSON.parse(window.localStorage.getItem("dccp.classes.pinnedIds") || "[]");
+            return JSON.parse(window.localStorage.getItem("koakademy.classes.pinnedIds") || "[]");
         } catch {
             return [];
         }
@@ -126,7 +126,7 @@ export default function Classes({ user, faculty_data, shs_strands, rooms, curren
     function togglePinned(classId: string) {
         setPinnedIds((prev) => {
             const next = prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId];
-            localStorage.setItem("dccp.classes.pinnedIds", JSON.stringify(next));
+            localStorage.setItem("koakademy.classes.pinnedIds", JSON.stringify(next));
             return next;
         });
     }

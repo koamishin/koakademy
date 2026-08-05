@@ -94,7 +94,7 @@ it('publicly verifies masked document details and detects snapshot tampering', f
         'student' => ['name' => 'Brent Sin-Ot', 'student_no' => '2065977'],
         'filters' => ['semester' => 1, 'school_year' => '2026 - 2027'],
         'tuition' => ['overall_tuition' => 15325, 'total_paid' => 3000, 'total_balance' => 12325],
-        'currency_code' => 'PHP', 'school' => ['name' => 'DCCP Baguio'],
+        'currency_code' => 'PHP', 'school' => ['name' => 'KoAkademy Baguio'],
     ];
     $issuance = StatementOfAccountIssuance::query()->create([
         'uuid' => fake()->uuid(), 'student_id' => $student->id, 'issued_by' => $user->id,

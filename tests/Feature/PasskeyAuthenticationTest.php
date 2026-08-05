@@ -30,17 +30,17 @@ test('passkey options endpoint returns 404 for non-existent user when email prov
 });
 
 test('passkey options endpoint uses configured app url for production origin', function () {
-    config(['app.url' => 'https://portal.dccp.edu.ph']);
+    config(['app.url' => 'https://portal.koakademy.edu.ph']);
 
     $response = $this->withServerVariables([
-        'HTTP_HOST' => 'portal.dccp.edu.ph',
+        'HTTP_HOST' => 'portal.koakademy.edu.ph',
         'HTTPS' => 'off',
     ])->postJson('/passkeys/options', []);
 
     $response->assertOk()
-        ->assertJsonPath('options.rpId', 'portal.dccp.edu.ph');
+        ->assertJsonPath('options.rpId', 'portal.koakademy.edu.ph');
 
-    expect(config('passkeys.allowed_origins'))->toContain('https://portal.dccp.edu.ph');
+    expect(config('passkeys.allowed_origins'))->toContain('https://portal.koakademy.edu.ph');
 });
 
 test('passkey options endpoint returns options for valid user with passkey', function () {

@@ -86,7 +86,10 @@ return [
         ],
 
         'redis' => [
-            'driver' => 'station-redis',
+            // The 'station-redis' driver is provided by the ojbaeza/station
+            // package, which is only installed in production. Set
+            // REDIS_QUEUE_DRIVER=redis in local environments.
+            'driver' => env('REDIS_QUEUE_DRIVER', 'station-redis'),
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),

@@ -49,7 +49,7 @@ interface Props {
 }
 
 const RIGHTS_LABELS: Record<string, string> = {
-    dccp_owned: "DCCP-owned work",
+    koakademy_owned: "KoAkademy-owned work",
     written_permission: "Written permission",
     licensed: "Licensed distribution",
     open_license: "Open license",
@@ -209,7 +209,7 @@ export default function DigitalLibraryShow({ auth, book, state, related, takedow
                         {book.available_online ? (
                             <>
                                 <p>
-                                    This edition is available to authenticated DCCP users under{" "}
+                                    This edition is available to authenticated KoAkademy users under{" "}
                                     <strong className="text-foreground">
                                         {book.rights_basis ? RIGHTS_LABELS[book.rights_basis] : "documented permission"}
                                     </strong>
