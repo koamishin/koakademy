@@ -7,6 +7,7 @@
 /resources/js/actions
 /resources/js/routes
 /resources/js/wayfinder
+/version-franken.json
 /storage/*.key
 /storage/pail
 /docker/traefik/certs/*
@@ -45,6 +46,7 @@ yarn-error.log
 /.github/skills/*
 /.mcp.json
 /.opencode/*
+/.omo/
 /.tmp/*
 /.outputs/*
 CLAUDE.md
