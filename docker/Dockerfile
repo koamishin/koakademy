@@ -9,7 +9,6 @@ ARG APP_URL=https://koakademy.yukazaki.com
 FROM composer:2.10@sha256:4d71c3c2109c61d5415544264b59ad4087e4c5b7244481723664138fd36d5040 AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./
-COPY patches ./patches
 RUN composer install \
     --no-dev \
     --no-interaction \
