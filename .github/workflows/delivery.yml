@@ -992,7 +992,7 @@ jobs:
               printf 'A newer master commit exists; immutable images remain available but edge will not move.\n'
             else
               promote_mutable_pair edge
-              promote_mutable_franken_pair edge
+              promote_mutable_franken_pair edge-frankenphp
             fi
           fi
 
@@ -1024,15 +1024,15 @@ jobs:
 
             if [[ "${VERSION}" == "${newest_minor}" ]]; then
               promote_mutable_pair "${major}.${minor}"
-              promote_mutable_franken_pair "${major}.${minor}"
+              promote_mutable_franken_pair "${major}.${minor}-franken"
             fi
             if [[ "${VERSION}" == "${newest_major}" ]]; then
               promote_mutable_pair "${major}"
-              promote_mutable_franken_pair "${major}"
+              promote_mutable_franken_pair "${major}-franken"
             fi
             if [[ "${VERSION}" == "${newest_global}" ]]; then
               promote_mutable_pair latest
-              promote_mutable_franken_pair latest
+              promote_mutable_franken_pair latest-franken
               release_latest=true
             fi
           fi
