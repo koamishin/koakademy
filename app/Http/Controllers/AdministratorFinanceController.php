@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\PaymentMethod;
+use App\Finance\FinancePaymentChargeCatalog;
 use App\Finance\RecordFinancePayment;
 use App\Http\Requests\ResendFinancialDocumentRequest;
 use App\Http\Requests\ResendTransactionReceiptRequest;
@@ -354,7 +355,7 @@ final class AdministratorFinanceController extends Controller
             ->map(fn ($product): array => [
                 'id' => $product->id,
                 'name' => $product->name,
-                'price' => $product->price,
+                'price' => (float) $product->price,
                 'sku' => $product->sku,
                 'category' => $product->category->name ?? 'Uncategorized',
             ]);
@@ -366,6 +367,7 @@ final class AdministratorFinanceController extends Controller
                 'role' => $user->role?->getLabel() ?? 'Administrator',
             ],
             'items' => $items,
+            'fee_options' => FinancePaymentChargeCatalog::feeOptions(),
             'currency' => $settingsService->getCurrency(),
             'payment_workspace' => $this->paymentWorkspace($user),
             'payment_methods' => PaymentMethod::options(),
@@ -394,6 +396,7 @@ final class AdministratorFinanceController extends Controller
 
         $identifiers = collect($request->validated('student_identifiers'))
             ->map(fn (mixed $identifier): string => mb_trim((string) $identifier))
+            ->unique()
             ->values();
         $students = Student::query()
             ->select(['id', 'student_id', 'first_name', 'middle_name', 'last_name'])
@@ -451,6 +454,7 @@ final class AdministratorFinanceController extends Controller
                     'status' => $recorded->duplicate ? 'duplicate' : 'recorded',
                     'transaction_id' => $recorded->transaction->id,
                     'receipt_url' => route('administrators.finance.payments.show', $recorded->transaction, false),
+                    'amount' => round($recorded->transaction->raw_total_amount, 2),
                     'errors' => [],
                 ];
             } catch (\Illuminate\Validation\ValidationException $exception) {
@@ -459,6 +463,7 @@ final class AdministratorFinanceController extends Controller
                     'status' => 'rejected',
                     'transaction_id' => null,
                     'receipt_url' => null,
+                    'amount' => null,
                     'errors' => collect($exception->errors())->flatten()->values()->all(),
                 ];
             } catch (Throwable $throwable) {
@@ -469,6 +474,7 @@ final class AdministratorFinanceController extends Controller
                     'status' => 'rejected',
                     'transaction_id' => null,
                     'receipt_url' => null,
+                    'amount' => null,
                     'errors' => ['This row could not be recorded. Please review it and try again.'],
                 ];
             }
@@ -1155,14 +1161,8 @@ final class AdministratorFinanceController extends Controller
 
         // Aggregate by fee type
         $feeTypes = [
-            'registration_fee' => 'Registration Fee',
             'tuition_fee' => 'Tuition Fee',
-            'miscelanous_fee' => 'Miscellaneous Fee',
-            'diploma_or_certificate' => 'Diploma/Certificate',
-            'transcript_of_records' => 'Transcript of Records',
-            'certification' => 'Certification',
-            'special_exam' => 'Special Exam',
-            'others' => 'Others',
+            ...FinancePaymentChargeCatalog::feeLabels(),
         ];
 
         $breakdown = [];
