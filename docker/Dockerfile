@@ -206,7 +206,7 @@ COPY --chown=${USER}:${USER} . .
 # R2 uses Laravel's S3 filesystem driver. Keep its adapter in the production
 # image so storage-backed branding and uploads cannot turn page rendering into
 # a runtime 500.
-RUN php -r 'class_exists(\League\Flysystem\AwsS3V3\PortableVisibilityConverter::class) || exit(1);'
+RUN php -r 'require "vendor/autoload.php"; class_exists(\League\Flysystem\AwsS3V3\PortableVisibilityConverter::class) || exit(1);'
 
 # Set ownership
 RUN chown -R ${USER}:${USER} ${ROOT}/storage ${ROOT}/bootstrap/cache ${ROOT}/.config ${ROOT}/.data /tmp/nginx \
