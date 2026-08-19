@@ -37,18 +37,18 @@ final class RegistrarAnalyticsService
         return [
             'analytics' => [
                 'current_semester_count' => (clone $currentSemesterQuery)
-                    ->where('status', '!=', $pendingStatus)
+                    ->where('student_enrollment.status', '!=', $pendingStatus)
                     ->count(),
                 'current_school_year_count' => StudentEnrollment::query()
                     ->withTrashed()
                     ->where('school_year', $currentSchoolYearString)
-                    ->where('status', '!=', $pendingStatus)
+                    ->where('student_enrollment.status', '!=', $pendingStatus)
                     ->count(),
                 'previous_semester_count' => StudentEnrollment::query()
                     ->withTrashed()
                     ->where('school_year', $previousSchoolYearString)
                     ->where('semester', $previousSemester)
-                    ->where('status', '!=', $pendingStatus)
+                    ->where('student_enrollment.status', '!=', $pendingStatus)
                     ->count(),
                 'total_all_time_enrollments' => StudentEnrollment::query()
                     ->withTrashed()
@@ -93,6 +93,10 @@ final class RegistrarAnalyticsService
                     ->selectRaw('status, count(*) as count')
                     ->groupBy('status')
                     ->get(),
+                'pipeline_breakdown' => (clone $currentSemesterQuery)
+                    ->selectRaw('status, count(*) as count')
+                    ->groupBy('status')
+                    ->get(),
                 'trashed_count' => (clone $currentSemesterQuery)->onlyTrashed()->count(),
                 'active_count' => (clone $currentSemesterQuery)->whereNull('deleted_at')->count(),
                 'daily_trend' => (clone $currentSemesterQuery)
@@ -100,10 +104,18 @@ final class RegistrarAnalyticsService
                     ->groupByRaw('DATE(created_at)')
                     ->orderBy('date')
                     ->get(),
+                'monthly_trend' => (clone $currentSemesterQuery)
+                    ->selectRaw('SUBSTR(created_at, 1, 7) as date, count(*) as count')
+                    ->groupByRaw('SUBSTR(created_at, 1, 7)')
+                    ->orderBy('date')
+                    ->get(),
                 'by_submission_channel' => (clone $currentSemesterQuery)
                     ->selectRaw("COALESCE(NULLIF(submission_channel, ''), 'direct') as channel, count(*) as count")
                     ->groupBy('submission_channel')
                     ->get(),
+                'conversion_rate' => $this->computeConversionRate(
+                    $currentSemesterQuery, $pendingStatus, (clone $currentSemesterQuery)->where('student_enrollment.status', '!=', $pendingStatus)->count()
+                ),
             ],
             'applicantsCount' => Student::query()
                 ->withTrashed()
@@ -154,5 +166,16 @@ final class RegistrarAnalyticsService
             'availableSemesters' => $this->settingsService->getAvailableSemesters(),
             'availableSchoolYears' => $this->settingsService->getAvailableSchoolYears(),
         ];
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     */
+    private function computeConversionRate($query, string $pendingStatus, int $enrolledCount): float
+    {
+        $applicants = (clone $query)->where('student_enrollment.status', $pendingStatus)->count();
+        $total = $enrolledCount + $applicants;
+
+        return $total > 0 ? round(($enrolledCount / $total) * 100, 1) : 0;
     }
 }
