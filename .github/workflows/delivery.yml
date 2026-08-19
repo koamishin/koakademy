@@ -1044,11 +1044,11 @@ jobs:
         run: |
           mkdir -p release-assets
           cp version.json compose.production.yaml .env.production.example \
-            scripts/install.sh scripts/install.ps1 release-assets/
+            scripts/install.sh release-assets/
           (
             cd release-assets
             LC_ALL=C sha256sum .env.production.example compose.production.yaml \
-              install.ps1 install.sh version.json > SHA256SUMS
+              install.sh version.json > SHA256SUMS
           )
 
       - name: Create missing recovery draft
@@ -1076,7 +1076,6 @@ jobs:
             release-assets/compose.production.yaml \
             release-assets/.env.production.example \
             release-assets/install.sh \
-            release-assets/install.ps1 \
             release-assets/SHA256SUMS \
             --clobber
 
