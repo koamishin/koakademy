@@ -90,9 +90,18 @@ it('downloads a formatted spreadsheet template for tuition viewers', function ()
     $templatePath = tempnam(sys_get_temp_dir(), 'tuition-template-');
     file_put_contents($templatePath, Excel::raw(new TuitionAdjustmentSpreadsheetTemplateExport, Maatwebsite\Excel\Excel::XLSX));
     $workbook = IOFactory::load($templatePath);
+    $instructions = $workbook->getSheetByName('Instructions');
+    $adjustments = $workbook->getSheetByName('Tuition Adjustments');
     expect($workbook->getSheetNames())->toBe(['Instructions', 'Tuition Adjustments'])
-        ->and($workbook->getSheetByName('Tuition Adjustments')?->getCell('A1')->getValue())->toBe('Student Number')
-        ->and($workbook->getSheetByName('Tuition Adjustments')?->getFreezePane())->toBe('A2');
+        ->and($instructions?->getCell('A1')->getValue())->toBe('TUITION ADJUSTMENT WORKBOOK — START HERE')
+        ->and($instructions?->getCell('A20')->getValue())->toBe('WORKED EXAMPLE — LOOK ONLY. ENTER YOUR REAL STUDENTS ON THE “TUITION ADJUSTMENTS” TAB.')
+        ->and($instructions?->getCell('A22')->getValue())->toBe('2026-0001')
+        ->and($adjustments?->getCell('A1')->getValue())->toBe('Student Number')
+        ->and($adjustments?->getFreezePane())->toBe('A2')
+        ->and($adjustments?->getShowGridlines())->toBeFalse()
+        ->and($adjustments?->getSheetView()->getZoomScale())->toBe(110)
+        ->and($adjustments?->getStyle('A2')->getFill()->getStartColor()->getRGB())->toBe('FFFBEB')
+        ->and($adjustments?->getComment('A1')->getText()->getPlainText())->toBe('REQUIRED. Type the Student Number exactly as it appears in the system. Do not use a student name or email address.');
 });
 
 it('stages valid and invalid spreadsheet rows without changing tuition', function (): void {
