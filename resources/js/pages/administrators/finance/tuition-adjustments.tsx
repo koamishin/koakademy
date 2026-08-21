@@ -1,4 +1,11 @@
-import { downloadTemplate, resolve, storeBatch, storeSpreadsheetImport } from "@/actions/App/Http/Controllers/AdministratorTuitionAdjustmentController";
+import {
+    downloadTemplate,
+    index,
+    resolve,
+    storeBatch,
+    storeSpreadsheetImport,
+    rows as tuitionRows,
+} from "@/actions/App/Http/Controllers/AdministratorTuitionAdjustmentController";
 import AdminLayout from "@/components/administrators/admin-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +15,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
-import { Head, Link, router, useForm } from "@inertiajs/react";
+import { Head, Link, useForm } from "@inertiajs/react";
 import axios from "axios";
 import {
     AlertTriangle,
@@ -31,7 +39,7 @@ import {
     Settings2,
     UserRound,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type Installment = { term: "prelim" | "midterm" | "finals"; amount: number; percentage?: number; source?: string };
@@ -79,7 +87,6 @@ type ScheduleProfile = {
 
 type Props = {
     user: User;
-    rows: TuitionRow[];
     filters: { school_year: string; semester: number };
     school_years: Record<string, string> | string[];
     semesters: Record<string, string>;
@@ -127,10 +134,12 @@ function generateSchedule(balance: number, profile: ScheduleProfile): Installmen
 }
 
 export default function TuitionAdjustmentsPage(props: Props) {
-    const [drafts, setDrafts] = useState<DraftRow[]>(() => props.rows.map(toDraft));
-    const [selectedId, setSelectedId] = useState<number | null>(props.rows[0]?.enrollment_id ?? null);
+    const [period, setPeriod] = useState(props.filters);
+    const [drafts, setDrafts] = useState<DraftRow[]>([]);
+    const [selectedId, setSelectedId] = useState<number | null>(null);
     const [layout, setLayout] = useState<"inspector" | "staged">(props.workspace_layout === "staged" ? "staged" : "inspector");
-    const [step, setStep] = useState<1 | 2 | 3>(props.rows.length > 0 ? 2 : 1);
+    const [step, setStep] = useState<1 | 2 | 3>(2);
+    const [loadingRows, setLoadingRows] = useState(true);
     const [search, setSearch] = useState("");
     const [course, setCourse] = useState("all");
     const [studentType, setStudentType] = useState("all");
@@ -143,9 +152,39 @@ export default function TuitionAdjustmentsPage(props: Props) {
     const spreadsheetInput = useRef<HTMLInputElement>(null);
     const spreadsheetImport = useForm<{ file: File | null; school_year: string; semester: number }>({
         file: null,
-        school_year: props.filters.school_year,
-        semester: props.filters.semester,
+        school_year: period.school_year,
+        semester: period.semester,
     });
+
+    useEffect(() => {
+        setPeriod(props.filters);
+    }, [props.filters.school_year, props.filters.semester]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        setLoadingRows(true);
+        setDrafts([]);
+        setSelectedId(null);
+        axios
+            .get<{ rows: TuitionRow[] }>(tuitionRows.url({ query: period }), { signal: controller.signal })
+            .then(({ data }) => {
+                const loaded = data.rows.map(toDraft);
+                setDrafts(loaded);
+                setSelectedId(loaded[0]?.enrollment_id ?? null);
+                setStep(loaded.length > 0 ? 2 : 1);
+            })
+            .catch((error: unknown) => {
+                if (axios.isCancel(error)) return;
+
+                toast.error("Tuition rows could not be loaded.");
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setLoadingRows(false);
+            });
+
+        return () => controller.abort();
+    }, [period]);
 
     const selected = drafts.find((row) => row.enrollment_id === selectedId) ?? drafts[0] ?? null;
     const filtered = useMemo(
@@ -199,11 +238,10 @@ export default function TuitionAdjustmentsPage(props: Props) {
     }
 
     function changePeriod(field: "school_year" | "semester", value: string) {
-        router.get(
-            "/administrators/finance/tuition-adjustments",
-            { ...props.filters, [field]: field === "semester" ? Number(value) : value },
-            { preserveState: false, replace: true },
-        );
+        const next = { ...period, [field]: field === "semester" ? Number(value) : value };
+        setPeriod(next);
+        const url = new URL(index.url({ query: next }));
+        window.history.replaceState(window.history.state, "", `${window.location.pathname}${url.search}`);
     }
 
     async function resolvePaste() {
@@ -228,8 +266,8 @@ export default function TuitionAdjustmentsPage(props: Props) {
         setResolving(true);
         try {
             const response = await axios.post(resolve.url(), {
-                school_year: props.filters.school_year,
-                semester: props.filters.semester,
+                school_year: period.school_year,
+                semester: period.semester,
                 rows: parsed,
             });
             const resolvedRows = response.data.rows.filter((row: { status: string }) => row.status === "resolved");
@@ -316,7 +354,7 @@ export default function TuitionAdjustmentsPage(props: Props) {
 
     function uploadSpreadsheet(file: File | null) {
         if (!file) return;
-        spreadsheetImport.setData({ file, school_year: props.filters.school_year, semester: props.filters.semester });
+        spreadsheetImport.setData({ file, school_year: period.school_year, semester: period.semester });
         spreadsheetImport.post(storeSpreadsheetImport.url(), { forceFormData: true });
     }
 
@@ -346,7 +384,7 @@ export default function TuitionAdjustmentsPage(props: Props) {
                                 className="pl-9"
                             />
                         </div>
-                        <Select value={props.filters.school_year} onValueChange={(value) => changePeriod("school_year", value)}>
+                        <Select value={period.school_year} onValueChange={(value) => changePeriod("school_year", value)}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
@@ -358,7 +396,7 @@ export default function TuitionAdjustmentsPage(props: Props) {
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Select value={String(props.filters.semester)} onValueChange={(value) => changePeriod("semester", value)}>
+                        <Select value={String(period.semester)} onValueChange={(value) => changePeriod("semester", value)}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
@@ -390,7 +428,11 @@ export default function TuitionAdjustmentsPage(props: Props) {
                                     onChange={(event) => uploadSpreadsheet(event.target.files?.[0] ?? null)}
                                 />
                                 <Button variant="outline" disabled={spreadsheetImport.processing} onClick={() => spreadsheetInput.current?.click()}>
-                                    {spreadsheetImport.processing ? <Loader2 className="size-4 animate-spin" /> : <FileSpreadsheet className="size-4" />}
+                                    {spreadsheetImport.processing ? (
+                                        <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                        <FileSpreadsheet className="size-4" />
+                                    )}
                                     Upload template
                                 </Button>
                             </>
@@ -413,7 +455,9 @@ export default function TuitionAdjustmentsPage(props: Props) {
                     </div>
                 </div>
 
-                {step === 1 ? (
+                {loadingRows ? (
+                    <TuitionWorkspaceSkeleton layout={layout} />
+                ) : step === 1 ? (
                     <ImportStage onPaste={() => setPasteOpen(true)} onContinue={() => setStep(2)} count={drafts.length} />
                 ) : step === 3 ? (
                     <NotifyStage
@@ -499,7 +543,7 @@ export default function TuitionAdjustmentsPage(props: Props) {
                     </div>
                 )}
 
-                {step === 2 && (
+                {!loadingRows && step === 2 && (
                     <div className="bg-card sticky bottom-3 z-10 flex flex-col gap-3 rounded-xl border p-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-wrap gap-5 text-sm">
                             <Summary label="Ready" value={ready.length} tone="success" />
@@ -658,6 +702,65 @@ function TuitionGrid({
                 })}
             </TableBody>
         </Table>
+    );
+}
+
+function TuitionWorkspaceSkeleton({ layout }: { layout: "inspector" | "staged" }) {
+    return (
+        <div className={cn("grid min-h-[620px] gap-4", layout === "inspector" && "2xl:grid-cols-[minmax(0,1fr)_380px]")}>
+            <Card className="min-w-0 overflow-hidden">
+                <CardHeader className="border-b py-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-2">
+                            <Skeleton className="h-5 w-36" />
+                            <Skeleton className="h-4 w-72" />
+                        </div>
+                        <div className="flex gap-2">
+                            <Skeleton className="h-9 w-32" />
+                            <Skeleton className="h-9 w-32" />
+                            <Skeleton className="h-9 w-32" />
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-3 p-4">
+                    {Array.from({ length: 12 }, (_, index) => (
+                        <div
+                            key={index}
+                            className="grid grid-cols-[2.25rem_minmax(12rem,1.6fr)_6rem_repeat(6,minmax(5rem,1fr))_6rem] items-center gap-3"
+                        >
+                            <Skeleton className="h-5 w-5" />
+                            <div className="space-y-1.5">
+                                <Skeleton className="h-4 w-40" />
+                                <Skeleton className="h-3 w-24" />
+                            </div>
+                            <Skeleton className="h-4 w-12" />
+                            {Array.from({ length: 6 }, (_, cell) => (
+                                <Skeleton key={cell} className="h-9 w-full" />
+                            ))}
+                            <Skeleton className="h-6 w-16" />
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+            {layout === "inspector" && (
+                <Card className="h-fit overflow-hidden">
+                    <CardHeader className="border-b">
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="size-10 rounded-full" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-5 w-36" />
+                                <Skeleton className="h-4 w-48" />
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-5 p-4">
+                        {Array.from({ length: 5 }, (_, index) => (
+                            <Skeleton key={index} className="h-10 w-full" />
+                        ))}
+                    </CardContent>
+                </Card>
+            )}
+        </div>
     );
 }
 

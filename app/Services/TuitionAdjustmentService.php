@@ -55,6 +55,9 @@ final readonly class TuitionAdjustmentService
         if (! $tuition instanceof StudentTuition) {
             throw new RuntimeException('This enrollment has no tuition record.');
         }
+        if (! $tuition->relationLoaded('enrollment')) {
+            $tuition->setRelation('enrollment', $enrollment);
+        }
 
         $paid = $this->billing->totalPaid($tuition);
         $position = $this->billing->accountPosition($tuition, $paid);

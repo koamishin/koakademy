@@ -58,11 +58,12 @@ final class EnrollmentBillingService
             ? $tuition->enrollment
             : $tuition->enrollment()->first();
         if ($enrollment instanceof StudentEnrollment) {
-            $linkedPayments = StudentTransaction::query()
-                ->with('transaction')
-                ->where('student_enrollment_id', $enrollment->id)
-                ->whereIn('status', ['Paid', 'Completed', 'paid', 'completed'])
-                ->get();
+            $linkedPayments = $enrollment->relationLoaded('enrollmentTransactions')
+                ? $enrollment->enrollmentTransactions
+                : StudentTransaction::query()
+                    ->where('student_enrollment_id', $enrollment->id)
+                    ->whereIn('status', ['Paid', 'Completed', 'paid', 'completed'])
+                    ->get();
             if ($linkedPayments->isNotEmpty()) {
                 $linkedPaid = $linkedPayments->sum(
                     fn (StudentTransaction $link): float => (float) $link->amount,

@@ -212,6 +212,7 @@ Route::middleware(['auth', 'administrators.only'])
             ->middleware('throttle:30,1')
             ->name('finance.payments.batch.store');
         Route::get('/finance/tuition-adjustments', [AdministratorTuitionAdjustmentController::class, 'index'])->name('finance.tuition-adjustments.index');
+        Route::get('/finance/tuition-adjustments/rows', [AdministratorTuitionAdjustmentController::class, 'rows'])->name('finance.tuition-adjustments.rows');
         Route::get('/finance/tuition-adjustments/template', [AdministratorTuitionAdjustmentController::class, 'downloadTemplate'])->name('finance.tuition-adjustments.template');
         Route::post('/finance/tuition-adjustments/imports', [AdministratorTuitionAdjustmentController::class, 'storeSpreadsheetImport'])
             ->middleware('throttle:30,1')

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\StudentType;
 use App\Exports\TuitionAdjustmentSpreadsheetTemplateExport;
 use App\Http\Requests\Administrators\ConfirmTuitionAdjustmentSpreadsheetImportRequest;
+use App\Http\Requests\Administrators\ListTuitionAdjustmentRowsRequest;
 use App\Http\Requests\Administrators\ResolveTuitionAdjustmentRowsRequest;
 use App\Http\Requests\Administrators\StoreTuitionAdjustmentBatchRequest;
 use App\Http\Requests\Administrators\StoreTuitionAdjustmentSpreadsheetImportRequest;
@@ -38,27 +39,12 @@ final class AdministratorTuitionAdjustmentController extends Controller
         private readonly TuitionAdjustmentNotificationService $notifications,
     ) {}
 
-    public function index(Request $request, GeneralSettingsService $settings): Response
+    public function index(ListTuitionAdjustmentRowsRequest $request, GeneralSettingsService $settings): Response
     {
-        abort_unless($request->user()?->can('view_tuition_fees'), 403);
-
-        $schoolYear = $request->string('school_year')->toString() ?: $settings->getCurrentSchoolYearString();
-        $semester = $request->integer('semester', $settings->getCurrentSemester());
-        $query = StudentEnrollment::query()
-            ->with(['student.Course', 'course', 'studentTuition.installments', 'additionalFees'])
-            ->where('school_year', $schoolYear)
-            ->where('semester', $semester)
-            ->whereHas('studentTuition')
-            ->when($request->filled('enrollment'), fn ($builder) => $builder->whereKey($request->integer('enrollment')))
-            ->when($request->filled('student'), fn ($builder) => $builder->where('student_id', $request->integer('student')))
-            ->when($request->filled('course_id'), fn ($builder) => $builder->where('course_id', $request->integer('course_id')))
-            ->orderByDesc('id')
-            ->limit(250)
-            ->get();
+        [$schoolYear, $semester] = $this->period($request, $settings);
 
         return Inertia::render('administrators/finance/tuition-adjustments', [
             'user' => $request->user(),
-            'rows' => $query->map(fn (StudentEnrollment $enrollment): array => $this->adjustments->serialize($enrollment))->values(),
             'filters' => ['school_year' => $schoolYear, 'semester' => $semester],
             'school_years' => $settings->getAvailableSchoolYears(),
             'semesters' => $settings->getAvailableSemesters(),
@@ -68,6 +54,13 @@ final class AdministratorTuitionAdjustmentController extends Controller
             'workspace_layout' => data_get($request->user()?->preferences, 'finance.tuition_adjustments.layout', 'inspector'),
             'can_manage' => $request->user()?->can('manage_tuition_fees') ?? false,
         ]);
+    }
+
+    public function rows(ListTuitionAdjustmentRowsRequest $request, GeneralSettingsService $settings): JsonResponse
+    {
+        [$schoolYear, $semester] = $this->period($request, $settings);
+
+        return response()->json(['rows' => $this->serializedRows($request, $schoolYear, $semester)]);
     }
 
     public function resolve(ResolveTuitionAdjustmentRowsRequest $request): JsonResponse
@@ -190,6 +183,37 @@ final class AdministratorTuitionAdjustmentController extends Controller
         abort_unless($request->user()?->can('manage_tuition_fees'), 403);
 
         return response()->json(['delivery_status' => $this->notifications->send($adjustment)]);
+    }
+
+    /** @return array{0: string, 1: int} */
+    private function period(ListTuitionAdjustmentRowsRequest $request, GeneralSettingsService $settings): array
+    {
+        return [
+            $request->string('school_year')->toString() ?: $settings->getCurrentSchoolYearString(),
+            $request->integer('semester', $settings->getCurrentSemester()),
+        ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function serializedRows(ListTuitionAdjustmentRowsRequest $request, string $schoolYear, int $semester): array
+    {
+        $query = StudentEnrollment::query()
+            ->with([
+                'student.Course', 'course', 'studentTuition.installments', 'additionalFees',
+                'enrollmentTransactions' => fn ($query) => $query
+                    ->select(['id', 'student_enrollment_id', 'amount', 'status'])
+                    ->whereIn('status', ['Paid', 'Completed', 'paid', 'completed']),
+            ])
+            ->where('school_year', $schoolYear)
+            ->where('semester', $semester)
+            ->whereHas('studentTuition')
+            ->when($request->filled('enrollment'), fn ($builder) => $builder->whereKey($request->integer('enrollment')))
+            ->when($request->filled('student'), fn ($builder) => $builder->where('student_id', $request->integer('student')))
+            ->when($request->filled('course_id'), fn ($builder) => $builder->where('course_id', $request->integer('course_id')))
+            ->orderByDesc('id')
+            ->get();
+
+        return $query->map(fn (StudentEnrollment $enrollment): array => $this->adjustments->serialize($enrollment))->values()->all();
     }
 
     private function resolveStudent(string $identifier): ?Student

@@ -19,7 +19,7 @@ final class StoreTuitionAdjustmentBatchRequest extends FormRequest
             'batch_key' => ['required', 'uuid'],
             'source' => ['nullable', 'string', 'in:workspace,clipboard,student'],
             'reason' => ['required', 'string', 'min:3', 'max:1000'],
-            'rows' => ['required', 'array', 'min:1', 'max:250'],
+            'rows' => ['required', 'array', 'min:1', 'max:1000'],
             'rows.*.client_row_id' => ['required', 'string', 'max:100'],
             'rows.*.enrollment_id' => ['required', 'integer', 'exists:student_enrollment,id'],
             'rows.*.tuition_id' => ['required', 'integer', 'exists:student_tuition,id'],

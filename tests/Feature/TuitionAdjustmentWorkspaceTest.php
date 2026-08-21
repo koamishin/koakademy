@@ -69,17 +69,64 @@ it('shows the tuition adjustment workspace only with tuition permission', functi
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('administrators/finance/tuition-adjustments')
-            ->has('rows', 1)
-            ->where('rows.0.student_number', (string) $student->student_id)
-            ->where('rows.0.total_fees', 14950)
-            ->where('rows.0.installments.0.amount', 4500)
+            ->missing('rows')
             ->where('workspace_layout', 'inspector')
         );
+
+    $this->actingAs($authorized)
+        ->getJson(portalUrlForAdministrators('/administrators/finance/tuition-adjustments/rows?school_year=2026%20-%202027&semester=1'))
+        ->assertOk()
+        ->assertJsonCount(1, 'rows')
+        ->assertJsonPath('rows.0.student_number', (string) $student->student_id)
+        ->assertJsonPath('rows.0.total_fees', 14950)
+        ->assertJsonPath('rows.0.installments.0.amount', 4500);
 
     $unauthorized = User::factory()->create(['role' => UserRole::Admin]);
     $this->actingAs($unauthorized)
         ->get(portalUrlForAdministrators('/administrators/finance/tuition-adjustments'))
         ->assertForbidden();
+
+    $this->actingAs($unauthorized)
+        ->getJson(portalUrlForAdministrators('/administrators/finance/tuition-adjustments/rows'))
+        ->assertForbidden();
+});
+
+it('loads every current-period tuition enrollment for client-side filtering', function (): void {
+    $actor = tuitionAdjustmentUser();
+    $course = Course::factory()->create(['code' => 'BSIT-ALL']);
+
+    foreach (range(1, 251) as $index) {
+        $student = Student::factory()->create(['course_id' => $course->id, 'student_type' => 'college']);
+        $enrollment = StudentEnrollment::factory()->create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'school_year' => '2026 - 2027',
+            'semester' => 1,
+            'academic_year' => 1,
+        ]);
+        StudentTuition::query()->create([
+            'student_id' => $student->id,
+            'enrollment_id' => $enrollment->id,
+            'school_year' => $enrollment->school_year,
+            'semester' => 1,
+            'academic_year' => 1,
+            'total_tuition' => 14950,
+            'total_lectures' => 14950,
+            'total_laboratory' => 0,
+            'total_miscelaneous_fees' => 0,
+            'overall_tuition' => 14950,
+            'total_balance' => 14950,
+            'paid' => 0,
+            'discount' => 0,
+            'downpayment' => 0,
+            'status' => 'pending',
+        ]);
+    }
+
+    $this->actingAs($actor)
+        ->getJson(portalUrlForAdministrators('/administrators/finance/tuition-adjustments/rows?school_year=2026%20-%202027&semester=1'))
+        ->assertOk()
+        ->assertJsonCount(251, 'rows');
 });
 
 it('allows an enum-only super admin to use the tuition adjustment workspace', function (): void {
@@ -91,7 +138,7 @@ it('allows an enum-only super admin to use the tuition adjustment workspace', fu
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('administrators/finance/tuition-adjustments')
-            ->has('rows', 1)
+            ->missing('rows')
         );
 });
 
