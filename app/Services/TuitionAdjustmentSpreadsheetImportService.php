@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exports\Sheets\TuitionAdjustmentSpreadsheetTemplateSheet;
+use App\Imports\TuitionAdjustmentSpreadsheetRowsImport;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\TuitionAdjustmentSpreadsheetImport;
@@ -15,7 +16,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
-use stdClass;
 
 final readonly class TuitionAdjustmentSpreadsheetImportService
 {
@@ -199,7 +199,7 @@ final readonly class TuitionAdjustmentSpreadsheetImportService
     /** @return list<array<string, mixed>> */
     private function readRows(UploadedFile $file): array
     {
-        $sheets = Excel::toArray(new stdClass, $file);
+        $sheets = Excel::toArray(new TuitionAdjustmentSpreadsheetRowsImport, $file);
         $sheet = collect($sheets)->first(fn (array $rows): bool => $this->headingsMatch($rows[0] ?? []));
         if (! is_array($sheet)) {
             throw ValidationException::withMessages(['file' => 'The Tuition Adjustments sheet headers do not match the downloaded template.']);

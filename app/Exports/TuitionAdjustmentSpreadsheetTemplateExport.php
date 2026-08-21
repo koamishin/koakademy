@@ -6,9 +6,10 @@ namespace App\Exports;
 
 use App\Exports\Sheets\TuitionAdjustmentSpreadsheetInstructionsSheet;
 use App\Exports\Sheets\TuitionAdjustmentSpreadsheetTemplateSheet;
+use Maatwebsite\Excel\Concerns\Export;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-final class TuitionAdjustmentSpreadsheetTemplateExport implements WithMultipleSheets
+final class TuitionAdjustmentSpreadsheetTemplateExport implements Export, WithMultipleSheets
 {
     public function sheets(): array
     {
