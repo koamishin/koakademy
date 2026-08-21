@@ -48,11 +48,15 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
      * @param  StudentEnrollment|int  $enrollment  The enrollment model or ID
      * @param  string|null  $jobId  Optional job ID for tracking
      * @param  bool  $createNewFile  Whether to create a new file instead of updating existing
+     * @param  bool  $forceRegenerate  Whether to bypass the one-hour resource reuse window
+     * @param  bool  $notifyOnCompletion  Whether administrators receive completion notifications
      */
     public function __construct(
         StudentEnrollment|int $enrollment,
         ?string $jobId = null,
-        private bool $createNewFile = false
+        private bool $createNewFile = false,
+        private bool $forceRegenerate = false,
+        private bool $notifyOnCompletion = true,
     ) {
         // Store the ID instead of the model to avoid SerializesModels issues
         $this->enrollmentId = $enrollment instanceof StudentEnrollment ? $enrollment->id : $enrollment;
@@ -68,6 +72,7 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
             'enrollment_id' => $this->enrollmentId,
             'job_id' => $this->jobId,
             'create_new_file' => $this->createNewFile,
+            'force_regenerate' => $this->forceRegenerate,
         ]);
     }
 
@@ -100,6 +105,7 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
                 ->first();
 
             if (
+                ! $this->forceRegenerate &&
                 $existingResource &&
                 $this->resourceExistsOnDisk($existingResource)
             ) {
@@ -126,7 +132,9 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
             $this->updateProgress(100, 'PDF generated successfully');
 
             // Send success notification to super_admin users
-            $this->sendNotificationToSuperAdmins($studentEnrollment, false, 'PDF generated successfully');
+            if ($this->notifyOnCompletion) {
+                $this->sendNotificationToSuperAdmins($studentEnrollment, false, 'PDF generated successfully');
+            }
 
             Log::info('PDF generation job completed successfully', [
                 'job_id' => $this->jobId,
@@ -137,7 +145,9 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
             $this->updateProgress(100, 'Failed: '.$exception->getMessage(), true);
 
             // Send failure notification to super_admin users
-            $this->sendNotificationToSuperAdmins(null, true, 'PDF generation failed', $exception->getMessage());
+            if ($this->notifyOnCompletion) {
+                $this->sendNotificationToSuperAdmins(null, true, 'PDF generation failed', $exception->getMessage());
+            }
 
             Log::error('PDF generation job failed', [
                 'job_id' => $this->jobId,
@@ -168,7 +178,9 @@ final class GenerateAssessmentPdfJob implements ShouldQueue
         );
 
         // Send failure notification to super_admin users
-        $this->sendNotificationToSuperAdmins(null, true, 'PDF generation failed permanently', $throwable->getMessage());
+        if ($this->notifyOnCompletion) {
+            $this->sendNotificationToSuperAdmins(null, true, 'PDF generation failed permanently', $throwable->getMessage());
+        }
     }
 
     /**

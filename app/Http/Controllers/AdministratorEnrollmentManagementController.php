@@ -36,6 +36,7 @@ use App\Services\EnrollmentService;
 use App\Services\GeneralSettingsService;
 use App\Services\QueueAssessmentExportService;
 use App\Services\TenantContext;
+use App\Services\TuitionAdjustmentRecalculationService;
 use App\Settings\SiteSettings;
 use Closure;
 use Exception;
@@ -65,6 +66,7 @@ final class AdministratorEnrollmentManagementController extends Controller
         private readonly EnrollmentBillingService $enrollmentBillingService,
         private readonly ClassScheduleChangeNotificationService $classScheduleChangeNotificationService,
         private readonly EnrollmentWorkflowCoordinator $workflowCoordinator,
+        private readonly TuitionAdjustmentRecalculationService $tuitionAdjustmentRecalculation,
     ) {}
 
     public function index(GeneralSettingsService $settingsService): Response|RedirectResponse
@@ -2857,24 +2859,36 @@ final class AdministratorEnrollmentManagementController extends Controller
 
         $overallTotal = $totalTuition + $miscellaneousFee + $additionalFeesTotal;
 
-        $tuition = StudentTuition::query()->updateOrCreate(
-            ['enrollment_id' => $enrollment->id],
-            [
-                'student_id' => $enrollment->student_id,
-                'total_tuition' => $totalTuition,
-                'total_balance' => $overallTotal,
-                'total_lectures' => $discountedLecture,
-                'total_laboratory' => $totalLaboratory,
-                'total_miscelaneous_fees' => $miscellaneousFee,
-                'discount' => $discount,
-                'discount_id' => $discountId,
-                'downpayment' => $downpayment,
-                'overall_tuition' => $overallTotal,
-                'semester' => $enrollment->semester,
-                'school_year' => $enrollment->school_year,
-                'academic_year' => $enrollment->academic_year,
-            ]
-        );
+        $existingTuition = StudentTuition::query()
+            ->where('enrollment_id', $enrollment->id)
+            ->lockForUpdate()
+            ->first();
+
+        $tuitionData = $this->tuitionAdjustmentRecalculation->preserveFinanceAdjustment($existingTuition, [
+            'student_id' => $enrollment->student_id,
+            'total_tuition' => $totalTuition,
+            'total_balance' => $overallTotal,
+            'total_lectures' => $discountedLecture,
+            'total_laboratory' => $totalLaboratory,
+            'total_miscelaneous_fees' => $miscellaneousFee,
+            'discount' => $discount,
+            'discount_id' => $discountId,
+            'downpayment' => $downpayment,
+            'overall_tuition' => $overallTotal,
+            'semester' => $enrollment->semester,
+            'school_year' => $enrollment->school_year,
+            'academic_year' => $enrollment->academic_year,
+        ]);
+
+        if ($existingTuition instanceof StudentTuition) {
+            $existingTuition->forceFill($tuitionData)->save();
+            $tuition = $existingTuition;
+        } else {
+            $tuition = StudentTuition::query()->create([
+                'enrollment_id' => $enrollment->id,
+                ...$tuitionData,
+            ]);
+        }
 
         $this->enrollmentBillingService->syncTuitionBalance($tuition, $downpayment);
     }

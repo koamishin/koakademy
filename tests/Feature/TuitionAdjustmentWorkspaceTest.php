@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Enums\UserRole;
+use App\Jobs\GenerateAssessmentPdfJob;
 use App\Models\Course;
+use App\Models\Resource;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
 use App\Models\StudentTuition;
@@ -12,6 +14,7 @@ use App\Models\User;
 use App\Notifications\StudentTuitionAdjustedNotification;
 use App\Services\TuitionAdjustmentService;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Permission;
@@ -194,6 +197,47 @@ it('records a reconciled adjustment, installments, audit, and student notificati
     $this->actingAs($actor)
         ->postJson(portalUrlForAdministrators('/administrators/finance/tuition-adjustments/batch'), $payload)
         ->assertJsonPath('rows.0.status', 'duplicate');
+});
+
+it('silently refreshes the current assessment PDF after a finance adjustment', function (): void {
+    Notification::fake();
+    Queue::fake();
+    $actor = tuitionAdjustmentUser();
+    ['student' => $student, 'enrollment' => $enrollment] = tuitionAdjustmentEnrollment(10000, 1000);
+    $canonical = app(TuitionAdjustmentService::class)->serialize($enrollment);
+
+    Resource::query()->create([
+        'resourceable_id' => $enrollment->id,
+        'resourceable_type' => $enrollment::class,
+        'type' => 'assessment',
+        'file_path' => 'assessments/current.pdf',
+        'file_name' => 'current.pdf',
+        'mime_type' => 'application/pdf',
+        'disk' => 'local',
+        'file_size' => 1,
+    ]);
+
+    $this->actingAs($actor)
+        ->postJson(portalUrlForAdministrators('/administrators/finance/tuition-adjustments/batch'), [
+            'batch_key' => (string) Str::uuid(),
+            'reason' => 'Corrected assessment total.',
+            'rows' => [[
+                'client_row_id' => 'assessment-refresh-row',
+                'enrollment_id' => $enrollment->id,
+                'tuition_id' => $canonical['tuition_id'],
+                'state_hash' => $canonical['state_hash'],
+                'total_fees' => 10500,
+                'opening_paid' => 1000,
+                'balance' => 9500,
+                'installments' => ['prelim' => 3000, 'midterm' => 3000, 'finals' => 3500],
+            ]],
+        ])
+        ->assertSuccessful();
+
+    Queue::assertPushed(
+        GenerateAssessmentPdfJob::class,
+        fn (GenerateAssessmentPdfJob $job): bool => $job->getJobId() === 'tuition-adjustment-'.TuitionAdjustment::query()->sole()->id,
+    );
 });
 
 it('keeps credits signed and rejects contradictory paper columns', function (): void {

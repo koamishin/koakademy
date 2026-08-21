@@ -9,7 +9,9 @@ use App\Filament\Resources\Students\StudentResource;
 use App\Models\Account;
 use App\Models\GeneralSetting;
 use App\Models\Student;
+use App\Services\EnrollmentBillingService;
 use App\Services\StudentIdUpdateService;
+use App\Services\TuitionAdjustmentRecalculationService;
 use Exception;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -552,17 +554,24 @@ final class ViewStudent extends ViewRecord
 
                         $totalBalance = $overallTuitionAfterDiscount - (float) $data['downpayment'];
 
-                        $tuition->update([
-                            'total_lectures' => (float) $data['total_lectures'],
-                            'total_laboratory' => (float) $data['total_laboratory'],
-                            'total_miscelaneous_fees' => (float) $data['total_miscelaneous_fees'],
-                            'total_tuition' => $totalTuition,
-                            'overall_tuition' => $overallTuitionAfterDiscount,
-                            'downpayment' => (float) $data['downpayment'],
-                            'discount' => (float) $data['discount'],
-                            'total_balance' => $totalBalance,
-                            'status' => $totalBalance <= 0 ? 'paid' : 'pending',
-                        ]);
+                        $tuitionData = app(TuitionAdjustmentRecalculationService::class)
+                            ->preserveFinanceAdjustment($tuition, [
+                                'total_lectures' => (float) $data['total_lectures'],
+                                'total_laboratory' => (float) $data['total_laboratory'],
+                                'total_miscelaneous_fees' => (float) $data['total_miscelaneous_fees'],
+                                'total_tuition' => $totalTuition,
+                                'overall_tuition' => $overallTuitionAfterDiscount,
+                                'downpayment' => (float) $data['downpayment'],
+                                'discount' => (float) $data['discount'],
+                                'total_balance' => $totalBalance,
+                                'status' => $totalBalance <= 0 ? 'paid' : 'pending',
+                            ]);
+
+                        $tuition->update($tuitionData);
+                        app(EnrollmentBillingService::class)->syncTuitionBalance(
+                            $tuition,
+                            (float) $tuitionData['downpayment'],
+                        );
 
                         Notification::make()
                             ->title('Tuition Updated')

@@ -561,7 +561,8 @@ it('renders full subject and room names in the assessment PDF view', function ()
         'total_laboratory' => 0,
         'total_miscelaneous_fees' => 3700,
         'total_tuition' => 1125,
-        'overall_tuition' => 4825,
+        'overall_tuition' => 5075,
+        'assessment_adjustment' => 250,
         'downpayment' => 1000,
         'total_balance' => 3825,
         'discount' => 0,
@@ -575,7 +576,8 @@ it('renders full subject and room names in the assessment PDF view', function ()
 
     $view
         ->assertSeeText($subjectTitle)
-        ->assertSeeText('Room: '.$roomName);
+        ->assertSeeText('Room: '.$roomName)
+        ->assertSeeText('Finance Adjustment');
 });
 
 it('regenerates a fresh assessment PDF when resending assessment emails', function (): void {
@@ -932,6 +934,86 @@ it('removes class enrollment when subject is removed from enrollment', function 
     // Verify class enrollment for subject2 was also deleted
     expect(App\Models\ClassEnrollment::query()->where('student_id', $student->id)->where('class_id', $class1->id)->exists())->toBeTrue();
     expect(App\Models\ClassEnrollment::query()->where('student_id', $student->id)->where('class_id', $class2->id)->exists())->toBeFalse();
+});
+
+it('retains the Finance assessment adjustment when enrollment fees are recalculated', function (): void {
+    $user = User::factory()->create(['role' => UserRole::Admin]);
+    $course = Course::factory()->create([
+        'lec_per_unit' => 100,
+        'lab_per_unit' => 0,
+        'miscelaneous' => 3500,
+    ]);
+    $student = Student::factory()->create(['course_id' => $course->id]);
+    $enrollment = StudentEnrollment::factory()->create([
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'school_year' => '2026 - 2027',
+        'semester' => 1,
+        'academic_year' => 1,
+    ]);
+    $subject = Subject::factory()->create([
+        'course_id' => $course->id,
+        'code' => 'FIN-101',
+        'lecture' => 3,
+        'laboratory' => 0,
+    ]);
+    $enrollment->subjectsEnrolled()->create([
+        'student_id' => $student->id,
+        'subject_id' => $subject->id,
+        'academic_year' => 1,
+        'school_year' => $enrollment->school_year,
+        'semester' => 1,
+        'lecture_fee' => 300,
+        'laboratory_fee' => 0,
+        'enrolled_lecture_units' => 3,
+        'enrolled_laboratory_units' => 0,
+    ]);
+    StudentTuition::query()->create([
+        'student_id' => $student->id,
+        'enrollment_id' => $enrollment->id,
+        'total_tuition' => 300,
+        'total_lectures' => 300,
+        'total_laboratory' => 0,
+        'total_miscelaneous_fees' => 3500,
+        'overall_tuition' => 4300,
+        'assessment_adjustment' => 500,
+        'total_balance' => 4300,
+        'discount' => 0,
+        'downpayment' => 0,
+        'semester' => 1,
+        'school_year' => $enrollment->school_year,
+        'academic_year' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->put(portalUrlForAdministrators("/administrators/enrollments/{$enrollment->id}"), [
+            'student_id' => $student->id,
+            'semester' => 1,
+            'academic_year' => 1,
+            'subjects' => [[
+                'subject_id' => $subject->id,
+                'class_id' => null,
+                'is_modular' => false,
+                'exclude_from_tuition' => false,
+                'lecture_fee' => 300,
+                'laboratory_fee' => 0,
+                'enrolled_lecture_units' => 3,
+                'enrolled_laboratory_units' => 0,
+            ]],
+            'discount' => 0,
+            'downpayment' => 0,
+            'miscellaneous_fee' => 2750,
+            'additional_fees' => [],
+        ])
+        ->assertRedirect();
+
+    $tuition = $enrollment->studentTuition()->firstOrFail();
+
+    expect((float) $tuition->total_tuition)->toBe(300.0)
+        ->and((float) $tuition->total_miscelaneous_fees)->toBe(2750.0)
+        ->and((float) $tuition->assessment_adjustment)->toBe(500.0)
+        ->and((float) $tuition->overall_tuition)->toBe(3550.0)
+        ->and((float) $tuition->total_balance)->toBe(3550.0);
 });
 
 it('excludes selected subjects from tuition calculations', function (): void {

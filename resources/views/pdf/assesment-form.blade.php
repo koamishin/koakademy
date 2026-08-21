@@ -496,6 +496,9 @@
                     @if((float) data_get($assessment, 'additional_fees_total', 0) > 0)
                         <p>Additional Fees: {{ $money(data_get($assessment, 'additional_fees_total', 0)) }}</p>
                     @endif
+                    @if(abs((float) data_get($tuition, 'assessment_adjustment', 0)) > 0.00001)
+                        <p>Finance Adjustment: {{ $money(data_get($tuition, 'assessment_adjustment', 0)) }}</p>
+                    @endif
                     <p class="grand-total">Total Amount: {{ $money(data_get($tuition, 'overall_tuition', data_get($assessment, 'total_amount', 0))) }}</p>
                     <p>Downpayment: {{ $money(data_get($tuition, 'downpayment', 0)) }}</p>
                     <p class="balance">Balance: {{ $money(data_get($tuition, 'total_balance', 0)) }}</p>

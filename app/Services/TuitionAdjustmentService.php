@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Jobs\GenerateAssessmentPdfJob;
+use App\Models\Resource;
 use App\Models\StudentEnrollment;
 use App\Models\StudentTuition;
 use App\Models\TuitionAdjustment;
@@ -193,7 +195,13 @@ final readonly class TuitionAdjustmentService
                     'delivery_status' => ['database' => 'pending', 'mail' => 'pending', 'warnings' => []],
                 ]);
 
-                DB::afterCommit(function () use ($adjustment): void {
+                $hasCurrentAssessment = Resource::query()
+                    ->where('resourceable_id', $enrollment->id)
+                    ->where('resourceable_type', StudentEnrollment::class)
+                    ->where('type', 'assessment')
+                    ->exists();
+
+                DB::afterCommit(function () use ($adjustment, $enrollment, $hasCurrentAssessment): void {
                     try {
                         $this->notifications->send($adjustment);
                     } catch (Throwable $exception) {
@@ -201,6 +209,16 @@ final readonly class TuitionAdjustmentService
                         $adjustment->forceFill([
                             'delivery_status' => ['database' => 'failed', 'mail' => 'failed', 'warnings' => ['Student notifications could not be queued.']],
                         ])->save();
+                    }
+
+                    if ($hasCurrentAssessment) {
+                        GenerateAssessmentPdfJob::dispatch(
+                            $enrollment->id,
+                            'tuition-adjustment-'.$adjustment->id,
+                            false,
+                            true,
+                            false,
+                        );
                     }
                 });
 

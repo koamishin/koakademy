@@ -11,6 +11,7 @@ use App\Models\StudentTuition;
 use App\Models\Subject;
 use App\Models\SubjectEnrollment;
 use App\Services\EnrollmentBillingService;
+use App\Services\TuitionAdjustmentRecalculationService;
 use Exception;
 // Added missing use statement
 use Filament\Schemas\Components\Utilities\Get;
@@ -442,6 +443,9 @@ final class EnrollmentServiceProvider extends ServiceProvider
         }
 
         // Update or create the tuition record
+        $existingTuition = StudentTuition::query()->where('enrollment_id', $studentEnrollment->id)->first();
+        $tuitionData = app(TuitionAdjustmentRecalculationService::class)
+            ->preserveFinanceAdjustment($existingTuition, $tuitionData);
         $tuition = StudentTuition::query()->updateOrCreate(['enrollment_id' => $studentEnrollment->id], $tuitionData);
 
         app(EnrollmentBillingService::class)->syncTuitionBalance($tuition, $downPayment);
@@ -518,6 +522,10 @@ final class EnrollmentServiceProvider extends ServiceProvider
         }
 
         // Use updateOrCreate for efficiency and atomicity
+        $existingTuition = StudentTuition::query()->where('enrollment_id', $studentEnrollment->id)->first();
+        $tuitionData = app(TuitionAdjustmentRecalculationService::class)
+            ->preserveFinanceAdjustment($existingTuition, $tuitionData);
+
         $tuition = StudentTuition::query()->updateOrCreate(
             ['enrollment_id' => $studentEnrollment->id],
             // Find by enrollment_id

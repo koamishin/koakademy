@@ -133,6 +133,7 @@ final readonly class AssessmentFormDataService
                 'total_lectures' => (float) $tuition->total_lectures,
                 'total_laboratory' => (float) $tuition->total_laboratory,
                 'total_miscelaneous_fees' => (float) $tuition->total_miscelaneous_fees,
+                'assessment_adjustment' => (float) ($tuition->assessment_adjustment ?? 0),
                 'discount' => (float) $tuition->discount,
                 'downpayment' => (float) $tuition->downpayment,
                 'overall_tuition' => (float) $tuition->overall_tuition,

@@ -7,6 +7,7 @@ namespace App\Filament\Resources\StudentEnrollments\Pages;
 use App\Filament\Resources\StudentEnrollments\StudentEnrollmentResource;
 use App\Models\StudentTuition;
 use App\Services\EnrollmentBillingService;
+use App\Services\TuitionAdjustmentRecalculationService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
@@ -82,14 +83,17 @@ final class EditStudentEnrollment extends EditRecord
     {
         // Update or create the student tuition record
         if ($this->tuitionData !== []) {
+            $existingTuition = StudentTuition::query()->where('enrollment_id', $this->record->id)->first();
+            $tuitionData = app(TuitionAdjustmentRecalculationService::class)
+                ->preserveFinanceAdjustment($existingTuition, $this->tuitionData);
             $tuition = StudentTuition::updateOrCreate(
                 ['enrollment_id' => $this->record->id],
-                $this->tuitionData
+                $tuitionData
             );
 
             app(EnrollmentBillingService::class)->syncTuitionBalance(
                 $tuition,
-                (float) ($this->tuitionData['downpayment'] ?? 0)
+                (float) ($tuitionData['downpayment'] ?? 0)
             );
         }
     }
