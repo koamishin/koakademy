@@ -59,6 +59,38 @@ beforeEach(function (): void {
     ]);
 });
 
+/** @return array{bsit: Course, enroll: Closure(Course, string, int, string): void} */
+function registrarWorkbookFixture(): array
+{
+    $department = Department::factory()->create(['code' => 'IT']);
+    $bsit = Course::factory()->create(['code' => 'BSIT', 'title' => 'Bachelor of Science in Information Technology', 'department_id' => $department->id, 'school_id' => $department->school_id]);
+    $bscs = Course::factory()->create(['code' => 'BSCS', 'title' => 'Bachelor of Science in Computer Science', 'department_id' => $department->id, 'school_id' => $department->school_id]);
+
+    $enroll = function (Course $course, string $gender, int $year, string $status = 'Enrolled') use ($department): void {
+        $student = Student::factory()->create(['course_id' => $course->id, 'gender' => $gender, 'school_id' => $department->school_id]);
+        StudentEnrollment::factory()->create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'school_year' => '2024 - 2025',
+            'semester' => 1,
+            'academic_year' => $year,
+            'intake_category' => $year === 1 ? 'new_freshman' : null,
+            'status' => $status,
+            'school_id' => $department->school_id,
+            'created_at' => '2024-08-15 12:00:00',
+            'updated_at' => '2024-08-15 12:00:00',
+        ]);
+    };
+
+    $enroll($bsit, 'Male', 1);
+    $enroll($bsit, 'Female', 2);
+    $enroll($bsit, 'Female', 8);
+    $enroll($bscs, 'Female', 3);
+    $enroll($bscs, 'Male', 1, 'Pending');
+
+    return compact('bsit', 'enroll');
+}
+
 it('renders dedicated registrar analytics with aggregate enrollment data', function (): void {
     $user = User::factory()->create(['role' => UserRole::Registrar]);
     $user->givePermissionTo('ViewAny:StudentEnrollment');
@@ -95,6 +127,7 @@ it('renders dedicated registrar analytics with aggregate enrollment data', funct
             ->where('quality.missing_course_count', 0)
             ->where('report.values.school_year', '2024 - 2025')
             ->where('report.values.semester', 1)
+            ->where('report.max_year_level', 4)
             ->where('report.context.status_rule', 'Pending enrollment records are excluded unless a specific enrollment status is selected.')
             ->has('analytics.form_bc_matrix')
             ->has('analytics.program_year_matrix')
@@ -177,32 +210,14 @@ it('exports registrar analytics as an excel workbook', function (): void {
         ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 });
 
-it('keeps program and year-level workbook breakdowns aligned with the selected reporting population', function (): void {
-    $department = Department::factory()->create(['code' => 'IT']);
-    $bsit = Course::factory()->create(['code' => 'BSIT', 'title' => 'Bachelor of Science in Information Technology', 'department_id' => $department->id, 'school_id' => $department->school_id]);
-    $bscs = Course::factory()->create(['code' => 'BSCS', 'title' => 'Bachelor of Science in Computer Science', 'department_id' => $department->id, 'school_id' => $department->school_id]);
-
-    $enroll = function (Course $course, string $gender, int $year, string $status = 'Enrolled') use ($department): void {
-        $student = Student::factory()->create(['course_id' => $course->id, 'gender' => $gender, 'school_id' => $department->school_id]);
-        StudentEnrollment::factory()->create([
-            'student_id' => $student->id,
-            'course_id' => $course->id,
-            'school_year' => '2024 - 2025',
-            'semester' => 1,
-            'academic_year' => $year,
-            'intake_category' => $year === 1 ? 'new_freshman' : null,
-            'status' => $status,
-            'school_id' => $department->school_id,
-            'created_at' => '2024-08-15 12:00:00',
-            'updated_at' => '2024-08-15 12:00:00',
-        ]);
-    };
-
-    $enroll($bsit, 'Male', 1);
-    $enroll($bsit, 'Female', 2);
-    $enroll($bsit, 'Female', 8);
-    $enroll($bscs, 'Female', 3);
-    $enroll($bscs, 'Male', 1, 'Pending');
+it('exports default program and year-level workbook breakdowns', function (): void {
+    ['bsit' => $bsit] = registrarWorkbookFixture();
+    Student::query()->where('course_id', $bsit->id)->orderBy('id')->firstOrFail()->update([
+        'religion' => 'Roman Catholic',
+        'region_of_origin' => 'National Capital Region',
+        'province_of_origin' => 'Metro Manila',
+        'city_of_origin' => 'Manila',
+    ]);
 
     $report = app(RegistrarAnalyticsService::class)->build([], true);
     expect($report['analytics']['current_semester_count'])->toBe(4)
@@ -237,6 +252,7 @@ it('keeps program and year-level workbook breakdowns aligned with the selected r
         $context = $workbook->getSheetByName('Report Context');
         $formBc = $workbook->getSheetByName('Form B-C Control Total');
         $matrix = $workbook->getSheetByName('Program by Year Level');
+        $details = $workbook->getSheetByName('Enrollment Details');
         $courseSheet = $workbook->getSheetByName('Enrollment by Program');
         $genderProgram = $workbook->getSheetByName('Gender by Program');
         $genderYear = $workbook->getSheetByName('Gender by Year');
@@ -245,13 +261,17 @@ it('keeps program and year-level workbook breakdowns aligned with the selected r
         expect($context?->getCell('A1')->getValue())->toBe('REGISTRAR ANALYTICS REPORT CONTEXT')
             ->and($context?->getCell('A4')->getValue())->toBe('Selected reporting population')
             ->and($context?->getCell('B4')->getValue())->toBe(4)
-            ->and($matrix?->getCell('D3')->getValue())->toBe('First Year')
-            ->and($matrix?->getCell('J3')->getValue())->toBe('Seventh Year')
-            ->and($matrix?->getCell('K3')->getValue())->toBe('Unclassified or Other Year Level')
-            ->and($matrix?->getCell('L3')->getValue())->toBe('Total')
+            ->and($matrix?->getCell('D3')->getValue())->toBe('Year 1')
+            ->and($matrix?->getCell('G3')->getValue())->toBe('Year 4')
+            ->and($matrix?->getCell('H3')->getValue())->toBe('Unclassified or Other Year Level')
+            ->and($matrix?->getCell('I3')->getValue())->toBe('Total')
             ->and($formBc?->getCell('D3')->getValue())->toBe('New First-Year Students, Male')
             ->and($formBc?->getCell('K4')->getValue())->toBe(1)
-            ->and($formBc?->getCell('T5')->getValue())->toBe(2)
+            ->and($formBc?->getCell('N5')->getValue())->toBe(2)
+            ->and($details?->getCell('E3')->getValue())->toBe('Religion')
+            ->and($details?->getCell('F3')->getValue())->toBe('Region of Origin')
+            ->and($details?->getCell('G3')->getValue())->toBe('Province of Origin')
+            ->and($details?->getCell('H3')->getValue())->toBe('City/Municipality of Origin')
             ->and($courseSheet?->getCell('B2')->getValue())->toBe('Program Code')
             ->and($courseSheet?->getCell('B3')->getValue())->toBe('BSIT')
             ->and($courseSheet?->getCell('D3')->getValue())->toBe(3)
@@ -259,7 +279,7 @@ it('keeps program and year-level workbook breakdowns aligned with the selected r
             ->and($genderProgram?->getCell('A3')->getValue())->toBe('Program Code')
             ->and($genderYear?->getCell('F3')->getValue())->toBe('Male Percentage')
             ->and($monthly?->getCell('A2')->getValue())->toBe('Month')
-            ->and((int) $matrix?->getCell('L6')->getValue())->toBe(4)
+            ->and((int) $matrix?->getCell('I6')->getValue())->toBe(4)
             ->and((int) $genderProgram?->getCell('F6')->getValue())->toBe(4)
             ->and((int) $genderYear?->getCell('E8')->getValue())->toBe(4)
             ->and((int) $monthly?->getCell('B3')->getValue())->toBe(4);
@@ -268,22 +288,94 @@ it('keeps program and year-level workbook breakdowns aligned with the selected r
         expect((int) $matrixRows['BSCS']['F'])->toBe(1)
             ->and((int) $matrixRows['BSIT']['D'])->toBe(1)
             ->and((int) $matrixRows['BSIT']['E'])->toBe(1)
-            ->and((int) $matrixRows['BSIT']['K'])->toBe(1)
-            ->and((int) $matrixRows['BSIT']['L'])->toBe(3);
+            ->and((int) $matrixRows['BSIT']['H'])->toBe(1)
+            ->and((int) $matrixRows['BSIT']['I'])->toBe(3);
 
-        $pendingReport = app(RegistrarAnalyticsService::class)->build(['status' => 'Pending'], true);
-        file_put_contents($path, Excel::raw(new RegistrarAnalyticsExport($pendingReport['analytics'], $pendingReport['report']), Maatwebsite\Excel\Excel::XLSX));
-        $pendingWorkbook = IOFactory::load($path);
-        $pendingContext = $pendingWorkbook->getSheetByName('Report Context');
-        $pendingMatrix = $pendingWorkbook->getSheetByName('Program by Year Level');
-        $pendingFormBc = $pendingWorkbook->getSheetByName('Form B-C Control Total');
+        $detailRows = collect($details?->toArray(null, true, true, true) ?? []);
+        expect($detailRows->contains(fn (array $row): bool => ($row['E'] ?? null) === 'Roman Catholic'
+            && ($row['F'] ?? null) === 'National Capital Region'
+            && ($row['G'] ?? null) === 'Metro Manila'
+            && ($row['H'] ?? null) === 'Manila'))->toBeTrue();
 
-        expect($pendingReport['analytics']['current_semester_count'])->toBe(1)
-            ->and($pendingContext?->getCell('B4')->getValue())->toBe(1)
-            ->and($pendingMatrix?->getCell('D4')->getValue())->toBe(1)
-            ->and($pendingMatrix?->getCell('L5')->getValue())->toBe(1)
-            ->and($pendingFormBc?->getCell('D4')->getValue())->toBe(1)
-            ->and($pendingFormBc?->getCell('T4')->getValue())->toBe(1);
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('exports Pending status workbook breakdowns from the selected reporting population', function (): void {
+    registrarWorkbookFixture();
+
+    $report = app(RegistrarAnalyticsService::class)->build(['status' => 'Pending'], true);
+    $path = tempnam(sys_get_temp_dir(), 'registrar-analytics-');
+    expect($path)->not->toBeFalse();
+
+    try {
+        file_put_contents($path, Excel::raw(new RegistrarAnalyticsExport($report['analytics'], $report['report']), Maatwebsite\Excel\Excel::XLSX));
+        $workbook = IOFactory::load($path);
+
+        expect($report['analytics']['current_semester_count'])->toBe(1)
+            ->and($workbook->getSheetByName('Report Context')?->getCell('B4')->getValue())->toBe(1)
+            ->and($workbook->getSheetByName('Program by Year Level')?->getCell('D4')->getValue())->toBe(1)
+            ->and($workbook->getSheetByName('Program by Year Level')?->getCell('I5')->getValue())->toBe(1)
+            ->and($workbook->getSheetByName('Form B-C Control Total')?->getCell('D4')->getValue())->toBe(1)
+            ->and($workbook->getSheetByName('Form B-C Control Total')?->getCell('N4')->getValue())->toBe(1);
+    } finally {
+        @unlink($path);
+    }
+});
+
+it('normalizes mixed-case and whitespace-padded genders in registrar aggregates', function (): void {
+    $department = Department::factory()->create(['code' => 'IT']);
+    $course = Course::factory()->create(['code' => 'BSIT', 'department_id' => $department->id, 'school_id' => $department->school_id]);
+
+    foreach (['Male', ' male ', 'FEMALE', ' female ', ''] as $gender) {
+        $student = Student::factory()->create(['course_id' => $course->id, 'gender' => $gender, 'school_id' => $department->school_id]);
+        StudentEnrollment::factory()->create([
+            'student_id' => $student->id,
+            'course_id' => $course->id,
+            'school_year' => '2024 - 2025',
+            'semester' => 1,
+            'academic_year' => 2,
+            'status' => 'Enrolled',
+            'school_id' => $department->school_id,
+        ]);
+    }
+
+    $report = app(RegistrarAnalyticsService::class)->build();
+    $programRows = collect($report['analytics']['gender_by_program'])->where('program_code', 'BSIT')->values();
+    $yearRows = collect($report['analytics']['gender_by_year_level'])->where('year_level', 2)->values();
+
+    expect($programRows->pluck('gender')->all())->toBe(['female', 'male', 'unspecified'])
+        ->and($programRows->pluck('count', 'gender')->map(fn ($count): int => (int) $count)->all())->toBe(['female' => 2, 'male' => 2, 'unspecified' => 1])
+        ->and($yearRows->pluck('gender')->all())->toBe(['female', 'male', 'unspecified'])
+        ->and($yearRows->pluck('count', 'gender')->map(fn ($count): int => (int) $count)->all())->toBe(['female' => 2, 'male' => 2, 'unspecified' => 1]);
+});
+
+it('expands workbook year-level columns when the global reporting setting is increased', function (): void {
+    ['bsit' => $bsit, 'enroll' => $enroll] = registrarWorkbookFixture();
+
+    $settings = GeneralSetting::query()->firstOrFail();
+    $moreConfigs = $settings->more_configs;
+    $moreConfigs['registrar_reporting'] = ['maximum_year_level' => 6];
+    $settings->update(['more_configs' => $moreConfigs]);
+    $enroll($bsit, 'Male', 5);
+
+    $report = app(RegistrarAnalyticsService::class)->build();
+    $program = collect($report['analytics']['program_year_matrix'])->firstWhere('program_code', 'BSIT');
+    $formBc = collect($report['analytics']['form_bc_matrix'])->firstWhere('program_code', 'BSIT');
+    $path = tempnam(sys_get_temp_dir(), 'registrar-analytics-');
+    expect($path)->not->toBeFalse();
+
+    try {
+        file_put_contents($path, Excel::raw(new RegistrarAnalyticsExport($report['analytics'], $report['report']), Maatwebsite\Excel\Excel::XLSX));
+        $workbook = IOFactory::load($path);
+
+        expect($report['report']['max_year_level'])->toBe(6)
+            ->and($report['report']['options']['year_levels'])->toHaveCount(6)
+            ->and((int) $program->year_5)->toBe(1)
+            ->and((int) $formBc->year_5_male)->toBe(1)
+            ->and($workbook->getSheetByName('Program by Year Level')?->getCell('I3')->getValue())->toBe('Year 6')
+            ->and($workbook->getSheetByName('Form B-C Control Total')?->getCell('P3')->getValue())->toBe('Year 6 Students, Male');
     } finally {
         @unlink($path);
     }
