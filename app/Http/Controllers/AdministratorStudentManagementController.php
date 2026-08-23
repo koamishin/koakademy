@@ -39,6 +39,7 @@ use App\Services\IdentifierGenerator;
 use App\Services\StudentIdUpdateService;
 use App\Services\StudentSchoolOptionService;
 use App\Settings\SiteSettings;
+use Closure;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -723,6 +724,8 @@ final class AdministratorStudentManagementController extends Controller
                 'birth_date' => $student->birth_date?->format('F j, Y'),
                 'type' => $studentType instanceof StudentType ? $studentType->value : (is_string($studentType) ? $studentType : null),
                 'status' => $studentStatus instanceof StudentStatus ? $studentStatus->value : (is_string($studentStatus) ? $studentStatus : null),
+                'graduation_school_year' => $student->graduation_school_year,
+                'graduation_semester' => $student->graduation_semester,
                 'academic_year' => $student->formatted_academic_year,
                 'course' => [
                     'id' => $student->Course?->id,
@@ -1913,24 +1916,47 @@ final class AdministratorStudentManagementController extends Controller
     {
         $validated = $request->validate([
             'status' => ['required', new \Illuminate\Validation\Rules\Enum(StudentStatus::class)],
+            'graduation_school_year' => [
+                'nullable',
+                'string',
+                'regex:/^\\d{4} - \\d{4}$/',
+                function (string $attribute, mixed $value, Closure $fail) use ($request): void {
+                    if ($request->input('status') !== StudentStatus::Graduated->value || ! is_string($value) || ! preg_match('/^(\\d{4}) - (\\d{4})$/', $value, $matches)) {
+                        return;
+                    }
+
+                    if ((int) $matches[2] !== (int) $matches[1] + 1) {
+                        $fail('The graduation academic year must span consecutive years.');
+                    }
+                },
+            ],
+            'graduation_semester' => ['nullable', 'integer', 'in:1,2,3'],
         ]);
 
         $generalSettingsService = app(GeneralSettingsService::class);
         $currentSchoolYear = $generalSettingsService->getCurrentSchoolYearString();
         $currentSemester = $generalSettingsService->getCurrentSemester();
 
-        StudentStatusRecord::updateOrCreate(
-            [
-                'student_id' => $student->id,
-                'academic_year' => $currentSchoolYear,
-                'semester' => $currentSemester,
-            ],
-            [
-                'status' => $validated['status'],
-            ]
-        );
+        $studentUpdate = ['status' => $validated['status']];
+        if ($validated['status'] === StudentStatus::Graduated->value) {
+            $studentUpdate['graduation_school_year'] = $validated['graduation_school_year'] ?? null;
+            $studentUpdate['graduation_semester'] = $validated['graduation_semester'] ?? null;
+        }
 
-        $student->update(['status' => $validated['status']]);
+        DB::transaction(function () use ($student, $currentSchoolYear, $currentSemester, $validated, $studentUpdate): void {
+            StudentStatusRecord::updateOrCreate(
+                [
+                    'student_id' => $student->id,
+                    'academic_year' => $currentSchoolYear,
+                    'semester' => $currentSemester,
+                ],
+                [
+                    'status' => $validated['status'],
+                ]
+            );
+
+            $student->update($studentUpdate);
+        });
 
         return back()->with('success', 'Student status updated successfully.');
     }

@@ -20,10 +20,11 @@ import { useMemo, useState, type FormEvent } from "react";
 import { route } from "ziggy-js";
 
 type DepartmentOption = { id: number; name: string; code: string };
-type ProgramPayload = { id: number; code: string; title: string; description: string | null; department_id: number | null; department_name: string | null; department_code: string | null; course_type_id: number | null; course_type_name: string | null; lec_per_unit: string | number | null; remarks: string | null; curriculum_year: string | null; miscelaneous: string | number | null };
+type ProgramPayload = { id: number; code: string; title: string; description: string | null; department_id: number | null; department_name: string | null; department_code: string | null; course_type_id: number | null; course_type_name: string | null; lec_per_unit: string | number | null; remarks: string | null; curriculum_year: string | null; miscelaneous: string | number | null; ched_major: string | null; ched_has_thesis: boolean | null; ched_program_status: string | null; ched_authority_category: string | null; ched_authority_serial: string | null; ched_authority_year: number | null; ched_authority_other_program: string | null; ched_delivery_mode: string | null; ched_normal_length_years: string | number | null; ched_program_credit_units: number | null; ched_tuition_per_unit: string | number | null; ched_program_fee: string | number | null };
 type SubjectPayload = { id: number; code: string; title: string; classification: string | null; units: number | null; lecture: number | null; laboratory: number | null; academic_year: number | null; semester: number | null; group: string | null; is_credited: boolean; pre_riquisite: number[] };
 type SubjectOption = { id: number; code: string; title: string };
 type ClassificationOption = { value: string; label: string };
+type ChedOption = { value: string; label: string };
 type SubjectFormData = { code: string; title: string; classification: string; units: string; lecture: string; laboratory: string; academic_year: string; semester: string; group: string; is_credited: boolean; pre_riquisite: number[] };
 
 interface Props {
@@ -35,6 +36,7 @@ interface Props {
     classification_options: ClassificationOption[];
     departments: DepartmentOption[];
     course_types: { id: number; name: string }[];
+    ched_options: { has_thesis: ChedOption[]; program_statuses: ChedOption[]; authority_categories: ChedOption[]; delivery_modes: ChedOption[] };
 }
 
 const yearOptions = [{ value: "1", label: "1st Year" }, { value: "2", label: "2nd Year" }, { value: "3", label: "3rd Year" }, { value: "4", label: "4th Year" }];
@@ -42,7 +44,7 @@ const semesterOptions = [{ value: "1", label: "1st Semester" }, { value: "2", la
 const fmt = (v: string | number | null): string => (v === null || v === undefined ? "" : String(v));
 const FieldError = ({ message }: { message?: string }) => (message ? <p className="text-destructive mt-1 text-xs font-medium">{message}</p> : null);
 
-export default function CurriculumProgramShow({ user, program, stats, subjects, subject_options, classification_options, departments, course_types }: Props) {
+export default function CurriculumProgramShow({ user, program, stats, subjects, subject_options, classification_options, departments, course_types, ched_options }: Props) {
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editSubject, setEditSubject] = useState<SubjectPayload | null>(null);
     const [deleteSubject, setDeleteSubject] = useState<SubjectPayload | null>(null);
@@ -63,6 +65,18 @@ export default function CurriculumProgramShow({ user, program, stats, subjects, 
         remarks: program.remarks ?? "",
         curriculum_year: program.curriculum_year ?? "",
         miscelaneous: fmt(program.miscelaneous),
+        ched_major: program.ched_major ?? "",
+        ched_has_thesis: program.ched_has_thesis === null ? "" : program.ched_has_thesis ? "1" : "0",
+        ched_program_status: program.ched_program_status ?? "",
+        ched_authority_category: program.ched_authority_category ?? "",
+        ched_authority_serial: program.ched_authority_serial ?? "",
+        ched_authority_year: fmt(program.ched_authority_year),
+        ched_authority_other_program: program.ched_authority_other_program ?? "",
+        ched_delivery_mode: program.ched_delivery_mode ?? "",
+        ched_normal_length_years: fmt(program.ched_normal_length_years),
+        ched_program_credit_units: fmt(program.ched_program_credit_units),
+        ched_tuition_per_unit: fmt(program.ched_tuition_per_unit),
+        ched_program_fee: fmt(program.ched_program_fee),
     });
 
     const defaultSubject: SubjectFormData = { code: "", title: "", classification: classification_options[0]?.value ?? "credited", units: "", lecture: "", laboratory: "", academic_year: "", semester: "", group: "", is_credited: true, pre_riquisite: [] };
@@ -201,6 +215,21 @@ export default function CurriculumProgramShow({ user, program, stats, subjects, 
                                     <div className="grid gap-5 md:grid-cols-2">
                                         <div className="grid gap-2"><Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Description</Label><Textarea className="min-h-[100px] resize-none" value={programForm.data.description} onChange={(e) => programForm.setData("description", e.target.value)} /><FieldError message={programForm.errors.description} /></div>
                                         <div className="grid gap-2"><Label className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Remarks</Label><Textarea className="min-h-[100px] resize-none" value={programForm.data.remarks} onChange={(e) => programForm.setData("remarks", e.target.value)} /><FieldError message={programForm.errors.remarks} /></div>
+                                    </div>
+                                    <div className="border-border/70 grid gap-4 rounded-lg border p-4 md:grid-cols-2 lg:grid-cols-4">
+                                        <div className="col-span-full"><p className="text-sm font-semibold">CHED Form B/C program profile</p><p className="text-muted-foreground text-xs">Leave unknown fields empty; they will remain in the reporting-quality queue.</p></div>
+                                        <div className="grid gap-2"><Label>Major</Label><Input value={programForm.data.ched_major} onChange={(e) => programForm.setData("ched_major", e.target.value)} /><FieldError message={programForm.errors.ched_major} /></div>
+                                        <div className="grid gap-2"><Label>Thesis / Dissertation</Label><Select value={programForm.data.ched_has_thesis || undefined} onValueChange={(value) => programForm.setData("ched_has_thesis", value === "__unknown" ? "" : value)}><SelectTrigger><SelectValue placeholder="Unknown" /></SelectTrigger><SelectContent><SelectItem value="__unknown">Unknown</SelectItem>{ched_options.has_thesis.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select><FieldError message={programForm.errors.ched_has_thesis} /></div>
+                                        <div className="grid gap-2"><Label>Program status</Label><Select value={programForm.data.ched_program_status || undefined} onValueChange={(value) => programForm.setData("ched_program_status", value === "__unknown" ? "" : value)}><SelectTrigger><SelectValue placeholder="Unknown" /></SelectTrigger><SelectContent><SelectItem value="__unknown">Unknown</SelectItem>{ched_options.program_statuses.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select><FieldError message={programForm.errors.ched_program_status} /></div>
+                                        <div className="grid gap-2"><Label>Delivery mode</Label><Select value={programForm.data.ched_delivery_mode || undefined} onValueChange={(value) => programForm.setData("ched_delivery_mode", value === "__unknown" ? "" : value)}><SelectTrigger><SelectValue placeholder="Unknown" /></SelectTrigger><SelectContent><SelectItem value="__unknown">Unknown</SelectItem>{ched_options.delivery_modes.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select><FieldError message={programForm.errors.ched_delivery_mode} /></div>
+                                        <div className="grid gap-2"><Label>Authority category</Label><Select value={programForm.data.ched_authority_category || undefined} onValueChange={(value) => programForm.setData("ched_authority_category", value === "__unknown" ? "" : value)}><SelectTrigger><SelectValue placeholder="Unknown" /></SelectTrigger><SelectContent><SelectItem value="__unknown">Unknown</SelectItem>{ched_options.authority_categories.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select><FieldError message={programForm.errors.ched_authority_category} /></div>
+                                        <div className="grid gap-2"><Label>Authority serial</Label><Input value={programForm.data.ched_authority_serial} onChange={(e) => programForm.setData("ched_authority_serial", e.target.value)} /><FieldError message={programForm.errors.ched_authority_serial} /></div>
+                                        <div className="grid gap-2"><Label>Authority year</Label><Input type="number" value={programForm.data.ched_authority_year} onChange={(e) => programForm.setData("ched_authority_year", e.target.value)} /><FieldError message={programForm.errors.ched_authority_year} /></div>
+                                        <div className="grid gap-2"><Label>Other program reference</Label><Input value={programForm.data.ched_authority_other_program} onChange={(e) => programForm.setData("ched_authority_other_program", e.target.value)} /><FieldError message={programForm.errors.ched_authority_other_program} /></div>
+                                        <div className="grid gap-2"><Label>Normal length (years)</Label><Input type="number" min="0" max="999.9" step="0.5" value={programForm.data.ched_normal_length_years} onChange={(e) => programForm.setData("ched_normal_length_years", e.target.value)} /><FieldError message={programForm.errors.ched_normal_length_years} /></div>
+                                        <div className="grid gap-2"><Label>Required units</Label><Input type="number" min="0" max="65535" value={programForm.data.ched_program_credit_units} onChange={(e) => programForm.setData("ched_program_credit_units", e.target.value)} /><FieldError message={programForm.errors.ched_program_credit_units} /></div>
+                                        <div className="grid gap-2"><Label>Tuition per unit</Label><Input type="number" min="0" max="9999999999.99" step="0.01" value={programForm.data.ched_tuition_per_unit} onChange={(e) => programForm.setData("ched_tuition_per_unit", e.target.value)} /><FieldError message={programForm.errors.ched_tuition_per_unit} /></div>
+                                        <div className="grid gap-2"><Label>Program fee</Label><Input type="number" min="0" max="9999999999.99" step="0.01" value={programForm.data.ched_program_fee} onChange={(e) => programForm.setData("ched_program_fee", e.target.value)} /><FieldError message={programForm.errors.ched_program_fee} /></div>
                                     </div>
                                     <div className="flex justify-end pt-2"><Button type="submit" disabled={programForm.processing}><FilePenLine className="mr-2 size-4" />Save Program Details</Button></div>
                                 </form>

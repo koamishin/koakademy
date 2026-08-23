@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Support\ChedProgramRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreCurriculumProgramRequest extends FormRequest
@@ -26,6 +27,7 @@ final class StoreCurriculumProgramRequest extends FormRequest
             'remarks' => ['nullable', 'string'],
             'curriculum_year' => ['nullable', 'string', 'max:255'],
             'miscelaneous' => ['nullable', 'numeric', 'min:0'],
+            ...ChedProgramRules::validationRules(),
         ];
     }
 
