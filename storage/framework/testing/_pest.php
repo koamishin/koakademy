@@ -48,6 +48,19 @@ namespace _Pest\Global {
 namespace Pest {
 
     /**
+     * @method self prompt(string $prompt, array $attachments = array (
+))
+     * @method self repeat(int $count)
+     * @method self toBeRelevant(float $threshold = 0.7)
+     * @method self toBeSafe(float $threshold = 0.7)
+     * @method self toBeFactual(string $expected, float $threshold = 0.7)
+     * @method self toPassJudge(string $criteria, float $threshold = 0.7)
+     * @method self toBeCorrect(string $expected, float $threshold = 0.7)
+     * @method self toSatisfy(string $criteria, float $threshold = 0.7)
+     * @method self toBeSimilar(string $expected, float $threshold = 0.7)
+     * @method self toHaveToolCalls(array $expected, float $threshold = 0.7)
+     * @method self toFollowTrajectory(array $steps, float $threshold = 0.7, bool $strictOrder = true)
+     * @method self toPassScorer(Pest\Evals\Scorers\Scorer $scorer, float $threshold = 0.7, ?string $expected = NULL)
      * @method self toBeCollection()
      * @method self toBeOne()
      */
@@ -58,6 +71,19 @@ namespace Pest {
 namespace Pest\Expectations {
 
     /**
+     * @method self prompt(string $prompt, array $attachments = array (
+))
+     * @method self repeat(int $count)
+     * @method self toBeRelevant(float $threshold = 0.7)
+     * @method self toBeSafe(float $threshold = 0.7)
+     * @method self toBeFactual(string $expected, float $threshold = 0.7)
+     * @method self toPassJudge(string $criteria, float $threshold = 0.7)
+     * @method self toBeCorrect(string $expected, float $threshold = 0.7)
+     * @method self toSatisfy(string $criteria, float $threshold = 0.7)
+     * @method self toBeSimilar(string $expected, float $threshold = 0.7)
+     * @method self toHaveToolCalls(array $expected, float $threshold = 0.7)
+     * @method self toFollowTrajectory(array $steps, float $threshold = 0.7, bool $strictOrder = true)
+     * @method self toPassScorer(Pest\Evals\Scorers\Scorer $scorer, float $threshold = 0.7, ?string $expected = NULL)
      * @method self toBeCollection()
      * @method self toBeOne()
      */
