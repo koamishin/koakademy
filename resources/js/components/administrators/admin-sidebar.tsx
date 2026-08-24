@@ -22,7 +22,14 @@ import {
     SidebarMenuSubItem,
     useSidebar,
 } from "@/components/ui/sidebar";
-import { getRoutesForRoleWithModules, ROUTE_SECTIONS, type AdminRoute, type ModuleAdminRoute, type RouteSection } from "@/config/admin-routes";
+import {
+    getRoutesForRoleWithModules,
+    getSectionTitle,
+    ROUTE_SECTIONS,
+    type AdminRoute,
+    type ModuleAdminRoute,
+    type RouteSection,
+} from "@/config/admin-routes";
 import { resolveBranding, type Branding } from "@/lib/branding";
 import { inbox as administratorNotificationsInbox } from "@/routes/administrators/notifications";
 import type { User } from "@/types/user";
@@ -63,19 +70,6 @@ const SECTION_ICONS: Record<RouteSection, React.ElementType> = {
     library: IconBooks,
     inventory: IconTools,
     support: IconHelp,
-};
-
-// Section labels for tooltips
-const SECTION_LABELS: Record<RouteSection, string> = {
-    core: "Overview",
-    academic: "Academics",
-    student_services: "Registrar",
-    finance: "Finance",
-    hr: "HR",
-    system: "System",
-    library: "Library",
-    inventory: "Property",
-    support: "Support",
 };
 
 const ADMIN_SIDEBAR_ICON_WIDTH = "3rem";
@@ -146,7 +140,7 @@ function useOrganizedRoutes(userRole: string, userPermissions: string[] = [], mo
                 allSearchableRoutes.push({
                     ...route,
                     sectionId: section.id,
-                    sectionLabel: section.title,
+                    sectionLabel: getSectionTitle(section.id),
                 });
                 // Add sub-routes as searchable items
                 if (route.subs) {
@@ -155,7 +149,7 @@ function useOrganizedRoutes(userRole: string, userPermissions: string[] = [], mo
                             ...sub,
                             id: `${route.id}-${sub.link}`,
                             sectionId: section.id,
-                            sectionLabel: section.title,
+                            sectionLabel: getSectionTitle(section.id),
                             isSub: true,
                             parentTitle: route.title,
                         } as SearchableRoute);
@@ -339,7 +333,7 @@ export function AdministratorSidebar({ user }: { user: User }) {
                 <SidebarHeader className="gap-2 border-b p-3">
                     <SchoolSwitcher />
                     <div className="text-foreground text-base font-medium">
-                        {searchQuery.trim() ? `Search: "${searchQuery}"` : SECTION_LABELS[displayedSection]}
+                        {searchQuery.trim() ? `Search: "${searchQuery}"` : getSectionTitle(displayedSection)}
                     </div>
                     <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
                         {sectionsWithRoutes.map((section) => {
@@ -355,7 +349,7 @@ export function AdministratorSidebar({ user }: { user: User }) {
                                             : "text-muted-foreground hover:text-foreground hover:bg-accent rounded-md px-2 py-1 text-xs font-medium"
                                     }
                                 >
-                                    {SECTION_LABELS[section.id]}
+                                    {getSectionTitle(section.id)}
                                 </button>
                             );
                         })}
@@ -533,7 +527,7 @@ export function AdministratorSidebar({ user }: { user: User }) {
                                             <SidebarMenuItem key={section.id}>
                                                 <SidebarMenuButton
                                                     tooltip={{
-                                                        children: SECTION_LABELS[section.id],
+                                                        children: getSectionTitle(section.id),
                                                         hidden: false,
                                                     }}
                                                     onClick={() => {
@@ -544,7 +538,7 @@ export function AdministratorSidebar({ user }: { user: User }) {
                                                     className="px-2.5 md:px-2"
                                                 >
                                                     <Icon className="size-4" />
-                                                    <span className="sr-only">{SECTION_LABELS[section.id]}</span>
+                                                    <span className="sr-only">{getSectionTitle(section.id)}</span>
                                                     {badgeCount > 0 && (
                                                         <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
                                                             {badgeCount > 9 ? "9+" : badgeCount}
@@ -586,7 +580,7 @@ export function AdministratorSidebar({ user }: { user: User }) {
                         <SchoolSwitcher />
                         <div className="flex w-full items-center justify-between">
                             <div className="text-foreground text-base font-medium">
-                                {searchQuery.trim() ? `Search: "${searchQuery}"` : SECTION_LABELS[displayedSection]}
+                                {searchQuery.trim() ? `Search: "${searchQuery}"` : getSectionTitle(displayedSection)}
                             </div>
                         </div>
                         <SidebarInput placeholder="Search navigation..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />

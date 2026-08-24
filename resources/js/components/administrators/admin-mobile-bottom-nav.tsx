@@ -18,7 +18,7 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { getRoutesForRoleWithModules, type ModuleAdminRoute, type RouteSection } from "@/config/admin-routes";
+import { getRoutesForRoleWithModules, getSectionTitle, type ModuleAdminRoute, type RouteSection } from "@/config/admin-routes";
 
 const SECTION_ICONS: Record<RouteSection, React.ElementType> = {
     core: IconDashboard,
@@ -30,18 +30,6 @@ const SECTION_ICONS: Record<RouteSection, React.ElementType> = {
     library: IconBooks,
     inventory: IconTools,
     support: IconHelp,
-};
-
-const SECTION_LABELS: Record<RouteSection, string> = {
-    core: "Overview",
-    academic: "Academics",
-    student_services: "Registrar",
-    finance: "Finance",
-    hr: "HR",
-    system: "System",
-    library: "Library",
-    inventory: "Property",
-    support: "Support",
 };
 
 const PRIORITY_IDS: RouteSection[] = ["core", "academic", "student_services", "finance", "system"];
@@ -119,7 +107,7 @@ export function AdminMobileBottomNav() {
             if (!map.has(section)) {
                 map.set(section, {
                     id: section,
-                    label: SECTION_LABELS[section],
+                    label: getSectionTitle(section),
                     link: route.link,
                 });
             }

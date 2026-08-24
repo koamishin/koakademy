@@ -153,12 +153,12 @@ export const ROUTE_SECTIONS: SectionConfig[] = [
     },
     {
         id: "academic",
-        title: "Academic Affairs",
+        title: "Academics",
         allowedRoles: [...ALL_ADMIN_ROLES, ...STUDENT_SERVICES_ROLES],
     },
     {
         id: "student_services",
-        title: "Registrar & Student Services",
+        title: "Students",
         allowedRoles: [
             ...SYSTEM_ADMIN_ROLES,
             ...STUDENT_SERVICES_ROLES,
@@ -171,27 +171,27 @@ export const ROUTE_SECTIONS: SectionConfig[] = [
     },
     {
         id: "finance",
-        title: "Finance & Accounting",
+        title: "Finance",
         allowedRoles: [...SYSTEM_ADMIN_ROLES, ...FINANCE_ROLES, UserRole.President, UserRole.VicePresident],
     },
     {
         id: "hr",
-        title: "Human Resources",
+        title: "HR",
         allowedRoles: [...SYSTEM_ADMIN_ROLES, ...HR_ROLES, UserRole.President, UserRole.VicePresident],
     },
     {
         id: "system",
-        title: "System Administration",
+        title: "System",
         allowedRoles: SYSTEM_ADMIN_ROLES,
     },
     {
         id: "library",
-        title: "Library & Research",
+        title: "Library",
         allowedRoles: [...SYSTEM_ADMIN_ROLES, ...STUDENT_SERVICES_ROLES],
     },
     {
         id: "inventory",
-        title: "Property & Inventory",
+        title: "Inventory",
         allowedRoles: [...SYSTEM_ADMIN_ROLES, ...IT_SUPPORT_ROLES],
     },
     {
@@ -225,7 +225,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-notifications",
-        title: "Notifications Center",
+        title: "Notifications",
         icon: <IconBell className="size-4" />,
         link: "/administrators/notifications",
         section: "core",
@@ -236,7 +236,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // ============================================
     {
         id: "admin-classes",
-        title: "Class Sections",
+        title: "Classes",
         icon: <IconSchool className="size-4" />,
         link: "/administrators/classes",
         section: "academic",
@@ -245,7 +245,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-faculty",
-        title: "Faculty & Staff",
+        title: "Faculty",
         icon: <IconUsers className="size-4" />,
         link: "/administrators/faculties",
         section: "academic",
@@ -254,7 +254,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-scheduling-analytics",
-        title: "Scheduling & Timetable",
+        title: "Schedule",
         icon: <IconCalendarStats className="size-4" />,
         link: "/administrators/scheduling-analytics",
         section: "academic",
@@ -263,7 +263,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-academic-calendar",
-        title: "Academic Calendar",
+        title: "Calendar",
         icon: <IconCalendarEvent className="size-4" />,
         link: "/administrators/academic-calendar",
         section: "academic",
@@ -274,7 +274,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-curriculum",
-        title: "Curriculum Management",
+        title: "Curriculum",
         icon: <IconFileDescription className="size-4" />,
         link: "/administrators/curriculum",
         section: "academic",
@@ -283,7 +283,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-programs",
-        title: "Programs & Degrees",
+        title: "Programs",
         icon: <IconSchool className="size-4" />,
         link: "/administrators/curriculum/programs",
         section: "academic",
@@ -292,7 +292,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-grade-management",
-        title: "Grades & Transcripts",
+        title: "Grades",
         icon: <IconClipboardCheck className="size-4" />,
         link: "/administrators/grades",
         section: "academic",
@@ -307,19 +307,19 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // ============================================
     {
         id: "admin-students",
-        title: "Student Records",
+        title: "Records",
         icon: <IconUser className="size-4" />,
         link: "/administrators/students",
         section: "student_services",
         requiredPermission: "ViewAny:Student",
         subs: [
             {
-                title: "Student Directory",
+                title: "Directory",
                 link: "/administrators/students",
                 icon: <IconUsers className="size-4" />,
             },
             {
-                title: "Student Documents",
+                title: "Documents",
                 link: "/administrators/students/documents",
                 icon: <IconFileDescription className="size-4" />,
             },
@@ -335,7 +335,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-enrollments",
-        title: "Admissions & Enrollment",
+        title: "Admissions",
         icon: <IconChecklist className="size-4" />,
         link: "/administrators/enrollments/applicants",
         section: "student_services",
@@ -347,7 +347,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
                 icon: <IconUserPlus className="size-4" />,
             },
             {
-                title: "Enrollment Records",
+                title: "Enrollments",
                 link: "/administrators/enrollments",
                 icon: <IconUsers className="size-4" />,
             },
@@ -356,19 +356,19 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-registrar-insights",
-        title: "Insights",
+        title: "Registrar",
         icon: <IconChartBar className="size-4" />,
         link: "/administrators/registrar/analytics",
         section: "student_services",
         requiredPermission: "ViewAny:StudentEnrollment",
         subs: [
             {
-                title: "Registrar Analytics",
+                title: "Analytics",
                 link: "/administrators/registrar/analytics",
                 icon: <IconReportAnalytics className="size-4" />,
             },
             {
-                title: "Registrar Reports",
+                title: "Reports",
                 link: "/administrators/registrar/reports",
                 icon: <IconFileAnalytics className="size-4" />,
             },
@@ -377,7 +377,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-document-requests",
-        title: "Document Requests & Credentials",
+        title: "Document Requests",
         icon: <IconCertificate className="size-4" />,
         link: "/administrators/document-requests",
         section: "student_services",
@@ -388,7 +388,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-student-clearance",
-        title: "Clearance & Compliance",
+        title: "Clearance",
         icon: <IconUserCheck className="size-4" />,
         link: "/administrators/clearance",
         section: "student_services",
@@ -399,7 +399,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-library",
-        title: "Library & Resource Center",
+        title: "Library",
         icon: <IconBooks className="size-4" />,
         link: "/administrators/library",
         section: "library",
@@ -427,12 +427,12 @@ export const ADMIN_ROUTES: AdminRoute[] = [
                 icon: <IconChecklist className="size-4" />,
             },
             {
-                title: "Borrow Records",
+                title: "Loans",
                 link: "/administrators/library/borrow-records",
                 icon: <IconClipboardCheck className="size-4" />,
             },
             {
-                title: "Research Papers",
+                title: "Research",
                 link: "/administrators/library/research-papers",
                 icon: <IconFileDescription className="size-4" />,
             },
@@ -440,7 +440,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-guidance",
-        title: "Guidance & Counseling",
+        title: "Guidance",
         icon: <IconUserCircle className="size-4" />,
         link: "/administrators/guidance",
         section: "student_services",
@@ -451,7 +451,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-medical-records",
-        title: "Health & Medical Records",
+        title: "Health Records",
         icon: <IconMedicalCross className="size-4" />,
         link: "/administrators/medical-records",
         section: "student_services",
@@ -466,7 +466,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // ============================================
     {
         id: "admin-finance-overview",
-        title: "Finance Dashboard",
+        title: "Overview",
         icon: <IconChartBar className="size-4" />,
         link: "/administrators/finance",
         section: "finance",
@@ -475,7 +475,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-invoices",
-        title: "Tuition & Billing",
+        title: "Billing",
         icon: <IconFileDescription className="size-4" />,
         link: "/administrators/finance/invoices",
         section: "finance",
@@ -484,7 +484,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-payments",
-        title: "Payments & Collections",
+        title: "Payments",
         icon: <IconCash className="size-4" />,
         link: "/administrators/finance/payments",
         section: "finance",
@@ -493,7 +493,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-tuition-adjustments",
-        title: "Tuition Adjustments",
+        title: "Adjustments",
         icon: <IconReceipt className="size-4" />,
         link: "/administrators/finance/tuition-adjustments",
         section: "finance",
@@ -502,7 +502,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-tuition-update-requests",
-        title: "Tuition Update Requests",
+        title: "Update Requests",
         icon: <IconReceipt className="size-4" />,
         link: "/administrators/finance/tuition-update-requests",
         section: "finance",
@@ -511,7 +511,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-financial-reports",
-        title: "Financial Reports",
+        title: "Reports",
         icon: <IconReportAnalytics className="size-4" />,
         link: "/administrators/finance/reports",
         section: "finance",
@@ -520,7 +520,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-scholarships",
-        title: "Scholarships & Financial Aid",
+        title: "Scholarships",
         icon: <IconGavel className="size-4" />,
         link: "/administrators/scholarships",
         section: "finance",
@@ -535,7 +535,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // ============================================
     {
         id: "admin-employees",
-        title: "Employee Directory",
+        title: "Employees",
         icon: <IconUsersGroup className="size-4" />,
         link: "/administrators/employees",
         section: "hr",
@@ -570,7 +570,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // ============================================
     {
         id: "admin-inventory",
-        title: "Property & Equipment",
+        title: "Assets",
         icon: <IconTools className="size-4" />,
         link: "/administrators/inventory",
         section: "inventory",
@@ -583,17 +583,17 @@ export const ADMIN_ROUTES: AdminRoute[] = [
                 icon: <IconDashboard className="size-4" />,
             },
             {
-                title: "Equipment & Tools",
+                title: "Equipment",
                 link: "/administrators/inventory/items?item_type=tool",
                 icon: <IconChecklist className="size-4" />,
             },
             {
-                title: "IT & Network Devices",
+                title: "Devices",
                 link: "/administrators/inventory/items?item_type=network",
                 icon: <IconServer className="size-4" />,
             },
             {
-                title: "Borrowing Records",
+                title: "Borrowing",
                 link: "/administrators/inventory/borrowings",
                 icon: <IconClipboardCheck className="size-4" />,
             },
@@ -601,7 +601,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-users",
-        title: "User Management",
+        title: "Users",
         icon: <IconShieldLock className="size-4" />,
         link: "/administrators/users",
         section: "system",
@@ -610,7 +610,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-roles",
-        title: "Roles & Permissions",
+        title: "Roles",
         icon: <IconShieldLock className="size-4" />,
         link: "/administrators/roles",
         section: "system",
@@ -628,7 +628,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-onboarding-features",
-        title: "Modules & Feature Flags",
+        title: "Features",
         icon: <IconSparkles className="size-4" />,
         link: "/administrators/feature-toggles",
         section: "system",
@@ -638,7 +638,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-reports",
-        title: "Institutional Reports",
+        title: "Reports",
         icon: <IconReportAnalytics className="size-4" />,
         link: "/administrators/reports",
         section: "system",
@@ -649,7 +649,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-system-health",
-        title: "System Monitoring",
+        title: "Monitoring",
         icon: <IconServer className="size-4" />,
         link: "/administrators/system-health",
         section: "system",
@@ -660,7 +660,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-approvals",
-        title: "Approval Workflows",
+        title: "Approvals",
         icon: <IconFileAnalytics className="size-4" />,
         link: "/administrators/approvals",
         section: "system",
@@ -671,7 +671,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-system-management",
-        title: "System Settings",
+        title: "Settings",
         icon: <IconSettings className="size-4" />,
         link: "/administrators/system-management",
         section: "system",
@@ -712,7 +712,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     // ============================================
     {
         id: "admin-help-tickets",
-        title: "Help Desk",
+        title: "Tickets",
         icon: <IconHelp className="size-4" />,
         link: "/administrators/help-tickets",
         section: "support",
@@ -720,7 +720,7 @@ export const ADMIN_ROUTES: AdminRoute[] = [
     },
     {
         id: "admin-help",
-        title: "Help & Documentation",
+        title: "Help",
         icon: <IconBook className="size-4" />,
         link: "/help",
         section: "support",
